@@ -8,6 +8,15 @@ const { once } = require('node:events');
 const { WebSocket } = require('ws');
 const { createDemo, safeNext, validCommand } = require('../server');
 const { createAccess } = require('../lib/access');
+const { registerPage } = require('../apps/portal/pages');
+
+test('signup username pattern is valid in the browser Unicode sets mode', () => {
+  const pattern = registerPage().match(/pattern="([^"]+)"/)[1];
+  const validation = new RegExp(`^(?:${pattern})$`, 'v');
+  assert.equal(validation.test('reviewer-01'), true);
+  assert.equal(validation.test('_reviewer'), false);
+  assert.equal(validation.test('검토자'), false);
+});
 
 test('all branches, APIs and WebSocket require the same authenticated session', async t => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'meatbox-gateway-'));
