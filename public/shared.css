@@ -112,7 +112,7 @@ body {
 .btn.sm { padding: 7px 10px; font-size: 12px; border-radius: 9px; }
 
 /* ---------- 지도 ---------- */
-.map { width: 100%; border-radius: 12px; overflow: hidden; }
+.map { width: 100%; border-radius: 12px; overflow: hidden; position: relative; z-index: 0; }
 .leaflet-container { font: inherit; }
 
 .marker-stop {
