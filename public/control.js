@@ -45,10 +45,6 @@
 
   function renderLive(s) {
     parkedLayer.clearLayers();
-    $('k-load').textContent = `${s.kpi.boxesTotal - s.kpi.boxesDelivered}/${s.kpi.boxesTotal}박스`;
-    $('k-load').nextElementSibling.textContent = '상차 적재 (적재율 100%)';
-    $('k-done').textContent = `${s.kpi.stopsDone}/${s.kpi.stopsTotal}착지`;
-    $('k-eta').textContent = s.kpi.finishEta || '—';
     $('incident').style.display = s.incidents.length ? 'inline-flex' : 'none';
 
     const header = `<tr style="color:var(--ink-3);font-size:11px;">
@@ -89,10 +85,6 @@
       }).addTo(parkedLayer);
     }
 
-    $('k-load').textContent = `${v.planned.boxes}박스`;
-    $('k-load').nextElementSibling.textContent = '금일 상차 예정';
-    $('k-done').textContent = `0/${v.planned.stops}착지`;
-    $('k-eta').textContent = '—';
     $('incident').style.display = 'none';
 
     $('stops').innerHTML = `<tr><td style="padding:14px 6px;color:var(--ink-3);">
