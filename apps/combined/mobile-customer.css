@@ -26,7 +26,7 @@ h1 { margin: 8px 0 18px; font-size: 28px; line-height: 1.3; letter-spacing: -1px
 .store-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 #account-name { font-size: 18px; overflow-wrap: anywhere; }
 .store-heading .btn { flex-shrink: 0; min-height: 44px; border: 1px solid var(--line); background: #fff; }
-.customer-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.customer-grid { display: grid; grid-template-columns: 390px minmax(0, 1fr); gap: 40px; align-items: start; }
 .tracking-column, .detail-column { min-width: 0; display: grid; gap: 16px; }
 .card { margin: 0; padding: 22px; border: 1px solid var(--line); }
 .card h2 { font-size: 16px; font-weight: 800; margin-bottom: 16px; }
@@ -109,4 +109,30 @@ body:has(#account-picker:not([hidden])) .mobile-shell { visibility: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Keep the customer screen at phone width while the timeline stays alongside it. */
+@media (min-width: 768px) {
+  .mobile-viewer { position: relative; width: 390px; height: 780px; padding: 8px; border-radius: 38px; background: #24262b; box-shadow: 0 12px 32px #17203320; }
+  .viewer-screen { height: 100%; overflow-y: auto; overscroll-behavior: contain; border-radius: 30px; padding: 38px 16px 24px; background: var(--bg); scrollbar-width: thin; }
+  .viewer-speaker { position: absolute; z-index: 2; top: 16px; left: 50%; transform: translateX(-50%); width: 76px; height: 6px; border-radius: 8px; background: #24262b; }
+  .mobile-viewer .push-banner { position: absolute; top: 28px; width: calc(100% - 32px); z-index: 100; }
+  .mobile-viewer h1 { font-size: 26px; }
+  .mobile-viewer #account-name { font-size: 16px; }
+  .mobile-viewer .customer-heading { margin-bottom: 20px; }
+  .mobile-viewer .card { padding: 18px; }
+  .mobile-viewer .map-card { padding: 10px; }
+  .mobile-viewer #map { height: 340px; }
+  .mobile-viewer .eta-hero .big { font-size: 28px; }
+}
+@media (max-width: 767px) {
+  .mobile-viewer, .viewer-screen, .tracking-column { display: contents; }
+  .viewer-speaker { display: none; }
+  .customer-heading { order: 1; margin-bottom: 4px; }
+  .order-checkout { order: 2; }
+  .eta-hero { order: 3; }
+  .map-card { order: 4; }
+  .detail-column { order: 5; }
+  .order-card { order: 6; }
+  #talk-card { order: 7; }
 }

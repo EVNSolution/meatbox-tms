@@ -1,5 +1,6 @@
 import { adaptSimulation, calculatedEtaText, customerHeadline, publishedEtaText } from './simulation-adapter.mjs';
 import { mountScenarioTools } from './scenario-tools.mjs';
+import { deliveryLinks, deliveryContext, deliveryChanges } from './delivery-review.mjs';
 
 const pages = {
   deliveries: { title: '배송 현황', eyebrow: '차량 1대의 배송 8곳', description: '배송 순서와 고객 공식 ETA, 계산 ETA를 함께 확인합니다.' },
@@ -11,7 +12,8 @@ const statusLabels = { pending: '대기', current: '배송 중', done: '완료',
 const state = {
   page: pageFromHash(location.hash),
   data: null,
-  selectedId: null,
+  selectedId: new URLSearchParams(location.search).get('id'),
+  lastChanges: null,
   query: '',
   status: 'all',
   tab: 'timeline',
@@ -47,7 +49,7 @@ function pageFromHash(hash) {
 }
 
 function redirectToLogin() {
-  location.replace('/login?next=%2Fcombined%2F');
+  location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search + location.hash));
 }
 
 function setConnection(kind, title, detail) {
@@ -92,7 +94,11 @@ function connect() {
     }
     if (message.type !== 'state') return;
     try {
-      state.data = adaptSimulation(message.state);
+      const next = adaptSimulation(message.state);
+      if (next.phase === 'unordered' && state.data?.phase !== 'unordered') state.lastChanges = null;
+      const changes = deliveryChanges(state.data, next);
+      if (changes) state.lastChanges = changes;
+      state.data = next;
       state.connected = true;
       setConnection('connected', '', '');
       render();
@@ -148,6 +154,7 @@ function render() {
   state.selectedId = selected?.id ?? null;
   renderPage();
   renderSummary();
+  renderReview(selected);
   renderDeliveries(visible, selected);
   renderControl(visible, selected);
   renderCustomer(visible, selected);
@@ -177,6 +184,40 @@ function renderSummary() {
     <div><span>차량</span><strong>${state.data.vehicle ? 1 : 0}</strong></div>
     <div><span>배송</span><strong>${deliveries.length}</strong></div>
     <div><span>완료</span><strong>${deliveries.filter(item => item.status === 'done').length}</strong></div>`;
+}
+
+function renderReview(selected) {
+  const context = deliveryContext(state.data, selected);
+  byId('review-vehicle').textContent = context.vehicle;
+  byId('review-customer').textContent = context.customer;
+  byId('review-context-note').textContent = context.note;
+  const links = deliveryLinks(selected?.id);
+  document.querySelectorAll('[data-mobile-link]').forEach(link => {
+    link.href = links.mobile;
+    link.setAttribute('aria-label', selected ? `${selected.name} 모바일 고객 화면 (새 탭)` : '모바일 고객 화면 (새 탭)');
+  });
+  byId('review-mobile').hidden = !selected;
+  const url = new URL(location.href);
+  if (selected && url.searchParams.get('id') !== selected.id) {
+    url.searchParams.set('id', selected.id);
+    history.replaceState(null, '', url);
+  }
+
+  const changes = state.lastChanges;
+  const own = changes?.deliveries[selected?.id]?.rows ?? [];
+  let rows = changes ? [...changes.global, ...own] : [];
+  if (changes && !rows.length) {
+    const other = Object.values(changes.deliveries)[0];
+    rows = other.rows.map(row => ({ ...row, label: `${other.name} · ${row.label}` }));
+  }
+  const first = rows[0];
+  byId('review-change-summary').textContent = changes && first
+    ? `최근 변동 ${changes.time} · ${first.label}: ${first.before} → ${first.after}`
+    : '단계를 진행하면 전후 변화를 확인할 수 있습니다.';
+  byId('review-change-note').textContent = changes && selected && !own.length
+    ? `보고 있는 ${selected.name}의 상태와 고객 안내는 이 변동에서 바뀌지 않았습니다.`
+    : changes ? '선택한 배송과 전체 진행의 변경 내용입니다.' : '첫 접속 이전의 변경 이력은 여기에 표시하지 않습니다.';
+  byId('review-change-rows').innerHTML = rows.map(row => `<li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.before)} <span aria-label="에서">→</span> ${escapeHtml(row.after)}</span></li>`).join('');
 }
 
 function renderDeliveries(visible, selected) {
