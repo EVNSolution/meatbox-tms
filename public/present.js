@@ -9,6 +9,10 @@
     const b = e.target.closest('button[data-v]');
     if (b) MB.send('speed', { value: Number(b.dataset.v) });
   });
+  $('p-stops').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-skip]');
+    if (b) MB.send('toggle_skip', { stopId: b.dataset.skip });
+  });
 
   const PHASE = {
     idle: ['대기', 'gray'],
@@ -44,6 +48,22 @@
     $('p-done').textContent = `${s.kpi.stopsDone}/${s.kpi.stopsTotal}`;
     $('p-boxes').textContent = `${s.kpi.boxesTotal - s.kpi.boxesDelivered}`;
     $('p-eta').textContent = s.kpi.finishEta || '—';
+
+    $('p-stops').innerHTML = s.order
+      .map((o, i) => {
+        let act;
+        if (o.id === s.customerStopId) act = '<span class="pill amber" style="font-size:10.5px;">시연 고객</span>';
+        else if (o.status === 'pending') act = `<button class="btn ghost sm" data-skip="${o.id}">스킵</button>`;
+        else if (o.status === 'skipped') act = `<button class="btn dark sm" data-skip="${o.id}">복원</button>`;
+        else if (o.status === 'done') act = '<span class="pill green" style="font-size:10.5px;">완료</span>';
+        else act = '<span class="pill red" style="font-size:10.5px;">배송 중</span>';
+        return `<div class="ps-row ${o.status}">
+          <span class="no">${o.status === 'done' ? '✓' : o.status === 'skipped' ? '✕' : i + 1}</span>
+          <span class="nm">${o.name}</span><span class="bx">${o.boxes}박스</span>
+          <span class="act">${act}</span>
+        </div>`;
+      })
+      .join('');
 
     $('log').innerHTML = s.events
       .slice(0, 7)

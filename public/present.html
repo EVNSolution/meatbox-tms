@@ -24,6 +24,20 @@
   .seg { display: flex; background: #eef0f5; border-radius: 10px; padding: 3px; flex: 1; }
   .seg button { flex: 1; border: 0; background: transparent; border-radius: 8px; padding: 10px 0; font-weight: 800; font-size: 13px; color: var(--ink-3); cursor: pointer; font-family: inherit; }
   .seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+  .ps-row { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px dashed #edeef3; font-size: 13px; }
+  .ps-row:last-child { border-bottom: 0; }
+  .ps-row .no {
+    width: 22px; height: 22px; border-radius: 50%; flex: 0 0 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: #fff; background: var(--ink-3);
+  }
+  .ps-row.done .no { background: var(--green); }
+  .ps-row.current .no { background: var(--red); }
+  .ps-row.skipped .no { background: #c3c7d1; }
+  .ps-row.skipped .nm { color: var(--ink-3); text-decoration: line-through; }
+  .ps-row .nm { font-weight: 700; }
+  .ps-row .bx { font-size: 11.5px; color: var(--ink-3); }
+  .ps-row .act { margin-left: auto; }
   .log { font-size: 12px; line-height: 1.55; }
   .log div { padding: 3px 0; border-bottom: 1px dashed #edeef3; display: flex; gap: 8px; }
   .log div:last-child { border-bottom: 0; }
@@ -67,6 +81,11 @@
       <button class="btn dark" id="traffic">🚨 교통사고 주입</button>
       <button class="btn dark" id="dwell">⏱ 정차 지연 주입</button>
     </div>
+  </div>
+
+  <div class="card" style="margin:0 0 10px;">
+    <h3>배송지 관리 <span style="font-weight:400;color:var(--ink-3);">— 스킵 시 경로·ETA 재계산</span></h3>
+    <div id="p-stops"></div>
   </div>
 
   <div class="card" style="margin:0 0 12px;">

@@ -46,6 +46,7 @@
         let right;
         if (o.status === 'done') right = `<span class="stamp">✓ ${o.deliveredTime}</span>`;
         else if (o.status === 'current') right = '<span class="now pill red">배송 중</span>';
+        else if (o.status === 'skipped') right = '<span class="now pill gray">스킵</span>';
         else {
           right = `<span class="ud">
             <button class="btn ghost sm" data-stop="${o.id}" data-dir="up">▲</button>

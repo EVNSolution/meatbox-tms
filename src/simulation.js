@@ -84,13 +84,13 @@ class Simulation {
 
   // ---------- 조회 헬퍼 ----------
   currentIndex() {
-    // order 상에서 아직 완료되지 않은 첫 정차지 index
-    return this.order.findIndex((id) => this.stops[id].status !== 'done');
+    // order 상에서 아직 완료되지 않은(스킵 제외) 첫 정차지 index
+    return this.order.findIndex((id) => this.stops[id].status !== 'done' && this.stops[id].status !== 'skipped');
   }
 
   remainingIds() {
     const i = this.currentIndex();
-    return i === -1 ? [] : this.order.slice(i);
+    return i === -1 ? [] : this.order.slice(i).filter((id) => this.stops[id].status !== 'skipped');
   }
 
   currentLegKey() {
@@ -312,6 +312,23 @@ class Simulation {
     this.emit();
   }
 
+  // 발표 컨트롤: 배송지 스킵/복원 토글. 시연 고객 정차지와 진행·완료된 정차지는 불가.
+  toggleSkip(stopId) {
+    const stop = this.stops[stopId];
+    if (!stop || stopId === CUSTOMER_STOP) return;
+    if (stop.status === 'pending') {
+      stop.status = 'skipped';
+      this.logEvent(`발표 컨트롤: ${stop.name} 배송지 스킵 — 경로에서 제외`, 'system');
+    } else if (stop.status === 'skipped') {
+      stop.status = 'pending';
+      this.logEvent(`발표 컨트롤: ${stop.name} 배송지 복원 — 경로에 재포함`, 'system');
+    } else {
+      return;
+    }
+    if (this.phase === 'delivering') this.recalcEta('배송 경로 변경');
+    this.emit();
+  }
+
   completeCurrentStop() {
     // 기사 앱 하차 완료 스캔 — 남은 하차 시간 건너뜀
     if (this.phase === 'delivering' && this.truck.dwellRemaining > 0) {
@@ -416,7 +433,7 @@ class Simulation {
     const leg = currentLeg ? routeData.legs[currentLeg] : null;
     const etas = this.stopEtas();
     this.latestEtas = etas;
-    const lastId = this.order[this.order.length - 1];
+    const lastId = [...this.order].reverse().find((id) => this.stops[id].status !== 'skipped');
     return {
       phase: this.phase,
       simTime: this.simTime,
@@ -456,7 +473,7 @@ class Simulation {
         boxesTotal: 70,
         boxesDelivered: this.order.filter((id) => this.stops[id].status === 'done').reduce((s, id) => s + this.stops[id].boxes, 0),
         stopsDone: this.order.filter((id) => this.stops[id].status === 'done').length,
-        stopsTotal: this.order.length,
+        stopsTotal: this.order.filter((id) => this.stops[id].status !== 'skipped').length,
         globalFactor: this.globalFactor,
         etaAccuracy: 82.4, // 최근 30일 ±15분 적중률(데모 고정값)
         finishEta: etas[lastId]

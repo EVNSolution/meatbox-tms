@@ -45,6 +45,7 @@ function handle(msg) {
       case 'inject_traffic': sim.injectTraffic(); break;
       case 'inject_dwell': sim.injectDwell(); break;
       case 'reorder': sim.reorder(String(msg.stopId), msg.dir === 'up' ? 'up' : 'down'); break;
+      case 'toggle_skip': sim.toggleSkip(String(msg.stopId)); break;
       case 'complete_stop': sim.completeCurrentStop(); break;
   }
 }

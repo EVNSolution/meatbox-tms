@@ -9,7 +9,7 @@
     delivering: ['배송 중', 'red'],
     done: ['금일 완료', 'green'],
   };
-  const STATUS = { pending: ['대기', 'gray'], current: ['배송 중', 'red'], done: ['완료', 'green'] };
+  const STATUS = { pending: ['대기', 'gray'], current: ['배송 중', 'red'], done: ['완료', 'green'], skipped: ['스킵', 'gray'] };
 
   let selected = 'V1';
   let lastState = null;

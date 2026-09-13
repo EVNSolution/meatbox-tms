@@ -50,7 +50,8 @@ window.MB = (() => {
 
   // 경로/정차지/차량을 그린다. 순서·상태가 바뀔 때만 폴리라인을 다시 그림.
   function renderRoute(ctx, rd, state, { showAll = true } = {}) {
-    const seq = ['MFC', ...state.order.map((s) => s.id)];
+    const active = state.order.filter((s) => s.status !== 'skipped');
+    const seq = ['MFC', ...active.map((s) => s.id)];
     const key = state.order.map((s) => s.id + s.status[0]).join('') + '|' + state.truck.fromId + '>' + state.truck.toId;
 
     if (ctx.key !== key) {
@@ -60,7 +61,7 @@ window.MB = (() => {
       for (let i = 0; i < seq.length - 1; i++) {
         const leg = rd.legs[`${seq[i]}>${seq[i + 1]}`];
         if (!leg) continue;
-        const dest = state.order[i];
+        const dest = active[i];
         let style;
         if (dest.status === 'done') style = { color: '#b9bfcc', weight: 3, opacity: 0.9 };
         else if (dest.status === 'current') style = { color: '#d32f2f', weight: 5, opacity: 0.95 };
@@ -76,9 +77,11 @@ window.MB = (() => {
       state.order.forEach((stop, i) => {
         const p = rd.points.find((x) => x.id === stop.id);
         const cls = `marker-stop ${stop.status}`;
+        const label = stop.status === 'done' ? '✓' : stop.status === 'skipped' ? '✕' : i + 1;
+        const tip = stop.status === 'skipped' ? `${stop.name} (스킵)` : `${i + 1}. ${stop.name} (${stop.boxes}박스)`;
         L.marker([p.lat, p.lng], {
-          icon: L.divIcon({ className: '', html: `<div class="${cls}">${stop.status === 'done' ? '✓' : i + 1}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }),
-        }).addTo(ctx.routeLayer).bindTooltip(`${i + 1}. ${stop.name} (${stop.boxes}박스)`, { direction: 'top' });
+          icon: L.divIcon({ className: '', html: `<div class="${cls}">${label}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }),
+        }).addTo(ctx.routeLayer).bindTooltip(tip, { direction: 'top' });
       });
     }
 
