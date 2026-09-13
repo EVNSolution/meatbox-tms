@@ -3,15 +3,6 @@
   const ctx = MB.initMap(document.getElementById('map'));
   const $ = (id) => document.getElementById(id);
 
-  $('start').addEventListener('click', () => MB.send('start'));
-  $('reset').addEventListener('click', () => MB.send('reset'));
-  $('traffic').addEventListener('click', () => MB.send('inject_traffic'));
-  $('dwell').addEventListener('click', () => MB.send('inject_dwell'));
-  $('speed').addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-v]');
-    if (b) MB.send('speed', { value: Number(b.dataset.v) });
-  });
-
   const PHASE = {
     idle: ['대기', 'gray'],
     preparing: ['MFC 출고 중', 'amber'],
@@ -25,13 +16,6 @@
     const [pl, pc] = PHASE[s.phase];
     $('phase').textContent = pl;
     $('phase').className = `pill ${pc} phase`;
-
-    $('start').disabled = s.phase !== 'idle';
-    $('traffic').disabled = s.phase !== 'delivering' || s.incidents.length > 0;
-    $('dwell').disabled = s.phase !== 'delivering';
-    for (const b of $('speed').querySelectorAll('button')) {
-      b.classList.toggle('on', Number(b.dataset.v) === s.speed);
-    }
 
     // KPI
     $('k-load').textContent = `${s.kpi.boxesTotal - s.kpi.boxesDelivered}/${s.kpi.boxesTotal}박스`;

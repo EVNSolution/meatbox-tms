@@ -11,7 +11,7 @@ const app = express();
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/api/route-data', (_req, res) => res.json(routeData));
-for (const view of ['customer', 'driver', 'control']) {
+for (const view of ['customer', 'driver', 'control', 'present']) {
   app.get(`/${view}`, (_req, res) => res.sendFile(path.join(__dirname, 'public', `${view}.html`)));
 }
 
