@@ -15,7 +15,8 @@
   });
 
   const PHASE = {
-    idle: ['대기', 'gray'],
+    unordered: ['고객 주문 대기', 'gray'],
+    idle: ['주문 접수됨', 'gray'],
     preparing: ['MFC 출고 중', 'amber'],
     delivering: ['배송 중', 'red'],
     done: ['금일 완료', 'green'],
@@ -29,7 +30,10 @@
     $('incident').style.display = s.incidents.length ? 'inline-flex' : 'none';
 
     const start = $('start');
-    if (s.nextStep) {
+    if (s.phase === 'unordered') {
+      start.disabled = true;
+      start.textContent = '🛒 고객 주문 대기 — 고객 앱에서 주문하기';
+    } else if (s.nextStep) {
       start.disabled = false;
       start.textContent = `▶ 다음 단계: ${s.nextStep.label}`;
     } else if (s.phase === 'delivering') {

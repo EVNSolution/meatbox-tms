@@ -3,7 +3,7 @@
   const { map } = MB.initMap(document.getElementById('map'), { scrollWheelZoom: false });
 
   const $ = (id) => document.getElementById(id);
-  let lastNotifId = null;
+  let lastNotifCount = null;
   let lastEtaKey = null;
   let pushTimer = null;
   let truckMarker = null;
@@ -49,7 +49,34 @@
     pushTimer = setTimeout(() => el.classList.remove('show'), 5200);
   }
 
+  let wasUnordered = null;
+  document.getElementById('place-order').addEventListener('click', () => MB.send('place_order'));
+
   MB.connect((s) => {
+    // 주문 전: 주문 화면 / 주문 후: 트래킹 화면
+    const unordered = s.phase === 'unordered';
+    $('order-cta').hidden = !unordered;
+    for (const id of ['eta-card', 'map-card', 'timeline-card', 'talk-card']) $(id).hidden = unordered;
+    if (wasUnordered && !unordered) {
+      // 숨김 상태에서 초기화된 지도 크기 보정
+      fitted = false;
+      setTimeout(() => map.invalidateSize(), 60);
+    }
+    wasUnordered = unordered;
+
+    // 알림 (푸시 배너 + 알림톡 피드) — 새로 늘어난 알림만 배너로 표시
+    if (lastNotifCount !== null && s.notifications.length > lastNotifCount) {
+      showPush(s.notifications[s.notifications.length - 1]);
+    }
+    lastNotifCount = s.notifications.length;
+    $('talk-list').innerHTML = s.notifications.length
+      ? s.notifications
+          .map((n) => `<div class="bubble"><div class="bt">${n.title}</div>${n.body}<div class="bwhen">${n.time}</div></div>`)
+          .join('')
+      : '<div class="empty">아직 도착한 알림이 없어요</div>';
+
+    if (unordered) return;
+
     // 상태 배지
     const st = s.customerStatus;
     const pill = $('status-pill');
@@ -90,18 +117,5 @@
 
     // 지도
     updateMap(s);
-
-    // 알림 (푸시 배너 + 알림톡 피드)
-    if (s.notifications.length) {
-      const latest = s.notifications[s.notifications.length - 1];
-      if (lastNotifId !== null && latest.id > lastNotifId) showPush(latest);
-      lastNotifId = latest.id;
-      $('talk-list').innerHTML = s.notifications
-        .map((n) => `<div class="bubble"><div class="bt">${n.title}</div>${n.body}<div class="bwhen">${n.time}</div></div>`)
-        .join('');
-    } else {
-      lastNotifId = null;
-      $('talk-list').innerHTML = '<div class="empty">아직 도착한 알림이 없어요</div>';
-    }
   });
 })();

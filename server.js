@@ -40,6 +40,7 @@ wss.on('connection', (ws) => {
 function handle(msg) {
   switch (msg.type) {
       case 'advance': sim.advance(); break;
+      case 'place_order': sim.placeOrder(); break;
       case 'reset': sim.reset(); break;
       case 'speed': sim.setSpeed(Number(msg.value)); break;
       case 'inject_traffic': sim.injectTraffic(); break;

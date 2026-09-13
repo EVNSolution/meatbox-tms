@@ -4,7 +4,8 @@
   const $ = (id) => document.getElementById(id);
 
   const PHASE = {
-    idle: ['대기', 'gray'],
+    unordered: ['주문 대기', 'gray'],
+    idle: ['주문 접수', 'gray'],
     preparing: ['MFC 출고 중', 'amber'],
     delivering: ['배송 중', 'red'],
     done: ['금일 완료', 'green'],

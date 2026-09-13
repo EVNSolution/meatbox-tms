@@ -13,8 +13,8 @@
     // 현재 목적지 카드
     const current = s.order.find((o) => o.status === 'current');
     const navState = $('nav-state');
-    if (s.phase === 'idle' || s.phase === 'preparing') {
-      navState.textContent = s.phase === 'idle' ? '배차 대기' : 'MFC 상차 중';
+    if (s.phase === 'unordered' || s.phase === 'idle' || s.phase === 'preparing') {
+      navState.textContent = s.phase === 'preparing' ? 'MFC 상차 중' : '배차 대기';
       navState.className = 'pill gray';
       $('nav-dest').textContent = '가락 MFC';
       $('nav-addr').textContent = '서울 송파구 양재대로 932';

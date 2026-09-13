@@ -51,7 +51,8 @@ class Simulation {
   }
 
   reset() {
-    this.phase = 'idle';                    // idle | preparing | delivering | done
+    this.phase = 'unordered';               // unordered | idle | preparing | delivering | done
+    this.orderedAt = null;
     this.simTime = (5 * 60 + 45) * MIN;     // 05:45
     this.speed = 5;
     this.order = [...DEFAULT_ORDER];
@@ -185,7 +186,7 @@ class Simulation {
     let baseTime = this.simTime;
     if (this.phase === 'delivering') {
       inputs = this.etaInputs();
-    } else if (this.phase === 'idle' || this.phase === 'preparing') {
+    } else if (this.phase === 'unordered' || this.phase === 'idle' || this.phase === 'preparing') {
       inputs = { fromId: 'MFC', remaining: [...this.order], legProgress: 0, dwellRemaining: 0 };
       baseTime = Math.max(this.simTime, (6 * 60 + 30) * MIN); // 06:30 출발 가정
     } else {
@@ -218,6 +219,7 @@ class Simulation {
       const last = this.prepDone[this.prepDone.length - 1];
       return { key: last.key, label: last.label };
     }
+    if (this.phase === 'unordered') return { key: 'unordered', label: '주문 전' };
     return { key: 'paid', label: '결제 완료' };
   }
 
@@ -228,9 +230,10 @@ class Simulation {
       const d = this.prepDone.find((s) => s.key === key);
       return d ? fmtTime(d.at) : null;
     };
+    const orderedTime = this.orderedAt != null ? fmtTime(this.orderedAt) : null;
     const items = [
-      { label: '주문 접수', time: '어제 21:38' },
-      { label: '결제 완료', time: '어제 21:38' },
+      { label: '주문 접수', time: orderedTime },
+      { label: '결제 완료', time: orderedTime },
       { label: '피킹 중', time: prepTime('picking') },
       { label: '라벨 부착', time: prepTime('labeling') },
       { label: '상차 대기', time: prepTime('staged') },
@@ -247,9 +250,19 @@ class Simulation {
   }
 
   // ---------- 시나리오 제어 ----------
+  // 고객 앱에서 주문 — 시나리오의 시작점
+  placeOrder() {
+    if (this.phase !== 'unordered') return;
+    this.phase = 'idle';
+    this.orderedAt = this.simTime;
+    this.logEvent('고객 주문 접수 — 주문번호 MB-20260913-84721 (12박스) · 결제 완료', 'scan');
+    this.notify('주문이 접수되었습니다 🧾', '결제가 완료되었어요. 오늘 새벽 배송으로 빠르게 준비할게요!');
+    this.emit();
+  }
+
   // 리모컨에서 한 단계씩 수동 진행: 피킹 중 → 라벨 부착 → 상차 대기 → 배송 출발
   advance() {
-    if (this.phase === 'delivering' || this.phase === 'done') return;
+    if (this.phase !== 'idle' && this.phase !== 'preparing') return;
     const step = PREP_STEPS[this.prepDone.length];
     if (!step) return;
     if (this.phase === 'idle') {
