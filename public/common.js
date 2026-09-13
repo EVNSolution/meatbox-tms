@@ -2,6 +2,7 @@
 window.MB = (() => {
   let ws = null;
   let onStateCb = null;
+  let bootId = null;
 
   function connect(onState) {
     onStateCb = onState;
@@ -13,6 +14,11 @@ window.MB = (() => {
     ws = new WebSocket(`${proto}://${location.host}`);
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
+      // 서버가 재배포/재시작되면 열린 화면을 자동 새로고침 (구버전 코드로 신버전 상태를 읽는 사고 방지)
+      if (msg.boot) {
+        if (bootId && bootId !== msg.boot) { location.reload(); return; }
+        bootId = msg.boot;
+      }
       if (msg.type === 'state' && onStateCb) onStateCb(msg.state);
     };
     ws.onclose = () => setTimeout(open, 1500);

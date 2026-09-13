@@ -7,6 +7,7 @@ const { Simulation } = require('./src/simulation');
 const routeData = require('./src/route-data');
 
 const PORT = process.env.PORT || 3000;
+const BOOT_ID = Date.now(); // 배포/재시작 감지용 — 값이 바뀌면 클라이언트가 자동 새로고침
 const app = express();
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -21,14 +22,14 @@ const wss = new WebSocketServer({ server });
 let latest = null;
 const sim = new Simulation((state) => {
   latest = state;
-  const msg = JSON.stringify({ type: 'state', state });
+  const msg = JSON.stringify({ type: 'state', state, boot: BOOT_ID });
   for (const client of wss.clients) {
     if (client.readyState === 1) client.send(msg);
   }
 });
 
 wss.on('connection', (ws) => {
-  if (latest) ws.send(JSON.stringify({ type: 'state', state: latest }));
+  if (latest) ws.send(JSON.stringify({ type: 'state', state: latest, boot: BOOT_ID }));
   ws.on('message', (raw) => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
