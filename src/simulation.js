@@ -1,6 +1,6 @@
 // 배송 시뮬레이션 엔진 — 서버가 단일 상태를 소유하고 모든 화면이 구독한다.
 const routeData = require('./route-data');
-const { secondsUntilArrival, roundTo5Min, BASE_ROAD_FACTOR } = require('./eta');
+const { roundTo5Min, BASE_ROAD_FACTOR } = require('./eta');
 
 const MIN = 60 * 1000;
 const SERVICE_TIME_SEC = 240;      // 정차지당 하차·검수 4분
@@ -8,14 +8,36 @@ const TICK_REAL_MS = 500;
 const CUSTOMER_STOP = 'S5';
 
 const STOP_INFO = {
-  S1: { boxes: 10, address: '서울 송파구 법원로 128' },
-  S2: { boxes: 8,  address: '서울 송파구 충민로 66 가든파이브' },
-  S3: { boxes: 9,  address: '서울 송파구 위례성대로 22' },
-  S4: { boxes: 7,  address: '서울 송파구 백제고분로 45길 19' },
-  S5: { boxes: 12, address: '서울 송파구 석촌호수로 268' },
-  S6: { boxes: 8,  address: '서울 강남구 봉은사로 524' },
-  S7: { boxes: 9,  address: '서울 강남구 테헤란로 151' },
-  S8: { boxes: 7,  address: '서울 강남구 학동로 305' },
+  S1: { boxes: 10, address: '서울 송파구 법원로 128', items: [
+    { icon: '🥩', name: '한돈 삼겹살 구이용 2kg (냉장)', opt: '두께 16mm', qty: 4 },
+    { icon: '🥩', name: '한우 양념갈비 2kg (냉장)', opt: '숙성 양념', qty: 3 },
+    { icon: '🍖', name: '갈비탕용 마구리 3kg (냉동)', opt: '벌크', qty: 3 } ] },
+  S2: { boxes: 8,  address: '서울 송파구 충민로 66 가든파이브', items: [
+    { icon: '🥩', name: '한우 등심 1++ No.9 1kg (냉장)', opt: '구이용 슬라이스', qty: 4 },
+    { icon: '🥩', name: '한우 차돌박이 1kg (냉동)', opt: '슬라이스', qty: 2 },
+    { icon: '🍖', name: '한우 사골 5kg (냉동)', opt: '벌크', qty: 2 } ] },
+  S3: { boxes: 9,  address: '서울 송파구 위례성대로 22', items: [
+    { icon: '🥩', name: '한돈 목살 구이용 2kg (냉장)', opt: '두께 14mm', qty: 4 },
+    { icon: '🥩', name: '한돈 갈매기살 1kg (냉장)', opt: '손질', qty: 3 },
+    { icon: '🥩', name: '한돈 항정살 1kg (냉장)', opt: '구이용', qty: 2 } ] },
+  S4: { boxes: 7,  address: '서울 송파구 백제고분로 45길 19', items: [
+    { icon: '🥩', name: '한돈 껍데기 삼겹 2kg (냉장)', opt: '구이용', qty: 3 },
+    { icon: '🥩', name: '한돈 가브리살 1kg (냉장)', opt: '손질', qty: 2 },
+    { icon: '🍖', name: '한돈 막창 2kg (냉동)', opt: '벌크', qty: 2 } ] },
+  S5: { boxes: 12, address: '서울 송파구 석촌호수로 268', items: [
+    { icon: '🥩', name: '한돈 삼겹살 구이용 2kg (냉장)', opt: '껍데기 제거 · 두께 16mm', qty: 4 },
+    { icon: '🥩', name: '한우 등심 1++ No.9 1kg (냉장)', opt: '구이용 슬라이스', qty: 3 },
+    { icon: '🍗', name: '무항생제 닭다리살 3kg (냉장)', opt: '정육 · 벌크', qty: 2 } ] },
+  S6: { boxes: 8,  address: '서울 강남구 봉은사로 524', items: [
+    { icon: '🥩', name: '한우 안심 1++ 1kg (냉장)', opt: '스테이크 컷', qty: 3 },
+    { icon: '🥩', name: '한우 채끝 1+ 1kg (냉장)', opt: '구이용', qty: 3 },
+    { icon: '🍖', name: '한우 우족 4kg (냉동)', opt: '벌크', qty: 2 } ] },
+  S7: { boxes: 9,  address: '서울 강남구 테헤란로 151', items: [
+    { icon: '🥩', name: '한돈 앞다리 불백용 3kg (냉장)', opt: '슬라이스', qty: 5 },
+    { icon: '🥩', name: '한돈 목살 2kg (냉장)', opt: '두께 12mm', qty: 4 } ] },
+  S8: { boxes: 7,  address: '서울 강남구 학동로 305', items: [
+    { icon: '🥩', name: '한돈 갈비 양념용 3kg (냉장)', opt: '절단', qty: 4 },
+    { icon: '🥩', name: '한돈 삼겹살 2kg (냉장)', opt: '두께 16mm', qty: 3 } ] },
 };
 const DEFAULT_ORDER = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'];
 
@@ -71,10 +93,10 @@ class Simulation {
     this.incidents = [];
     this.events = [];
     this.notifications = [];
-    this.eta = null;
-    this.notifiedNearby = false;
+    this.officialEtas = {};      // stopId → 고객 노출용 공식 ETA (이벤트 시점에만 갱신)
+    this.nearbyNotified = new Set();
     this.logEvent('시나리오 대기 — 가락 MFC 상차 완료 70박스 / 8개 착지', 'system');
-    this.recalcEta('초기 산출', { silent: true });
+    this.recalcEtas('초기 산출', { silent: true });
     this.emit();
   }
 
@@ -129,53 +151,34 @@ class Simulation {
     if (this.events.length > 120) this.events.shift();
   }
 
-  notify(title, body) {
-    // 앱 푸시 + 카카오 알림톡 두 채널 동시 발송(데모)
-    const base = { id: this.notifications.length + 1, ts: this.simTime, time: fmtTime(this.simTime), title, body };
-    this.notifications.push(base);
-    this.logEvent(`고객 알림 발송(푸시·알림톡): ${title}`, 'notify');
+  // 특정 고객 계정(정차지)에게 앱 푸시 + 카카오 알림톡 발송(데모)
+  notifyStop(stopId, title, body, log = true) {
+    this.notifications.push({
+      id: this.notifications.length + 1, stopId,
+      ts: this.simTime, time: fmtTime(this.simTime), title, body,
+    });
+    if (log) this.logEvent(`고객 알림 발송(푸시·알림톡): ${this.stops[stopId].name} — ${title}`, 'notify');
   }
 
   // ---------- ETA ----------
-  recalcEta(reason, { silent = false, forceNotify = false } = {}) {
-    const cust = this.stops[CUSTOMER_STOP];
-    if (cust.status === 'done') { this.eta = null; return; }
-
-    const departed = this.phase === 'delivering';
-    let seconds;
-    if (departed) {
-      const inputs = this.etaInputs();
-      if (!inputs.remaining.includes(CUSTOMER_STOP)) return; // 고객 정차지 하차 중 — 마지막 ETA 유지
-      seconds = secondsUntilArrival({
-        targetStopId: CUSTOMER_STOP,
-        ...inputs,
-        legs: routeData.legs,
-        serviceTimeSec: SERVICE_TIME_SEC,
-        legFactors: this.legFactors,
-        globalFactor: this.globalFactor,
-      });
-    } else {
-      const remaining = [...this.order];
-      // 출발 전: 06:30 출발 가정으로 산출
-      const departMs = (6 * 60 + 30) * MIN;
-      seconds = secondsUntilArrival({
-        targetStopId: CUSTOMER_STOP, remaining, fromId: 'MFC', legProgress: 0, dwellRemaining: 0,
-        legs: routeData.legs, serviceTimeSec: SERVICE_TIME_SEC,
-        legFactors: this.legFactors, globalFactor: this.globalFactor,
-      }) + Math.max(0, (departMs - this.simTime) / 1000);
-    }
-
-    const arrival = this.simTime + seconds * 1000;
-    const time = roundTo5Min(arrival);
-    const prev = this.eta;
-    const deltaMin = prev ? Math.round((arrival - prev.arrival) / MIN) : 0;
-
-    this.eta = { arrival, time, reason, updatedAt: this.simTime, deltaMin };
-    if (!silent && prev) {
-      this.logEvent(`ETA 재계산(${reason}): ${fmtTime(time)} 도착 예정 (${deltaMin >= 0 ? '+' : ''}${deltaMin}분)`, 'eta');
-      if (Math.abs(deltaMin) >= 10 || forceNotify) {
-        this.notify('배송 예정 시간이 변경되었습니다', `새 도착 예정 시간: ${fmtTime(time)} (사유: ${reason})`);
+  // 전 고객 계정의 공식 ETA를 일괄 재계산. 변동 10분 이상(또는 forceNotify)인 계정에게 알림 발송.
+  recalcEtas(reason, { silent = false, forceNotify = false } = {}) {
+    const etas = this.stopEtas();
+    let notified = 0;
+    for (const id of this.order) {
+      const arrival = etas[id];
+      if (arrival == null) continue; // 완료·스킵·하차 중 정차지는 마지막 공식 ETA 유지
+      const time = roundTo5Min(arrival);
+      const prev = this.officialEtas[id];
+      const deltaMin = prev ? Math.round((arrival - prev.arrival) / MIN) : 0;
+      this.officialEtas[id] = { arrival, time, reason, deltaMin, updatedAt: this.simTime };
+      if (!silent && prev && (forceNotify || Math.abs(deltaMin) >= 10)) {
+        this.notifyStop(id, '배송 예정 시간이 변경되었습니다', `새 도착 예정 시간: ${fmtTime(time)} (사유: ${reason})`, false);
+        notified++;
       }
+    }
+    if (!silent) {
+      this.logEvent(`ETA 재계산(${reason})${notified ? ` — 고객 알림 ${notified}건 발송(푸시·알림톡)` : ''}`, 'eta');
     }
   }
 
@@ -207,30 +210,34 @@ class Simulation {
   }
 
   // ---------- 고객 노출 상태 ----------
-  customerStatus() {
-    const cust = this.stops[CUSTOMER_STOP];
-    if (cust.status === 'done') return { key: 'delivered', label: '배송 완료' };
+  customerStatusFor(id) {
+    const stop = this.stops[id];
+    if (stop.status === 'done') return { key: 'delivered', label: '배송 완료' };
+    if (stop.status === 'skipped') return { key: 'held', label: '배송 보류' };
     if (this.phase === 'delivering') {
       const remaining = this.remainingIds();
-      if (remaining.indexOf(CUSTOMER_STOP) === 0) return { key: 'nearby', label: '인근 배송 중' };
+      if (remaining.indexOf(id) === 0) return { key: 'nearby', label: '인근 배송 중' };
       return { key: 'shipping', label: '배송 중' };
     }
     if (this.prepDone.length > 0) {
       const last = this.prepDone[this.prepDone.length - 1];
       return { key: last.key, label: last.label };
     }
-    if (this.phase === 'unordered') return { key: 'unordered', label: '주문 전' };
+    if (this.phase === 'unordered' && id === CUSTOMER_STOP) return { key: 'unordered', label: '주문 전' };
     return { key: 'paid', label: '결제 완료' };
   }
 
-  timeline() {
-    const cust = this.stops[CUSTOMER_STOP];
-    const st = this.customerStatus();
+  timelineFor(id) {
+    const stop = this.stops[id];
+    const st = this.customerStatusFor(id);
     const prepTime = (key) => {
       const d = this.prepDone.find((s) => s.key === key);
       return d ? fmtTime(d.at) : null;
     };
-    const orderedTime = this.orderedAt != null ? fmtTime(this.orderedAt) : null;
+    // 주인공 계정은 데모에서 직접 주문, 나머지 7곳은 전날 저녁 주문 완료 상태
+    const orderedTime = id === CUSTOMER_STOP
+      ? (this.orderedAt != null ? fmtTime(this.orderedAt) : null)
+      : '어제 21:38';
     const items = [
       { label: '주문 접수', time: orderedTime },
       { label: '결제 완료', time: orderedTime },
@@ -239,7 +246,7 @@ class Simulation {
       { label: '상차 대기', time: prepTime('staged') },
       { label: '배송 중', time: prepTime('departed') },
       { label: '인근 배송 중', time: st.key === 'nearby' ? fmtTime(this.simTime) : null },
-      { label: '배송 완료', time: cust.deliveredAt ? fmtTime(cust.deliveredAt) : null },
+      { label: '배송 완료', time: stop.deliveredAt ? fmtTime(stop.deliveredAt) : null },
     ];
     const stepOrder = ['ordered', 'paid', 'picking', 'labeling', 'staged', 'shipping', 'nearby', 'delivered'];
     const curIdx = stepOrder.indexOf(st.key);
@@ -256,7 +263,7 @@ class Simulation {
     this.phase = 'idle';
     this.orderedAt = this.simTime;
     this.logEvent('고객 주문 접수 — 주문번호 MB-20260913-84721 (12박스) · 결제 완료', 'scan');
-    this.notify('주문이 접수되었습니다 🧾', '결제가 완료되었어요. 오늘 새벽 배송으로 빠르게 준비할게요!');
+    this.notifyStop(CUSTOMER_STOP, '주문이 접수되었습니다 🧾', '결제가 완료되었어요. 오늘 새벽 배송으로 빠르게 준비할게요!');
     this.emit();
   }
 
@@ -274,11 +281,17 @@ class Simulation {
     this.logEvent(`구간 스캔: ${step.label}`, 'scan');
     if (step.key === 'departed') {
       this.phase = 'delivering';
-      this.beginLeg(this.order[0]);
-      this.recalcEta('배송 출발', { silent: true });
-      this.notify('배송이 출발했습니다 🚚', `주문하신 상품이 가락 MFC에서 출발했어요. 도착 예정 ${fmtTime(this.eta.time)}`);
+      this.beginLeg(this.remainingIds()[0]);
+      this.recalcEtas('배송 출발', { silent: true });
+      // 전 고객 계정에 각자의 도착 예정 시간으로 출발 알림
+      const targets = this.remainingIds();
+      for (const id of targets) {
+        const eta = this.officialEtas[id];
+        this.notifyStop(id, '배송이 출발했습니다 🚚', `주문하신 상품이 가락 MFC에서 출발했어요. 도착 예정 ${eta ? fmtTime(eta.time) : ''}`, false);
+      }
+      this.logEvent(`고객 알림 발송(푸시·알림톡): 배송 출발 안내 ${targets.length}건`, 'notify');
     } else {
-      this.recalcEta(step.label, { silent: true });
+      this.recalcEtas(step.label, { silent: true });
     }
     this.emit();
   }
@@ -296,7 +309,7 @@ class Simulation {
     this.globalFactor = 1.4;
     this.incidents.push({ at: this.simTime, label: '탄천대로 3중 추돌 사고' });
     this.logEvent('실시간 교통정보 수신(티맵·네이버): 탄천대로 사고 — 구간 지연 반영', 'incident');
-    this.recalcEta('실시간 교통 지연(사고)', { forceNotify: true });
+    this.recalcEtas('실시간 교통 지연(사고)', { forceNotify: true });
     this.emit();
   }
 
@@ -306,7 +319,7 @@ class Simulation {
     if (this.truck.dwellRemaining > 0) this.truck.dwellRemaining += SIX_MIN;
     else this.extraDwellQueued += SIX_MIN;
     this.logEvent('정차 지연 감지: 앞 배송지 하차 지연 +6분', 'incident');
-    this.recalcEta('앞 배송지 정차 지연', { forceNotify: true });
+    this.recalcEtas('앞 배송지 정차 지연', { forceNotify: true });
     this.emit();
   }
 
@@ -321,7 +334,7 @@ class Simulation {
     if (this.stops[this.order[swapWith]].status === 'done') return;
     [this.order[idx], this.order[swapWith]] = [this.order[swapWith], this.order[idx]];
     this.logEvent(`기사 앱: 배송 순서 변경 — ${this.stops[stopId].name} ${dir === 'up' ? '앞으로' : '뒤로'}`, 'driver');
-    this.recalcEta('기사 배송 순서 변경', { forceNotify: false });
+    this.recalcEtas('기사 배송 순서 변경');
     this.emit();
   }
 
@@ -338,7 +351,7 @@ class Simulation {
     } else {
       return;
     }
-    if (this.phase === 'delivering') this.recalcEta('배송 경로 변경');
+    if (this.phase === 'delivering') this.recalcEtas('배송 경로 변경');
     this.emit();
   }
 
@@ -375,9 +388,7 @@ class Simulation {
     const p = routeData.points.find((x) => x.id === id);
     this.truck.lat = p.lat; this.truck.lng = p.lng;
     this.logEvent(`구간 스캔: ${this.stops[id].name} 도착 — 하차 시작`, 'scan');
-    if (id === CUSTOMER_STOP) {
-      this.notify('기사님이 도착했어요', '주문하신 상품을 문 앞으로 전달 중입니다.');
-    }
+    this.notifyStop(id, '기사님이 도착했어요', '주문하신 상품을 문 앞으로 전달 중입니다.');
   }
 
   finishStop() {
@@ -386,18 +397,16 @@ class Simulation {
     this.stops[id].deliveredAt = this.simTime;
     this.truck.dwellRemaining = 0;
     this.logEvent(`구간 스캔: ${this.stops[id].name} 배송 완료 (${this.stops[id].boxes}박스)`, 'scan');
-    if (id === CUSTOMER_STOP) {
-      this.notify('배송이 완료되었습니다 ✅', `${fmtTime(this.simTime)} 문 앞에 상품을 전달했어요. 오늘도 미트박스를 이용해 주셔서 감사합니다.`);
-      this.eta = null;
-    }
+    this.notifyStop(id, '배송이 완료되었습니다 ✅', `${fmtTime(this.simTime)} 문 앞에 상품을 전달했어요. 오늘도 미트박스를 이용해 주셔서 감사합니다.`);
+    delete this.officialEtas[id];
     const next = this.remainingIds()[0];
     if (next) {
       this.beginLeg(next);
-      if (next === CUSTOMER_STOP && !this.notifiedNearby) {
-        this.notifiedNearby = true;
-        this.notify('곧 도착 예정이에요', '고객님 상품이 곧 도착할 예정이에요. 잠시만 기다려 주세요!');
+      if (!this.nearbyNotified.has(next)) {
+        this.nearbyNotified.add(next);
+        this.notifyStop(next, '곧 도착 예정이에요', '고객님 상품이 곧 도착할 예정이에요. 잠시만 기다려 주세요!');
       }
-      this.recalcEta('정차지 배송 완료', { silent: false });
+      this.recalcEtas('정차지 배송 완료');
     } else {
       this.phase = 'done';
       this.logEvent('금일 배송 전체 완료 — 복귀', 'system');
@@ -423,19 +432,14 @@ class Simulation {
         }
       }
 
-      // 주기적 드리프트 보정: 공식 ETA와 8분 이상 벌어지면 자동 재계산
-      if (this.eta && this.stops[CUSTOMER_STOP].status !== 'done') {
-        const inputs = this.etaInputs();
-        if (inputs.remaining.includes(CUSTOMER_STOP)) {
-          const secs = secondsUntilArrival({
-            targetStopId: CUSTOMER_STOP, ...inputs,
-            legs: routeData.legs, serviceTimeSec: SERVICE_TIME_SEC,
-            legFactors: this.legFactors, globalFactor: this.globalFactor,
-          });
-          const drift = Math.abs(this.simTime + secs * 1000 - this.eta.arrival);
-          if (drift > 8 * MIN) this.recalcEta('이동 지연 자동 감지');
-        }
+      // 주기적 드리프트 보정: 어느 계정이든 공식 ETA와 8분 이상 벌어지면 일괄 재계산
+      const live = this.stopEtas();
+      let maxDrift = 0;
+      for (const id of Object.keys(live)) {
+        const official = this.officialEtas[id];
+        if (official) maxDrift = Math.max(maxDrift, Math.abs(live[id] - official.arrival));
       }
+      if (maxDrift > 8 * MIN) this.recalcEtas('이동 지연 자동 감지');
     }
     if (!manual) this.emit();
   }
@@ -467,14 +471,22 @@ class Simulation {
         deliveredTime: this.stops[id].deliveredAt ? fmtTime(this.stops[id].deliveredAt) : null,
         eta: etas[id] ? fmtTime(etas[id]) : this.frozenEtas[id] ? fmtTime(this.frozenEtas[id]) : null,
       })),
-      customerStatus: this.customerStatus(),
-      timeline: this.timeline(),
-      eta: this.eta ? {
-        time: this.eta.time,
-        timeText: fmtTime(this.eta.time),
-        reason: this.eta.reason, deltaMin: this.eta.deltaMin,
-        updatedAt: this.eta.updatedAt,
-      } : null,
+      // 계정별 고객 화면 데이터 (정차지 1곳 = 고객 계정 1개)
+      customers: Object.fromEntries(this.order.map((id) => {
+        const stop = this.stops[id];
+        const official = this.officialEtas[id];
+        return [id, {
+          ordered: id !== CUSTOMER_STOP || this.phase !== 'unordered',
+          status: this.customerStatusFor(id),
+          timeline: this.timelineFor(id),
+          eta: official && stop.status !== 'done' && stop.status !== 'skipped' ? {
+            time: official.time,
+            timeText: fmtTime(official.time),
+            reason: official.reason, deltaMin: official.deltaMin,
+            updatedAt: official.updatedAt,
+          } : null,
+        }];
+      })),
       vehicles: VEHICLES,
       nextStep: this.phase === 'idle' || this.phase === 'preparing'
         ? (PREP_STEPS[this.prepDone.length] ? { key: PREP_STEPS[this.prepDone.length].key, label: PREP_STEPS[this.prepDone.length].label } : null)
