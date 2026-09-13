@@ -1,11 +1,12 @@
 import { adaptSimulation, calculatedEtaText, customerHeadline, publishedEtaText } from './simulation-adapter.mjs';
-import { mountScenarioTools } from './scenario-tools.mjs';
+import { mountDemoShell } from './demo-shell.mjs';
+import { connectSimulation } from './simulation-client.mjs';
 import { deliveryLinks, deliveryContext, deliveryChanges } from './delivery-review.mjs';
 
 const pages = {
   deliveries: { title: '배송 현황', eyebrow: '차량 1대의 배송 8곳', description: '배송 순서와 고객 공식 ETA, 계산 ETA를 함께 확인합니다.' },
-  control: { title: '단말 관제', eyebrow: '차량 장착형 TMS', description: '차량의 배송 진행을 확인합니다. 실제 장착 단말 정보는 제공되지 않았습니다.' },
-  customer: { title: '고객 보기', eyebrow: '선택 배송 미리보기', description: '운영 화면과 같은 고객 공식 ETA를 고객 안내 형태로 확인합니다.' },
+  control: { title: '선택 배송 상세', eyebrow: '운영 뷰어', description: '차량의 배송 진행을 확인합니다. 실제 장착 단말 정보는 제공되지 않았습니다.' },
+  customer: { title: '고객 안내 요약', eyebrow: '선택 배송 미리보기', description: '운영 화면과 같은 고객 공식 ETA를 고객 안내 형태로 확인합니다.' },
 };
 const phaseLabels = { unordered: '주문 전', idle: '주문 접수', preparing: '출고 준비', delivering: '배송 중', done: '배송 완료' };
 const statusLabels = { pending: '대기', current: '배송 중', done: '완료', skipped: '건너뜀' };
@@ -24,104 +25,32 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 const badge = (text, color = 'neutral') => `<span class="badge ${color}">${escapeHtml(text)}</span>`;
 const keyValue = (label, value) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value ?? '미확인')}</dd></div>`;
 
-let socket = null;
-let reconnectTimer = null;
-let bootId = null;
-
-const scenarioTools = mountScenarioTools({
-  onSend(type, extra = {}) {
-    if (socket?.readyState !== WebSocket.OPEN) return;
-    if (extra.stopId && ['arrive_stop', 'complete_stop'].includes(type)) {
-      state.selectedId = extra.stopId;
-      state.query = '';
-      state.status = 'all';
-      byId('delivery-search').value = '';
-      byId('delivery-status').value = 'all';
-    }
-    socket.send(JSON.stringify({ type, ...extra }));
-  },
-});
+const scenarioTools = mountDemoShell({ viewer: 'operator', onSend: (type, extra) => simulation.send(type, extra) });
 scenarioTools.update(null, false);
+const simulation = connectSimulation({
+  onState(raw) {
+    const next = adaptSimulation(raw);
+    if (next.phase === 'unordered' && state.data?.phase !== 'unordered') state.lastChanges = null;
+    const changes = deliveryChanges(state.data, next);
+    if (changes) state.lastChanges = changes;
+    state.data = next;
+    state.connected = true;
+    render();
+  },
+  onStatus(connected, message) {
+    state.connected = connected;
+    byId('connection-panel').hidden = connected;
+    byId('live-pages').hidden = !connected;
+    byId('connection-title').textContent = message;
+    byId('connection-detail').textContent = connected ? '' : '연결이 복구되면 같은 진행 상태를 이어갑니다.';
+    scenarioTools.update(state.data, connected);
+  },
+  onError: message => scenarioTools.showError(message),
+});
 
 function pageFromHash(hash) {
   const page = hash.replace(/^#\//, '');
   return Object.hasOwn(pages, page) ? page : 'deliveries';
-}
-
-function redirectToLogin() {
-  location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search + location.hash));
-}
-
-function setConnection(kind, title, detail) {
-  const badgeEl = byId('connection-state');
-  badgeEl.dataset.state = kind;
-  badgeEl.textContent = { loading: '연결 중', connected: '실시간 연결', error: '연결 끊김' }[kind];
-  byId('connection-panel').hidden = kind === 'connected';
-  byId('live-pages').hidden = kind !== 'connected';
-  byId('connection-title').textContent = title;
-  byId('connection-detail').textContent = detail;
-  byId('retry-connection').hidden = kind !== 'error';
-}
-
-async function start() {
-  clearTimeout(reconnectTimer);
-  setConnection('loading', '로그인 상태를 확인하고 있습니다.', '잠시만 기다려 주세요.');
-  try {
-    const response = await fetch('/api/session', { headers: { accept: 'application/json' } });
-    if (response.status === 401) return redirectToLogin();
-    if (!response.ok) throw new Error(`세션 확인 실패 (${response.status})`);
-    connect();
-  } catch (error) {
-    setConnection('error', '서버에 연결할 수 없습니다.', error.message);
-  }
-}
-
-function connect() {
-  if (socket && [WebSocket.OPEN, WebSocket.CONNECTING].includes(socket.readyState)) return;
-  setConnection('loading', '실시간 시뮬레이션에 연결하고 있습니다.', '상태 스트림을 기다리는 중입니다.');
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  socket = new WebSocket(`${protocol}//${location.host}/ws/simulation`);
-  socket.addEventListener('message', event => {
-    let message;
-    try { message = JSON.parse(event.data); } catch { return; }
-    if (message.type === 'error') {
-      scenarioTools.showError('요청을 처리하지 못했습니다. 현재 단계를 확인하고 다시 시도해 주세요.');
-      return;
-    }
-    if (message.boot) {
-      if (bootId && bootId !== message.boot) return location.reload();
-      bootId = message.boot;
-    }
-    if (message.type !== 'state') return;
-    try {
-      const next = adaptSimulation(message.state);
-      if (next.phase === 'unordered' && state.data?.phase !== 'unordered') state.lastChanges = null;
-      const changes = deliveryChanges(state.data, next);
-      if (changes) state.lastChanges = changes;
-      state.data = next;
-      state.connected = true;
-      setConnection('connected', '', '');
-      render();
-    } catch (error) {
-      state.connected = false;
-      setConnection('error', '받은 시뮬레이션 상태를 표시할 수 없습니다.', error.message);
-    }
-  });
-  socket.addEventListener('close', async event => {
-    state.connected = false;
-    scenarioTools.update(state.data, false);
-    if ([1008, 4401, 4403].includes(event.code) || /auth|login|session/i.test(event.reason)) return redirectToLogin();
-    try {
-      const session = await fetch('/api/session', { headers: { accept: 'application/json' } });
-      if (session.status === 401) return redirectToLogin();
-    } catch {}
-    setConnection('error', '실시간 연결이 끊겼습니다.', '잠시 후 자동으로 다시 연결합니다.');
-    clearTimeout(reconnectTimer);
-    reconnectTimer = setTimeout(connect, 1500);
-  });
-  socket.addEventListener('error', () => {
-    if (socket?.readyState !== WebSocket.CLOSED) socket.close();
-  });
 }
 
 function visibleDeliveries() {
@@ -159,7 +88,6 @@ function render() {
   renderControl(visible, selected);
   renderCustomer(visible, selected);
   renderTabs();
-  byId('snapshot-clock').textContent = state.data.simClock || '--:--';
   scenarioTools.update(state.data, state.connected);
 }
 
@@ -170,12 +98,11 @@ function renderPage() {
     if (link.dataset.pageLink === state.page) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
-  byId('app-title').textContent = `합본 ${page.title}`;
   byId('page-heading').textContent = page.title;
   byId('page-eyebrow').textContent = page.eyebrow;
   byId('page-description').textContent = page.description;
   byId('toggle-map').hidden = state.page !== 'control';
-  document.title = `${page.title} · 미트박스 TMS 합본`;
+  document.title = `${page.title} · 미트박스 TMS 시연`;
 }
 
 function renderSummary() {
@@ -187,6 +114,7 @@ function renderSummary() {
 }
 
 function renderReview(selected) {
+  scenarioTools.select(selected?.id);
   const context = deliveryContext(state.data, selected);
   byId('review-vehicle').textContent = context.vehicle;
   byId('review-customer').textContent = context.customer;
@@ -194,7 +122,7 @@ function renderReview(selected) {
   const links = deliveryLinks(selected?.id);
   document.querySelectorAll('[data-mobile-link]').forEach(link => {
     link.href = links.mobile;
-    link.setAttribute('aria-label', selected ? `${selected.name} 모바일 고객 화면 (새 탭)` : '모바일 고객 화면 (새 탭)');
+    link.setAttribute('aria-label', selected ? `${selected.name} 고객 뷰어` : '고객 뷰어');
   });
   byId('review-mobile').hidden = !selected;
   const url = new URL(location.href);
@@ -233,7 +161,7 @@ function renderDeliveries(visible, selected) {
     </tr>`).join('');
   byId('delivery-selection').innerHTML = selected ? `
     <div class="panel-heading"><h2>선택 배송</h2>${badge(statusLabels[selected.status] || '미확인', selected.statusTone)}</div>
-    <div class="selection-body"><p class="eyebrow">${selected.sequence}번째 배송</p><h3>${escapeHtml(selected.name)}</h3><p class="eyebrow">${selected.status === 'done' ? '배송 완료 시각' : '고객 공식 ETA'}</p><strong class="selection-eta">${escapeHtml(etaDisplay(selected))}</strong><p class="muted">${selected.status === 'done' ? `실제 도착 ${escapeHtml(selected.arrivedAt || '미확인')}` : selected.ordered && selected.officialEta?.updatedAt ? `${escapeHtml(selected.officialEta.updatedAt)} 갱신` : '갱신 시각 미확인'}</p><dl class="key-values selection-key-values">${keyValue('계산 ETA', calculatedEtaText(selected))}${keyValue('차량', state.data.vehicle?.plate)}${keyValue('장착 단말', '미확인')}</dl><div class="selection-actions"><a class="button primary" href="#/control">단말 관제 보기</a><a class="button" href="#/customer">고객 보기</a></div></div>`
+    <div class="selection-body"><p class="eyebrow">${selected.sequence}번째 배송</p><h3>${escapeHtml(selected.name)}</h3><p class="eyebrow">${selected.status === 'done' ? '배송 완료 시각' : '고객 공식 ETA'}</p><strong class="selection-eta">${escapeHtml(etaDisplay(selected))}</strong><p class="muted">${selected.status === 'done' ? `실제 도착 ${escapeHtml(selected.arrivedAt || '미확인')}` : selected.ordered && selected.officialEta?.updatedAt ? `${escapeHtml(selected.officialEta.updatedAt)} 갱신` : '갱신 시각 미확인'}</p><dl class="key-values selection-key-values">${keyValue('계산 ETA', calculatedEtaText(selected))}${keyValue('차량', state.data.vehicle?.plate)}${keyValue('장착 단말', '미확인')}</dl><div class="selection-actions"><a class="button primary" href="#/control">배송 상세 보기</a><a class="button" href="#/customer">고객 안내 요약</a></div></div>`
     : '<div class="empty-state"><h2>선택할 배송이 없습니다.</h2><p>조회 조건을 바꿔 주세요.</p></div>';
 }
 
@@ -322,8 +250,8 @@ document.addEventListener('click', event => {
     render();
   }
   const command = event.target.closest('[data-command]');
-  if (command && command.closest('#preview-sidebar') && socket?.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ type: command.dataset.command, stopId: command.dataset.stopId, dir: command.dataset.dir }));
+  if (command && command.closest('#preview-sidebar')) {
+    simulation.send(command.dataset.command, { stopId: command.dataset.stopId, dir: command.dataset.dir });
   }
 });
 byId('delivery-search').addEventListener('input', event => { state.query = event.target.value; render(); });
@@ -357,9 +285,6 @@ tabs.forEach((button, index) => {
     tabs[next].focus();
   });
 });
-byId('retry-connection').addEventListener('click', start);
+byId('retry-connection').addEventListener('click', () => location.reload());
 document.querySelector('.skip-link').addEventListener('click', event => { event.preventDefault(); byId('page-heading').focus(); });
-new ResizeObserver(() => document.documentElement.style.setProperty('--header-height', `${document.querySelector('.app-header').offsetHeight}px`)).observe(document.querySelector('.app-header'));
-
 history.replaceState(null, '', `#/${state.page}`);
-start();
