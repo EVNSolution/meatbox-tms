@@ -5,6 +5,7 @@ const fs = require('node:fs/promises');
 const { randomUUID } = require('node:crypto');
 const { WebSocketServer } = require('ws');
 const { createAccess, AccessError } = require('./lib/access');
+const { arriveStop, completeStop } = require('./lib/scenario-controls');
 const { page, loginPage, registerPage, homePage } = require('./apps/portal/pages');
 const { Simulation } = require('./workspaces/sanghyun-scenario/src/simulation');
 const routeData = require('./workspaces/sanghyun-scenario/src/route-data');
@@ -26,7 +27,9 @@ function safeNext(value) {
 }
 function validCommand(msg) {
   if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return false;
-  if (['advance', 'place_order', 'reset', 'inject_traffic', 'inject_dwell', 'complete_stop'].includes(msg.type)) return true;
+  if (['advance', 'place_order', 'reset', 'inject_traffic', 'inject_dwell'].includes(msg.type)) return true;
+  if (msg.type === 'complete_stop') return msg.stopId === undefined || /^S[1-8]$/.test(msg.stopId);
+  if (msg.type === 'arrive_stop') return /^S[1-8]$/.test(msg.stopId);
   if (msg.type === 'speed') return [1, 5, 20].includes(msg.value);
   if (['reorder', 'toggle_skip'].includes(msg.type)) return /^S[1-8]$/.test(msg.stopId) && (msg.type !== 'reorder' || ['up', 'down'].includes(msg.dir));
   return false;
@@ -190,7 +193,8 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
           case 'inject_dwell': sim.injectDwell(); break;
           case 'reorder': sim.reorder(msg.stopId, msg.dir); break;
           case 'toggle_skip': sim.toggleSkip(msg.stopId); break;
-          case 'complete_stop': sim.completeCurrentStop(); break;
+          case 'arrive_stop': arriveStop(sim, msg.stopId); break;
+          case 'complete_stop': completeStop(sim, msg.stopId); break;
         }
       } catch { ws.send(JSON.stringify({ type: 'error', error: 'INVALID_COMMAND' })); }
     });

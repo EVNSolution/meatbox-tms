@@ -28,7 +28,15 @@ let bootId = null;
 
 const scenarioTools = mountScenarioTools({
   onSend(type, extra = {}) {
-    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type, ...extra }));
+    if (socket?.readyState !== WebSocket.OPEN) return;
+    if (extra.stopId && ['arrive_stop', 'complete_stop'].includes(type)) {
+      state.selectedId = extra.stopId;
+      state.query = '';
+      state.status = 'all';
+      byId('delivery-search').value = '';
+      byId('delivery-status').value = 'all';
+    }
+    socket.send(JSON.stringify({ type, ...extra }));
   },
 });
 scenarioTools.update(null, false);
@@ -74,6 +82,10 @@ function connect() {
   socket.addEventListener('message', event => {
     let message;
     try { message = JSON.parse(event.data); } catch { return; }
+    if (message.type === 'error') {
+      scenarioTools.showError('요청을 처리하지 못했습니다. 현재 단계를 확인하고 다시 시도해 주세요.');
+      return;
+    }
     if (message.boot) {
       if (bootId && bootId !== message.boot) return location.reload();
       bootId = message.boot;
@@ -140,7 +152,7 @@ function render() {
   renderControl(visible, selected);
   renderCustomer(visible, selected);
   renderTabs();
-  byId('snapshot-clock').textContent = `${state.data.simClock || '시각 미확인'} 시뮬레이션 기준`;
+  byId('snapshot-clock').textContent = state.data.simClock || '--:--';
   scenarioTools.update(state.data, state.connected);
 }
 
@@ -180,7 +192,7 @@ function renderDeliveries(visible, selected) {
     </tr>`).join('');
   byId('delivery-selection').innerHTML = selected ? `
     <div class="panel-heading"><h2>선택 배송</h2>${badge(statusLabels[selected.status] || '미확인', selected.statusTone)}</div>
-    <div class="selection-body"><p class="eyebrow">${selected.sequence}번째 배송</p><h3>${escapeHtml(selected.name)}</h3><p class="eyebrow">고객 공식 ETA</p><strong class="selection-eta">${escapeHtml(etaDisplay(selected))}</strong><p class="muted">${selected.ordered && selected.officialEta?.updatedAt ? `${escapeHtml(selected.officialEta.updatedAt)} 갱신` : '갱신 시각 미확인'}</p><dl class="key-values selection-key-values">${keyValue('계산 ETA', calculatedEtaText(selected))}${keyValue('차량', state.data.vehicle?.plate)}${keyValue('장착 단말', '미확인')}</dl><div class="selection-actions"><a class="button primary" href="#/control">단말 관제 보기</a><a class="button" href="#/customer">고객 보기</a></div></div>`
+    <div class="selection-body"><p class="eyebrow">${selected.sequence}번째 배송</p><h3>${escapeHtml(selected.name)}</h3><p class="eyebrow">${selected.status === 'done' ? '배송 완료 시각' : '고객 공식 ETA'}</p><strong class="selection-eta">${escapeHtml(etaDisplay(selected))}</strong><p class="muted">${selected.status === 'done' ? `실제 도착 ${escapeHtml(selected.arrivedAt || '미확인')}` : selected.ordered && selected.officialEta?.updatedAt ? `${escapeHtml(selected.officialEta.updatedAt)} 갱신` : '갱신 시각 미확인'}</p><dl class="key-values selection-key-values">${keyValue('계산 ETA', calculatedEtaText(selected))}${keyValue('차량', state.data.vehicle?.plate)}${keyValue('장착 단말', '미확인')}</dl><div class="selection-actions"><a class="button primary" href="#/control">단말 관제 보기</a><a class="button" href="#/customer">고객 보기</a></div></div>`
     : '<div class="empty-state"><h2>선택할 배송이 없습니다.</h2><p>조회 조건을 바꿔 주세요.</p></div>';
 }
 
@@ -206,7 +218,7 @@ function renderControl(visible, selected) {
   }
   byId('eta-panel').innerHTML = `
     <div class="panel-heading"><h2 id="eta-heading">ETA 배송 진행</h2><span class="muted">${escapeHtml(state.data.simClock || '시각 미확인')} 기준</span></div>
-    <div class="eta-grid"><div class="eta-primary"><p class="eyebrow">고객 공식 ETA</p><p class="eta-value">${escapeHtml(etaDisplay(selected))}</p><p class="muted">${selected.ordered && selected.officialEta?.updatedAt ? `${escapeHtml(selected.officialEta.updatedAt)} 갱신` : '갱신 시각 미확인'}</p></div><div class="eta-secondary"><dl class="key-values">${keyValue('계산 ETA', calculatedEtaText(selected))}${keyValue('현재 순서', `${selected.sequence}번째`)}${keyValue('실제 도착', selected.arrivedAt)}${keyValue('배송 완료', selected.completedAt)}</dl></div></div>`;
+    <div class="eta-grid"><div class="eta-primary"><p class="eyebrow">${selected.status === 'done' ? '배송 완료 시각' : '고객 공식 ETA'}</p><p class="eta-value">${escapeHtml(etaDisplay(selected))}</p><p class="muted">${selected.status === 'done' ? '배송 완료 기록' : selected.ordered && selected.officialEta?.updatedAt ? `${escapeHtml(selected.officialEta.updatedAt)} 갱신` : '갱신 시각 미확인'}</p></div><div class="eta-secondary"><dl class="key-values">${keyValue('계산 ETA', calculatedEtaText(selected))}${keyValue('현재 순서', `${selected.sequence}번째`)}${keyValue('실제 도착', selected.arrivedAt)}${keyValue('배송 완료', selected.completedAt)}</dl></div></div>`;
   byId('delivery-timeline').innerHTML = selected.timeline.length
     ? selected.timeline.map(item => `<li><time class="event-time">${escapeHtml(item.time || '')}</time><div class="event-copy"><span class="event-kind">${escapeHtml(({ done: '완료', current: '현재 단계', pending: '예정' })[item.state] || '미확인')}</span><h3>${escapeHtml(item.label)}</h3></div></li>`).join('')
     : '<li class="empty-state">제공된 고객 타임라인이 없습니다.</li>';
