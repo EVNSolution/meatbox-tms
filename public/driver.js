@@ -43,7 +43,6 @@
     // 배송 리스트
     $('stops').innerHTML = s.order
       .map((o, i) => {
-        const star = o.id === s.customerStopId ? ' ⭐' : '';
         let right;
         if (o.status === 'done') right = `<span class="stamp">✓ ${o.deliveredTime}</span>`;
         else if (o.status === 'current') right = '<span class="now pill red">배송 중</span>';
@@ -55,7 +54,7 @@
         }
         return `<div class="stop-row ${o.status}">
           <div class="no">${o.status === 'done' ? '✓' : i + 1}</div>
-          <div><div class="nm">${o.name}${star}</div><div class="sub">${o.address} · ${o.boxes}박스</div></div>
+          <div><div class="nm">${o.name}</div><div class="sub">${o.address} · ${o.boxes}박스</div></div>
           ${right}
         </div>`;
       })
@@ -64,6 +63,6 @@
     // 하단 요약
     $('f-done').textContent = `${s.kpi.stopsDone}/${s.kpi.stopsTotal}`;
     $('f-left').textContent = `${s.kpi.boxesTotal - s.kpi.boxesDelivered}`;
-    $('f-eta').textContent = s.eta ? s.eta.timeText : '—';
+    $('f-eta').textContent = s.kpi.finishEta || '—';
   });
 })();

@@ -125,7 +125,6 @@ body {
 }
 .marker-stop.done { background: var(--green); }
 .marker-stop.current { background: var(--red); animation: pulse 1.2s infinite; }
-.marker-stop.customer { outline: 3px solid #ffc107; outline-offset: 1px; }
 .marker-mfc {
   background: var(--ink); color: #fff; font-size: 10px; font-weight: 800;
   padding: 3px 6px; border-radius: 7px; border: 2px solid #fff;

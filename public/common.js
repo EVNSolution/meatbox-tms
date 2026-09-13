@@ -75,7 +75,7 @@ window.MB = (() => {
 
       state.order.forEach((stop, i) => {
         const p = rd.points.find((x) => x.id === stop.id);
-        const cls = `marker-stop ${stop.status}${stop.id === state.customerStopId ? ' customer' : ''}`;
+        const cls = `marker-stop ${stop.status}`;
         L.marker([p.lat, p.lng], {
           icon: L.divIcon({ className: '', html: `<div class="${cls}">${stop.status === 'done' ? '✓' : i + 1}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }),
         }).addTo(ctx.routeLayer).bindTooltip(`${i + 1}. ${stop.name} (${stop.boxes}박스)`, { direction: 'top' });

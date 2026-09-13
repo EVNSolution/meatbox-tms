@@ -53,14 +53,13 @@
     $('stops').innerHTML = header + s.order
       .map((o, i) => {
         const [sl, sc] = STATUS[o.status];
-        const star = o.id === s.customerStopId ? ' ⭐' : '';
         let etaCell;
         if (o.status === 'done') etaCell = `<span style="color:var(--green);font-weight:700;">${o.deliveredTime} ✓</span>`;
         else if (o.status === 'current' && s.truck.dwelling) etaCell = '<span style="color:var(--amber);font-weight:700;">하차 중</span>';
         else etaCell = o.eta ? `<b>${o.eta}</b>` : '—';
         return `<tr>
           <td style="width:22px;font-weight:800;">${i + 1}</td>
-          <td><b>${o.name}</b>${star}<br><span style="color:var(--ink-3);font-size:11px;">${o.address}</span></td>
+          <td><b>${o.name}</b><br><span style="color:var(--ink-3);font-size:11px;">${o.address}</span></td>
           <td style="width:48px;" class="mono">${o.boxes}박스</td>
           <td style="width:60px;"><span class="pill ${sc}" style="font-size:11px;">${sl}</span></td>
           <td style="width:58px;text-align:right;" class="mono">${etaCell}</td>

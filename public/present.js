@@ -43,10 +43,7 @@
 
     $('p-done').textContent = `${s.kpi.stopsDone}/${s.kpi.stopsTotal}`;
     $('p-boxes').textContent = `${s.kpi.boxesTotal - s.kpi.boxesDelivered}`;
-    const cust = s.order.find((o) => o.id === s.customerStopId);
-    $('p-eta').textContent = s.eta
-      ? s.eta.timeText
-      : cust?.deliveredTime ? `${cust.deliveredTime} 완료` : '—';
+    $('p-eta').textContent = s.kpi.finishEta || '—';
 
     $('log').innerHTML = s.events
       .slice(0, 7)
