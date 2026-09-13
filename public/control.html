@@ -47,15 +47,6 @@
   .stop-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   .stop-table td { padding: 6px 4px; border-bottom: 1px solid var(--line); }
   .stop-table tr:last-child td { border-bottom: 0; }
-  .log { font-size: 12px; line-height: 1.5; max-height: 260px; overflow-y: auto; }
-  .log div { padding: 4px 0; border-bottom: 1px dashed #edeef3; display: flex; gap: 8px; }
-  .log .lt { color: var(--ink-3); flex: 0 0 38px; font-variant-numeric: tabular-nums; }
-  .log .scan { color: var(--ink-2); }
-  .log .eta { color: #1565c0; font-weight: 700; }
-  .log .incident { color: var(--red); font-weight: 800; }
-  .log .driver { color: #6a1b9a; font-weight: 700; }
-  .log .notify { color: var(--amber); font-weight: 700; }
-  .log .system { color: var(--ink-3); }
 </style>
 </head>
 <body>
@@ -79,10 +70,6 @@
       <table class="stop-table" id="stops"></table>
     </div>
 
-    <div class="card">
-      <h3>이벤트 로그 <span style="font-weight:400;color:var(--ink-3);">— 구간 스캔 · ETA 재계산 · 알림</span></h3>
-      <div class="log" id="log"></div>
-    </div>
   </div>
 </div>
 

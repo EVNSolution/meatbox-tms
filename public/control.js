@@ -102,10 +102,6 @@
     const v = s.vehicles.find((x) => x.id === selected);
     if (v && !v.live) renderParked(s);
     else renderLive(s);
-
-    $('log').innerHTML = s.events
-      .map((e) => `<div><span class="lt">${e.time}</span><span class="${e.type}">${e.message}</span></div>`)
-      .join('');
   }
 
   MB.connect((s) => {
