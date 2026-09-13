@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>미트박스 TMS 데모</title>
+<link rel="stylesheet" href="/shared.css" />
+<style>
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 20px; }
+  h1 { font-size: 26px; letter-spacing: -0.5px; }
+  h1 .logo { font-size: 26px; }
+  .lead { color: var(--ink-2); margin: 10px 0 28px; line-height: 1.6; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  a.tile { text-decoration: none; color: inherit; }
+  .tile .card { margin: 0; height: 100%; transition: transform 0.12s ease, box-shadow 0.12s; }
+  .tile:hover .card { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(20,24,40,0.13); }
+  .tile .emoji { font-size: 30px; }
+  .tile h2 { font-size: 17px; margin: 8px 0 6px; }
+  .tile p { font-size: 13px; color: var(--ink-3); line-height: 1.55; }
+  .guide { margin-top: 30px; }
+  .guide ol { margin: 10px 0 0 20px; line-height: 2; font-size: 13.5px; color: var(--ink-2); }
+  .guide b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="stage" style="align-items:flex-start;">
+  <div class="wrap">
+    <h1><span class="logo">MEATBOX</span> TMS 데모</h1>
+    <p class="lead">
+      고객 배송 트래킹 + 다이나믹 ETA 시연 — 가락 MFC에서 출발한 전용차 1대(70박스)가
+      송파·강남 8개 정차지를 순회하며, 세 화면이 실시간으로 연동됩니다.
+    </p>
+    <div class="grid">
+      <a class="tile" href="/customer" target="_blank">
+        <div class="card"><div class="emoji">📱</div><h2>고객 앱</h2>
+        <p>상태 타임라인 · 실시간 지도 · 다이나믹 ETA · 앱 푸시 / 카카오 알림톡</p></div>
+      </a>
+      <a class="tile" href="/driver" target="_blank">
+        <div class="card"><div class="emoji">🚚</div><h2>기사 앱</h2>
+        <p>배송 리스트 · 하차 완료 스캔 · <b>배송 순서 변경</b> (ETA 재계산 트리거)</p></div>
+      </a>
+      <a class="tile" href="/control" target="_blank">
+        <div class="card"><div class="emoji">🗺️</div><h2>관제센터</h2>
+        <p>전체 지도 관제 · KPI · 이벤트 로그 · <b>시나리오/배속/이벤트 주입 컨트롤</b></p></div>
+      </a>
+    </div>
+    <div class="card guide">
+      <h3>시연 가이드 (권장 순서)</h3>
+      <ol>
+        <li><b>관제센터</b>에서 <b>▶ 시나리오 시작</b> — MFC 출고 스캔이 순차 진행되고 차량이 출발합니다.</li>
+        <li><b>고객 앱</b>에서 상태 타임라인이 자동으로 넘어가고 "N번째 순서 배송 예정"과 ETA 범위가 표시되는 것을 확인.</li>
+        <li><b>기사 앱</b>에서 정차지 순서를 ▲▼로 변경 → 고객 ETA가 즉시 재계산됩니다.</li>
+        <li><b>관제센터</b>에서 <b>🚨 교통사고 주입</b> → ETA가 지연되고 고객에게 "배송 예정 시간이 변경되었습니다" 알림 발송.</li>
+        <li>배송이 진행될수록 ETA 범위가 <b>±20분 → ±10분 → ±5분</b>으로 좁아지는 것을 강조 (모델 고도화 컨셉).</li>
+        <li>도착 → <b>인근 배송 중</b> → 하차 스캔 → <b>배송 완료</b> 알림까지 확인.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "meatbox-tms-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "미트박스 TMS 데모 — 고객 배송 트래킹 + 다이나믹 ETA",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}

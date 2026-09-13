@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>미트박스 — 주문 상세</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="/shared.css" />
+<style>
+  .eta-hero { text-align: left; }
+  .eta-hero .cap { font-size: 12px; color: var(--ink-3); font-weight: 700; }
+  .eta-hero .big { font-size: 27px; font-weight: 900; letter-spacing: -0.5px; margin: 5px 0 2px; }
+  .eta-hero .big .tilde { color: var(--ink-3); font-weight: 700; }
+  .eta-hero .sub { font-size: 12.5px; color: var(--ink-3); }
+  .eta-hero .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .eta-delta { font-size: 12px; font-weight: 800; border-radius: 8px; padding: 3px 8px; display: none; }
+  .eta-delta.plus { background: #fff3e0; color: var(--amber); display: inline-block; }
+  .eta-delta.minus { background: #e8f5e9; color: var(--green); display: inline-block; }
+  .eta-note { display: none; margin-top: 10px; padding: 9px 11px; border-radius: 10px; background: #fff8e1; color: #7a5b00; font-size: 12px; font-weight: 600; line-height: 1.45; }
+  .eta-note.show { display: block; }
+  #map { height: 240px; }
+  .order-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .order-head .no { font-size: 12px; color: var(--ink-3); }
+  .prod { display: flex; gap: 11px; align-items: center; }
+  .prod .thumb { width: 44px; height: 44px; border-radius: 10px; background: var(--red-soft); display: flex; align-items: center; justify-content: center; font-size: 21px; flex: 0 0 44px; }
+  .prod .nm { font-weight: 700; font-size: 13.5px; }
+  .prod .op { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .prod .qty { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="push-banner" id="push">
+        <div class="icon">M</div>
+        <div>
+          <div class="title" id="push-title"></div>
+          <div class="body" id="push-body"></div>
+        </div>
+        <div class="when" id="push-when"></div>
+      </div>
+
+      <div class="appbar">
+        <span class="logo">MEATBOX<small>미트박스</small></span>
+        <span class="right">주문 상세</span>
+      </div>
+
+      <div class="card eta-hero" id="eta-card">
+        <div class="row">
+          <span class="cap">도착 예정</span>
+          <span class="pill red" id="status-pill">결제 완료</span>
+        </div>
+        <div class="big" id="eta-text">—</div>
+        <div class="sub" id="eta-sub">호수정육식당 · 석촌호수로 268 · 12박스</div>
+        <span class="eta-delta" id="eta-delta"></span>
+        <div class="eta-note" id="eta-note"></div>
+      </div>
+
+      <div class="card" style="padding:10px;">
+        <div id="map" class="map"></div>
+      </div>
+
+      <div class="card">
+        <h3>배송 현황</h3>
+        <ul class="timeline" id="timeline"></ul>
+      </div>
+
+      <div class="card">
+        <div class="order-head">
+          <h3 style="margin:0;">주문 상품</h3>
+          <span class="no">주문번호 MB-20260912-84721</span>
+        </div>
+        <div class="item-row prod">
+          <div class="thumb">🥩</div>
+          <div><div class="nm">한돈 삼겹살 구이용 2kg (냉장)</div><div class="op">껍데기 제거 · 두께 16mm</div></div>
+          <div class="qty">×4</div>
+        </div>
+        <div class="item-row prod">
+          <div class="thumb">🥩</div>
+          <div><div class="nm">한우 등심 1++ No.9 1kg (냉장)</div><div class="op">구이용 슬라이스</div></div>
+          <div class="qty">×3</div>
+        </div>
+        <div class="item-row prod">
+          <div class="thumb">🍗</div>
+          <div><div class="nm">무항생제 닭다리살 3kg (냉장)</div><div class="op">정육 · 벌크</div></div>
+          <div class="qty">×2</div>
+        </div>
+        <div style="text-align:right; margin-top:10px; font-weight:800;">총 12박스</div>
+      </div>
+
+      <div class="card" style="background:transparent; box-shadow:none; padding:0;">
+        <div class="talk">
+          <div class="ch"><div class="avatar">M</div> 미트박스 <span style="font-weight:400;">알림톡</span></div>
+          <div id="talk-list"><div class="empty">아직 도착한 알림이 없어요</div></div>
+        </div>
+      </div>
+      <div style="height:20px;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="/common.js"></script>
+<script src="/customer.js"></script>
+</body>
+</html>

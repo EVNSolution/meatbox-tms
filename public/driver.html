@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>미트박스 기사 — 배송 리스트</title>
+<link rel="stylesheet" href="/shared.css" />
+<style>
+  .drv-head { background: var(--ink); color: #fff; padding: 44px 18px 16px; }
+  .drv-head .nm { font-size: 17px; font-weight: 900; }
+  .drv-head .meta { font-size: 12px; color: #aab0c2; margin-top: 3px; }
+  .drv-head .clock { float: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: #ffd6d6; }
+  .nav-card .dest { font-size: 19px; font-weight: 900; margin: 2px 0 3px; }
+  .nav-card .addr { font-size: 12.5px; color: var(--ink-3); }
+  .nav-card .stats { display: flex; gap: 14px; margin-top: 11px; }
+  .nav-card .stats div { flex: 1; background: #f6f7fa; border-radius: 10px; padding: 9px 11px; }
+  .nav-card .stats .v { font-size: 16px; font-weight: 900; }
+  .nav-card .stats .k { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+  .scanbtn { width: 100%; margin-top: 12px; font-size: 15px; padding: 14px; }
+  .stop-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .stop-row:last-child { border-bottom: 0; }
+  .stop-row .no {
+    width: 26px; height: 26px; border-radius: 50%; flex: 0 0 26px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: #fff; background: var(--ink-3);
+  }
+  .stop-row.done .no { background: var(--green); }
+  .stop-row.current .no { background: var(--red); }
+  .stop-row.done .nm { color: var(--ink-3); text-decoration: line-through; }
+  .stop-row .nm { font-weight: 700; font-size: 13.5px; }
+  .stop-row .sub { font-size: 11.5px; color: var(--ink-3); margin-top: 1px; }
+  .stop-row .ud { margin-left: auto; display: flex; gap: 5px; }
+  .stop-row .stamp { margin-left: auto; font-size: 12px; color: var(--green); font-weight: 800; }
+  .stop-row .now { margin-left: auto; }
+  .footer-stat { display: flex; gap: 10px; margin: 0 14px 20px; }
+  .footer-stat div { flex: 1; background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 12px; text-align: center; }
+  .footer-stat .v { font-size: 18px; font-weight: 900; }
+  .footer-stat .k { font-size: 11px; color: var(--ink-3); }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen" style="background:#eef0f4;">
+      <div class="drv-head">
+        <span class="clock" id="clock">--:--</span>
+        <div class="nm">김민수 기사님 <span style="font-size:12px;color:#8f96ab;font-weight:600;">서울87바 1234 · 냉장탑차 1t</span></div>
+        <div class="meta">가락 MFC 4권역 · 상차 70박스 / 8착지</div>
+      </div>
+
+      <div class="card nav-card">
+        <span class="pill red" id="nav-state">대기 중</span>
+        <div class="dest" id="nav-dest">—</div>
+        <div class="addr" id="nav-addr"></div>
+        <div class="stats">
+          <div><div class="v" id="nav-dist">—</div><div class="k">남은 거리</div></div>
+          <div><div class="v" id="nav-boxes">—</div><div class="k">하차 박스</div></div>
+          <div><div class="v" id="nav-order">—</div><div class="k">진행</div></div>
+        </div>
+        <button class="btn primary scanbtn" id="scan" disabled>📦 하차 완료 스캔</button>
+      </div>
+
+      <div class="card">
+        <h3>오늘 배송 순서 <span style="font-weight:400;color:var(--ink-3);">— 순서 변경 시 고객 ETA 자동 재계산</span></h3>
+        <div id="stops"></div>
+      </div>
+
+      <div class="footer-stat">
+        <div><div class="v" id="f-done">0/8</div><div class="k">완료 착지</div></div>
+        <div><div class="v" id="f-left">70</div><div class="k">잔여 박스</div></div>
+        <div><div class="v" id="f-eta">—</div><div class="k">호수정육 ETA</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/common.js"></script>
+<script src="/driver.js"></script>
+</body>
+</html>
