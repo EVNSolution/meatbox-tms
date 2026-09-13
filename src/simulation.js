@@ -19,6 +19,13 @@ const STOP_INFO = {
 };
 const DEFAULT_ORDER = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'];
 
+// 관제 차량 목록 — V1만 라이브 시뮬레이션, 나머지는 배차 대기 차량(정적)
+const VEHICLES = [
+  { id: 'V1', plate: '서울87바 1234', driver: '김민수', region: '송파·강남 4권역', live: true },
+  { id: 'V2', plate: '서울85아 5678', driver: '박정호', region: '강동 2권역', live: false, status: '상차 중', planned: { stops: 6, boxes: 54 } },
+  { id: 'V3', plate: '인천91바 3456', driver: '이수진', region: '성남·분당 7권역', live: false, status: '배차 대기', planned: { stops: 7, boxes: 61 } },
+];
+
 const PREP_STEPS = [
   { key: 'picking',  label: '피킹 중',   simMin: 5 * 60 + 50 },
   { key: 'labeling', label: '라벨 부착', simMin: 6 * 60 + 5 },
@@ -399,6 +406,7 @@ class Simulation {
         reason: this.eta.reason, deltaMin: this.eta.deltaMin,
         updatedAt: this.eta.updatedAt,
       } : null,
+      vehicles: VEHICLES,
       nextStep: this.phase === 'idle' || this.phase === 'preparing'
         ? (PREP_STEPS[this.prepDone.length] ? { key: PREP_STEPS[this.prepDone.length].key, label: PREP_STEPS[this.prepDone.length].label } : null)
         : null,

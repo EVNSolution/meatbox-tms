@@ -1,12 +1,43 @@
 (async () => {
   const rd = await MB.loadRouteData();
-  const ctx = MB.initMap(document.getElementById('map'), { scrollWheelZoom: false });
+  const { map } = MB.initMap(document.getElementById('map'), { scrollWheelZoom: false });
 
   const $ = (id) => document.getElementById(id);
   let lastNotifId = null;
-  let firstState = true;
   let lastEtaKey = null;
   let pushTimer = null;
+  let truckMarker = null;
+  let homeMarker = null;
+  let fitted = false;
+
+  // 소비자 지도: 차량 위치 + 내 위치만 표시 (다른 배송지는 노출하지 않음)
+  function updateMap(s) {
+    const home = rd.points.find((p) => p.id === s.customerStopId);
+    if (!homeMarker) {
+      homeMarker = L.marker([home.lat, home.lng], {
+        icon: L.divIcon({ className: '', html: '<div class="marker-home">🏠</div>', iconSize: [32, 32], iconAnchor: [16, 16] }),
+      }).addTo(map);
+    }
+    const delivered = s.order.find((o) => o.id === s.customerStopId)?.status === 'done';
+    if (delivered) {
+      // 배송 완료 후에는 차량을 더 이상 보여주지 않음
+      if (truckMarker) { map.removeLayer(truckMarker); truckMarker = null; }
+      map.setView([home.lat, home.lng], 15);
+      return;
+    }
+    const pos = [s.truck.lat, s.truck.lng];
+    if (!truckMarker) {
+      truckMarker = L.marker(pos, {
+        icon: L.divIcon({ className: '', html: '<div class="marker-truck">🚚</div>', iconSize: [38, 38], iconAnchor: [19, 19] }),
+        zIndexOffset: 1000,
+      }).addTo(map);
+    } else {
+      truckMarker.setLatLng(pos);
+    }
+    const bounds = L.latLngBounds([pos, [home.lat, home.lng]]).pad(0.3);
+    if (!fitted) { map.fitBounds(bounds); fitted = true; }
+    else if (!map.getBounds().contains(pos)) map.fitBounds(bounds);
+  }
 
   function showPush(n) {
     $('push-title').textContent = n.title;
@@ -58,15 +89,7 @@
       .join('');
 
     // 지도
-    MB.renderRoute(ctx, rd, s);
-    if (firstState) {
-      firstState = false;
-      const home = rd.points.find((p) => p.id === s.customerStopId);
-      L.marker([home.lat, home.lng], {
-        icon: L.divIcon({ className: '', html: '<div class="marker-home">🏠</div>', iconSize: [32, 32], iconAnchor: [16, 16] }),
-        zIndexOffset: 900,
-      }).addTo(ctx.map);
-    }
+    updateMap(s);
 
     // 알림 (푸시 배너 + 알림톡 피드)
     if (s.notifications.length) {
