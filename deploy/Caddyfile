@@ -1,3 +1,7 @@
+{
+	default_sni 3.36.96.156
+}
+
 https://3.36.96.156 {
 	tls {
 		issuer acme {

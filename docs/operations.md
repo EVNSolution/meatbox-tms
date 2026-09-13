@@ -49,6 +49,8 @@ sudo -u meatbox-demo node /opt/meatbox-demo/current/scripts/manage-access.js dis
 
 IP 인증서는 160시간 유효하며 Caddy가 자동 갱신합니다. `/var/lib/caddy/.local/share/caddy`를 영속 보존하고 80/443을 유지합니다. 별도 Certbot을 중복 실행하지 않습니다.
 
+IP 주소로 접속하는 클라이언트는 SNI를 생략할 수 있습니다. EC2의 내부 주소와 Public IP가 다르므로 `default_sni 3.36.96.156`으로 올바른 IP 인증서를 선택합니다. 인증서 검증은 끄지 않습니다.
+
 ```sh
 sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy
