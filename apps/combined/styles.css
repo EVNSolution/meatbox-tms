@@ -309,8 +309,6 @@ ol {
 
 .map-preview {
   width: calc(100% - 40px);
-  min-height: clamp(420px, 62dvh, 760px);
-  max-width: 1560px;
   margin: 12px auto 0;
   background: #f8f9fb;
   border: 1px solid var(--border);
@@ -319,15 +317,6 @@ ol {
 
 .map-preview[hidden] {
   display: none;
-}
-
-.map-preview > div {
-  min-height: inherit;
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  padding: 28px;
-  text-align: center;
 }
 
 .map-preview h2 {
@@ -1399,13 +1388,7 @@ button:disabled {
 
   .map-preview {
     width: auto;
-    min-height: max(360px, 60dvh);
     margin: 10px 12px 0;
-  }
-
-  .map-preview > div {
-    min-height: inherit;
-    padding: 20px;
   }
 
   .workspace {
