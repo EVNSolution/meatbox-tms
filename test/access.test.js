@@ -164,6 +164,19 @@ test('validates usernames, passwords, duplicate users, and invite lifetime', asy
   );
 });
 
+test('eight-character passwords register and sign in while length boundaries remain enforced', async t => {
+  const { access, file } = await fixture();
+  t.after(() => fs.rm(path.dirname(file), { recursive: true, force: true }));
+  const invite = await access.issueInvite();
+  for (const password of ['seven77', 'x'.repeat(129)]) {
+    await assert.rejects(access.register({ username: 'boundary.user', password, invite }),
+      error => rejectsCode('VALIDATION')(error) && error.field === 'password');
+  }
+  await access.register({ username: 'boundary.user', password: 'eight888', invite });
+  const { token } = await access.login({ username: 'boundary.user', password: 'eight888' });
+  assert.equal((await access.session(token)).username, 'boundary.user');
+});
+
 test('invite CLI writes the secret to a new 0600 file without printing it', async (context) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'meatbox-access-cli-'));
   context.after(() => fs.rm(directory, { recursive: true, force: true }));

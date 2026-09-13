@@ -30,7 +30,9 @@ test('portal validator reports after interaction, clears on correction, and focu
   const username = input('username');
   const password = input('password');
   const errors = Object.fromEntries([username, password].map(item => [item.name, {
-    hidden: true,
+    dataset: { hint: `${item.name} hint` },
+    textContent: `${item.name} hint`,
+    classList: { toggle(_name, enabled) { this.invalid = enabled; }, invalid: false },
     attributes: new Map(),
     setAttribute(name, value) { this.attributes.set(name, value); },
     removeAttribute(name) { this.attributes.delete(name); },
@@ -38,29 +40,31 @@ test('portal validator reports after interaction, clears on correction, and focu
   const listeners = {};
   const form = {
     querySelectorAll: () => [username, password],
-    querySelector: selector => errors[selector.slice(1, -6)],
+    querySelector: selector => errors[selector.slice(1, -9)],
     addEventListener(type, listener) { listeners[type] = listener; },
   };
   const source = fs.readFileSync(path.join(__dirname, '..', 'apps/portal/validation.js'), 'utf8');
   vm.runInNewContext(source, { document: { querySelectorAll: () => [form] }, CSS: { escape: value => value } });
 
-  assert.equal(errors.username.hidden, true);
+  assert.equal(errors.username.textContent, 'username hint');
+  assert.equal(errors.username.classList.invalid, false);
   username.required = true;
   username.validity = { valid: false, valueMissing: true };
   username.dispatch('blur');
   assert.equal(errors.username.textContent, 'username required');
-  assert.equal(errors.username.hidden, false);
+  assert.equal(errors.username.classList.invalid, true);
   assert.equal(username.getAttribute('aria-invalid'), 'true');
 
   username.validity = { valid: true };
   username.value = ' reviewer ';
   username.dispatch('input');
-  assert.equal(errors.username.hidden, true);
+  assert.equal(errors.username.textContent, 'username hint');
+  assert.equal(errors.username.classList.invalid, false);
   assert.equal(username.getAttribute('aria-invalid'), 'false');
   assert.equal(username.value, 'reviewer');
 
   password.required = true;
-  password.minLength = 12;
+  password.minLength = 8;
   password.value = 'short';
   password.validity = { valid: true };
   let prevented = false;
@@ -68,5 +72,6 @@ test('portal validator reports after interaction, clears on correction, and focu
   assert.equal(prevented, true);
   assert.equal(password.focused, true);
   assert.equal(errors.password.textContent, 'password short');
-  assert.equal(errors.username.hidden, true);
+  assert.equal(errors.username.textContent, 'username hint');
+  assert.equal(errors.username.classList.invalid, false);
 });

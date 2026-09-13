@@ -19,12 +19,10 @@ for (const form of document.querySelectorAll('form[data-validate]')) {
   }
 
   function validate(input) {
-    const error = form.querySelector(`#${CSS.escape(input.name)}-error`);
+    const feedback = form.querySelector(`#${CSS.escape(input.name)}-feedback`);
     const text = message(input);
-    error.textContent = text;
-    error.hidden = !text;
-    if (text) error.setAttribute('role', 'alert');
-    else error.removeAttribute('role');
+    feedback.textContent = text || feedback.dataset.hint;
+    feedback.classList.toggle('is-error', Boolean(text));
     input.setAttribute('aria-invalid', String(Boolean(text)));
     return !text;
   }

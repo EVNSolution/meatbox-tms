@@ -89,7 +89,7 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
       const message = error.code === 'USERNAME_TAKEN' ? '이미 사용 중인 아이디입니다.'
         : error.code === 'INVALID_INVITE' ? '초대 코드가 유효하지 않거나 이미 사용되었습니다.'
           : field === 'username' ? '영문 또는 숫자로 시작하는 3~40자로 입력해 주세요.'
-            : field === 'password' ? '비밀번호는 12~128자로 입력해 주세요.'
+            : field === 'password' ? '비밀번호를 8~128자로 입력해 주세요.'
               : field === 'displayName' ? '표시 이름은 제어 문자를 제외한 80자 이내로 입력해 주세요.'
                 : '입력값을 확인해 주세요.';
       res.status(400).send(registerPage({
