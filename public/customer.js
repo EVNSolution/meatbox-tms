@@ -21,6 +21,12 @@
   function selectAccount(id) {
     myId = id;
     try { localStorage.setItem('mb-account', id); } catch {}
+    // 딥링크(?id=)로 들어온 경우에도 선택이 유지되도록 URL을 함께 갱신
+    try {
+      const u = new URL(location.href);
+      u.searchParams.set('id', id);
+      history.replaceState(null, '', u);
+    } catch {}
     // 계정별 화면 상태 초기화
     lastNotifCount = null; lastEtaKey = null; wasUnordered = null; fitted = false;
     if (homeMarker) { map.removeLayer(homeMarker); homeMarker = null; }
@@ -40,6 +46,8 @@
       </button>`)
       .join('');
     $('account-picker').hidden = false;
+    const screen = document.querySelector('.screen');
+    if (screen) screen.scrollTop = 0;
   }
 
   $('account-list').addEventListener('click', (e) => {
