@@ -176,6 +176,33 @@ class Simulation {
     }
   }
 
+  // 전 정차지 도착 예상 시각(ms) 맵 — 관제 테이블용. 하차 중인 정차지는 제외(이미 도착).
+  stopEtas() {
+    const out = {};
+    let inputs;
+    let baseTime = this.simTime;
+    if (this.phase === 'delivering') {
+      inputs = this.etaInputs();
+    } else if (this.phase === 'idle' || this.phase === 'preparing') {
+      inputs = { fromId: 'MFC', remaining: [...this.order], legProgress: 0, dwellRemaining: 0 };
+      baseTime = Math.max(this.simTime, (6 * 60 + 30) * MIN); // 06:30 출발 가정
+    } else {
+      return out;
+    }
+    let total = inputs.dwellRemaining;
+    let prev = inputs.fromId;
+    for (let i = 0; i < inputs.remaining.length; i++) {
+      const id = inputs.remaining[i];
+      let travel = this.legDurationSec(`${prev}>${id}`);
+      if (i === 0) travel *= 1 - inputs.legProgress;
+      total += travel;
+      out[id] = baseTime + total * 1000;
+      total += SERVICE_TIME_SEC;
+      prev = id;
+    }
+    return out;
+  }
+
   // ---------- 고객 노출 상태 ----------
   customerStatus() {
     const cust = this.stops[CUSTOMER_STOP];
@@ -383,6 +410,8 @@ class Simulation {
   snapshot() {
     const currentLeg = this.currentLegKey();
     const leg = currentLeg ? routeData.legs[currentLeg] : null;
+    const etas = this.stopEtas();
+    const lastId = this.order[this.order.length - 1];
     return {
       phase: this.phase,
       simTime: this.simTime,
@@ -397,7 +426,11 @@ class Simulation {
         dwellRemaining: Math.max(0, Math.round(this.truck.dwellRemaining)),
         remainingM: leg ? Math.round(leg.distance * (1 - this.truck.progress)) : 0,
       },
-      order: this.order.map((id) => ({ ...this.stops[id], deliveredTime: this.stops[id].deliveredAt ? fmtTime(this.stops[id].deliveredAt) : null })),
+      order: this.order.map((id) => ({
+        ...this.stops[id],
+        deliveredTime: this.stops[id].deliveredAt ? fmtTime(this.stops[id].deliveredAt) : null,
+        eta: etas[id] ? fmtTime(etas[id]) : null,
+      })),
       customerStatus: this.customerStatus(),
       timeline: this.timeline(),
       eta: this.eta ? {
@@ -420,6 +453,9 @@ class Simulation {
         stopsTotal: this.order.length,
         globalFactor: this.globalFactor,
         etaAccuracy: 82.4, // 최근 30일 ±15분 적중률(데모 고정값)
+        finishEta: etas[lastId]
+          ? fmtTime(etas[lastId])
+          : this.stops[lastId].deliveredAt ? `${fmtTime(this.stops[lastId].deliveredAt)} 완료` : null,
       },
     };
   }
