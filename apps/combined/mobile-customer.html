@@ -10,10 +10,11 @@
   <link rel="stylesheet" href="/scenario/shared.css">
   <link rel="stylesheet" href="./mobile-customer.css">
   <script src="/auth-check.js" defer></script>
+  <script type="module" src="./mobile-customer-links.mjs"></script>
 </head>
 <body>
   <header class="preview-bar">
-    <div class="preview-bar-inner"><a href="/combined/">← 합본</a><span>모바일 고객 시나리오</span></div>
+    <div class="preview-bar-inner"><a href="/combined/#/control" data-operator-link>← 같은 배송 관제</a><span>모바일 고객 시나리오</span></div>
   </header>
 
   <section id="account-picker" aria-labelledby="picker-title">
@@ -26,21 +27,22 @@
     </div>
   </section>
 
-  <div class="mobile-shell screen">
-    <div class="push-banner" id="push" role="status" aria-live="polite" aria-atomic="true">
+  <div class="mobile-shell">
+    <main class="customer-grid">
+      <section class="mobile-viewer" aria-label="고객 모바일 뷰어">
+        <div class="viewer-speaker" aria-hidden="true"></div>
+<div class="push-banner" id="push" role="status" aria-live="polite" aria-atomic="true">
       <div class="icon" aria-hidden="true">M</div>
       <div class="push-copy"><div class="title" id="push-title"></div><div class="body" id="push-body"></div></div>
       <div class="when" id="push-when"></div>
     </div>
-
-    <div class="customer-heading">
+        <div class="viewer-screen screen" tabindex="0" role="region" aria-label="고객 모바일 화면, 스크롤해서 주문과 알림 확인">
+<div class="customer-heading">
       <p class="logo">MEATBOX <small>새벽배송</small></p>
       <h1>주문·배송 조회</h1>
       <div class="store-heading"><strong id="account-name">배송지 선택</strong><button type="button" class="btn ghost" id="switch-account">매장 변경</button></div>
     </div>
-
-    <main class="customer-grid">
-      <div class="tracking-column">
+          <div class="tracking-column">
         <section class="card order-checkout" id="order-cta" aria-labelledby="checkout-title" hidden>
           <p class="eyebrow">주문 전</p>
           <h2 id="checkout-title">새벽배송 주문을 시작해 보세요</h2>
@@ -62,15 +64,7 @@
           <div class="map-heading"><h2 id="map-heading">배송 위치</h2><span>🚚 배송 차량 &nbsp; 🏠 우리 매장</span></div>
           <div id="map" class="map" aria-label="배송 차량과 선택한 매장의 위치 지도"></div>
         </section>
-      </div>
-
-      <div class="detail-column">
-        <section class="card" id="timeline-card" aria-labelledby="timeline-heading">
-          <h2 id="timeline-heading">배송 현황</h2>
-          <ul class="timeline" id="timeline"></ul>
-        </section>
-
-        <section class="card" aria-labelledby="order-heading">
+        <section class="card order-card" aria-labelledby="order-heading">
           <div class="order-head"><h2 id="order-heading">주문 상품</h2><span class="no" id="order-no"></span></div>
           <div id="order-items"></div>
           <div class="order-total" id="order-boxes"></div>
@@ -82,9 +76,18 @@
             <div id="talk-list"><p class="empty">아직 도착한 알림이 없어요</p></div>
           </div>
         </section>
-      </div>
+          </div>
+        </div>
+      </section>
+      <aside class="detail-column" aria-label="선택 고객 배송 타임라인">
+        <section class="card" id="timeline-card" aria-labelledby="timeline-heading">
+          <h2 id="timeline-heading">배송 현황</h2>
+          <ul class="timeline" id="timeline"></ul>
+        </section>
+
+      </aside>
     </main>
-    <footer class="customer-footer">배송 단계는 <a href="/combined/">합본의 시연 가이드</a>에서 진행할 수 있습니다.</footer>
+    <footer class="customer-footer">운영 화면을 함께 열어 두고 고객 안내의 변화를 비교해 보세요.<br><a href="/combined/#/control" data-operator-link>같은 배송 관제에서 시연 이어가기</a></footer>
   </div>
   <noscript><p class="no-script">배송 시나리오를 보려면 JavaScript를 활성화해 주세요. <a href="/combined/">합본으로 돌아가기</a></p></noscript>
 
