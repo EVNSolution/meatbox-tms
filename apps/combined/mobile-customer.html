@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#ffffff">
+  <title>모바일 고객 시나리오 · 미트박스</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
+  <link rel="stylesheet" href="/scenario/shared.css">
+  <link rel="stylesheet" href="./mobile-customer.css">
+  <script src="/auth-check.js" defer></script>
+</head>
+<body>
+  <header class="preview-bar">
+    <div class="preview-bar-inner"><a href="/combined/">← 합본</a><span>모바일 고객 시나리오</span></div>
+  </header>
+
+  <section id="account-picker" aria-labelledby="picker-title">
+    <div class="picker-content">
+      <a class="back-link" href="/combined/">← 합본으로 돌아가기</a>
+      <p class="eyebrow">MEATBOX · 고객 시나리오</p>
+      <h1 id="picker-title">어느 매장의 배송을<br>확인할까요?</h1>
+      <p class="picker-description">미리 볼 배송지를 선택해 주세요.<br>선택한 매장의 주문, 도착 예정 시각과 알림을 확인할 수 있습니다.</p>
+      <div id="account-list"><p class="loading-copy" role="status">배송지 목록을 불러오고 있습니다.</p><a href="">다시 불러오기</a></div>
+    </div>
+  </section>
+
+  <div class="mobile-shell screen">
+    <div class="push-banner" id="push" role="status" aria-live="polite" aria-atomic="true">
+      <div class="icon" aria-hidden="true">M</div>
+      <div class="push-copy"><div class="title" id="push-title"></div><div class="body" id="push-body"></div></div>
+      <div class="when" id="push-when"></div>
+    </div>
+
+    <div class="customer-heading">
+      <p class="logo">MEATBOX <small>새벽배송</small></p>
+      <h1>주문·배송 조회</h1>
+      <div class="store-heading"><strong id="account-name">배송지 선택</strong><button type="button" class="btn ghost" id="switch-account">매장 변경</button></div>
+    </div>
+
+    <main class="customer-grid">
+      <div class="tracking-column">
+        <section class="card order-checkout" id="order-cta" aria-labelledby="checkout-title" hidden>
+          <p class="eyebrow">주문 전</p>
+          <h2 id="checkout-title">새벽배송 주문을 시작해 보세요</h2>
+          <div class="payment-row"><span>결제 금액</span><strong>486,000원</strong></div>
+          <p class="checkout-meta">총 12박스 · 무료배송 · 새벽배송</p>
+          <button type="button" class="btn primary" id="place-order">시연 주문하기</button>
+          <p class="checkout-note">시연용 주문이며 실제 결제는 발생하지 않습니다.</p>
+        </section>
+
+        <section class="card eta-hero" id="eta-card" aria-labelledby="eta-heading">
+          <div class="row"><h2 id="eta-heading" class="cap">배송 안내</h2><span class="pill gray" id="status-pill">조회 중</span></div>
+          <div class="big" id="eta-text">—</div>
+          <p class="sub" id="eta-sub"></p>
+          <span class="eta-delta" id="eta-delta"></span>
+          <p class="eta-note" id="eta-note"></p>
+        </section>
+
+        <section class="card map-card" id="map-card" aria-labelledby="map-heading">
+          <div class="map-heading"><h2 id="map-heading">배송 위치</h2><span>🚚 배송 차량 &nbsp; 🏠 우리 매장</span></div>
+          <div id="map" class="map" aria-label="배송 차량과 선택한 매장의 위치 지도"></div>
+        </section>
+      </div>
+
+      <div class="detail-column">
+        <section class="card" id="timeline-card" aria-labelledby="timeline-heading">
+          <h2 id="timeline-heading">배송 현황</h2>
+          <ul class="timeline" id="timeline"></ul>
+        </section>
+
+        <section class="card" aria-labelledby="order-heading">
+          <div class="order-head"><h2 id="order-heading">주문 상품</h2><span class="no" id="order-no"></span></div>
+          <div id="order-items"></div>
+          <div class="order-total" id="order-boxes"></div>
+        </section>
+
+        <section class="card" id="talk-card" aria-labelledby="talk-heading">
+          <div class="talk">
+            <h2 class="ch" id="talk-heading"><span class="avatar" aria-hidden="true">M</span>미트박스 알림톡 <span class="demo-label">시연</span></h2>
+            <div id="talk-list"><p class="empty">아직 도착한 알림이 없어요</p></div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer class="customer-footer">배송 단계는 <a href="/combined/">합본의 시연 가이드</a>에서 진행할 수 있습니다.</footer>
+  </div>
+  <noscript><p class="no-script">배송 시나리오를 보려면 JavaScript를 활성화해 주세요. <a href="/combined/">합본으로 돌아가기</a></p></noscript>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
+  <script src="/scenario/common.js"></script>
+  <script src="/scenario/customer.js"></script>
+</body>
+</html>
