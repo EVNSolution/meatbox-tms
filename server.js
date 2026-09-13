@@ -63,6 +63,7 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
   }
   const cookieOptions = { secure, httpOnly: true, sameSite: 'strict', path: '/' };
   app.get('/portal.css', (_req, res) => res.sendFile(path.join(ROOT, 'apps/portal/portal.css')));
+  app.get('/portal-validation.js', (_req, res) => res.sendFile(path.join(ROOT, 'apps/portal/validation.js')));
   app.get('/login', asyncRoute(async (req, res) => {
     if (await access.session(tokenFrom(req))) return res.redirect(safeNext(req.query.next));
     res.send(loginPage({ next: safeNext(req.query.next), registered: req.query.registered === '1' }));
@@ -84,7 +85,17 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
       res.redirect(303, '/login?registered=1');
     } catch (error) {
       if (!(error instanceof AccessError)) throw error;
-      res.status(400).send(registerPage('가입 정보를 확인해 주세요. 초대 코드는 유효 기간 내 한 번만 사용할 수 있습니다.'));
+      const field = error.field || (error.code === 'USERNAME_TAKEN' ? 'username' : error.code === 'INVALID_INVITE' ? 'invite' : '');
+      const message = error.code === 'USERNAME_TAKEN' ? '이미 사용 중인 아이디입니다.'
+        : error.code === 'INVALID_INVITE' ? '초대 코드가 유효하지 않거나 이미 사용되었습니다.'
+          : field === 'username' ? '영문 또는 숫자로 시작하는 3~40자로 입력해 주세요.'
+            : field === 'password' ? '비밀번호는 12~128자로 입력해 주세요.'
+              : field === 'displayName' ? '표시 이름은 제어 문자를 제외한 80자 이내로 입력해 주세요.'
+                : '입력값을 확인해 주세요.';
+      res.status(400).send(registerPage({
+        errors: { [field || 'form']: message },
+        values: { username: req.body.username, displayName: req.body.displayName },
+      }));
     }
   }));
   app.post('/logout', sameOrigin, asyncRoute(async (req, res) => {

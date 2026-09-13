@@ -8,7 +8,7 @@ const { once } = require('node:events');
 const { WebSocket } = require('ws');
 const { createDemo, safeNext, validCommand } = require('../server');
 const { createAccess } = require('../lib/access');
-const { registerPage } = require('../apps/portal/pages');
+const { loginPage, registerPage } = require('../apps/portal/pages');
 
 test('signup username pattern is valid in the browser Unicode sets mode', () => {
   const pattern = registerPage().match(/pattern="([^"]+)"/)[1];
@@ -16,6 +16,17 @@ test('signup username pattern is valid in the browser Unicode sets mode', () => 
   assert.equal(validation.test('reviewer-01'), true);
   assert.equal(validation.test('_reviewer'), false);
   assert.equal(validation.test('검토자'), false);
+});
+
+test('auth forms expose native constraints and accessible inline validation targets', () => {
+  const signup = registerPage();
+  const login = loginPage();
+  assert.match(signup, /data-validate/);
+  assert.match(signup, /name="invite"[^>]*minlength="16"[^>]*maxlength="256"/);
+  assert.match(signup, /name="password"[^>]*minlength="12"[^>]*maxlength="128"/);
+  assert.match(signup, /id="username-error" hidden/);
+  assert.match(login, /name="username"[^>]*pattern=/);
+  assert.match(login, /portal-validation\.js/);
 });
 
 test('all branches, APIs and WebSocket require the same authenticated session', async t => {
@@ -33,12 +44,31 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   for (const route of ['/api/session', '/scenario/api/route-data']) assert.equal((await get(route)).status, 401, route);
   assert.equal((await get('/login')).status, 200);
   assert.equal((await get('/dev/register')).status, 200);
-  assert.equal((await post('/dev/register', {})).status, 400);
+  const validator = await get('/portal-validation.js');
+  assert.equal(validator.status, 200);
+  assert.match(validator.headers.get('content-type'), /javascript/);
+  const invalidSignup = await post('/dev/register', {});
+  assert.equal(invalidSignup.status, 400);
+  const invalidSignupHtml = await invalidSignup.text();
+  assert.match(invalidSignupHtml, /id="username-error"[^>]*role="alert"[^>]*>영문 또는 숫자로 시작/);
+  assert.doesNotMatch(invalidSignupHtml, /value="undefined"/);
   const invite = await demo.access.issueInvite();
   const credentials = { username: 'reviewer', password: 'a-long-demo-password' };
   assert.equal((await post('/dev/register', { ...credentials, invite }, '', 'https://attacker.invalid')).status, 403);
   assert.equal((await post('/dev/register', { ...credentials, invite })).status, 303);
-  assert.equal((await post('/dev/register', { ...credentials, username: 'second', invite })).status, 400);
+  const reusedInvite = await post('/dev/register', { ...credentials, username: 'second', invite });
+  assert.equal(reusedInvite.status, 400);
+  const reusedInviteHtml = await reusedInvite.text();
+  assert.match(reusedInviteHtml, /id="invite-error"[^>]*role="alert"[^>]*>초대 코드가 유효하지 않거나 이미 사용/);
+  assert.doesNotMatch(reusedInviteHtml, new RegExp(invite));
+  assert.doesNotMatch(reusedInviteHtml, new RegExp(credentials.password));
+  const duplicateInvite = await demo.access.issueInvite();
+  const duplicate = await post('/dev/register', { ...credentials, invite: duplicateInvite });
+  assert.equal(duplicate.status, 400);
+  const duplicateHtml = await duplicate.text();
+  assert.match(duplicateHtml, /id="username-error"[^>]*role="alert"[^>]*>이미 사용 중인 아이디/);
+  assert.doesNotMatch(duplicateHtml, new RegExp(duplicateInvite));
+  assert.doesNotMatch(duplicateHtml, new RegExp(credentials.password));
   assert.equal((await post('/login', { ...credentials, password: 'wrong-password' })).status, 401);
   const login = await post('/login', { ...credentials, next: '//attacker.invalid' });
   assert.equal(login.status, 303); assert.equal(login.headers.get('location'), '/');

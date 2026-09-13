@@ -152,8 +152,8 @@ test('validates usernames, passwords, duplicate users, and invite lifetime', asy
   const { access } = await fixture();
   await assert.rejects(access.issueInvite({ expiresInMs: 0 }), rejectsCode('VALIDATION'));
   const invite = await access.issueInvite();
-  await assert.rejects(access.register({ username: '../bad', password: 'correct horse battery', invite }), rejectsCode('VALIDATION'));
-  await assert.rejects(access.register({ username: 'valid.user', password: 'short', invite }), rejectsCode('VALIDATION'));
+  await assert.rejects(access.register({ username: '../bad', password: 'correct horse battery', invite }), error => rejectsCode('VALIDATION')(error) && error.field === 'username');
+  await assert.rejects(access.register({ username: 'valid.user', password: 'short', invite }), error => rejectsCode('VALIDATION')(error) && error.field === 'password');
   await assert.rejects(access.login({ username: 'unknown.user', password: 'correct horse battery' }), rejectsCode('BAD_CREDENTIALS'));
 
   await access.register({ username: 'valid.user', password: 'correct horse battery', invite });
