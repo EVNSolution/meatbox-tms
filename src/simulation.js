@@ -58,8 +58,10 @@ class Simulation {
     this.stops = {};
     for (const id of DEFAULT_ORDER) {
       const p = routeData.points.find((x) => x.id === id);
-      this.stops[id] = { id, name: p.name, ...STOP_INFO[id], status: 'pending', deliveredAt: null };
+      this.stops[id] = { id, name: p.name, ...STOP_INFO[id], status: 'pending', arrivedAt: null, deliveredAt: null };
     }
+    this.latestEtas = {};   // 스냅샷마다 갱신되는 예측치
+    this.frozenEtas = {};   // 도착 시점에 동결된 예측치 (실제 vs 예측 비교용)
     this.prepDone = [];                      // 완료된 출고 전 단계
     this.truck = this.makeIdleTruck();
     this.legFactors = {};
@@ -332,6 +334,8 @@ class Simulation {
 
   arriveAtStop() {
     const id = this.truck.toId;
+    this.stops[id].arrivedAt = this.simTime;
+    if (this.frozenEtas[id] == null && this.latestEtas[id] != null) this.frozenEtas[id] = this.latestEtas[id];
     this.truck.atStopId = id;
     this.truck.fromId = id;
     this.truck.toId = null;
@@ -411,6 +415,7 @@ class Simulation {
     const currentLeg = this.currentLegKey();
     const leg = currentLeg ? routeData.legs[currentLeg] : null;
     const etas = this.stopEtas();
+    this.latestEtas = etas;
     const lastId = this.order[this.order.length - 1];
     return {
       phase: this.phase,
@@ -428,8 +433,9 @@ class Simulation {
       },
       order: this.order.map((id) => ({
         ...this.stops[id],
+        arrivedTime: this.stops[id].arrivedAt ? fmtTime(this.stops[id].arrivedAt) : null,
         deliveredTime: this.stops[id].deliveredAt ? fmtTime(this.stops[id].deliveredAt) : null,
-        eta: etas[id] ? fmtTime(etas[id]) : null,
+        eta: etas[id] ? fmtTime(etas[id]) : this.frozenEtas[id] ? fmtTime(this.frozenEtas[id]) : null,
       })),
       customerStatus: this.customerStatus(),
       timeline: this.timeline(),

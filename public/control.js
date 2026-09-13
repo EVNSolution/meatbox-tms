@@ -48,21 +48,24 @@
     $('incident').style.display = s.incidents.length ? 'inline-flex' : 'none';
 
     const header = `<tr style="color:var(--ink-3);font-size:11px;">
-      <td>#</td><td>정차지</td><td>박스</td><td>상태</td><td style="text-align:right;">ETA</td>
+      <td>#</td><td>정차지</td><td>박스</td><td>상태</td>
+      <td style="text-align:right;">도착</td><td style="text-align:right;">ETA</td>
     </tr>`;
     $('stops').innerHTML = header + s.order
       .map((o, i) => {
         const [sl, sc] = STATUS[o.status];
-        let etaCell;
-        if (o.status === 'done') etaCell = `<span style="color:var(--green);font-weight:700;">${o.deliveredTime} ✓</span>`;
-        else if (o.status === 'current' && s.truck.dwelling) etaCell = '<span style="color:var(--amber);font-weight:700;">하차 중</span>';
-        else etaCell = o.eta ? `<b>${o.eta}</b>` : '—';
+        let arrCell;
+        if (o.status === 'done') arrCell = `<span style="color:var(--green);font-weight:700;">${o.arrivedTime} ✓</span>`;
+        else if (o.arrivedTime) arrCell = `<span style="color:var(--amber);font-weight:700;">${o.arrivedTime}</span>`;
+        else arrCell = '—';
+        const etaCell = o.eta ? (o.arrivedTime ? `<span style="color:var(--ink-3);">${o.eta}</span>` : `<b>${o.eta}</b>`) : '—';
         return `<tr>
-          <td style="width:22px;font-weight:800;">${i + 1}</td>
+          <td style="width:20px;font-weight:800;">${i + 1}</td>
           <td><b>${o.name}</b><br><span style="color:var(--ink-3);font-size:11px;">${o.address}</span></td>
-          <td style="width:48px;" class="mono">${o.boxes}박스</td>
-          <td style="width:60px;"><span class="pill ${sc}" style="font-size:11px;">${sl}</span></td>
-          <td style="width:58px;text-align:right;" class="mono">${etaCell}</td>
+          <td style="width:42px;" class="mono">${o.boxes}박스</td>
+          <td style="width:54px;"><span class="pill ${sc}" style="font-size:11px;">${sl}</span></td>
+          <td style="width:52px;text-align:right;" class="mono">${arrCell}</td>
+          <td style="width:44px;text-align:right;" class="mono">${etaCell}</td>
         </tr>`;
       })
       .join('');
