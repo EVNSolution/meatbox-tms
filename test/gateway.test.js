@@ -39,7 +39,7 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   t.after(async () => { await demo.close(); await fs.rm(dir, { recursive: true, force: true }); });
   const get = (url, cookie) => fetch(base + url, { redirect: 'manual', headers: cookie ? { cookie } : {} });
   const post = (url, data, cookie, requestOrigin = origin) => fetch(base + url, { method: 'POST', redirect: 'manual', headers: { origin: requestOrigin, 'content-type': 'application/x-www-form-urlencoded', ...(cookie ? { cookie } : {}) }, body: new URLSearchParams(data) });
-  for (const route of ['/', '/scenario/', '/scenario/present', '/scenario/common.js', '/ui-layout/styles.css', '/combined/app.mjs', '/combined/', '/combined/mobile-customer.html?id=S5', '/combined/mobile-customer.css']) {
+  for (const route of ['/', '/scenario/', '/scenario/present', '/scenario/common.js', '/ui-layout/styles.css', '/combined/app.mjs', '/combined/', '/combined/mobile-customer.html?id=S5', '/combined/mobile-customer.css', '/combined/map-preview.css']) {
     const res = await get(route); assert.equal(res.status, 302, route); assert.match(res.headers.get('location'), /^\/login\?next=/);
   }
   for (const route of ['/api/session', '/scenario/api/route-data']) assert.equal((await get(route)).status, 401, route);
@@ -93,6 +93,12 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   const combined = await (await get('/combined/', cookie)).text();
   assert.match(combined, /href="\.\/mobile-customer\.html"/);
   assert.doesNotMatch(combined, /href="\/ui-layout\/#\/design"/);
+  assert.match(combined, /href="\.\/map-preview\.css"/);
+  const layout = await (await get('/ui-layout/', cookie)).text();
+  assert.match(layout, /href="\/combined\/map-preview\.css"/);
+  const mapCss = await get('/combined/map-preview.css', cookie);
+  assert.equal(mapCss.status, 200);
+  assert.match(mapCss.headers.get('content-type'), /text\/css/);
   const mobileResponse = await get('/combined/mobile-customer.html?id=S5', cookie);
   assert.equal(mobileResponse.status, 200);
   assert.equal(mobileResponse.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');

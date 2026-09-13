@@ -136,7 +136,9 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
   app.use('/scenario', express.static(scenarioDir, { index: false, dotfiles: 'deny' }));
   app.get('/ui-layout/', asyncRoute(async (_req, res) => {
     const html = await fs.readFile(path.join(ROOT, 'workspaces/jiin-ui/index.html'), 'utf8');
-    res.type('html').send(html.replace('</body>', '<script src="/auth-check.js" defer></script></body>'));
+    res.type('html').send(html
+      .replace('</head>', '<link rel="stylesheet" href="/combined/map-preview.css"></head>')
+      .replace('</body>', '<script src="/auth-check.js" defer></script></body>'));
   }));
   app.use('/ui-layout', express.static(path.join(ROOT, 'workspaces/jiin-ui'), { index: false, dotfiles: 'deny' }));
   app.use('/combined', express.static(path.join(ROOT, 'apps/combined'), { dotfiles: 'deny' }));
