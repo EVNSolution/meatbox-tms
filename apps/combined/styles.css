@@ -318,7 +318,7 @@ ol {
 
 .map-preview {
   width: calc(100% - 40px);
-  min-height: 220px;
+  min-height: clamp(420px, 62dvh, 760px);
   max-width: 1560px;
   margin: 12px auto 0;
   background: #f8f9fb;
@@ -331,8 +331,12 @@ ol {
 }
 
 .map-preview > div {
-  min-height: 218px;
-  padding: 18px 20px;
+  min-height: inherit;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: 28px;
+  text-align: center;
 }
 
 .map-preview h2 {
@@ -1404,13 +1408,13 @@ button:disabled {
 
   .map-preview {
     width: auto;
-    min-height: 200px;
+    min-height: max(360px, 60dvh);
     margin: 10px 12px 0;
   }
 
   .map-preview > div {
-    min-height: 198px;
-    padding: 16px;
+    min-height: inherit;
+    padding: 20px;
   }
 
   .workspace {
@@ -1884,4 +1888,13 @@ a.button {
   .field select {
     font-size: 16px;
   }
+}
+
+/* The clock remains visible while a presenter changes pages or collapses the guide. */
+.simulation-clock { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.simulation-clock > span { color: var(--muted); font-size: 12px; }
+.simulation-clock time { color: var(--action); font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+@media (max-width: 520px) {
+  .simulation-clock { margin-left: auto; }
+  .simulation-clock time { font-size: 24px; }
 }

@@ -1,5 +1,7 @@
+import { scenarioGuide } from './scenario-guide.mjs';
+
 const storageKey = 'meatbox-combined-tools-position';
-const phaseLabels = { unordered: '주문 전', idle: '주문 접수', preparing: '출고 준비', delivering: '배송 중', done: '배송 완료' };
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 export function clampPosition(x, y, width, height, viewportWidth, viewportHeight) {
   return {
@@ -17,20 +19,25 @@ export function mountScenarioTools({ onSend }) {
     <button type="button" class="scenario-handle" aria-label="시나리오 패널 이동" title="끌어서 이동"><span aria-hidden="true">⠿</span></button>
     <div class="scenario-content">
       <div class="scenario-palette-header">
-        <div><strong class="scenario-title" id="scenario-tools-heading">시나리오 제어</strong><small id="current-scenario">상태 연결 중</small></div>
+        <div><strong class="scenario-title" id="scenario-tools-heading">시연 가이드</strong><small id="current-scenario">상태 연결 중</small></div>
         <button type="button" class="scenario-toggle" aria-expanded="false" aria-controls="scenario-body">펼치기 +</button>
       </div>
       <div class="scenario-body" id="scenario-body" hidden>
-        <p class="scenario-help">상현님 시뮬레이션 원본 명령을 전송합니다.</p>
+        <div class="scenario-clock-row"><div><span>시연 시각</span><time id="scenario-clock">--:--</time></div><span id="scenario-count"></span></div>
+        <section class="scenario-current" aria-labelledby="scenario-stage"><span class="scenario-label">현재 단계</span><h2 id="scenario-stage">연결 중</h2><p id="scenario-description"></p></section>
+        <section class="scenario-next" aria-labelledby="scenario-next-title"><div class="scenario-next-heading"><span class="scenario-label">다음</span><strong id="scenario-next-title"></strong><time id="scenario-next-time"></time></div><p id="scenario-effect"></p><small id="scenario-elapsed"></small><button type="button" class="scenario-primary" id="scenario-next-action" disabled>상태 연결 중</button></section>
+        <p class="scenario-completed" id="scenario-completed" hidden></p>
+        <details class="scenario-guide-details"><summary>단계별 시연 순서</summary><ol id="scenario-steps"></ol><p>출발 후에는 각 배송지의 <strong>이동 → 도착·하차 → 배송 완료</strong>를 반복합니다. 이동은 자동으로 진행되고, 하차 시간이 끝나면 자동 완료됩니다. 다음 행동 버튼으로 기다리는 시간을 줄일 수 있습니다.</p></details>
+        <details class="scenario-guide-details"><summary>최근 변동과 시각</summary><ol class="scenario-events" id="scenario-events"></ol></details>
+        <p class="scenario-error" id="scenario-error" role="alert" hidden></p>
+        <span class="scenario-label">추가 상황</span>
         <div class="scenario-buttons" role="group" aria-label="시뮬레이션 진행">
-          <button type="button" data-command="place_order">주문 접수</button>
-          <button type="button" data-command="advance">다음 단계</button>
           <button type="button" data-command="inject_traffic">교통 사고</button>
           <button type="button" data-command="inject_dwell">정차 지연</button>
         </div>
         <fieldset class="speed-controls"><legend>배속</legend><button type="button" data-speed="1">1×</button><button type="button" data-speed="5">5×</button><button type="button" data-speed="20">20×</button></fieldset>
         <div class="scenario-footer"><button type="button" class="button subtle" data-command="reset">초기화</button><a href="/scenario/present">시나리오 페이지</a></div>
-        <p class="scenario-reset-help">배송 순서 변경과 건너뜀은 단말 관제의 배송 카드에서 조작합니다.</p>
+        <p class="scenario-reset-help">모든 접속자가 같은 진행 상태를 봅니다. 순서 변경과 건너뜀은 단말 관제에서 조작합니다.</p>
       </div>
     </div>`;
   document.body.append(panel);
@@ -39,6 +46,10 @@ export function mountScenarioTools({ onSend }) {
   const toggle = panel.querySelector('.scenario-toggle');
   const body = panel.querySelector('.scenario-body');
   const status = panel.querySelector('#current-scenario');
+  const primary = panel.querySelector('#scenario-next-action');
+  let nextAction = null;
+  let pending = false;
+  const put = (id, text) => { panel.querySelector(`#${id}`).textContent = text || ''; };
 
   function move(x, y) {
     const position = clampPosition(x, y, panel.offsetWidth, panel.offsetHeight, innerWidth, innerHeight);
@@ -61,11 +72,29 @@ export function mountScenarioTools({ onSend }) {
   }
 
   toggle.addEventListener('click', () => { expand(body.hidden); save(); });
+  primary.addEventListener('click', () => {
+    if (pending || !nextAction?.action) return;
+    pending = true;
+    primary.disabled = true;
+    panel.querySelector('#scenario-error').hidden = true;
+    onSend(nextAction.action, nextAction.stopId ? { stopId: nextAction.stopId } : {});
+  });
   panel.addEventListener('click', event => {
     const command = event.target.closest('[data-command]')?.dataset.command;
     const speed = event.target.closest('[data-speed]')?.dataset.speed;
     if (command) onSend(command);
     if (speed) onSend('speed', { value: Number(speed) });
+  });
+  panel.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !body.hidden) { expand(false); save(); toggle.focus(); }
+  });
+  handle.addEventListener('keydown', event => {
+    const moves = { ArrowLeft: [-20, 0], ArrowRight: [20, 0], ArrowUp: [0, -20], ArrowDown: [0, 20] };
+    if (!moves[event.key]) return;
+    event.preventDefault();
+    const { x, y } = panel.getBoundingClientRect();
+    move(x + moves[event.key][0], y + moves[event.key][1]);
+    save();
   });
 
   let drag = null;
@@ -100,12 +129,36 @@ export function mountScenarioTools({ onSend }) {
   } catch {}
 
   return {
+    showError(message) {
+      put('scenario-error', message);
+      panel.querySelector('#scenario-error').hidden = false;
+      pending = false;
+    },
     update(state, connected) {
-      status.textContent = connected && state ? `${state.simClock}  ${phaseLabels[state.phase] || '상태 미확인'}  ${state.speed}×` : '연결 대기';
-      panel.querySelector('[data-command="place_order"]').disabled = !connected || state?.phase !== 'unordered';
-      panel.querySelector('[data-command="advance"]').disabled = !connected || !['idle', 'preparing'].includes(state?.phase);
-      panel.querySelector('[data-command="inject_traffic"]').disabled = !connected || state?.phase !== 'delivering';
+      const guide = scenarioGuide(state);
+      nextAction = guide;
+      pending = false;
+      status.textContent = connected && guide ? guide.title : '연결 대기';
+      primary.disabled = !connected || !guide?.action;
+      put('scenario-next-action', connected ? guide?.actionLabel || '배송 시연 완료' : '연결 대기');
+      if (guide) {
+        put('scenario-clock', state.simClock);
+        put('scenario-count', `완료 ${guide.doneCount} / ${guide.totalCount}곳`);
+        put('scenario-stage', guide.title);
+        put('scenario-description', guide.description);
+        put('scenario-next-title', guide.nextTitle);
+        put('scenario-next-time', guide.nextTime ? `${guide.nextTime}${guide.estimated ? ' 예상' : ''}` : '');
+        put('scenario-effect', guide.effect);
+        put('scenario-elapsed', guide.elapsed);
+        const completed = guide.latestCompleted;
+        panel.querySelector('#scenario-completed').hidden = !completed;
+        put('scenario-completed', completed ? `최근 완료 ${completed.sequence}번 ${completed.name} · 도착 ${completed.arrivedAt || '미확인'} / 완료 ${completed.completedAt || '미확인'}` : '');
+        panel.querySelector('#scenario-steps').innerHTML = guide.steps.map(step => `<li data-state="${step.state}"><div><strong>${escapeHtml(step.label)}</strong><time>${escapeHtml(step.actualTime || step.time)}${step.actualTime ? '' : ' 예정'}</time></div><p>${escapeHtml(step.description)}</p></li>`).join('');
+        panel.querySelector('#scenario-events').innerHTML = guide.recentEvents.map(event => `<li><time>${escapeHtml(event.time)}</time><span>${escapeHtml(event.message)}</span></li>`).join('') || '<li>아직 변동이 없습니다.</li>';
+      }
+      panel.querySelector('[data-command="inject_traffic"]').disabled = !connected || state?.phase !== 'delivering' || state.incidents.length > 0;
       panel.querySelector('[data-command="inject_dwell"]').disabled = !connected || state?.phase !== 'delivering';
+      panel.querySelector('[data-command="reset"]').disabled = !connected;
       panel.querySelectorAll('[data-speed]').forEach(button => {
         button.disabled = !connected;
         button.setAttribute('aria-pressed', String(Number(button.dataset.speed) === state?.speed));

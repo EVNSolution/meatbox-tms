@@ -107,6 +107,29 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   const first = await once(ws, 'message'); assert.equal(JSON.parse(first[0]).type, 'state');
   const nextState = once(ws, 'message'); ws.send(JSON.stringify({ type: 'place_order' }));
   assert.equal(JSON.parse((await nextState)[0]).state.phase, 'idle');
+  async function commandState(command, matches) {
+    const result = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { ws.off('message', receive); reject(new Error(`No state for ${command.type}`)); }, 2000);
+      function receive(raw) {
+        const message = JSON.parse(raw);
+        if (message.type === 'state' && matches(message.state)) {
+          clearTimeout(timer); ws.off('message', receive); resolve(message.state);
+        }
+      }
+      ws.on('message', receive);
+    });
+    ws.send(JSON.stringify(command));
+    return result;
+  }
+  for (const simClock of ['05:50', '06:05', '06:20', '06:30']) {
+    await commandState({ type: 'advance' }, state => state.simClock === simClock);
+  }
+  const arrived = await commandState({ type: 'arrive_stop', stopId: 'S1' }, state => state.truck.dwelling && state.truck.fromId === 'S1');
+  assert.ok(arrived.order[0].arrivedTime);
+  assert.equal(arrived.order[0].deliveredTime, null);
+  const completed = await commandState({ type: 'complete_stop', stopId: 'S1' }, state => state.order[0].status === 'done');
+  assert.ok(completed.order[0].deliveredTime);
+  assert.equal(completed.truck.toId, 'S2');
   assert.equal((await post('/logout', {}, cookie, 'https://attacker.invalid')).status, 403);
   const closed = once(ws, 'close'); assert.equal((await post('/logout', {}, cookie)).status, 303);
   assert.equal((await closed)[0], 4401);

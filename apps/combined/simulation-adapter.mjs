@@ -73,6 +73,10 @@ export function adaptSimulation(snapshot) {
     phase: escapeText(snapshot.phase),
     simClock: escapeText(snapshot.simClock),
     speed: snapshot.speed,
+    truck: snapshot.truck ? {
+      dwelling: snapshot.truck.dwelling === true,
+      dwellRemaining: Number.isFinite(snapshot.truck.dwellRemaining) ? snapshot.truck.dwellRemaining : 0,
+    } : null,
     customerStopId: snapshot.customerStopId ? escapeText(snapshot.customerStopId) : null,
     vehicle: liveVehicle ? {
       id: escapeText(liveVehicle.id),
