@@ -5,21 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#ffffff">
-  <title>모바일 고객 시나리오 · 미트박스</title>
+  <title>고객 뷰어 · 미트박스 TMS 시연</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
   <link rel="stylesheet" href="/scenario/shared.css">
   <link rel="stylesheet" href="./mobile-customer.css">
+  <link rel="stylesheet" href="./scenario-tools.css">
+  <link rel="stylesheet" href="./demo-shell.css">
   <script src="/auth-check.js" defer></script>
   <script type="module" src="./mobile-customer-links.mjs"></script>
 </head>
 <body>
-  <header class="preview-bar">
-    <div class="preview-bar-inner"><a href="/combined/#/control" data-operator-link>← 같은 배송 관제</a><span>모바일 고객 시나리오</span></div>
-  </header>
+  <header class="demo-header" id="demo-header"></header>
+  <div class="demo-layout">
+    <aside class="demo-navigation" id="demo-navigation"></aside>
+    <main class="demo-main">
+      <div id="demo-guide"></div>
+      <p class="demo-connection" id="customer-connection" role="status">시연에 연결하고 있습니다.</p>
 
   <section id="account-picker" aria-labelledby="picker-title">
     <div class="picker-content">
-      <a class="back-link" href="/combined/">← 합본으로 돌아가기</a>
+      <a class="back-link" href="/combined/">← 운영 뷰어로</a>
       <p class="eyebrow">MEATBOX · 고객 시나리오</p>
       <h1 id="picker-title">어느 매장의 배송을<br>확인할까요?</h1>
       <p class="picker-description">미리 볼 배송지를 선택해 주세요.<br>선택한 매장의 주문, 도착 예정 시각과 알림을 확인할 수 있습니다.</p>
@@ -28,7 +33,7 @@
   </section>
 
   <div class="mobile-shell">
-    <main class="customer-grid">
+    <div class="customer-grid">
       <section class="mobile-viewer" aria-label="고객 모바일 뷰어">
         <div class="viewer-speaker" aria-hidden="true"></div>
 <div class="push-banner" id="push" role="status" aria-live="polite" aria-atomic="true">
@@ -86,13 +91,14 @@
         </section>
 
       </aside>
-    </main>
-    <footer class="customer-footer">운영 화면을 함께 열어 두고 고객 안내의 변화를 비교해 보세요.<br><a href="/combined/#/control" data-operator-link>같은 배송 관제에서 시연 이어가기</a></footer>
+    </div>
+    <footer class="customer-footer">같은 배송을 운영 뷰어와 고객 뷰어에서 비교할 수 있습니다.<br><a href="/combined/#/control" data-operator-link>운영 뷰어로 전환</a></footer>
   </div>
-  <noscript><p class="no-script">배송 시나리오를 보려면 JavaScript를 활성화해 주세요. <a href="/combined/">합본으로 돌아가기</a></p></noscript>
+    </main>
+  </div>
+  <noscript><p class="no-script">배송 시나리오를 보려면 JavaScript를 활성화해 주세요. <a href="/combined/">시연 안내로</a></p></noscript>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
   <script src="/scenario/common.js"></script>
-  <script src="/scenario/customer.js"></script>
 </body>
 </html>

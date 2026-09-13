@@ -10,7 +10,7 @@ export function clampPosition(x, y, width, height, viewportWidth, viewportHeight
   };
 }
 
-export function mountScenarioTools({ onSend }) {
+export function mountScenarioTools({ onSend, container }) {
   const panel = document.createElement('aside');
   panel.id = 'scenario-tools';
   panel.className = 'scenario-palette';
@@ -36,15 +36,27 @@ export function mountScenarioTools({ onSend }) {
           <button type="button" data-command="inject_dwell">정차 지연</button>
         </div>
         <fieldset class="speed-controls"><legend>배속</legend><button type="button" data-speed="1">1×</button><button type="button" data-speed="5">5×</button><button type="button" data-speed="20">20×</button></fieldset>
-        <div class="scenario-footer"><button type="button" class="button subtle" data-command="reset">초기화</button><a href="/scenario/present">시나리오 페이지</a></div>
-        <p class="scenario-reset-help">모든 접속자가 같은 진행 상태를 봅니다. 순서 변경과 건너뜀은 단말 관제에서 조작합니다.</p>
+        <div class="scenario-footer"><button type="button" class="button subtle" data-command="reset">초기화</button><a href="/scenario/present">원본 발표 리모컨</a></div>
+        <p class="scenario-reset-help">모든 접속자가 같은 진행 상태를 봅니다. 순서 변경과 건너뜀은 운영 뷰어의 배송 상세에서 조작합니다.</p>
       </div>
     </div>`;
-  document.body.append(panel);
+  if (container) {
+    panel.classList.add('scenario-inline');
+    const advanced = document.createElement('div');
+    advanced.className = 'scenario-advanced';
+    advanced.id = 'scenario-advanced';
+    let node = panel.querySelector('#scenario-completed');
+    while (node) { const next = node.nextElementSibling; advanced.append(node); node = next; }
+    panel.querySelector('.scenario-body').append(advanced);
+    panel.querySelector('.scenario-body').hidden = false;
+    panel.querySelector('.scenario-toggle').setAttribute('aria-controls', advanced.id);
+    panel.querySelector('.scenario-handle').hidden = true;
+  }
+  (container || document.body).append(panel);
 
   const handle = panel.querySelector('.scenario-handle');
   const toggle = panel.querySelector('.scenario-toggle');
-  const body = panel.querySelector('.scenario-body');
+  const body = panel.querySelector(container ? '.scenario-advanced' : '.scenario-body');
   const status = panel.querySelector('#current-scenario');
   const primary = panel.querySelector('#scenario-next-action');
   let nextAction = null;
@@ -52,6 +64,7 @@ export function mountScenarioTools({ onSend }) {
   const put = (id, text) => { panel.querySelector(`#${id}`).textContent = text || ''; };
 
   function move(x, y) {
+    if (container) return;
     const position = clampPosition(x, y, panel.offsetWidth, panel.offsetHeight, innerWidth, innerHeight);
     Object.assign(panel.style, { left: `${position.x}px`, top: `${position.y}px`, right: 'auto', bottom: 'auto' });
   }
@@ -60,6 +73,7 @@ export function mountScenarioTools({ onSend }) {
     move(x, y);
   }
   function save() {
+    if (container) return;
     const { x, y } = panel.getBoundingClientRect();
     try { sessionStorage.setItem(storageKey, JSON.stringify({ x, y, expanded: !body.hidden })); } catch {}
   }
@@ -67,7 +81,7 @@ export function mountScenarioTools({ onSend }) {
     body.hidden = !expanded;
     panel.dataset.expanded = String(expanded);
     toggle.setAttribute('aria-expanded', String(expanded));
-    toggle.textContent = expanded ? '접기 −' : '펼치기 +';
+    toggle.textContent = expanded ? '접기 −' : container ? '자세히 +' : '펼치기 +';
     keepInView();
   }
 
@@ -122,7 +136,7 @@ export function mountScenarioTools({ onSend }) {
   expand(false);
   try {
     const saved = JSON.parse(sessionStorage.getItem(storageKey));
-    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+    if (!container && saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
       expand(saved.expanded === true);
       move(saved.x, saved.y);
     }
@@ -130,6 +144,7 @@ export function mountScenarioTools({ onSend }) {
 
   return {
     showError(message) {
+      if (container) expand(true);
       put('scenario-error', message);
       panel.querySelector('#scenario-error').hidden = false;
       pending = false;

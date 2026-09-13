@@ -39,7 +39,7 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   t.after(async () => { await demo.close(); await fs.rm(dir, { recursive: true, force: true }); });
   const get = (url, cookie) => fetch(base + url, { redirect: 'manual', headers: cookie ? { cookie } : {} });
   const post = (url, data, cookie, requestOrigin = origin) => fetch(base + url, { method: 'POST', redirect: 'manual', headers: { origin: requestOrigin, 'content-type': 'application/x-www-form-urlencoded', ...(cookie ? { cookie } : {}) }, body: new URLSearchParams(data) });
-  for (const route of ['/', '/scenario/', '/scenario/present', '/scenario/common.js', '/ui-layout/styles.css', '/combined/app.mjs', '/combined/', '/combined/mobile-customer.html?id=S5', '/combined/mobile-customer.css', '/combined/map-preview.css']) {
+  for (const route of ['/', '/scenario/', '/scenario/present', '/scenario/common.js', '/ui-layout/styles.css', '/combined/app.mjs', '/combined/', '/combined/mobile-customer.html?id=S5', '/combined/mobile-customer.css', '/combined/map-preview.css', '/combined/demo-shell.mjs', '/combined/simulation-client.mjs']) {
     const res = await get(route); assert.equal(res.status, 302, route); assert.match(res.headers.get('location'), /^\/login\?next=/);
   }
   for (const route of ['/api/session', '/scenario/api/route-data']) assert.equal((await get(route)).status, 401, route);
@@ -103,8 +103,10 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   assert.equal(mobileResponse.status, 200);
   assert.equal(mobileResponse.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
   const mobile = await mobileResponse.text();
-  for (const script of ['/scenario/common.js', '/scenario/customer.js', '/auth-check.js']) assert.ok(mobile.includes(`src="${script}"`), script);
+  for (const script of ['/scenario/common.js', './mobile-customer-links.mjs', '/auth-check.js']) assert.ok(mobile.includes(`src="${script}"`), script);
   assert.equal((mobile.match(/integrity="sha384-/g) || []).length, 2);
+  const customerEntry = await (await get('/combined/mobile-customer-links.mjs', cookie)).text();
+  assert.ok(customerEntry.includes("import('/scenario/customer.js')"));
   const mobileCss = await get('/combined/mobile-customer.css', cookie);
   assert.equal(mobileCss.status, 200);
   assert.match(mobileCss.headers.get('content-type'), /text\/css/);

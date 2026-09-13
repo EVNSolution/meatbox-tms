@@ -5,27 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <meta name="referrer" content="no-referrer">
-  <title>미트박스 TMS 합본</title>
+  <title>운영 뷰어 · 미트박스 TMS 시연</title>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./scenario-tools.css">
   <link rel="stylesheet" href="./map-preview.css">
+  <link rel="stylesheet" href="./demo-shell.css">
   <script type="module" src="./app.mjs"></script>
 </head>
 <body>
   <a class="skip-link" href="#page-heading">본문으로 이동</a>
-  <header class="app-header">
-    <a class="brand" href="/" aria-label="첫 화면으로">미트박스 <span>TMS</span></a>
-    <div class="app-title" id="app-title">합본</div>
-    <div class="header-meta"><span class="connection-badge" id="connection-state" data-state="loading">연결 중</span><span class="simulation-clock"><span>시연 시각</span><time id="snapshot-clock">--:--</time></span></div>
-  </header>
-  <div class="app-shell">
-    <aside class="app-navigation"><nav class="app-nav-links" aria-label="주 메뉴">
-      <a href="#/deliveries" data-page-link="deliveries">배송 현황</a>
-      <a href="#/control" data-page-link="control">단말 관제</a>
-      <a href="#/customer" data-page-link="customer">고객 보기</a>
-      <a href="./mobile-customer.html" class="nav-mobile" data-mobile-link target="_blank" rel="noopener">모바일<br>고객 ↗</a>
-    </nav></aside>
-    <main class="page-body">
+  <header class="demo-header" id="demo-header"></header>
+  <div class="demo-layout">
+    <aside class="demo-navigation" id="demo-navigation"></aside>
+    <main class="page-body demo-main">
+      <div id="demo-guide"></div>
+      <nav class="operator-pages" aria-label="운영 뷰어 내용"><a href="#/deliveries" data-page-link="deliveries">배송 목록</a><a href="#/control" data-page-link="control">선택 배송 상세</a></nav>
       <section class="page-intro" aria-labelledby="page-heading">
         <div><p class="eyebrow" id="page-eyebrow">상현님 시뮬레이션 연결</p><h1 id="page-heading" tabindex="-1">배송 현황</h1><p class="intro-copy" id="page-description">차량 1대의 8개 배송을 원본 상태로 확인합니다.</p></div>
         <div class="page-actions"><div class="summary-counts" id="summary-counts" aria-label="현재 배송 요약"></div><button type="button" class="button" id="toggle-map" aria-expanded="false" aria-controls="map-preview" hidden>지도 펼치기</button></div>
@@ -38,7 +32,7 @@
           <div class="review-context-head">
             <div><span>차량 진행</span><strong id="review-vehicle"></strong></div>
             <div><span>보고 있는 고객 배송</span><strong id="review-customer"></strong></div>
-            <a class="button" id="review-mobile" data-mobile-link target="_blank" rel="noopener">이 고객 화면 열기 ↗</a>
+            <a class="button" id="review-mobile" data-mobile-link href="./mobile-customer.html">고객 뷰어로 전환</a>
           </div>
           <p id="review-context-note"></p>
           <details class="review-changes"><summary id="review-change-summary">단계를 진행하면 전후 변화를 확인할 수 있습니다.</summary><p id="review-change-note"></p><ul id="review-change-rows"></ul></details>
@@ -58,8 +52,8 @@
             <aside class="panel delivery-selection" id="delivery-selection" aria-label="선택 배송 요약"></aside>
           </div>
         </section>
-        <section id="page-control" class="page-view" data-page="control" aria-label="단말 관제" hidden>
-          <section class="map-preview panel" id="map-preview" aria-labelledby="map-preview-heading" hidden><div><h2 id="map-preview-heading">지도 미리보기</h2><p>지도 미리보기를 위한 빈 화면입니다.</p><p class="muted">합본 화면에는 지도를 연결하지 않았습니다.</p></div></section>
+        <section id="page-control" class="page-view" data-page="control" aria-label="선택 배송 상세" hidden>
+          <section class="map-preview panel" id="map-preview" aria-labelledby="map-preview-heading" hidden><div><h2 id="map-preview-heading">지도 미리보기</h2><p>지도 미리보기를 위한 빈 화면입니다.</p><p class="muted">운영 뷰어에는 지도를 연결하지 않았습니다.</p></div></section>
           <div class="workspace">
             <aside class="terminal-sidebar panel" aria-labelledby="terminal-list-heading">
               <div class="section-heading"><h2 id="terminal-list-heading">차량의 배송</h2><span class="muted" id="list-count"></span></div>
