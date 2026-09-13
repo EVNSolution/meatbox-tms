@@ -1,0 +1,9 @@
+https://3.36.96.156 {
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+		}
+	}
+	reverse_proxy 127.0.0.1:3001
+}

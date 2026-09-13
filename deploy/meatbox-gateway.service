@@ -1,0 +1,28 @@
+[Unit]
+Description=Meatbox authenticated demo gateway
+After=network.target
+
+[Service]
+Type=simple
+User=meatbox-demo
+Group=meatbox-demo
+WorkingDirectory=/opt/meatbox-demo/current
+ExecStart=/usr/bin/node server.js
+Environment=NODE_ENV=production
+Environment=PUBLIC_ORIGIN=https://3.36.96.156
+Environment=PORT=3001
+Environment=ACCESS_FILE=/var/lib/meatbox-demo/access.json
+StateDirectory=meatbox-demo
+StateDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/meatbox-demo
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,306 @@
+.scenario-palette {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  width: min(280px, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  color: #232221;
+  background: #ffffff;
+  border: 1px solid #db0e64;
+  border-radius: var(--radius, 3px);
+  box-shadow: 0 0 0 3px rgb(219 14 100 / 10%), 0 10px 28px rgb(35 34 33 / 22%);
+  overflow: hidden;
+  font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.scenario-palette,
+.scenario-palette * {
+  box-sizing: border-box;
+}
+
+.scenario-palette[data-expanded="true"] {
+  width: min(400px, calc(100vw - 16px));
+}
+
+.scenario-handle {
+  width: 42px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #ffffff;
+  background: #db0e64;
+  border: 0;
+  border-right: 1px solid #bd0c56;
+  border-radius: 0;
+  cursor: grab;
+  font-size: 20px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.scenario-handle:active,
+.scenario-palette[data-dragging="true"] .scenario-handle {
+  cursor: grabbing;
+}
+
+.scenario-handle:hover {
+  background: #bd0c56;
+}
+
+.scenario-content {
+  min-width: 0;
+}
+
+.scenario-palette-header {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 12px;
+  background: #fff1f6;
+}
+
+.scenario-palette-header > div:first-child {
+  min-width: 0;
+}
+
+.scenario-title {
+  min-width: 0;
+}
+
+.scenario-title,
+#scenario-tools-heading {
+  display: block;
+  color: #a80b4d;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+#current-scenario {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--muted, #61656e);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenario-toggle {
+  min-width: 58px;
+  min-height: 34px;
+  margin-left: auto;
+  padding: 5px 8px;
+  color: #ffffff;
+  background: #bd0c56;
+  border: 1px solid #bd0c56;
+  border-radius: var(--radius, 3px);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.scenario-toggle:hover {
+  background: #a80b4d;
+  border-color: #a80b4d;
+}
+
+.scenario-body {
+  max-height: calc(100dvh - 72px);
+  padding: 10px 12px 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--border, #dce0e6);
+  scrollbar-width: thin;
+}
+
+.scenario-body[hidden] {
+  display: none;
+}
+
+.scenario-help {
+  margin: 0 0 10px;
+  color: var(--muted, #61656e);
+  font-size: 12px;
+}
+
+.scenario-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.scenario-buttons button[data-scenario],
+.scenario-buttons button[data-command] {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+  padding: 6px 8px;
+  color: var(--action, #263345);
+  background: #ffffff;
+  border: 1px solid var(--border-strong, #aeb5bf);
+  border-radius: var(--radius, 3px);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scenario-buttons button[data-scenario]:hover,
+.scenario-buttons button[data-command]:hover {
+  background: #f5f6f8;
+}
+
+.scenario-buttons button[data-scenario][aria-pressed="true"],
+.scenario-buttons button[data-scenario].selected,
+.scenario-buttons button[data-command][aria-pressed="true"] {
+  color: #ffffff;
+  background: var(--action, #263345);
+  border-color: var(--action, #263345);
+}
+
+.scenario-code {
+  min-width: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  color: var(--muted, #61656e);
+  background: #f0f2f4;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.scenario-buttons button[data-scenario][aria-pressed="true"] .scenario-code {
+  color: var(--action, #263345);
+  background: #ffffff;
+}
+
+.scenario-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border, #dce0e6);
+}
+
+.scenario-footer small {
+  color: var(--muted, #61656e);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.scenario-footer a {
+  color: #a80b4d;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.speed-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 8px;
+  border: 1px solid var(--border, #dce0e6);
+  border-radius: var(--radius, 3px);
+}
+
+.speed-controls legend {
+  padding: 0 4px;
+  color: var(--muted, #61656e);
+  font-size: 12px;
+}
+
+.speed-controls button {
+  min-width: 48px;
+  min-height: 34px;
+  color: var(--action, #263345);
+  background: #ffffff;
+  border: 1px solid var(--border-strong, #aeb5bf);
+  border-radius: var(--radius, 3px);
+  font: inherit;
+  font-weight: 750;
+}
+
+.speed-controls button[aria-pressed="true"] {
+  color: #ffffff;
+  background: var(--action, #263345);
+  border-color: var(--action, #263345);
+}
+
+.scenario-reset-help {
+  margin: 8px 0 0;
+  color: var(--muted, #61656e);
+  font-size: 12px;
+}
+
+.scenario-palette .button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  color: var(--muted, #61656e);
+  background: transparent;
+  border: 1px solid var(--border, #dce0e6);
+  border-radius: var(--radius, 3px);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.scenario-palette :where(button):focus-visible {
+  position: relative;
+  z-index: 2;
+  outline: 3px solid #76a9ff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .scenario-palette {
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .scenario-palette[data-expanded="true"] {
+    width: calc(100vw - 16px);
+  }
+
+  .scenario-buttons button[data-scenario],
+  .scenario-buttons button[data-command] {
+    min-height: 42px;
+    font-size: 16px;
+  }
+
+  .scenario-toggle,
+  .scenario-palette .button {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scenario-palette,
+  .scenario-palette * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

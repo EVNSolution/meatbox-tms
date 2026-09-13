@@ -1,74 +1,56 @@
-# 미트박스 TMS 데모
+# 미트박스 TMS 검토 작업 공간
 
-미트박스 TMS 제안의 **고객 배송 트래킹 + 다이나믹 ETA** 요구사항을 시연하는 인터랙티브 웹 데모입니다.
-가락 MFC에서 출발한 전용차 1대(70박스)가 서울 송파·강남 8개 정차지를 순회 배송하는 시나리오를
-고객 / 기사 / 관제 / 발표 리모컨 4개 화면이 실시간으로 공유합니다.
+로그인한 사용자가 시나리오 원본, UI/레이아웃 원본, 합본을 선택하는 데모입니다. 기존 배송 현황 시스템과 연결할 화면을 검토하며, 실제 차량 TMS 연결이나 고객 알림 발송을 수행하지 않습니다.
 
-## 바로 보기
+## URL과 소유 범위
 
-| 화면 | URL | 설명 |
+운영 주소: **https://3.36.96.156/**
+
+| 경로 | 용도 | 코드 |
 |---|---|---|
-| 랜딩 (시연 가이드) | https://3-36-96-156.sslip.io/ | 화면 링크 + 권장 시연 순서 |
-| 고객 앱 | https://3-36-96-156.sslip.io/customer | **8개 식당 계정 선택** · 타임라인 · ETA · 푸시/알림톡 |
-| 기사 앱 | https://3-36-96-156.sslip.io/driver | 배송 리스트 · 순서 변경 · 하차 스캔 |
-| 관제센터 | https://3-36-96-156.sslip.io/control | 차량 목록 · 지도 관제 · 정차지별 도착/ETA |
-| 발표 리모컨 | https://3-36-96-156.sslip.io/present | 상태 단계 진행 · 배속 · 사고/지연 주입 · 배송지 스킵 |
+| `/` | 로그인 후 작업 선택 | `apps/portal/` |
+| `/scenario/` | 박상현 작업 원본의 진입 페이지 | `workspaces/sanghyun-scenario/` |
+| `/scenario/customer?id=S5` | 고객 시나리오 | 위와 같음 |
+| `/scenario/driver` | 기사 시나리오 | 위와 같음 |
+| `/scenario/control` | 지도 관제 시나리오 | 위와 같음 |
+| `/scenario/present` | 진행 단계와 사건 제어 | 위와 같음 |
+| `/ui-layout/#/design` | 지인 작업 원본의 디자인 가이드 | `workspaces/jiin-ui/` |
+| `/ui-layout/#/control` | 원본 B안 단말 관제 | 위와 같음 |
+| `/combined/#/deliveries` | 합본 배송 현황 | `apps/combined/` |
+| `/combined/#/control` | 합본 단말 관제 | 위와 같음 |
+| `/combined/#/customer` | 합본 고객 보기 | 위와 같음 |
+| `/login` | 로그인 | `apps/portal/`, `lib/access.js` |
+| `/dev/register` | 메뉴에 노출하지 않는 초대 기반 개발용 가입 | 위와 같음 |
 
-여러 기기에서 동시에 접속해도 WebSocket으로 같은 상태를 공유합니다.
-고객 앱은 `?id=S1`~`?id=S8` 딥링크로 특정 계정에 바로 진입할 수 있습니다.
+`workspaces/`의 두 원본은 보존용입니다. 박상현 원본 기준 커밋은 `f41af790be7529d4d2da9e8ac44826acdd120a50`이며, 원본 파일별 SHA-256은 `docs/source-snapshots.json`에 있습니다. 원본 코드 수정은 별도 작업으로 검토하고, 통합 변경은 `apps/combined/`와 루트 게이트웨이에 적용합니다. `/scenario/` 경로와 WebSocket 주소만 HTTP 응답 시 치환하여 원본 바이트를 유지합니다.
 
-## 시연 흐름
+시나리오와 합본은 **하나의 메모리 시뮬레이션**을 공유합니다. 어느 화면에서든 단계 변경/리셋하면 접속한 모든 검토자에게 반영됩니다. 서비스 재시작 시 시뮬레이션과 로그인 세션은 초기화되고 계정은 유지됩니다. UI/레이아웃은 독립 표본입니다.
 
-1. **고객 앱**에서 🛒 주문하기 — 주문 접수·결제 완료 기록 + 알림 발송
-2. **리모컨**에서 ▶ 다음 단계 — 피킹 → 라벨 부착 → 상차 대기 → 배송 출발 (구간 스캔 컨셉)
-3. 출발 후 차량 자동 주행 — 고객 앱에 "배송 중" 상태와 단일 도착 예정 시각 표시
-4. **기사 앱**에서 순서 변경 ▲▼ / **리모컨**에서 🚨 교통사고·⏱ 정차 지연 주입 / 배송지 스킵
-   → 전 계정 ETA 재계산, 변동 10분 이상 계정에 "배송 예정 시간이 변경되었습니다" 알림
-5. 곧 도착 → 기사 도착 → 배송 완료 알림까지 계정별로 확인
-
-핵심 포인트: 폰 2~3대에 서로 다른 식당 계정을 띄우면 같은 트리거에 대해
-1번째 정차지 식당(+5분)과 7번째 식당(+25분)이 **각자 다른 ETA 변동**으로 반응하는 것을 보여줄 수 있습니다.
-
-## 구조
-
-```
-server.js            Express 정적 서빙 + WebSocket 브로드캐스트 + 컨트롤 명령
-src/simulation.js    시뮬레이션 엔진 — 차량 이동, 구간 스캔, 계정별 상태/알림, 스킵/사고/지연
-src/eta.js           ETA 계산 (남은 구간 이동시간 × 교통 계수 + 정차지 서비스타임, 5분 반올림)
-src/route-data.js    실제 도로 경로 (OSRM에서 사전 생성한 72개 구간 — 런타임 외부 API 없음)
-scripts/gen-routes.mjs  route-data.js 재생성 스크립트 (정차지 변경 시)
-public/              고객·기사·관제·리모컨 화면 (vanilla JS + Leaflet/OSM)
-test/eta.test.js     ETA 엔진 단위 테스트
-docs/superpowers/specs/  설계 문서
-```
-
-- 서버가 시뮬레이션 상태를 단독 소유하고 모든 화면이 WebSocket으로 구독 (0.5초 틱)
-- 배포/재시작 시 boot id 변경을 감지해 열려 있는 화면이 자동 새로고침
-- 관제의 차량 2·3호는 UI 시연용 정적 데이터 (라이브 시뮬레이션은 1호차)
+합본은 차량 V1 한 대와 배송 8곳을 표현합니다. 고객 공식 ETA와 계속 계산되는 ETA를 분리하며, 원본의 단일 시각을 시간 범위로 바꾸지 않습니다. 실제 도착, 배송 완료, 단말 수신 여부도 각각 구분합니다. `customer?id=S5`는 시연 배송 선택이며 로그인 권한을 대신하지 않습니다.
 
 ## 로컬 실행
 
-```bash
-npm install
-npm start        # http://localhost:3000
-npm test         # ETA 엔진 단위 테스트
+Node.js 22 이상을 사용합니다. 별도 번들 빌드 없이 Express와 ws만 설치합니다.
+
+```sh
+npm ci
+mkdir -p .runtime
+node scripts/manage-access.js issue-invite --file .runtime/access.json --output .runtime/invite.txt
+PUBLIC_ORIGIN=http://127.0.0.1:3001 ACCESS_FILE=.runtime/access.json PORT=3001 npm start
 ```
 
-## EC2 배포
+`http://127.0.0.1:3001/dev/register`에서 초대 파일의 코드를 입력하여 가입한 뒤 로그인합니다. 초대 코드는 기본 24시간 내 1회 사용 가능하며 회원가입 링크는 일반 화면에 노출하지 않습니다. 기본 계정/비밀번호는 없습니다.
 
-Ubuntu EC2 (3.36.96.156)에서 systemd 서비스로 상시 구동됩니다.
-
-- `meatbox-demo.service` — Node 서버 (포트 3000, 재부팅·크래시 자동 재시작)
-- Caddy — 80/443 리버스 프록시, `3-36-96-156.sslip.io` Let's Encrypt 인증서, HTTP → HTTPS 리다이렉트
-
-코드 반영은 파일 업로드 후 서비스 재시작:
-
-```bash
-tar czf - --exclude=node_modules --exclude=.git . | ssh -i <key.pem> ubuntu@3.36.96.156 "tar xzf - -C ~/meatbox-demo && sudo systemctl restart meatbox-demo"
+```sh
+npm test
+node --check server.js
+node --check lib/access.js
+node --check apps/combined/app.mjs
+git diff --check
 ```
 
-## 주의
+인증, 익명 HTTP/API/WebSocket 차단, 외부 Origin 거부, 세션 종료, 초대 1회 사용, 원본 보존, ETA 의미와 UI 팝업 범위를 검증합니다. CSS는 실제 브라우저에서 넓은 화면과 좁은 화면을 함께 점검합니다.
 
-프론트엔드 + 인메모리 시뮬레이션 데모입니다. DB 저장, 실제 인증, 실제 알림(푸시/알림톡) 발송은
-포함하지 않으며, 서버가 재시작되면 시나리오는 초기 상태로 돌아갑니다.
-데모 URL은 접속하는 누구나 컨트롤을 조작할 수 있으므로 시연 기간에만 열어두는 것을 권장합니다.
+## 배포와 계정 관리
+
+`deploy/meatbox-gateway.service`와 `deploy/Caddyfile`을 사용합니다. 자세한 배포/롤백/초대 발급 절차는 [운영 문서](docs/operations.md)를 참고하세요. 계정 파일, 초대 코드, SSH 키는 Git에 넣지 않습니다.

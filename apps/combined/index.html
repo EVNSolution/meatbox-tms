@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>미트박스 TMS 합본</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./scenario-tools.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#page-heading">본문으로 이동</a>
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="첫 화면으로">미트박스 <span>TMS</span></a>
+    <div class="app-title" id="app-title">합본</div>
+    <div class="header-meta"><span class="connection-badge" id="connection-state" data-state="loading">연결 중</span><span class="clock" id="snapshot-clock">시뮬레이션 상태를 기다리는 중</span></div>
+  </header>
+  <div class="app-shell">
+    <aside class="app-navigation"><nav class="app-nav-links" aria-label="주 메뉴">
+      <a href="#/deliveries" data-page-link="deliveries">배송 현황</a>
+      <a href="#/control" data-page-link="control">단말 관제</a>
+      <a href="#/customer" data-page-link="customer">고객 보기</a>
+      <a href="/ui-layout/#/design" class="nav-design"><span class="nav-review-label">별도 원본</span><span class="nav-design-label">디자인<br>가이드</span></a>
+    </nav></aside>
+    <main class="page-body">
+      <section class="page-intro" aria-labelledby="page-heading">
+        <div><p class="eyebrow" id="page-eyebrow">상현님 시뮬레이션 연결</p><h1 id="page-heading" tabindex="-1">배송 현황</h1><p class="intro-copy" id="page-description">차량 1대의 8개 배송을 원본 상태로 확인합니다.</p></div>
+        <div class="page-actions"><div class="summary-counts" id="summary-counts" aria-label="현재 배송 요약"></div><button type="button" class="button" id="toggle-map" aria-expanded="false" aria-controls="map-preview" hidden>지도 펼치기</button></div>
+      </section>
+      <section class="connection-panel view-content" id="connection-panel" aria-live="polite">
+        <div class="panel loading-state"><span class="loading-dot" aria-hidden="true"></span><div><strong id="connection-title">실시간 시뮬레이션에 연결하고 있습니다.</strong><p id="connection-detail">잠시만 기다려 주세요.</p></div><button type="button" class="button" id="retry-connection" hidden>다시 연결</button></div>
+      </section>
+      <div id="live-pages" hidden>
+        <section id="page-deliveries" class="page-view view-content" data-page="deliveries" aria-label="배송 현황">
+          <div class="deliveries-layout">
+            <section class="panel delivery-list-panel" aria-labelledby="delivery-list-heading">
+              <div class="panel-heading"><h2 id="delivery-list-heading">배송 목록</h2><span id="delivery-count" class="muted"></span></div>
+              <div class="list-toolbar">
+                <label class="field"><span>배송 검색</span><input type="search" id="delivery-search" placeholder="정차지·주소 검색" autocomplete="off"></label>
+                <label class="field"><span>배송 상태</span><select id="delivery-status"><option value="all">전체 상태</option><option value="pending">대기</option><option value="current">배송 중</option><option value="done">완료</option><option value="skipped">건너뜀</option></select></label>
+                <button type="button" class="button subtle" id="clear-filters">초기화</button>
+              </div>
+              <div class="table-scroll" role="region" aria-label="배송 목록 표" tabindex="0"><table class="delivery-table"><caption class="sr-only">실시간 시뮬레이션 배송 목록</caption><thead><tr><th scope="col">배송 순서와 배송지</th><th scope="col">상태</th><th scope="col">고객 공식 ETA</th><th scope="col">계산 ETA</th><th scope="col">도착 및 완료</th></tr></thead><tbody id="delivery-rows"></tbody></table></div>
+              <div class="empty-state" id="delivery-empty" hidden><strong>조회 결과가 없습니다.</strong><p>검색어나 상태 조건을 바꿔 주세요.</p></div>
+            </section>
+            <aside class="panel delivery-selection" id="delivery-selection" aria-label="선택 배송 요약"></aside>
+          </div>
+        </section>
+        <section id="page-control" class="page-view" data-page="control" aria-label="단말 관제" hidden>
+          <section class="map-preview panel" id="map-preview" aria-labelledby="map-preview-heading" hidden><div><h2 id="map-preview-heading">지도 미리보기</h2><p>지도 미리보기를 위한 빈 화면입니다.</p><p class="muted">합본 화면에는 지도를 연결하지 않았습니다.</p></div></section>
+          <div class="workspace">
+            <aside class="terminal-sidebar panel" aria-labelledby="terminal-list-heading">
+              <div class="section-heading"><h2 id="terminal-list-heading">차량의 배송</h2><span class="muted" id="list-count"></span></div>
+              <div id="terminal-list" class="terminal-list" role="group" aria-label="배송지 선택"></div>
+              <p class="footer-note sidebar-note">차량 1대에 속한 배송입니다. 장착 단말 정보는 제공되지 않았습니다.</p>
+            </aside>
+            <div class="detail-workspace">
+              <section id="selected-heading" class="selected-heading" aria-label="선택 배송" tabindex="-1"></section>
+              <section class="panel" id="eta-panel" aria-labelledby="eta-heading"></section>
+              <section class="panel detail-panel" aria-label="선택 배송 상세">
+                <div class="detail-tabs" role="tablist" aria-label="선택 배송 상세">
+                  <button type="button" role="tab" id="tab-timeline" aria-selected="true" aria-controls="panel-timeline" data-tab="timeline">배송 타임라인</button>
+                  <button type="button" role="tab" id="tab-events" aria-selected="false" aria-controls="panel-events" tabindex="-1" data-tab="events">전체 사건</button>
+                  <button type="button" role="tab" id="tab-notifications" aria-selected="false" aria-controls="panel-notifications" tabindex="-1" data-tab="notifications">알림 문구</button>
+                </div>
+                <div class="tab-panel" role="tabpanel" id="panel-timeline" aria-labelledby="tab-timeline"><ol class="timeline" id="delivery-timeline"></ol></div>
+                <div class="tab-panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events" hidden><ol class="timeline" id="event-list"></ol></div>
+                <div class="tab-panel" role="tabpanel" id="panel-notifications" aria-labelledby="tab-notifications" hidden><div id="notification-list"></div></div>
+              </section>
+            </div>
+            <aside class="preview-sidebar" id="preview-sidebar" aria-label="차량 정보"></aside>
+          </div>
+        </section>
+        <section id="page-customer" class="page-view view-content" data-page="customer" aria-label="고객 보기" hidden>
+          <div class="customer-layout">
+            <section class="panel customer-context-panel" aria-labelledby="customer-selection-heading"><div class="panel-heading"><h2 id="customer-selection-heading">고객 배송 선택</h2></div><div class="context-body"><label class="field"><span>미리 볼 배송</span><select id="customer-delivery"></select></label><div id="customer-context"></div></div></section>
+            <div id="customer-display"></div>
+          </div>
+        </section>
+      </div>
+      <p class="footer-note page-footer">상현님 시뮬레이션의 실시간 상태 · 실제 장치 연결 정보 미제공 · 알림은 시연 문구</p>
+      <p class="sr-only" id="screen-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    </main>
+  </div>
+</body>
+</html>

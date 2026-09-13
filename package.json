@@ -11,5 +11,11 @@
   "dependencies": {
     "express": "^4.21.2",
     "ws": "^8.18.0"
+  },
+  "overrides": {
+    "qs": "6.16.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
