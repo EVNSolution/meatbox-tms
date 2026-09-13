@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { secondsUntilArrival, marginMinutes, etaWindow, BASE_ROAD_FACTOR } = require('../src/eta');
+const { secondsUntilArrival, roundTo5Min, BASE_ROAD_FACTOR } = require('../src/eta');
 
 // 단순 검증용 가짜 leg: 각 600초
 const legs = {
@@ -38,18 +38,9 @@ test('교통 계수는 해당 leg에만, 전역 계수는 전 구간에 적용',
   assert.strictEqual(withGlobal, (600 + 600) * 1.5 * BASE_ROAD_FACTOR + 240);
 });
 
-test('ETA 마진: 출발 전 30분 → 진행되며 축소 → 인근 5분', () => {
-  assert.strictEqual(marginMinutes(4, false), 30);
-  assert.strictEqual(marginMinutes(4, true), 20);
-  assert.strictEqual(marginMinutes(2, true), 10);
-  assert.strictEqual(marginMinutes(0, true), 5);
-});
-
-test('ETA 창은 5분 단위로 정렬', () => {
-  const arrival = (7 * 60 + 23) * 60 * 1000; // 07:23
-  const { start, end } = etaWindow(arrival, 5);
-  assert.strictEqual(start, (7 * 60 + 15) * 60 * 1000); // 07:15
-  assert.strictEqual(end, (7 * 60 + 30) * 60 * 1000);   // 07:30
+test('ETA는 5분 단위 단일 시각으로 반올림', () => {
+  assert.strictEqual(roundTo5Min((7 * 60 + 23) * 60 * 1000), (7 * 60 + 25) * 60 * 1000); // 07:23 → 07:25
+  assert.strictEqual(roundTo5Min((7 * 60 + 12) * 60 * 1000), (7 * 60 + 10) * 60 * 1000); // 07:12 → 07:10
 });
 
 test('존재하지 않는 목적지는 에러', () => {

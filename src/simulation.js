@@ -1,6 +1,6 @@
 // 배송 시뮬레이션 엔진 — 서버가 단일 상태를 소유하고 모든 화면이 구독한다.
 const routeData = require('./route-data');
-const { secondsUntilArrival, marginMinutes, etaWindow, BASE_ROAD_FACTOR } = require('./eta');
+const { secondsUntilArrival, roundTo5Min, BASE_ROAD_FACTOR } = require('./eta');
 
 const MIN = 60 * 1000;
 const SERVICE_TIME_SEC = 240;      // 정차지당 하차·검수 4분
@@ -37,7 +37,6 @@ class Simulation {
   constructor(broadcast) {
     this.broadcast = broadcast; // (state) => void
     this.timer = null;
-    this.prepTimers = [];
     this.reset();
     this.timer = setInterval(() => {
       try { this.tick(); } catch (e) { console.error('tick error:', e); }
@@ -45,8 +44,6 @@ class Simulation {
   }
 
   reset() {
-    this.prepTimers.forEach(clearTimeout);
-    this.prepTimers = [];
     this.phase = 'idle';                    // idle | preparing | delivering | done
     this.simTime = (5 * 60 + 45) * MIN;     // 05:45
     this.speed = 5;
@@ -136,11 +133,9 @@ class Simulation {
 
     const departed = this.phase === 'delivering';
     let seconds;
-    let stopsBefore;
     if (departed) {
       const inputs = this.etaInputs();
       if (!inputs.remaining.includes(CUSTOMER_STOP)) return; // 고객 정차지 하차 중 — 마지막 ETA 유지
-      stopsBefore = inputs.remaining.indexOf(CUSTOMER_STOP);
       seconds = secondsUntilArrival({
         targetStopId: CUSTOMER_STOP,
         ...inputs,
@@ -151,7 +146,6 @@ class Simulation {
       });
     } else {
       const remaining = [...this.order];
-      stopsBefore = remaining.indexOf(CUSTOMER_STOP);
       // 출발 전: 06:30 출발 가정으로 산출
       const departMs = (6 * 60 + 30) * MIN;
       seconds = secondsUntilArrival({
@@ -162,16 +156,15 @@ class Simulation {
     }
 
     const arrival = this.simTime + seconds * 1000;
-    const margin = marginMinutes(stopsBefore, departed);
-    const win = etaWindow(arrival, margin);
+    const time = roundTo5Min(arrival);
     const prev = this.eta;
     const deltaMin = prev ? Math.round((arrival - prev.arrival) / MIN) : 0;
 
-    this.eta = { ...win, arrival, margin, reason, updatedAt: this.simTime, deltaMin };
+    this.eta = { arrival, time, reason, updatedAt: this.simTime, deltaMin };
     if (!silent && prev) {
-      this.logEvent(`ETA 재계산(${reason}): ${fmtTime(win.start)}~${fmtTime(win.end)} (${deltaMin >= 0 ? '+' : ''}${deltaMin}분)`, 'eta');
+      this.logEvent(`ETA 재계산(${reason}): ${fmtTime(time)} 도착 예정 (${deltaMin >= 0 ? '+' : ''}${deltaMin}분)`, 'eta');
       if (Math.abs(deltaMin) >= 10 || forceNotify) {
-        this.notify('배송 예정 시간이 변경되었습니다', `새 도착 예정: ${fmtTime(win.start)} ~ ${fmtTime(win.end)} (사유: ${reason})`);
+        this.notify('배송 예정 시간이 변경되었습니다', `새 도착 예정 시간: ${fmtTime(time)} (사유: ${reason})`);
       }
     }
   }
@@ -182,9 +175,8 @@ class Simulation {
     if (cust.status === 'done') return { key: 'delivered', label: '배송 완료' };
     if (this.phase === 'delivering') {
       const remaining = this.remainingIds();
-      const pos = remaining.indexOf(CUSTOMER_STOP) + 1;
-      if (pos === 1) return { key: 'nearby', label: '인근 배송 중' };
-      return { key: 'queued', label: `${pos}번째 순서 배송 예정` };
+      if (remaining.indexOf(CUSTOMER_STOP) === 0) return { key: 'nearby', label: '인근 배송 중' };
+      return { key: 'shipping', label: '배송 중' };
     }
     if (this.prepDone.length > 0) {
       const last = this.prepDone[this.prepDone.length - 1];
@@ -194,27 +186,24 @@ class Simulation {
   }
 
   timeline() {
+    const cust = this.stops[CUSTOMER_STOP];
+    const st = this.customerStatus();
+    const prepTime = (key) => {
+      const d = this.prepDone.find((s) => s.key === key);
+      return d ? fmtTime(d.at) : null;
+    };
     const items = [
       { label: '주문 접수', time: '어제 21:38' },
       { label: '결제 완료', time: '어제 21:38' },
+      { label: '피킹 중', time: prepTime('picking') },
+      { label: '라벨 부착', time: prepTime('labeling') },
+      { label: '상차 대기', time: prepTime('staged') },
+      { label: '배송 중', time: prepTime('departed') },
+      { label: '인근 배송 중', time: st.key === 'nearby' ? fmtTime(this.simTime) : null },
+      { label: '배송 완료', time: cust.deliveredAt ? fmtTime(cust.deliveredAt) : null },
     ];
-    for (const step of PREP_STEPS) {
-      const done = this.prepDone.find((s) => s.key === step.key);
-      items.push({ label: step.label, time: done ? fmtTime(done.at) : null });
-    }
-    const cust = this.stops[CUSTOMER_STOP];
-    const st = this.customerStatus();
-    items.push({
-      label: st.key === 'queued' ? st.label : '순서 배송 예정',
-      time: this.phase === 'delivering' && (st.key === 'queued') ? fmtTime(this.simTime) : null,
-      dynamic: true,
-    });
-    items.push({ label: '인근 배송 중', time: st.key === 'nearby' ? fmtTime(this.simTime) : null });
-    items.push({ label: '배송 완료', time: cust.deliveredAt ? fmtTime(cust.deliveredAt) : null });
-
-    // 진행 표시: 완료 여부 계산
-    const stepOrder = ['ordered', 'paid', 'picking', 'labeling', 'staged', 'departed', 'queued', 'nearby', 'delivered'];
-    const curIdx = stepOrder.indexOf(st.key === 'queued' && this.phase === 'delivering' ? 'queued' : st.key);
+    const stepOrder = ['ordered', 'paid', 'picking', 'labeling', 'staged', 'shipping', 'nearby', 'delivered'];
+    const curIdx = stepOrder.indexOf(st.key);
     return items.map((item, i) => ({
       ...item,
       state: i < curIdx ? 'done' : i === curIdx ? 'current' : 'pending',
@@ -222,26 +211,27 @@ class Simulation {
   }
 
   // ---------- 시나리오 제어 ----------
-  start() {
-    if (this.phase !== 'idle') return;
-    this.phase = 'preparing';
-    this.logEvent('시나리오 시작 — MFC 출고 프로세스 진행', 'system');
-    PREP_STEPS.forEach((step, i) => {
-      this.prepTimers.push(setTimeout(() => {
-        this.simTime = step.simMin * MIN;
-        this.prepDone.push({ ...step, at: this.simTime });
-        this.logEvent(`구간 스캔: ${step.label}`, 'scan');
-        if (step.key === 'departed') {
-          this.phase = 'delivering';
-          this.beginLeg(this.order[0]);
-          this.notify('배송이 출발했습니다 🚚', `주문하신 상품이 가락 MFC에서 출발했어요. 도착 예정 ${fmtTime(this.eta.start)} ~ ${fmtTime(this.eta.end)}`);
-          this.recalcEta('배송 출발', { silent: true });
-        } else {
-          this.recalcEta(step.label, { silent: true });
-        }
-        this.emit();
-      }, (i + 1) * 2500));
-    });
+  // 리모컨에서 한 단계씩 수동 진행: 피킹 중 → 라벨 부착 → 상차 대기 → 배송 출발
+  advance() {
+    if (this.phase === 'delivering' || this.phase === 'done') return;
+    const step = PREP_STEPS[this.prepDone.length];
+    if (!step) return;
+    if (this.phase === 'idle') {
+      this.phase = 'preparing';
+      this.logEvent('시나리오 시작 — MFC 출고 프로세스 진행', 'system');
+    }
+    this.simTime = step.simMin * MIN;
+    this.prepDone.push({ ...step, at: this.simTime });
+    this.logEvent(`구간 스캔: ${step.label}`, 'scan');
+    if (step.key === 'departed') {
+      this.phase = 'delivering';
+      this.beginLeg(this.order[0]);
+      this.recalcEta('배송 출발', { silent: true });
+      this.notify('배송이 출발했습니다 🚚', `주문하신 상품이 가락 MFC에서 출발했어요. 도착 예정 ${fmtTime(this.eta.time)}`);
+    } else {
+      this.recalcEta(step.label, { silent: true });
+    }
+    this.emit();
   }
 
   setSpeed(v) {
@@ -337,7 +327,7 @@ class Simulation {
       this.beginLeg(next);
       if (next === CUSTOMER_STOP && !this.notifiedNearby) {
         this.notifiedNearby = true;
-        this.notify('곧 도착 예정이에요', '고객님 상품이 다음 배송 순서입니다. 잠시 후 도착 예정!');
+        this.notify('곧 도착 예정이에요', '고객님 상품이 곧 도착할 예정이에요. 잠시만 기다려 주세요!');
       }
       this.recalcEta('정차지 배송 완료', { silent: false });
     } else {
@@ -404,11 +394,14 @@ class Simulation {
       customerStatus: this.customerStatus(),
       timeline: this.timeline(),
       eta: this.eta ? {
-        start: this.eta.start, end: this.eta.end,
-        startText: fmtTime(this.eta.start), endText: fmtTime(this.eta.end),
-        margin: this.eta.margin, reason: this.eta.reason, deltaMin: this.eta.deltaMin,
+        time: this.eta.time,
+        timeText: fmtTime(this.eta.time),
+        reason: this.eta.reason, deltaMin: this.eta.deltaMin,
         updatedAt: this.eta.updatedAt,
       } : null,
+      nextStep: this.phase === 'idle' || this.phase === 'preparing'
+        ? (PREP_STEPS[this.prepDone.length] ? { key: PREP_STEPS[this.prepDone.length].key, label: PREP_STEPS[this.prepDone.length].label } : null)
+        : null,
       events: this.events.slice(-40).reverse(),
       notifications: this.notifications,
       incidents: this.incidents,

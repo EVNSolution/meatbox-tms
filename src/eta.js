@@ -46,29 +46,13 @@ function secondsUntilArrival(p) {
 }
 
 /**
- * ETA 창(범위)을 계산한다. 배송이 진행될수록 범위가 좁아진다.
- * @param {number} stopsBefore 고객 정차지 앞에 남은 정차지 수 (0 = 다음이 고객)
- * @param {boolean} departed   배송 출발 여부
- * @returns {number} 마진(분)
+ * 도착 예정 시각을 5분 단위로 반올림해 단일 시각으로 만든다.
+ * @param {number} arrivalMs 예상 도착 ms
+ * @returns {number} 5분 단위로 반올림된 ms
  */
-function marginMinutes(stopsBefore, departed) {
-  if (!departed) return 30;
-  if (stopsBefore > 3) return 20;
-  if (stopsBefore > 0) return 10;
-  return 5; // 인근 배송 중
-}
-
-/**
- * 도착 예정 시각을 5분 단위 범위로 만든다.
- * @param {number} arrivalMs 예상 도착 epoch ms
- * @param {number} marginMin 마진(분)
- * @returns {{start:number, end:number}} epoch ms 범위
- */
-function etaWindow(arrivalMs, marginMin) {
+function roundTo5Min(arrivalMs) {
   const FIVE = 5 * 60 * 1000;
-  const start = Math.floor((arrivalMs - marginMin * 60 * 1000) / FIVE) * FIVE;
-  const end = Math.ceil((arrivalMs + marginMin * 60 * 1000) / FIVE) * FIVE;
-  return { start, end };
+  return Math.round(arrivalMs / FIVE) * FIVE;
 }
 
-module.exports = { secondsUntilArrival, marginMinutes, etaWindow, BASE_ROAD_FACTOR };
+module.exports = { secondsUntilArrival, roundTo5Min, BASE_ROAD_FACTOR };

@@ -64,6 +64,6 @@
     // 하단 요약
     $('f-done').textContent = `${s.kpi.stopsDone}/${s.kpi.stopsTotal}`;
     $('f-left').textContent = `${s.kpi.boxesTotal - s.kpi.boxesDelivered}`;
-    $('f-eta').textContent = s.eta ? `${s.eta.startText}~${s.eta.endText}` : '—';
+    $('f-eta').textContent = s.eta ? s.eta.timeText : '—';
   });
 })();

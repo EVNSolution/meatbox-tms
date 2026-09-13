@@ -21,7 +21,7 @@
     $('k-load').textContent = `${s.kpi.boxesTotal - s.kpi.boxesDelivered}/${s.kpi.boxesTotal}박스`;
     $('k-done').textContent = `${s.kpi.stopsDone}/${s.kpi.stopsTotal}착지`;
     $('k-eta').textContent = s.eta
-      ? `${s.eta.startText}~${s.eta.endText}`
+      ? s.eta.timeText
       : s.order.find((o) => o.id === s.customerStopId)?.deliveredTime
         ? `${s.order.find((o) => o.id === s.customerStopId).deliveredTime} 완료`
         : '—';

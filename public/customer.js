@@ -27,8 +27,8 @@
 
     // ETA 카드
     if (s.eta) {
-      $('eta-text').innerHTML = `${s.eta.startText} <span class="tilde">~</span> ${s.eta.endText} <span style="font-size:15px;">도착 예정</span>`;
-      const etaKey = s.eta.startText + s.eta.endText;
+      $('eta-text').innerHTML = `${s.eta.timeText} <span style="font-size:15px;">도착 예정</span>`;
+      const etaKey = s.eta.timeText;
       if (lastEtaKey && etaKey !== lastEtaKey) {
         $('eta-card').classList.remove('flash');
         void $('eta-card').offsetWidth;
