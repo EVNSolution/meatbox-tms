@@ -25,7 +25,7 @@
 - 출처: 로컬 설치 파일 `/Users/jiin/Library/Fonts/PretendardVariable.ttf`
 - 역할: 로컬 UI 레퍼런스의 self-hosted 한국어 UI 서체
 - 폰트 메타데이터: Pretendard Variable, Version 1.309, Copyright © 2023 Kil Hyung-jin
-- 라이선스: SIL Open Font License 1.1 (`OFL-1.1.txt`)
+- 라이선스: SIL Open Font License 1.1 (`OFL-1.1.txt`). Pretendard 및 기반 서체 저작권 고지를 포함한 공식 전체 LICENSE: https://github.com/orioncactus/pretendard/blob/main/LICENSE
 - 처리: 원본 TTF를 byte-for-byte 복사. 현재 환경에 `fontTools`와 Brotli가 없어 WOFF2 변환은 수행하지 않음
 - SHA-256: `3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22`
 
