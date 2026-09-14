@@ -45,6 +45,7 @@
 
 ## Components
 - Reuse existing ETA, timeline, event, notification and list renderers.
+- Monitoring back navigation sits in the selected delivery title bar. Keep its metadata, ETA rows and timeline compact, with all timestamps visible and 44px mobile action targets.
 - Shared shell owns header viewer switching and floating guide.
 - A route editor owns temporary order, handle interactions and save/cancel; backend validates a full update before applying it.
 

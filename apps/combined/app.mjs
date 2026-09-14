@@ -142,12 +142,10 @@ function renderControl(visible, selected) {
   const showList = state.monitorView === 'list' || !selected;
   const current = visible.find(delivery => delivery.status === 'current');
   byId('monitor-count').textContent = `${visible.length}곳`;
-  byId('monitor-list-heading').hidden = !showList;
-  byId('monitor-back').hidden = showList;
   byId('monitor-list-panel').hidden = !showList;
   byId('monitor-detail').hidden = showList;
   byId('monitor-current').hidden = !current;
-  byId('monitor-current').disabled = !showList && current?.id === selected?.id;
+  byId('monitor-current-detail').hidden = !current || current.id === selected?.id;
   const list = byId('monitor-deliveries');
   const rows = visible.map(delivery => {
     const isSelected = delivery.id === selected?.id;
@@ -162,9 +160,10 @@ function renderControl(visible, selected) {
   }
   byId('manage-selected-name').textContent = selected ? `${selected.name} · 배송 이력` : '선택 배송 이력';
   byId('eta-panel').hidden = !selected;
-  byId('selected-heading').innerHTML = selected ? `
-    <div class="terminal-title"><p class="eyebrow">${escapeHtml(state.data.vehicle?.plate)} · ${selected.sequence}번째 배송</p><h2>${escapeHtml(selected.name)}</h2><p>${escapeHtml(selected.address)}</p></div><div class="status-meta">${badge(statusLabels[selected.status] || '미확인', selected.statusTone)}</div>`
-    : '<div class="empty-state"><h2>선택할 배송이 없습니다.</h2></div>';
+  byId('monitor-selected-name').textContent = selected?.name || '';
+  byId('monitor-selected-status').innerHTML = selected ? badge(statusLabels[selected.status] || '미확인', selected.statusTone) : '';
+  byId('monitor-selected-meta').textContent = selected ? `${state.data.vehicle?.plate || '차량 미확인'} · ${selected.sequence}번째 배송` : '';
+  byId('monitor-selected-address').textContent = selected?.address || '';
   if (!selected) {
     byId('eta-panel').innerHTML = '';
     byId('delivery-timeline').innerHTML = '';
@@ -232,16 +231,16 @@ function showMonitorDelivery(id) {
   state.monitorView = 'detail';
   render();
   byId('selected-heading').focus({ preventScroll: true });
-  byId('monitor-toolbar').scrollIntoView({ block: 'nearest' });
+  byId('selected-heading').scrollIntoView({ block: 'nearest' });
 }
 byId('monitor-back').addEventListener('click', () => {
   state.monitorView = 'list';
   render();
   byId('monitor-deliveries').querySelector(`[data-monitor-select="${CSS.escape(state.selectedId || '')}"]`)?.focus();
 });
-byId('monitor-current').addEventListener('click', () => {
+document.querySelectorAll('[data-monitor-current]').forEach(button => button.addEventListener('click', () => {
   showMonitorDelivery(state.data?.deliveries.find(delivery => delivery.status === 'current')?.id);
-});
+}));
 const tabs = [...document.querySelectorAll('#page-manage [data-tab]')];
 tabs.forEach((button, index) => {
   button.addEventListener('click', () => { state.tab = button.dataset.tab; renderTabs(); });
