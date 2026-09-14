@@ -18,6 +18,13 @@ export function nextCustomerPopup(previousIds, notices) {
   return notices.find(notice => notice.id && !previousIds.has(notice.id)) ?? null;
 }
 
+export function customerPopupState(previousIds, notices) {
+  return {
+    popup: nextCustomerPopup(previousIds, notices),
+    currentIds: new Set(notices.map(notice => notice.id).filter(Boolean)),
+  };
+}
+
 export function mountCustomerRenderer({ mb, onSelect }) {
   const byId = id => document.getElementById(id);
   let latest;
@@ -105,8 +112,9 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     byId('timeline').innerHTML = (delivery.timeline || []).map(item => `<li class="${escapeHtml(item.state)}">${escapeHtml(item.label)}${item.time ? `<span class="t">${escapeHtml(item.time)}</span>` : ''}</li>`).join('') || '<li>배송 이력 준비 중</li>';
     const notices = delivery.notices || [];
     byId('talk-list').innerHTML = notices.length ? notices.map(notice => `<div class="bubble"><div class="bt">${escapeHtml(notice.title)}</div>${escapeHtml(customerNoticeBody(notice, delivery))}<div class="bwhen">${escapeHtml(notice.time)}</div></div>`).join('') : '<p class="empty">아직 도착한 알림이 없어요</p>';
-    const popup = nextCustomerPopup(popupBaseline, notices);
-    notices.forEach(notice => { if (notice.id) popupBaseline.add(notice.id); });
+    const popupState = customerPopupState(popupBaseline, notices);
+    popupBaseline = popupState.currentIds;
+    const popup = popupState.popup;
     if (popup) showPopup(popup, delivery);
     updateMap(delivery);
   }

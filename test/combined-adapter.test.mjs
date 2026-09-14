@@ -78,7 +78,11 @@ test('fleet 계약은 live 배송과 synthetic 배송을 한 목록으로 제공
   input.customers.S5.eta.windowText = '08:01 ~ 09:01';
   input.customers.S5.eta.windowStart = '08:01';
   input.customers.S5.eta.windowEnd = '09:01';
-  input.notifications[0] = { id: 7, stopId: 'S5', title: '운영자 안내', body: '문자 그대로', time: '06:30', clock: '06:30', kind: 'manual', channel: '고객 팝업', status: '시연 발송', author: '운영자' };
+  input.notifications = [
+    { id: 7, stopId: 'S5', title: '운영자 안내', body: '첫 안내', time: '06:30', clock: '06:30', kind: 'manual', channel: '고객 팝업', status: '시연 발송', author: '운영자' },
+    { id: 8, stopId: 'V2-S1', title: '운영자 안내', body: '합성 안내', time: '06:31', clock: '06:31', kind: 'manual', channel: '고객 팝업', status: '시연 발송', author: '운영자' },
+    { id: 9, stopId: 'S5', title: '운영자 안내', body: '최근 안내', time: '06:32', clock: '06:32', kind: 'manual', channel: '고객 팝업', status: '시연 발송', author: '운영자' },
+  ];
   input.fleet = {
     vehicles: [
       { ...input.vehicles[0], planned: { stops: 1, boxes: 12 }, capacityBoxes: 60 },
@@ -94,10 +98,8 @@ test('fleet 계약은 live 배송과 synthetic 배송을 한 목록으로 제공
   assert.equal(result.deliveries[0].preciseTimeText, '08:31');
   assert.equal(result.deliveries[0].customerWindowText, '08:01 ~ 09:01');
   assert.deepEqual(result.deliveries[0].tip, { body: '직접 작성한 팁', author: '김민수', updatedAt: '07:05' });
-  assert.deepEqual(result.deliveries[0].notices[0], {
-    id: 7, stopId: 'S5', title: '운영자 안내', body: '문자 그대로', time: '06:30', clock: '06:30', kind: 'manual', channel: '고객 팝업', status: '시연 발송', author: '운영자',
-  });
+  assert.deepEqual(result.deliveries[0].notices.map(notice => [notice.id, notice.body]), [[7, '첫 안내'], [9, '최근 안내']]);
   assert.equal(result.fleetDeliveries[1].vehicle.live, false);
   assert.equal(result.fleetDeliveries[1].calculatedEta, null);
-  assert.equal(result.fleetDeliveries[1].notices.length, 0);
+  assert.deepEqual(result.fleetDeliveries[1].notices.map(notice => [notice.id, notice.body]), [[8, '합성 안내']]);
 });

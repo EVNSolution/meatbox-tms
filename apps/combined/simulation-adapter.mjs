@@ -38,20 +38,25 @@ export function adaptSimulation(snapshot) {
     planned: vehicle.planned ?? null,
     capacityBoxes: Number.isFinite(vehicle.capacityBoxes) ? vehicle.capacityBoxes : null,
   } : null;
-  const adaptNotices = stopId => (Array.isArray(snapshot.notifications)
-    ? snapshot.notifications.filter(notice => notice.stopId === stopId)
-    : []).map(notice => ({
-    id: notice.id,
-    stopId: escapeText(notice.stopId),
-    title: escapeText(notice.title),
-    body: escapeText(notice.body),
-    time: notice.time ? escapeText(notice.time) : null,
-    clock: notice.clock ? escapeText(notice.clock) : (notice.time ? escapeText(notice.time) : null),
-    kind: escapeText(notice.kind),
-    channel: escapeText(notice.channel),
-    status: escapeText(notice.status),
-    author: notice.author ? escapeText(notice.author) : null,
-  }));
+  const noticesByStop = new Map();
+  for (const notice of Array.isArray(snapshot.notifications) ? snapshot.notifications : []) {
+    const adapted = {
+      id: notice.id,
+      stopId: escapeText(notice.stopId),
+      title: escapeText(notice.title),
+      body: escapeText(notice.body),
+      time: notice.time ? escapeText(notice.time) : null,
+      clock: notice.clock ? escapeText(notice.clock) : (notice.time ? escapeText(notice.time) : null),
+      kind: escapeText(notice.kind),
+      channel: escapeText(notice.channel),
+      status: escapeText(notice.status),
+      author: notice.author ? escapeText(notice.author) : null,
+    };
+    const notices = noticesByStop.get(adapted.stopId) || [];
+    notices.push(adapted);
+    noticesByStop.set(adapted.stopId, notices);
+  }
+  const adaptNotices = stopId => noticesByStop.get(stopId) || [];
   const deliveries = snapshot.order.map((stop, index) => {
     const customer = snapshot.customers?.[stop.id] ?? null;
     const officialEta = customer?.eta ?? null;

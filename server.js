@@ -159,6 +159,7 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
 
   const server = http.createServer(app);
   const wss = new WebSocketServer({ noServer: true, maxPayload: 4096 });
+  const commandWindows = new Map();
   const boot = randomUUID();
   let latest;
   const sim = new OperatingSimulation(state => {
@@ -184,15 +185,16 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
   });
   wss.on('connection', ws => {
     sendState(ws);
-    let recent = [];
     ws.on('error', () => {});
     ws.on('message', async raw => {
       try {
         const user = await access.session(ws.token);
         if (!user) { ws.close(4401, 'Session ended'); return; }
-        recent = recent.filter(ts => Date.now() - ts < 1000);
+        const now = Date.now();
+        const recent = (commandWindows.get(user.username) || []).filter(ts => now - ts < 1000);
         if (recent.length >= 10) { ws.close(4429, 'Too many commands'); return; }
-        recent.push(Date.now());
+        recent.push(now);
+        commandWindows.set(user.username, recent);
         const msg = JSON.parse(raw);
         if (!validCommand(msg)) return;
         switch (msg.type) {
@@ -214,7 +216,13 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
     });
   });
   const sweep = setInterval(async () => {
+    const now = Date.now();
     for (const [key, item] of limits) if (item.until <= Date.now()) limits.delete(key);
+    for (const [username, recent] of commandWindows) {
+      const active = recent.filter(ts => now - ts < 1000);
+      if (active.length) commandWindows.set(username, active);
+      else commandWindows.delete(username);
+    }
     for (const ws of wss.clients) {
       ws.checkingSession = true;
       try { if (!await access.session(ws.token)) ws.close(4401, 'Session ended'); }

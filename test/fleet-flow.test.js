@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { once } = require('node:events');
 const { WebSocket } = require('ws');
-const { OperatingSimulation } = require('../lib/operating-simulation');
+const { OperatingSimulation, MAX_NOTICES, MAX_NOTICES_PER_STOP } = require('../lib/operating-simulation');
 const { createDemo, validCommand } = require('../server');
 
 const MIN = 60 * 1000;
@@ -138,6 +138,28 @@ test('운영 알림과 배송팁 명령은 알려진 정차지의 인쇄 가능�
   assert.equal(sim.snapshot().fleet.deliveries.find(stop => stop.id === 'V2-S1').tip.body, '배송 팁');
 });
 
+test('알림 이력은 정차지별 50건과 전체 1000건의 최신 항목만 보존한다', () => {
+  const perStop = simulation().sim;
+  for (let index = 1; index <= 70; index++) perStop.notifyStop('S1', '운영자 안내', `안내 ${index}`, false, { kind: 'manual' });
+  assert.equal(perStop.notifications.length, MAX_NOTICES_PER_STOP);
+  assert.equal(perStop.notifications[0].body, '안내 21');
+  assert.equal(perStop.notifications.at(-1).body, '안내 70');
+
+  const global = simulation().sim;
+  const stopIds = [...global.order, ...global.fleet.deliveries.map(stop => stop.id)];
+  for (let index = 1; index <= 1_100; index++) {
+    global.notifyStop(stopIds[(index - 1) % stopIds.length], '운영자 안내', `전체 안내 ${index}`, false, { kind: 'manual' });
+  }
+  assert.equal(global.notifications.length, MAX_NOTICES);
+  assert.equal(global.notifications[0].id, 101);
+  assert.equal(global.notifications.at(-1).id, 1_100);
+  assert.equal(global.notifications.at(-1).body, '전체 안내 1100');
+  global.reset();
+  assert.equal(global.notifications.length, 0);
+  global.notifyStop('S1', '운영자 안내', '리셋 뒤 최신 안내', false, { kind: 'manual' });
+  assert.equal(global.notifications[0].id, 1_101);
+});
+
 test('인증된 두 WebSocket은 synthetic 알림과 팁을 함께 받고 reset은 미작성 상태로 복원한다', async t => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'meatbox-fleet-'));
   const origin = 'http://127.0.0.1:32123';
@@ -207,4 +229,33 @@ test('인증된 두 WebSocket은 synthetic 알림과 팁을 함께 받고 reset�
   await denied;
   first.terminate();
   second.terminate();
+});
+
+test('같은 계정의 두 WebSocket은 초당 명령 10건 제한을 공유한다', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'meatbox-rate-'));
+  const origin = 'http://127.0.0.1:32123';
+  const demo = createDemo({ accessFile: path.join(directory, 'access.json'), origin });
+  await new Promise(resolve => demo.server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => { await demo.close(); await fs.rm(directory, { recursive: true, force: true }); });
+  const invite = await demo.access.issueInvite();
+  await demo.access.register({ username: 'shared-rate', password: 'fleet-test-password', invite });
+  const { token } = await demo.access.login({ username: 'shared-rate', password: 'fleet-test-password' });
+  const endpoint = `ws://127.0.0.1:${demo.server.address().port}/ws/simulation`;
+  const connect = () => new WebSocket(endpoint, { headers: { origin, cookie: `meatbox_session=${token}` } });
+  const first = connect();
+  const second = connect();
+  await Promise.all([once(first, 'message'), once(second, 'message')]);
+
+  const startedAt = Date.now();
+  for (let index = 0; index < 10; index++) {
+    const state = once(first, 'message');
+    (index % 2 ? second : first).send(JSON.stringify({ type: 'reset' }));
+    await state;
+  }
+  assert.ok(Date.now() - startedAt < 1_000, 'rate-limit commands must stay in one window');
+  const closed = once(second, 'close');
+  second.send(JSON.stringify({ type: 'reset' }));
+  assert.equal((await closed)[0], 4429);
+  assert.equal(first.readyState, WebSocket.OPEN);
+  first.terminate();
 });

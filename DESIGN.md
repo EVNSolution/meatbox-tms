@@ -80,6 +80,8 @@
 - Pending saves disable resubmission. Stale route edits require fresh data, never silent overwrite.
 - Customer and driver form typing survives unrelated live state updates. Save success appears only after the returned snapshot contains the requested value.
 - Customer viewers treat the initial notice set as history and open a popup only for a new notice ID targeting the current delivery. A new server boot establishes a fresh initial history without replaying popups.
+- Customer notice history retains at most the latest 50 entries per destination and 1,000 entries overall. Labels must describe this as retained recent history rather than a permanent archive.
+- WebSocket command throttling is shared by username: ten commands per rolling second, with only the connection sending the eleventh command closed.
 - Errors remain visible with a recovery action. No actual notification delivery is implied.
 
 ## Content voice
