@@ -17,7 +17,8 @@ test('고객 링크는 같은 배송을 유지하며 잘못된 배송 ID를 URL�
   assert.equal(links.customer, links.mobile);
   assert.equal(links.driver, '/combined/driver.html?id=S1');
   assert.equal(links.operator, '/combined/?id=S1#/control');
-  for (const id of [null, 'S9', 'S1&next=https://example.invalid', '../']) {
+  assert.equal(deliveryLinks('V130-S3').customer, '/combined/mobile-customer.html?id=V130-S3');
+  for (const id of [null, 'S9', 'V131-S1', 'V2-S4', 'S1&next=https://example.invalid', '../']) {
     assert.equal(deliveryLinks(id).operator, '/combined/#/control');
     assert.equal(deliveryLinks(id).driver, '/combined/driver.html');
   }

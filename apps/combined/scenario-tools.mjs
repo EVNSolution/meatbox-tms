@@ -31,13 +31,8 @@ export function mountScenarioTools({ onSend }) {
         <details class="scenario-guide-details"><summary>단계별 시연 순서</summary><ol id="scenario-steps"></ol><p>출발 후에는 각 배송지의 <strong>이동 → 도착·하차 → 배송 완료</strong>를 반복합니다. 이동은 자동으로 진행되고, 하차 시간이 끝나면 자동 완료됩니다. 다음 행동 버튼으로 기다리는 시간을 줄일 수 있습니다.</p></details>
         <details class="scenario-guide-details"><summary>최근 변동과 시각</summary><ol class="scenario-events" id="scenario-events"></ol></details>
         <p class="scenario-error" id="scenario-error" role="alert" hidden></p>
-        <span class="scenario-label">추가 상황</span>
-        <div class="scenario-buttons" role="group" aria-label="시뮬레이션 진행">
-          <button type="button" data-command="inject_traffic">교통 사고</button>
-          <button type="button" data-command="inject_dwell">정차 지연</button>
-        </div>
         <fieldset class="speed-controls"><legend>배속</legend><button type="button" data-speed="1">1×</button><button type="button" data-speed="5">5×</button><button type="button" data-speed="20">20×</button></fieldset>
-        <div class="scenario-footer"><button type="button" class="button subtle" data-command="reset">초기화</button><a href="/scenario/present">원본 발표 리모컨</a></div>
+        <div class="scenario-footer"><button type="button" class="button subtle" data-command="reset">초기화</button></div>
         <p class="scenario-reset-help">단계를 진행하거나 초기화하면 모든 접속자에게 반영됩니다. 순서 변경과 보류는 배송 관리에서 할 수 있습니다.</p>
       </div>
     </div>`;
@@ -174,7 +169,7 @@ export function mountScenarioTools({ onSend }) {
     update(state, isConnected) {
       connected = isConnected;
       if (state) {
-        if (state.phase === 'unordered' && latest?.phase !== 'unordered') lastChanges = null;
+        if (state.phase === 'idle' && latest?.phase !== 'idle') lastChanges = null;
         const changes = deliveryChanges(latest, state);
         if (changes) lastChanges = changes;
         latest = state;
@@ -201,8 +196,6 @@ export function mountScenarioTools({ onSend }) {
         panel.querySelector('#scenario-steps').innerHTML = guide.steps.map(step => `<li data-state="${step.state}"><div><strong>${escapeHtml(step.label)}</strong><time>${escapeHtml(step.actualTime || step.time)}${step.actualTime ? '' : ' 예정'}</time></div><p>${escapeHtml(step.description)}</p></li>`).join('');
         panel.querySelector('#scenario-events').innerHTML = guide.recentEvents.map(event => `<li><time>${escapeHtml(event.time)}</time><span>${escapeHtml(event.message)}</span></li>`).join('') || '<li>아직 변동이 없습니다.</li>';
       }
-      panel.querySelector('[data-command="inject_traffic"]').disabled = !connected || state?.phase !== 'delivering' || state.incidents.length > 0;
-      panel.querySelector('[data-command="inject_dwell"]').disabled = !connected || state?.phase !== 'delivering';
       panel.querySelector('[data-command="reset"]').disabled = !connected;
       panel.querySelectorAll('[data-speed]').forEach(button => {
         button.disabled = !connected;

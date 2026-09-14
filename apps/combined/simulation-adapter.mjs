@@ -26,12 +26,36 @@ export function adaptSimulation(snapshot) {
   }
 
   const liveVehicle = snapshot.vehicles?.find(vehicle => vehicle.live) ?? null;
+  const vehicles = Array.isArray(snapshot.fleet?.vehicles) ? snapshot.fleet.vehicles : (snapshot.vehicles ?? []);
+  const vehicleById = new Map(vehicles.map(vehicle => [vehicle.id, vehicle]));
+  const adaptVehicle = vehicle => vehicle ? {
+    id: escapeText(vehicle.id),
+    plate: escapeText(vehicle.plate),
+    driver: escapeText(vehicle.driver),
+    region: escapeText(vehicle.region),
+    live: vehicle.live === true,
+    status: escapeText(vehicle.status),
+    planned: vehicle.planned ?? null,
+    capacityBoxes: Number.isFinite(vehicle.capacityBoxes) ? vehicle.capacityBoxes : null,
+  } : null;
+  const adaptNotices = stopId => (Array.isArray(snapshot.notifications)
+    ? snapshot.notifications.filter(notice => notice.stopId === stopId)
+    : []).map(notice => ({
+    id: notice.id,
+    stopId: escapeText(notice.stopId),
+    title: escapeText(notice.title),
+    body: escapeText(notice.body),
+    time: notice.time ? escapeText(notice.time) : null,
+    clock: notice.clock ? escapeText(notice.clock) : (notice.time ? escapeText(notice.time) : null),
+    kind: escapeText(notice.kind),
+    channel: escapeText(notice.channel),
+    status: escapeText(notice.status),
+    author: notice.author ? escapeText(notice.author) : null,
+  }));
   const deliveries = snapshot.order.map((stop, index) => {
     const customer = snapshot.customers?.[stop.id] ?? null;
     const officialEta = customer?.eta ?? null;
-    const notices = Array.isArray(snapshot.notifications)
-      ? snapshot.notifications.filter(notice => notice.stopId === stop.id)
-      : [];
+    const vehicle = vehicleById.get(stop.vehicleId) ?? liveVehicle;
 
     return {
       id: escapeText(stop.id),
@@ -46,7 +70,8 @@ export function adaptSimulation(snapshot) {
       customerStatusTone: customerTone(customer?.status?.key),
       ordered: customer?.ordered === true,
       officialEta: officialEta ? {
-        time: escapeText(officialEta.timeText),
+        time: escapeText(officialEta.preciseTimeText || officialEta.timeText),
+        windowText: escapeText(officialEta.windowText),
         reason: escapeText(officialEta.reason),
         deltaMin: Number.isFinite(officialEta.deltaMin) ? officialEta.deltaMin : null,
         updatedAt: formatSimTime(officialEta.updatedAt),
@@ -61,13 +86,54 @@ export function adaptSimulation(snapshot) {
           state: escapeText(item.state),
         }))
         : [],
-      notices: notices.map(notice => ({
-        title: escapeText(notice.title),
-        body: escapeText(notice.body),
-        time: notice.time ? escapeText(notice.time) : null,
-      })),
+      preciseTimeText: officialEta?.preciseTimeText ? escapeText(officialEta.preciseTimeText) : (stop.eta ? escapeText(stop.eta) : null),
+      customerWindowText: officialEta?.windowText ? escapeText(officialEta.windowText) : null,
+      customerWindowStart: officialEta?.windowStart ? escapeText(officialEta.windowStart) : null,
+      customerWindowEnd: officialEta?.windowEnd ? escapeText(officialEta.windowEnd) : null,
+      vehicleId: escapeText(vehicle?.id),
+      vehicle: adaptVehicle(vehicle),
+      notices: adaptNotices(stop.id),
+      tip: stop.tip ? {
+        body: escapeText(stop.tip.body),
+        author: escapeText(stop.tip.author),
+        updatedAt: Number.isFinite(stop.tip.updatedAt) ? formatSimTime(stop.tip.updatedAt) : null,
+      } : null,
     };
   });
+
+  const syntheticDeliveries = Array.isArray(snapshot.fleet?.deliveries) ? snapshot.fleet.deliveries.map(stop => {
+    const vehicle = vehicleById.get(stop.vehicleId);
+    return {
+      id: escapeText(stop.id),
+      name: escapeText(stop.name),
+      address: escapeText(stop.address),
+      boxes: Number.isFinite(stop.boxes) ? stop.boxes : null,
+      items: Array.isArray(stop.items) ? stop.items : [],
+      sequence: stop.sequence,
+      status: escapeText(stop.status || 'pending'),
+      statusTone: statusTone(stop.status),
+      customerStatus: { key: 'paid', label: '결제 완료' },
+      customerStatusTone: 'neutral',
+      ordered: stop.ordered === true,
+      officialEta: null,
+      calculatedEta: null,
+      arrivedAt: null,
+      completedAt: null,
+      timeline: [],
+      preciseTimeText: null,
+      customerWindowText: null,
+      customerWindowStart: null,
+      customerWindowEnd: null,
+      vehicleId: escapeText(stop.vehicleId),
+      vehicle: adaptVehicle(vehicle),
+      notices: adaptNotices(stop.id),
+      tip: stop.tip ? {
+        body: escapeText(stop.tip.body),
+        author: escapeText(stop.tip.author),
+        updatedAt: Number.isFinite(stop.tip.updatedAt) ? formatSimTime(stop.tip.updatedAt) : null,
+      } : null,
+    };
+  }) : [];
 
   return {
     phase: escapeText(snapshot.phase),
@@ -86,6 +152,8 @@ export function adaptSimulation(snapshot) {
     } : null,
     device: null,
     deliveries,
+    fleetVehicles: vehicles.map(adaptVehicle),
+    fleetDeliveries: [...deliveries, ...syntheticDeliveries],
     events: Array.isArray(snapshot.events) ? snapshot.events.map(event => ({
       time: event.time ? escapeText(event.time) : null,
       type: escapeText(event.type),
@@ -103,7 +171,7 @@ export function adaptSimulation(snapshot) {
 export const officialEtaText = delivery => delivery?.officialEta?.time || '미확인';
 export const calculatedEtaText = delivery => delivery?.calculatedEta || '미확인';
 
-export const publishedEtaText = delivery => delivery?.ordered ? officialEtaText(delivery) : '미확인';
+export const publishedEtaText = delivery => delivery?.ordered ? (delivery?.customerWindowText || officialEtaText(delivery)) : '미확인';
 
 export function customerHeadline(delivery) {
   if (delivery?.ordered === false) return '주문 접수 전입니다.';

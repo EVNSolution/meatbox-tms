@@ -4,21 +4,17 @@ export function operatorRoute(hash) {
   return { page, controlTab: path === 'manage' || (page === 'control' && section === 'manage') ? 'management' : 'monitor' };
 }
 
-export function orderStage(delivery) {
-  if (delivery.status === 'done') return 'done';
-  if (delivery.status === 'skipped') return 'held';
-  return ['shipping', 'nearby'].includes(delivery.customerStatus?.key) ? 'shipping' : 'preparing';
-}
-
-export function filterOrders(deliveries, query = '', status = 'all') {
+export function filterFleetDeliveries(deliveries, { query = '', status = 'all', vehicleId = 'all' } = {}) {
   const needle = query.trim().toLocaleLowerCase('ko-KR');
-  return deliveries.filter(delivery => delivery.ordered &&
-    (status === 'all' || orderStage(delivery) === status) &&
-    [delivery.name, delivery.address, ...delivery.items.map(item => item.name)].some(value => String(value ?? '').toLocaleLowerCase('ko-KR').includes(needle)));
+  return deliveries.filter(delivery =>
+    (status === 'all' || delivery.status === status) &&
+    (vehicleId === 'all' || delivery.vehicleId === vehicleId) &&
+    [delivery.id, delivery.name, delivery.address, delivery.vehicle?.plate, delivery.vehicle?.driver]
+      .some(value => String(value ?? '').toLocaleLowerCase('ko-KR').includes(needle)));
 }
 
 export function resolveDeliverySelection(data, selectedId) {
-  const deliveries = data?.deliveries || [];
+  const deliveries = data?.fleetDeliveries || data?.deliveries || [];
   return deliveries.find(delivery => delivery.id === selectedId)
     ?? deliveries.find(delivery => delivery.id === data?.customerStopId)
     ?? deliveries[0]

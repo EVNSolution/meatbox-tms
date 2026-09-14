@@ -4,7 +4,7 @@ import { scenarioGuide } from './scenario-guide.mjs';
 const stopName = stop => `${stop.sequence}번 ${stop.name}`;
 
 export function deliveryLinks(id) {
-  const query = /^S[1-8]$/.test(id || '') ? `?id=${id}` : '';
+  const query = /^(?:S[1-8]|V(?:[2-9]|[1-9][0-9]|1[0-2][0-9]|130)-S[1-3])$/.test(id || '') ? `?id=${id}` : '';
   return {
     mobile: `/combined/mobile-customer.html${query}`,
     customer: `/combined/mobile-customer.html${query}`,

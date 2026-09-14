@@ -69,3 +69,35 @@ test('배열 순서가 바뀌면 표시 순서만 원본 스냅샷대로 바뀐�
 test('잘못된 상태는 조용히 가짜 배송을 만들지 않는다', () => {
   assert.throws(() => adaptSimulation({ phase: 'idle' }), /order 배열/);
 });
+
+test('fleet 계약은 live 배송과 synthetic 배송을 한 목록으로 제공한다', () => {
+  const input = structuredClone(base);
+  input.order[0].vehicleId = 'V1';
+  input.order[0].tip = { body: '직접 작성한 팁', author: '김민수', updatedAt: 25_500_000 };
+  input.customers.S5.eta.preciseTimeText = '08:31';
+  input.customers.S5.eta.windowText = '08:01 ~ 09:01';
+  input.customers.S5.eta.windowStart = '08:01';
+  input.customers.S5.eta.windowEnd = '09:01';
+  input.notifications[0] = { id: 7, stopId: 'S5', title: '운영자 안내', body: '문자 그대로', time: '06:30', clock: '06:30', kind: 'manual', channel: '고객 팝업', status: '시연 발송', author: '운영자' };
+  input.fleet = {
+    vehicles: [
+      { ...input.vehicles[0], planned: { stops: 1, boxes: 12 }, capacityBoxes: 60 },
+      { id: 'V2', plate: '예시 차량 002', driver: '예시 배송원 002', region: '권역 데이터 대기', live: false, planned: { stops: 3, boxes: 60 }, capacityBoxes: 60 },
+    ],
+    deliveries: [{ id: 'V2-S1', vehicleId: 'V2', sequence: 1, name: '예시 배송지 002-1', address: '위치 데이터 대기', boxes: 20, eta: null, status: 'pending', ordered: true, items: [], tip: null }],
+  };
+
+  const result = adaptSimulation(input);
+  assert.equal(result.fleetVehicles.length, 2);
+  assert.deepEqual(result.fleetDeliveries.map(stop => stop.id), ['S5', 'V2-S1']);
+  assert.equal(result.deliveries[0].vehicle.live, true);
+  assert.equal(result.deliveries[0].preciseTimeText, '08:31');
+  assert.equal(result.deliveries[0].customerWindowText, '08:01 ~ 09:01');
+  assert.deepEqual(result.deliveries[0].tip, { body: '직접 작성한 팁', author: '김민수', updatedAt: '07:05' });
+  assert.deepEqual(result.deliveries[0].notices[0], {
+    id: 7, stopId: 'S5', title: '운영자 안내', body: '문자 그대로', time: '06:30', clock: '06:30', kind: 'manual', channel: '고객 팝업', status: '시연 발송', author: '운영자',
+  });
+  assert.equal(result.fleetDeliveries[1].vehicle.live, false);
+  assert.equal(result.fleetDeliveries[1].calculatedEta, null);
+  assert.equal(result.fleetDeliveries[1].notices.length, 0);
+});

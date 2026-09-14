@@ -40,7 +40,17 @@
             <section class="driver-totals" aria-label="배송 요약"><div><strong id="driver-done">0/0</strong><span>완료 배송</span></div><div><strong id="driver-left">0</strong><span>잔여 박스</span></div><div><strong id="driver-finish">—</strong><span>완료 예상</span></div></section>
           </div>
         </section>
-        <aside class="driver-note"><h2>배송 관리</h2><p>순서 변경과 보류는 배송 관제에서 처리합니다.</p></aside>
+        <aside class="driver-note" aria-labelledby="driver-tip-heading">
+          <h2 id="driver-tip-heading">배송 팁</h2>
+          <p>배송지를 선택하고 현장에서 확인한 정보를 남겨 주세요.</p>
+          <label class="driver-tip-label" for="driver-tip-stop">배송지</label>
+          <select id="driver-tip-stop"></select>
+          <label class="driver-tip-label" for="driver-tip-body">배송 팁 내용</label>
+          <textarea id="driver-tip-body" maxlength="500" rows="6" placeholder="예: 후문 경비실에 연락 후 지하 하역장으로 진입"></textarea>
+          <div class="driver-tip-meta"><span id="driver-tip-author">작성 기록 없음</span><span id="driver-tip-count">0/500</span></div>
+          <button type="button" class="driver-tip-save" id="driver-tip-save" disabled>저장</button>
+          <p class="driver-tip-status" id="driver-tip-status" role="status"></p>
+        </aside>
       </div>
     </main>
   </div>
