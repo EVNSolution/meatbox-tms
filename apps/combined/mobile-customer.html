@@ -27,7 +27,7 @@
     <div class="picker-content">
       <p class="eyebrow">미트박스 · 고객 시나리오</p>
       <h1 id="picker-title">배송 조회</h1>
-      <p class="picker-description">주문과 배송을 조회할 매장을 선택해 주세요.</p>
+      <p class="picker-description">접수된 주문의 배송 현황을 조회할 매장을 선택해 주세요.</p>
       <div id="account-list"><p class="loading-copy" role="status">배송지 목록을 불러오고 있습니다.</p><a href="">다시 불러오기</a></div>
     </div>
   </section>
@@ -44,19 +44,10 @@
         <div class="viewer-screen screen" tabindex="0" role="region" aria-label="고객 모바일 화면, 스크롤해서 주문과 알림 확인">
 <div class="customer-heading">
       <p class="logo"><img src="./assets/meatbox-logo.svg" width="105" height="25" alt="미트박스"><small>새벽배송</small></p>
-      <h1>주문·배송 조회</h1>
+      <h1>배송 조회</h1>
       <div class="store-heading"><strong id="account-name">배송지 선택</strong><button type="button" class="btn ghost" id="switch-account">매장 변경</button></div>
     </div>
           <div class="tracking-column">
-        <section class="card order-checkout" id="order-cta" aria-labelledby="checkout-title" hidden>
-          <p class="eyebrow">주문 전</p>
-          <h2 id="checkout-title">새벽배송 주문을 시작해 보세요</h2>
-          <div class="payment-row"><span>결제 금액</span><strong>486,000원</strong></div>
-          <p class="checkout-meta">총 12박스 · 무료배송 · 새벽배송</p>
-          <button type="button" class="btn primary" id="place-order">시연 주문하기</button>
-          <p class="checkout-note">시연용 주문이며 실제 결제는 발생하지 않습니다.</p>
-        </section>
-
         <section class="card eta-hero" id="eta-card" aria-labelledby="eta-heading">
           <div class="row"><h2 id="eta-heading" class="cap">배송 안내</h2><span class="pill gray" id="status-pill">조회 중</span></div>
           <div class="big" id="eta-text">—</div>
@@ -68,6 +59,7 @@
         <section class="card map-card" id="map-card" aria-labelledby="map-heading">
           <div class="map-heading"><h2 id="map-heading">배송 위치</h2><span>🚚 배송 차량 &nbsp; 🏠 우리 매장</span></div>
           <div id="map" class="map" aria-label="배송 차량과 선택한 매장의 위치 지도"></div>
+          <p class="map-empty" id="map-empty" hidden>이 예시 배송에는 지도 좌표가 없습니다.</p>
         </section>
         <section class="card order-card" aria-labelledby="order-heading">
           <div class="order-head"><h2 id="order-heading">주문 상품</h2><span class="no" id="order-no"></span></div>
@@ -97,7 +89,14 @@
   </div>
   <noscript><p class="no-script">배송 시나리오를 보려면 JavaScript를 활성화해 주세요. <a href="/combined/">시연 안내로</a></p></noscript>
 
+  <dialog class="customer-notification-dialog" id="customer-notification-dialog" aria-labelledby="customer-notification-title" aria-describedby="customer-notification-body">
+    <div class="notification-dialog-heading"><img src="./assets/meatbox-app.webp" alt=""><span>미트박스 고객 안내</span></div>
+    <h2 id="customer-notification-title"></h2>
+    <p id="customer-notification-body"></p>
+    <time id="customer-notification-time"></time>
+    <button type="button" class="btn primary" id="customer-notification-close">확인</button>
+  </dialog>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
-  <script src="/scenario/common.js"></script>
 </body>
 </html>

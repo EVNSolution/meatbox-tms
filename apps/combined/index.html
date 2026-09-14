@@ -10,9 +10,9 @@
   <link rel="stylesheet" href="./brand.css">
   <link rel="icon" href="./assets/meatbox-app.webp">
   <link rel="stylesheet" href="./scenario-tools.css">
-  <link rel="stylesheet" href="./map-preview.css">
   <link rel="stylesheet" href="./demo-shell.css">
   <link rel="stylesheet" href="./operations.css">
+  <link rel="stylesheet" href="./order-planning.css">
   <script type="module" src="./app.mjs"></script>
 </head>
 <body>
@@ -35,30 +35,18 @@
               <div class="panel-heading"><h2 id="delivery-list-heading">배송 목록</h2><span id="delivery-count" class="muted"></span></div>
               <div class="list-toolbar">
                 <label class="field"><span>배송 검색</span><span class="search-control"><span data-field-icon="search"></span><input type="search" id="delivery-search" placeholder="정차지·주소 검색" autocomplete="off"></span></label>
+                <label class="field"><span>차량</span><select id="delivery-vehicle"><option value="all">전체 차량</option></select></label>
                 <label class="field"><span>배송 상태</span><select id="delivery-status"><option value="all">전체 상태</option><option value="pending">대기</option><option value="current">배송 중</option><option value="done">완료</option><option value="skipped">보류</option></select></label>
                 <button type="button" class="button subtle" id="clear-filters">초기화</button>
               </div>
-              <div class="table-scroll" role="region" aria-label="배송 목록 표" tabindex="0"><table class="delivery-table"><caption class="sr-only">실시간 시뮬레이션 배송 목록</caption><thead><tr><th scope="col">배송 순서와 배송지</th><th scope="col">상태</th><th scope="col">고객 공식 ETA</th><th scope="col">계산 ETA</th><th scope="col">도착 및 완료</th></tr></thead><tbody id="delivery-rows"></tbody></table></div>
+              <div class="table-scroll fleet-table-scroll" role="region" aria-label="배송 목록 표" tabindex="0"><table class="delivery-table fleet-delivery-table"><caption class="sr-only">차량별 전체 배송 목록</caption><thead><tr><th scope="col">차량 · 배송원</th><th scope="col">순서</th><th scope="col">배송지</th><th scope="col">주소</th><th scope="col">박스</th><th scope="col">상태</th><th scope="col">운영 ETA</th><th scope="col">고객 안내</th><th scope="col">도착</th><th scope="col">완료</th></tr></thead><tbody id="delivery-rows"></tbody></table></div>
               <div class="empty-state" id="delivery-empty" hidden><strong>조회 결과가 없습니다.</strong><p>검색어나 상태 조건을 바꿔 주세요.</p></div>
             </section>
             <aside class="panel delivery-selection" id="delivery-selection" aria-label="선택 배송 요약"></aside>
           </div>
         </section>
         <section id="page-orders" class="page-view view-content" data-page="orders" aria-label="주문 관리" hidden>
-          <div class="orders-layout">
-            <section class="panel" aria-labelledby="order-list-heading">
-              <div class="panel-heading"><h2 id="order-list-heading">접수 주문</h2><span id="order-count" class="muted"></span></div>
-              <div class="list-toolbar">
-                <label class="field"><span>주문 검색</span><span class="search-control"><span data-field-icon="search"></span><input type="search" id="order-search" placeholder="매장·상품 검색" autocomplete="off"></span></label>
-                <label class="field"><span>주문 상태</span><select id="order-status"><option value="all">전체 상태</option><option value="preparing">출고 준비</option><option value="shipping">배송 중</option><option value="done">완료</option><option value="held">보류</option></select></label>
-                <button type="button" class="button subtle" id="clear-order-filters">초기화</button>
-              </div>
-              <div class="table-scroll" role="region" aria-label="접수 주문 표" tabindex="0"><table class="delivery-table"><caption class="sr-only">시연에 접수된 주문</caption><thead><tr><th scope="col">주문 매장</th><th scope="col">진행 상태</th><th scope="col">주문 상품</th><th scope="col">박스</th><th scope="col">배송 연결</th></tr></thead><tbody id="order-rows"></tbody></table></div>
-              <div class="empty-state" id="order-empty" hidden><strong>조회 결과가 없습니다.</strong><p>주문 접수 여부나 조회 조건을 확인해 주세요.</p></div>
-            </section>
-            <aside class="panel" id="order-selection" aria-label="선택 주문 상세"></aside>
-          </div>
-          <p class="footer-note">시연에 접수된 주문 기준입니다. 실제 주문 시스템과 연결되어 있지 않습니다.</p>
+          <div id="order-planning"></div>
         </section>
         <section id="page-control" class="page-view view-content" data-page="control" aria-label="배송 관제" hidden>
           <div class="monitor-layout">
@@ -73,15 +61,14 @@
                 <section class="panel detail-panel" id="monitor-timeline" aria-labelledby="monitor-timeline-heading"><div class="panel-heading"><h2 id="monitor-timeline-heading">배송 타임라인</h2></div><div class="tab-panel"><ol class="timeline" id="delivery-timeline"></ol></div></section>
               </div>
               <section class="panel detail-panel" aria-label="선택 배송 이력">
-                <div class="panel-heading"><h2 id="manage-selected-name">선택 배송 이력</h2></div>
+                <div class="panel-heading"><h2>운영 기록</h2></div>
                 <div class="detail-tabs" role="tablist" aria-label="배송 이력">
-                  <button type="button" role="tab" id="tab-events" aria-selected="true" aria-controls="panel-events" data-tab="events">사건 이력</button>
-                  <button type="button" role="tab" id="tab-notifications" aria-selected="false" aria-controls="panel-notifications" tabindex="-1" data-tab="notifications">고객 알림 문구</button>
+                  <button type="button" role="tab" id="tab-events" aria-selected="false" aria-controls="panel-events" tabindex="-1" data-tab="events">사건 이력</button>
+                  <button type="button" role="tab" id="tab-notifications" aria-selected="true" aria-controls="panel-notifications" data-tab="notifications">고객 알림</button>
                 </div>
-                <div class="tab-panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events"><p class="notification-description">차량 전체 사건 · 최신순</p><ol class="timeline" id="event-list"></ol></div>
-                <div class="tab-panel" role="tabpanel" id="panel-notifications" aria-labelledby="tab-notifications" hidden><div id="notification-list"></div></div>
+                <div class="tab-panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events" hidden><p class="notification-description">선택 차량 사건 · 최신순</p><ol class="timeline" id="event-list"></ol></div>
+                <div class="tab-panel" role="tabpanel" id="panel-notifications" aria-labelledby="tab-notifications"><div class="notification-actions"><p class="notification-description">고객 화면에 전달된 시연 알림 기록입니다.</p><button type="button" class="button primary" id="open-notice-dialog">고객 안내 작성</button></div><p id="notice-send-status" class="route-message" role="status" hidden></p><div id="notification-list"></div></div>
               </section>
-              <details class="map-disclosure"><summary>지도 미리보기</summary><section class="map-preview panel" id="map-preview" aria-labelledby="map-preview-heading"><h2 id="map-preview-heading">지도 미리보기</h2></section></details>
             </div>
             <aside class="monitor-sidebar panel" aria-label="배송 관제 관리 영역">
               <div class="detail-tabs control-tabs" role="tablist" aria-label="관제 관리">
@@ -97,9 +84,16 @@
           </div>
         </section>
       </div>
-      <p class="footer-note page-footer">시연 데이터 · 실제 장치 연결·알림 발송 없음</p>
+      <p class="footer-note page-footer">시연 데이터 · 고객 팝업만 전달 · 외부 문자·카카오 알림 발송 없음</p>
       <p class="sr-only" id="screen-status" role="status" aria-live="polite" aria-atomic="true"></p>
     </main>
   </div>
+  <dialog id="customer-notice-dialog" class="customer-notice-dialog" aria-labelledby="customer-notice-heading">
+    <form method="dialog" id="customer-notice-form">
+      <div class="notice-dialog-heading"><div><h2 id="customer-notice-heading">고객 안내 작성</h2><p id="customer-notice-target"></p></div><button type="submit" class="notice-dialog-close" value="cancel" formnovalidate aria-label="닫기">×</button></div>
+      <label class="field" for="customer-notice-body"><span>안내 문구</span><textarea id="customer-notice-body" maxlength="300" rows="5" required></textarea></label>
+      <div class="notice-dialog-footer"><span id="customer-notice-count">0 / 300</span><div><button type="submit" class="button subtle" value="cancel" formnovalidate>취소</button><button type="button" class="button primary" id="send-customer-notice">팝업 보내기</button></div></div>
+    </form>
+  </dialog>
 </body>
 </html>

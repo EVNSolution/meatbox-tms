@@ -8,7 +8,7 @@ const { createAccess, AccessError } = require('./lib/access');
 const { arriveStop, completeStop } = require('./lib/scenario-controls');
 const { validRouteOrder, applyRouteOrder } = require('./lib/route-order');
 const { page, loginPage, registerPage, homePage } = require('./apps/portal/pages');
-const { Simulation } = require('./workspaces/sanghyun-scenario/src/simulation');
+const { OperatingSimulation, validPlainText } = require('./lib/operating-simulation');
 const routeData = require('./workspaces/sanghyun-scenario/src/route-data');
 
 const COOKIE = 'meatbox_session';
@@ -29,7 +29,12 @@ function safeNext(value) {
 function validCommand(msg) {
   if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return false;
   if (msg.type === 'set_route_order') return validRouteOrder(msg);
-  if (['advance', 'place_order', 'reset', 'inject_traffic', 'inject_dwell'].includes(msg.type)) return true;
+  if (['advance', 'place_order', 'reset'].includes(msg.type)) return true;
+  if (['send_customer_notice', 'set_delivery_tip'].includes(msg.type)) {
+    const max = msg.type === 'send_customer_notice' ? 300 : 500;
+    return typeof msg.stopId === 'string' && /^(?:S[1-8]|V(?:[2-9]|[1-9]\d|1[0-2]\d|130)-S[1-3])$/.test(msg.stopId)
+      && validPlainText(msg.body, max);
+  }
   if (msg.type === 'complete_stop') return msg.stopId === undefined || /^S[1-8]$/.test(msg.stopId);
   if (msg.type === 'arrive_stop') return /^S[1-8]$/.test(msg.stopId);
   if (msg.type === 'speed') return [1, 5, 20].includes(msg.value);
@@ -128,6 +133,7 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
       res.type('html').send(html.replace(/(href|src)="\/(?!\/)/g, '$1="/scenario/')
         .replace('src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"', 'src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"')
         .replace('href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"', 'href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous"')
+        .replace('</head>', '<style>#traffic,#dwell{display:none!important}</style></head>')
         .replace('</body>', '<script src="/auth-check.js" defer></script></body>'));
     }));
   }
@@ -153,9 +159,10 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
 
   const server = http.createServer(app);
   const wss = new WebSocketServer({ noServer: true, maxPayload: 4096 });
+  const commandWindows = new Map();
   const boot = randomUUID();
   let latest;
-  const sim = new Simulation(state => {
+  const sim = new OperatingSimulation(state => {
     latest = JSON.stringify({ type: 'state', state, boot });
     for (const ws of wss.clients) sendState(ws);
   });
@@ -178,14 +185,16 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
   });
   wss.on('connection', ws => {
     sendState(ws);
-    let recent = [];
     ws.on('error', () => {});
     ws.on('message', async raw => {
       try {
-        if (!await access.session(ws.token)) { ws.close(4401, 'Session ended'); return; }
-        recent = recent.filter(ts => Date.now() - ts < 1000);
+        const user = await access.session(ws.token);
+        if (!user) { ws.close(4401, 'Session ended'); return; }
+        const now = Date.now();
+        const recent = (commandWindows.get(user.username) || []).filter(ts => now - ts < 1000);
         if (recent.length >= 10) { ws.close(4429, 'Too many commands'); return; }
-        recent.push(Date.now());
+        recent.push(now);
+        commandWindows.set(user.username, recent);
         const msg = JSON.parse(raw);
         if (!validCommand(msg)) return;
         switch (msg.type) {
@@ -193,8 +202,6 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
           case 'place_order': sim.placeOrder(); break;
           case 'reset': sim.reset(); break;
           case 'speed': sim.setSpeed(msg.value); break;
-          case 'inject_traffic': sim.injectTraffic(); break;
-          case 'inject_dwell': sim.injectDwell(); break;
           case 'reorder': sim.reorder(msg.stopId, msg.dir); break;
           case 'set_route_order':
             if (!applyRouteOrder(sim, msg)) ws.send(JSON.stringify({ type: 'error', error: 'ROUTE_CHANGED' }));
@@ -202,12 +209,20 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
           case 'toggle_skip': sim.toggleSkip(msg.stopId); break;
           case 'arrive_stop': arriveStop(sim, msg.stopId); break;
           case 'complete_stop': completeStop(sim, msg.stopId); break;
+          case 'send_customer_notice': sim.sendCustomerNotice(msg.stopId, msg.body, user.displayName); break;
+          case 'set_delivery_tip': sim.setDeliveryTip(msg.stopId, msg.body); break;
         }
       } catch { ws.send(JSON.stringify({ type: 'error', error: 'INVALID_COMMAND' })); }
     });
   });
   const sweep = setInterval(async () => {
+    const now = Date.now();
     for (const [key, item] of limits) if (item.until <= Date.now()) limits.delete(key);
+    for (const [username, recent] of commandWindows) {
+      const active = recent.filter(ts => now - ts < 1000);
+      if (active.length) commandWindows.set(username, active);
+      else commandWindows.delete(username);
+    }
     for (const ws of wss.clients) {
       ws.checkingSession = true;
       try { if (!await access.session(ws.token)) ws.close(4401, 'Session ended'); }

@@ -1,0 +1,112 @@
+.order-planning-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 292px;
+  gap: 16px;
+  min-height: min(690px, calc(100vh - 180px));
+}
+
+.order-map-panel,
+.order-planning-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.order-map-panel {
+  display: grid;
+  grid-template-rows: auto minmax(440px, 1fr);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.order-map-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.order-map-heading h2,
+.order-planning-title h2 { margin: 0; font-size: 16px; }
+.order-map-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+.order-map-count { color: var(--brand); font-weight: 700; }
+
+.order-map-canvas {
+  position: relative;
+  min-height: 440px;
+  overflow: hidden;
+  background-color: #f5f6f7;
+  background-image:
+    linear-gradient(rgba(33, 35, 34, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(33, 35, 34, .035) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+.order-map-marker {
+  position: absolute;
+  top: var(--marker-top);
+  left: var(--marker-left);
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.order-map-marker[aria-pressed="true"] { outline: 3px solid #212322; outline-offset: 2px; }
+.order-map-marker:focus-visible { outline: 3px solid #212322; outline-offset: 2px; }
+
+.order-planning-panel { align-self: start; padding: 18px; }
+.order-planning-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 20px; }
+.order-planning-title span { color: var(--brand); font-size: 12px; font-weight: 600; }
+.order-vehicle-field { margin-bottom: 24px; }
+.order-vehicle-field select { width: 100%; }
+
+.order-volume-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.order-volume-heading label { font-size: 13px; font-weight: 600; }
+.order-volume-heading strong { color: var(--brand); font-size: 18px; }
+.order-box-range { width: 100%; margin: 16px 0 12px; accent-color: var(--brand); cursor: ew-resize; }
+.order-box-range:focus-visible { outline: 2px solid #212322; outline-offset: 4px; }
+
+.order-box-entry { display: grid; grid-template-columns: 1fr 112px; align-items: center; gap: 12px; }
+.order-box-entry label { font-size: 13px; font-weight: 600; }
+.order-box-entry input { width: 100%; text-align: right; }
+.order-box-help { margin: 8px 0 18px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+.order-plan-summary { margin: 0; border-top: 1px solid var(--border); }
+.order-plan-summary > div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.order-plan-summary dt { color: var(--muted); font-size: 12px; }
+.order-plan-summary dd { margin: 0; font-size: 14px; font-weight: 700; }
+
+.order-map-selection { margin-top: 18px; padding: 14px; border-radius: var(--radius); background: #f7f7f8; }
+.order-map-selection span { display: block; margin-bottom: 5px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.order-map-selection strong { display: block; font-size: 14px; }
+.order-map-selection p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 860px) {
+  .order-planning-layout { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .order-planning-panel { grid-row: 1; width: 100%; }
+  .order-map-panel { grid-row: 2; grid-template-rows: auto minmax(420px, 62vh); }
+  .order-map-canvas { min-height: 420px; }
+}
+
+@media (max-width: 420px) {
+  .order-planning-layout { gap: 12px; }
+  .order-planning-panel { padding: 14px; }
+  .order-map-heading { min-height: 60px; padding: 10px 12px; }
+  .order-map-panel { grid-template-rows: auto 430px; }
+  .order-map-canvas { min-height: 430px; }
+  .order-box-entry { grid-template-columns: 1fr 104px; }
+}

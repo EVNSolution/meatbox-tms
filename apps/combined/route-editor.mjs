@@ -1,8 +1,12 @@
-import { publishedEtaText } from './simulation-adapter.mjs';
+import { calculatedEtaText } from './simulation-adapter.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const labels = { pending: '대기', current: '배송 중', done: '완료', skipped: '보류' };
 const signature = state => JSON.stringify([state.phase, state.deliveries.map(stop => [stop.id, stop.status])]);
+
+export const routeEditability = state => state?.vehicle?.live === false
+  ? { editable: false, reason: '배차 예시 차량은 조회만 가능하며 배송 순서를 편집할 수 없습니다.' }
+  : { editable: true, reason: '' };
 
 export function movePendingOrder(order, deliveries, id, targetId) {
   const pending = new Set(deliveries.filter(stop => stop.status === 'pending').map(stop => stop.id));
@@ -26,24 +30,25 @@ export function mountRouteEditor({ element, onSend, onSelect }) {
   }
   function render() {
     if (!latest || drag) return;
+    const access = routeEditability(latest);
     const rows = (draft || order()).map(id => latest.deliveries.find(stop => stop.id === id));
     const key = JSON.stringify([rows.map(stop => [stop.id, stop.status, stop.officialEta?.time]), selectedId, !!draft, pending, connected, message, error]);
     if (key === rendered) return;
     rendered = key;
     const focused = element.contains(document.activeElement) ? document.activeElement.getAttribute('data-focus') : null;
     element.innerHTML = `
-      <div class="route-heading"><div><h2>차량 배송 순서</h2><p>${escapeHtml(latest.vehicle?.plate)} · ${escapeHtml(latest.vehicle?.driver)} · ${rows.length}곳</p></div><div class="route-edit-actions">${draft
+      <div class="route-heading"><div><h2>차량 배송 순서</h2><p>${escapeHtml(latest.vehicle?.plate)} · ${escapeHtml(latest.vehicle?.driver)} · ${rows.length}곳${access.editable ? '' : ' · 배차 예시'}</p></div><div class="route-edit-actions">${draft
         ? `<button class="button subtle" data-route-action="cancel" data-focus="cancel" ${pending ? 'disabled' : ''}>취소</button><button class="button primary" data-route-action="save" data-focus="save" ${!changed() || pending || !connected ? 'disabled' : ''}>${pending ? '저장 중…' : '변경 저장'}</button>`
-        : `<button class="button" data-route-action="edit" data-focus="edit" ${!connected || rows.filter(stop => stop.status === 'pending').length < 2 ? 'disabled' : ''}>순서 편집</button>`}</div></div>
-      <p class="route-help">${draft ? '손잡이를 끌거나 ↑↓로 순서를 바꾼 뒤 저장하세요. 배송 중·완료·보류 행은 고정됩니다.' : '배송지를 눌러 이력을 확인하세요. 순서를 바꾸려면 ‘순서 편집’을 누르세요.'}</p>
+        : `<button class="button" data-route-action="edit" data-focus="edit" ${!access.editable || !connected || rows.filter(stop => stop.status === 'pending').length < 2 ? 'disabled' : ''}>순서 편집</button>`}</div></div>
+      <p class="route-help">${access.reason || (draft ? '손잡이를 끌거나 ↑↓로 순서를 바꾼 뒤 저장하세요. 배송 중·완료·보류 행은 고정됩니다.' : '배송지를 눌러 이력을 확인하세요. 순서를 바꾸려면 ‘순서 편집’을 누르세요.')}</p>
       <ol class="route-list">${rows.map((stop, index) => {
         const movable = draft && stop.status === 'pending';
         const eligible = rows.filter(row => row.status === 'pending');
         const place = eligible.findIndex(row => row.id === stop.id);
-        const canHold = stop.id !== latest.customerStopId && ['pending', 'skipped'].includes(stop.status);
+        const canHold = access.editable && stop.id !== latest.customerStopId && ['pending', 'skipped'].includes(stop.status);
         return `<li class="route-row${draft ? ' editing' : ''}${stop.id === selectedId ? ' selected' : ''}" data-route-id="${stop.id}">
           ${draft ? `<button class="route-handle" data-handle="${stop.id}" data-focus="handle-${stop.id}" aria-label="${escapeHtml(stop.name)} 순서 이동" title="끌어서 이동 · 위아래 방향키" ${!movable || pending || !connected ? 'disabled' : ''}>⠿</button>` : ''}
-          <span class="route-number">${index + 1}</span><button class="route-select" data-route-select="${stop.id}" data-focus="select-${stop.id}" aria-pressed="${stop.id === selectedId}"><strong>${escapeHtml(stop.name)}</strong><small>${escapeHtml(stop.address)}</small><span class="route-meta"><span class="badge ${stop.statusTone}">${labels[stop.status]}</span><small>ETA ${escapeHtml(publishedEtaText(stop))}</small>${draft && index !== stop.sequence - 1 ? `<span class="route-draft">${stop.sequence} → ${index + 1}번째</span>` : ''}</span></button>
+          <span class="route-number">${index + 1}</span><button class="route-select" data-route-select="${stop.id}" data-focus="select-${stop.id}" aria-pressed="${stop.id === selectedId}"><strong>${escapeHtml(stop.name)}</strong><small>${escapeHtml(stop.address)}</small><span class="route-meta"><span class="badge ${stop.statusTone}">${labels[stop.status]}</span><small>ETA ${escapeHtml(stop.preciseTimeText || calculatedEtaText(stop))}</small>${draft && index !== stop.sequence - 1 ? `<span class="route-draft">${stop.sequence} → ${index + 1}번째</span>` : ''}</span></button>
           <div class="route-row-actions">${draft ? movable ? `<button class="route-move" data-move="${stop.id}" data-direction="-1" data-focus="up-${stop.id}" aria-label="${escapeHtml(stop.name)} 위로" ${place === 0 || pending || !connected ? 'disabled' : ''}>↑</button><button class="route-move" data-move="${stop.id}" data-direction="1" data-focus="down-${stop.id}" aria-label="${escapeHtml(stop.name)} 아래로" ${place === eligible.length - 1 || pending || !connected ? 'disabled' : ''}>↓</button>` : '<span class="route-locked">고정</span>' : canHold ? `<button class="route-hold" data-hold="${stop.id}" data-focus="hold-${stop.id}" ${!connected ? 'disabled' : ''}>${stop.status === 'skipped' ? '복원' : '보류'}</button>` : ''}</div>
         </li>`;
       }).join('')}</ol><p class="route-message" role="status" data-error="${error}" ${message ? '' : 'hidden'}>${escapeHtml(message)}</p>`;
@@ -67,19 +72,19 @@ export function mountRouteEditor({ element, onSend, onSelect }) {
     const selection = event.target.closest('[data-route-select]');
     if (selection) onSelect(selection.dataset.routeSelect);
     const action = event.target.closest('[data-route-action]')?.dataset.routeAction;
-    if (action === 'edit' && connected) {
+    if (action === 'edit' && connected && routeEditability(latest).editable) {
       draft = order(); base = { order: order(), statuses: latest.deliveries.map(stop => stop.status), phase: latest.phase, signature: signature(latest) };
       message = ''; error = false;
     }
     if (action === 'cancel' && !pending) finish('변경을 취소했습니다. 기존 배송 순서를 유지합니다.');
-    if (action === 'save' && changed() && connected && !pending) {
+    if (action === 'save' && changed() && connected && !pending && routeEditability(latest).editable) {
       pending = true; message = '배송 순서를 저장하고 있습니다.';
       onSend('set_route_order', { order: draft, expectedOrder: base.order, expectedStatuses: base.statuses, expectedPhase: base.phase });
     }
     const moving = event.target.closest('[data-move]');
     if (moving) moveBy(moving.dataset.move, Number(moving.dataset.direction));
     const hold = event.target.closest('[data-hold]');
-    if (hold && connected && !draft) onSend('toggle_skip', { stopId: hold.dataset.hold });
+    if (hold && connected && !draft && routeEditability(latest).editable) onSend('toggle_skip', { stopId: hold.dataset.hold });
     render();
   });
   element.addEventListener('keydown', event => {

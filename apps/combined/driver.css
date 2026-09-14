@@ -50,6 +50,17 @@ button { font: inherit; }
 .driver-note { padding: 22px; background: #fff; border: 1px solid var(--driver-line); border-radius: 8px; }
 .driver-note h2 { margin: 0; font-size: 16px; }
 .driver-note p { margin: 10px 0 0; color: var(--driver-muted); line-height: 1.7; }
+.driver-tip-label { display: block; margin: 18px 0 6px; font-size: 12px; font-weight: 600; }
+.driver-note select, .driver-note textarea { width: 100%; color: var(--meatbox-ink); background: #fff; border: 1px solid var(--driver-line); border-radius: 6px; font: inherit; }
+.driver-note select { min-height: 44px; padding: 8px 10px; }
+.driver-note textarea { min-height: 128px; padding: 10px 12px; resize: vertical; line-height: 1.55; }
+.driver-note select:focus-visible, .driver-note textarea:focus-visible, .driver-tip-save:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 3px; }
+.driver-tip-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; color: var(--driver-muted); font-size: 11px; }
+.driver-tip-save { width: 100%; min-height: 44px; margin-top: 14px; color: #fff; background: var(--meatbox-red); border: 1px solid var(--meatbox-red); border-radius: 6px; font-weight: 600; cursor: pointer; }
+.driver-tip-save:disabled { color: #98a2b3; background: #f2f4f7; border-color: #eaecf0; cursor: default; }
+.driver-tip-status { min-height: 21px; font-size: 12px; }
+.driver-tip-status[data-tone="success"] { color: #067647; }
+.driver-tip-status[data-tone="error"] { color: #b42318; }
 .driver-noscript { position: fixed; inset: 0; z-index: 100; margin: 0; padding: 40px 20px; background: #fff; }
 @media (max-width: 860px) {
   .driver-intro { min-height: 96px; padding: 20px 16px; }

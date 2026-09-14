@@ -1,5 +1,5 @@
 const preparation = [
-  { key: 'order', label: '주문 접수', time: '05:45', description: '고객 주문과 결제를 접수합니다.' },
+  { key: 'order', label: '주문 접수 완료', time: '05:45', description: '서비스에서 접수한 주문과 배송 수량을 확인했습니다.' },
   { key: 'picking', label: '피킹 중', time: '05:50', description: 'MFC에서 배송할 상품을 모읍니다. 고객 화면도 피킹 중으로 바뀝니다.' },
   { key: 'labeling', label: '라벨 부착', time: '06:05', description: '상품에 배송 라벨을 붙이고 배송지를 구분합니다.' },
   { key: 'staged', label: '상차 대기', time: '06:20', description: '상품 준비를 마치고 차량 상차를 기다립니다.' },
@@ -20,12 +20,12 @@ export function scenarioGuide(state) {
   const timeline = state.deliveries.find(stop => stop.id === state.customerStopId)?.timeline ?? [];
   const steps = preparation.map((step, index) => ({
     ...step,
-    actualTime: timeline.find(item => item.label === (step.key === 'departed' ? '배송 중' : step.label))?.time ?? null,
+    actualTime: timeline.find(item => item.label === (step.key === 'departed' ? '배송 중' : step.key === 'order' ? '주문 접수' : step.label))?.time ?? null,
     state: index < prepIndex ? 'done' : index === prepIndex ? 'current' : 'pending',
   }));
   let guide;
   if (state.phase === 'unordered') {
-    guide = { title: '고객 주문 대기', description: '주문 접수부터 첫 배송지 완료까지 한 단계씩 시연합니다.', action: 'place_order', actionLabel: '주문 접수하기', nextTitle: '주문 접수', nextTime: state.simClock, effect: '주문과 결제가 접수되고 고객 화면에 배송 안내가 표시됩니다.' };
+    guide = { title: '주문 접수 상태 확인 중', description: '접수 완료 상태를 서버에서 다시 확인하고 있습니다.', nextTitle: '피킹 시작', effect: '연결이 복구되면 접수된 주문의 피킹부터 진행합니다.' };
   } else if (nextPrep) {
     const previous = preparation[prepIndex];
     guide = { title: previous.label, description: previous.description, action: 'advance', actionLabel: { picking: '피킹 시작', labeling: '라벨 부착 처리', staged: '상차 대기로 진행', departed: '배송 출발' }[nextPrep.key], nextTitle: nextPrep.label, nextTime: nextPrep.time, effect: nextPrep.description };
@@ -45,8 +45,7 @@ export function scenarioGuide(state) {
   return {
     ...guide, steps, current, latestCompleted,
     elapsed: guide.action === 'complete_stop' ? '현재 시각에 완료 스캔'
-      : guide.action === 'place_order' ? '시연 시작'
-        : minutes(guide.nextTime) !== null && minutes(state.simClock) !== null && delta >= 0 ? `시연 시간 +${delta}분${guide.estimated ? ' 예상' : ''}` : null,
+      : minutes(guide.nextTime) !== null && minutes(state.simClock) !== null && delta >= 0 ? `시연 시간 +${delta}분${guide.estimated ? ' 예상' : ''}` : null,
     doneCount: completed.length,
     totalCount: state.deliveries.filter(stop => stop.status !== 'skipped').length,
     recentEvents: state.events.filter(event => event.type !== 'notify').slice(0, 3),
