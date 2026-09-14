@@ -60,14 +60,22 @@
           <div class="monitor-layout">
             <section class="map-preview panel" id="map-preview" aria-labelledby="map-preview-heading"><div><h2 id="map-preview-heading">지도 미리보기</h2></div></section>
             <div class="monitor-sidebar">
-              <div class="monitor-toolbar" id="monitor-toolbar">
-                <h2 id="monitor-list-heading">배송지 <span id="monitor-count" class="muted"></span></h2>
-                <button type="button" class="button subtle" id="monitor-back" hidden>← 배송지 목록</button>
-                <button type="button" class="button" id="monitor-current" hidden>현재 배송지 보기</button>
-              </div>
-              <section class="panel" id="monitor-list-panel" aria-labelledby="monitor-list-heading"><ol class="monitor-deliveries" id="monitor-deliveries"></ol></section>
+              <section class="panel" id="monitor-list-panel" aria-labelledby="monitor-list-heading">
+                <div class="panel-heading monitor-toolbar">
+                  <h2 id="monitor-list-heading">배송지 <span id="monitor-count" class="muted"></span></h2>
+                  <button type="button" class="button subtle" id="monitor-current" data-monitor-current hidden>현재 배송지 보기</button>
+                </div>
+                <ol class="monitor-deliveries" id="monitor-deliveries"></ol>
+              </section>
               <div class="monitor-detail" id="monitor-detail" hidden>
-                <section id="selected-heading" class="panel monitor-selected" aria-label="선택 배송" tabindex="-1"></section>
+                <section id="selected-heading" class="panel monitor-selected" aria-label="선택 배송" tabindex="-1">
+                  <div class="monitor-title-row">
+                    <button type="button" class="monitor-back" id="monitor-back" aria-label="배송지 목록으로 돌아가기" title="배송지 목록">←</button>
+                    <h2 id="monitor-selected-name"></h2><span id="monitor-selected-status"></span>
+                  </div>
+                  <div class="monitor-meta-row"><span id="monitor-selected-meta"></span><button type="button" class="button subtle" id="monitor-current-detail" data-monitor-current hidden>현재 배송지 보기</button></div>
+                  <p class="monitor-address" id="monitor-selected-address"></p>
+                </section>
                 <section class="panel" id="eta-panel" aria-labelledby="eta-heading"></section>
                 <section class="panel detail-panel" id="monitor-timeline" aria-labelledby="monitor-timeline-heading"><div class="panel-heading"><h2 id="monitor-timeline-heading">배송 타임라인</h2></div><div class="tab-panel"><ol class="timeline" id="delivery-timeline"></ol></div></section>
               </div>
