@@ -6,7 +6,7 @@ export function mountDemoShell({ viewer, onSend }) {
   const initialLinks = deliveryLinks(new URLSearchParams(location.search).get('id'));
   document.getElementById('demo-navigation').innerHTML = `<nav class="viewer-tabs" aria-label="시연 뷰어"><a data-viewer="operator" href="${initialLinks.operator}">운영<br>뷰어</a><a data-viewer="customer" href="${initialLinks.mobile}">고객<br>뷰어</a></nav>`;
   document.querySelector(`[data-viewer="${viewer}"]`).setAttribute('aria-current', 'page');
-  const guide = mountScenarioTools({ onSend, container: document.getElementById('demo-guide') });
+  const guide = mountScenarioTools({ onSend });
   let lastId;
   return {
     update(state, connected) { guide.update(state, connected); },

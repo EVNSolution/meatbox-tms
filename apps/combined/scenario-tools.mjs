@@ -10,7 +10,7 @@ export function clampPosition(x, y, width, height, viewportWidth, viewportHeight
   };
 }
 
-export function mountScenarioTools({ onSend, container }) {
+export function mountScenarioTools({ onSend }) {
   const panel = document.createElement('aside');
   panel.id = 'scenario-tools';
   panel.className = 'scenario-palette';
@@ -40,31 +40,25 @@ export function mountScenarioTools({ onSend, container }) {
         <p class="scenario-reset-help">모든 접속자가 같은 진행 상태를 봅니다. 순서 변경과 건너뜀은 운영 뷰어의 배송 상세에서 조작합니다.</p>
       </div>
     </div>`;
-  if (container) {
-    panel.classList.add('scenario-inline');
-    const advanced = document.createElement('div');
-    advanced.className = 'scenario-advanced';
-    advanced.id = 'scenario-advanced';
-    let node = panel.querySelector('#scenario-completed');
-    while (node) { const next = node.nextElementSibling; advanced.append(node); node = next; }
-    panel.querySelector('.scenario-body').append(advanced);
-    panel.querySelector('.scenario-body').hidden = false;
-    panel.querySelector('.scenario-toggle').setAttribute('aria-controls', advanced.id);
-    panel.querySelector('.scenario-handle').hidden = true;
-  }
-  (container || document.body).append(panel);
+  const advanced = document.createElement('details');
+  advanced.className = 'scenario-advanced';
+  advanced.innerHTML = '<summary>배속·초기화 및 상세 설정</summary>';
+  let node = panel.querySelector('#scenario-completed');
+  while (node) { const next = node.nextElementSibling; advanced.append(node); node = next; }
+  panel.querySelector('.scenario-body').append(advanced);
+  document.body.append(panel);
 
   const handle = panel.querySelector('.scenario-handle');
   const toggle = panel.querySelector('.scenario-toggle');
-  const body = panel.querySelector(container ? '.scenario-advanced' : '.scenario-body');
+  const body = panel.querySelector('.scenario-body');
   const status = panel.querySelector('#current-scenario');
   const primary = panel.querySelector('#scenario-next-action');
   let nextAction = null;
   let pending = false;
+  let connected = false;
   const put = (id, text) => { panel.querySelector(`#${id}`).textContent = text || ''; };
 
   function move(x, y) {
-    if (container) return;
     const position = clampPosition(x, y, panel.offsetWidth, panel.offsetHeight, innerWidth, innerHeight);
     Object.assign(panel.style, { left: `${position.x}px`, top: `${position.y}px`, right: 'auto', bottom: 'auto' });
   }
@@ -73,7 +67,6 @@ export function mountScenarioTools({ onSend, container }) {
     move(x, y);
   }
   function save() {
-    if (container) return;
     const { x, y } = panel.getBoundingClientRect();
     try { sessionStorage.setItem(storageKey, JSON.stringify({ x, y, expanded: !body.hidden })); } catch {}
   }
@@ -81,7 +74,7 @@ export function mountScenarioTools({ onSend, container }) {
     body.hidden = !expanded;
     panel.dataset.expanded = String(expanded);
     toggle.setAttribute('aria-expanded', String(expanded));
-    toggle.textContent = expanded ? '접기 −' : container ? '자세히 +' : '펼치기 +';
+    toggle.textContent = expanded ? '접기 −' : '펼치기 +';
     keepInView();
   }
 
@@ -132,11 +125,12 @@ export function mountScenarioTools({ onSend, container }) {
   handle.addEventListener('pointerup', endDrag);
   handle.addEventListener('pointercancel', endDrag);
   window.addEventListener('resize', keepInView);
+  new ResizeObserver(keepInView).observe(panel);
 
   expand(false);
   try {
     const saved = JSON.parse(sessionStorage.getItem(storageKey));
-    if (!container && saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
       expand(saved.expanded === true);
       move(saved.x, saved.y);
     }
@@ -144,16 +138,19 @@ export function mountScenarioTools({ onSend, container }) {
 
   return {
     showError(message) {
-      if (container) expand(true);
+      expand(true);
+      advanced.open = true;
       put('scenario-error', message);
       panel.querySelector('#scenario-error').hidden = false;
       pending = false;
+      primary.disabled = !connected || !nextAction?.action;
     },
-    update(state, connected) {
+    update(state, isConnected) {
+      connected = isConnected;
       const guide = scenarioGuide(state);
       nextAction = guide;
       pending = false;
-      status.textContent = connected && guide ? guide.title : '연결 대기';
+      status.textContent = connected && guide ? `${state.simClock} · ${guide.title}` : '연결 대기';
       primary.disabled = !connected || !guide?.action;
       put('scenario-next-action', connected ? guide?.actionLabel || '배송 시연 완료' : '연결 대기');
       if (guide) {
