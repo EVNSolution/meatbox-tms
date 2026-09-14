@@ -25,7 +25,7 @@ export function scenarioGuide(state) {
   }));
   let guide;
   if (state.phase === 'unordered') {
-    guide = { title: '고객 주문 대기', description: '주문 접수부터 첫 배송지 완료까지 한 단계씩 시연합니다.', action: 'place_order', actionLabel: '주문 접수하기', nextTitle: '주문 접수', nextTime: state.simClock, effect: '시연 고객의 주문과 결제가 접수되고 고객 배송 안내가 시작됩니다.' };
+    guide = { title: '고객 주문 대기', description: '주문 접수부터 첫 배송지 완료까지 한 단계씩 시연합니다.', action: 'place_order', actionLabel: '주문 접수하기', nextTitle: '주문 접수', nextTime: state.simClock, effect: '주문과 결제가 접수되고 고객 화면에 배송 안내가 표시됩니다.' };
   } else if (nextPrep) {
     const previous = preparation[prepIndex];
     guide = { title: previous.label, description: previous.description, action: 'advance', actionLabel: { picking: '피킹 시작', labeling: '라벨 부착 처리', staged: '상차 대기로 진행', departed: '배송 출발' }[nextPrep.key], nextTitle: nextPrep.label, nextTime: nextPrep.time, effect: nextPrep.description };
@@ -37,7 +37,7 @@ export function scenarioGuide(state) {
       guide = { title: `${stopName(current)} 이동 중`, description: '차량이 자동 주행 중입니다. 기다리거나 도착까지 시간을 진행할 수 있습니다.', action: 'arrive_stop', stopId: current.id, actionLabel: `${current.sequence}번 도착까지 시간 진행`, nextTitle: `${current.sequence}번 배송지 도착`, nextTime: current.calculatedEta, estimated: true, effect: '이동과 교통 지연을 반영해 도착 시각까지 진행합니다. 도착 후 하차와 배송 완료를 따로 확인합니다.' };
     }
   } else if (state.phase === 'done') {
-    guide = { title: '배송 시연 완료', description: `${completed.length}곳의 배송을 완료했습니다.${state.deliveries.some(stop => stop.status === 'skipped') ? ' 건너뛴 배송지는 완료 건수에서 제외됩니다.' : ''}`, nextTitle: '전체 배송 결과 확인', effect: '배송 목록에서 각 배송지의 도착·완료 시각을 확인하거나 초기화해 다시 시연합니다.' };
+    guide = { title: '배송 시연 완료', description: `${completed.length}곳 배송 완료.${state.deliveries.some(stop => stop.status === 'skipped') ? ' 건너뛴 배송지는 완료 건수에서 제외됩니다.' : ''}`, nextTitle: '전체 배송 결과 확인', effect: '배송 목록에서 도착·완료 시각을 확인하세요. 다시 시연하려면 초기화를 누르세요.' };
   } else {
     guide = { title: '진행 상태 확인 중', description: '다음 상태를 기다립니다.', nextTitle: '상태 연결 확인', effect: '연결이 복구되면 현재 단계에 맞는 행동을 안내합니다.' };
   }

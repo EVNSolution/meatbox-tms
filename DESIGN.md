@@ -67,6 +67,7 @@
 ## Content voice
 - Use concise Korean task labels and specific status/time text.
 - Distinguish published ETA, calculated ETA, arrival and completion.
+- Keep introductions short and natural; prefer 차량 1대 · 배송지 8곳 over 차량 1대의 배송 8곳. Original links are 상현 시나리오 원본 and 클라인 UI 원본.
 
 ## Implementation constraints
 - Vanilla HTML/CSS/JS; no new dependency.

@@ -20,7 +20,7 @@
     <aside class="demo-navigation" id="demo-navigation"></aside>
     <main class="page-body demo-main">
       <section class="page-intro" aria-labelledby="page-heading">
-        <div><p class="eyebrow" id="page-eyebrow">상현님 시뮬레이션 연결</p><h1 id="page-heading" tabindex="-1">배송 현황</h1><p class="intro-copy" id="page-description">차량 1대의 8개 배송을 원본 상태로 확인합니다.</p></div>
+        <div><p class="eyebrow" id="page-eyebrow">차량 1대 · 배송지 8곳</p><h1 id="page-heading" tabindex="-1">배송 현황</h1><p class="intro-copy" id="page-description">배송 순서 · 고객 안내 ETA · 계산 ETA</p></div>
         <div class="page-actions"><div class="summary-counts" id="summary-counts" aria-label="현재 배송 요약"></div></div>
       </section>
       <section class="connection-panel view-content" id="connection-panel" aria-live="polite">
@@ -51,7 +51,7 @@
                 <button type="button" role="tab" id="tab-events" aria-selected="true" aria-controls="panel-events" data-tab="events">사건 이력</button>
                 <button type="button" role="tab" id="tab-notifications" aria-selected="false" aria-controls="panel-notifications" tabindex="-1" data-tab="notifications">고객 알림 문구</button>
               </div>
-              <div class="tab-panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events"><p class="notification-description">이 차량의 전체 배송 사건을 시간순으로 확인합니다.</p><ol class="timeline" id="event-list"></ol></div>
+              <div class="tab-panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events"><p class="notification-description">차량 전체 사건 · 최신순</p><ol class="timeline" id="event-list"></ol></div>
               <div class="tab-panel" role="tabpanel" id="panel-notifications" aria-labelledby="tab-notifications" hidden><div id="notification-list"></div></div>
             </section>
           </div>
@@ -67,7 +67,7 @@
           </div>
         </section>
       </div>
-      <p class="footer-note page-footer">상현님 시뮬레이션의 실시간 상태 · 실제 장치 연결 정보 미제공 · 알림은 시연 문구</p>
+      <p class="footer-note page-footer">시연 데이터 · 실제 장치 연결·알림 발송 없음</p>
       <p class="sr-only" id="screen-status" role="status" aria-live="polite" aria-atomic="true"></p>
     </main>
   </div>

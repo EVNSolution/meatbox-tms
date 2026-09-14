@@ -38,7 +38,7 @@ export function mountScenarioTools({ onSend }) {
         </div>
         <fieldset class="speed-controls"><legend>배속</legend><button type="button" data-speed="1">1×</button><button type="button" data-speed="5">5×</button><button type="button" data-speed="20">20×</button></fieldset>
         <div class="scenario-footer"><button type="button" class="button subtle" data-command="reset">초기화</button><a href="/scenario/present">원본 발표 리모컨</a></div>
-        <p class="scenario-reset-help">모든 접속자가 같은 진행 상태를 봅니다. 순서 변경과 건너뜀은 운영 뷰어의 배송 상세에서 조작합니다.</p>
+        <p class="scenario-reset-help">단계를 진행하거나 초기화하면 모든 접속자에게 반영됩니다. 순서 변경과 보류는 배송 관리에서 할 수 있습니다.</p>
       </div>
     </div>`;
   const advanced = document.createElement('details');
@@ -157,7 +157,7 @@ export function mountScenarioTools({ onSend }) {
     }
     const first = rows[0];
     put('scenario-change-summary', first ? `최근 변동 ${lastChanges.time} · ${first.label}: ${first.before} → ${first.after}` : '단계를 진행하면 전후 변화를 확인할 수 있습니다.');
-    put('scenario-change-note', lastChanges && selected && !own.length ? `${selected.name}의 고객 안내는 이 변동에서 바뀌지 않았습니다.` : lastChanges ? '선택 배송과 전체 진행의 변경 내용입니다.' : '이 페이지를 연 이후의 변경 내용입니다.');
+    put('scenario-change-note', lastChanges && selected && !own.length ? `${selected.name} 고객 안내는 그대로입니다.` : lastChanges ? '선택 배송과 전체 진행에서 바뀐 내용입니다.' : '이 페이지를 연 뒤 바뀐 내용만 표시합니다.');
     panel.querySelector('#scenario-change-rows').innerHTML = rows.map(row => `<li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.before)} → ${escapeHtml(row.after)}</span></li>`).join('');
   }
 
