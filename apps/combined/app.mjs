@@ -14,6 +14,7 @@ const state = {
   page: pageFromHash(location.hash),
   data: null,
   selectedId: new URLSearchParams(location.search).get('id'),
+  monitorView: new URLSearchParams(location.search).has('id') ? 'detail' : 'list',
   query: '',
   status: 'all',
   tab: 'events',
@@ -138,10 +139,27 @@ function renderDeliveries(visible, selected) {
 }
 
 function renderControl(visible, selected) {
-  const select = byId('monitor-delivery');
-  const options = visible.map(delivery => `<option value="${escapeHtml(delivery.id)}">${delivery.sequence}. ${escapeHtml(delivery.name)}</option>`).join('');
-  if (select.innerHTML !== options) select.innerHTML = options;
-  select.value = selected?.id || '';
+  const showList = state.monitorView === 'list' || !selected;
+  const current = visible.find(delivery => delivery.status === 'current');
+  byId('monitor-count').textContent = `${visible.length}곳`;
+  byId('monitor-list-heading').hidden = !showList;
+  byId('monitor-back').hidden = showList;
+  byId('monitor-list-panel').hidden = !showList;
+  byId('monitor-detail').hidden = showList;
+  byId('monitor-current').hidden = !current;
+  byId('monitor-current').disabled = !showList && current?.id === selected?.id;
+  const list = byId('monitor-deliveries');
+  const rows = visible.map(delivery => {
+    const isSelected = delivery.id === selected?.id;
+    const timeLabel = delivery.status === 'done' ? '완료 시각' : delivery.ordered ? '도착 예정' : '계산 ETA';
+    const time = delivery.ordered ? etaDisplay(delivery) : calculatedEtaText(delivery);
+    return `<li><button type="button" class="monitor-stop" data-monitor-select="${escapeHtml(delivery.id)}" aria-pressed="${isSelected}"><span class="monitor-stop-number">${delivery.sequence}</span><span class="monitor-stop-main"><strong>${escapeHtml(delivery.name)}</strong><span class="monitor-stop-status">${badge(statusLabels[delivery.status] || '미확인', delivery.statusTone)}${isSelected ? '<span>선택</span>' : ''}</span></span><span class="monitor-stop-time"><small>${timeLabel}</small><strong>${escapeHtml(time)}</strong></span></button></li>`;
+  }).join('') || '<li class="empty-state">배송지가 없습니다.</li>';
+  if (list.innerHTML !== rows) {
+    const focusedId = document.activeElement?.dataset.monitorSelect;
+    list.innerHTML = rows;
+    if (focusedId) list.querySelector(`[data-monitor-select="${CSS.escape(focusedId)}"]`)?.focus({ preventScroll: true });
+  }
   byId('manage-selected-name').textContent = selected ? `${selected.name} · 배송 이력` : '선택 배송 이력';
   byId('eta-panel').hidden = !selected;
   byId('selected-heading').innerHTML = selected ? `
@@ -185,6 +203,13 @@ window.addEventListener('hashchange', () => {
   window.scrollTo(0, 0);
 });
 document.addEventListener('click', event => {
+  if (event.target.closest('[data-page-link="control"]')) {
+    state.monitorView = 'list';
+    render();
+  }
+  if (event.target.closest('#delivery-selection a[href="#/control"]')) state.monitorView = 'detail';
+  const monitorSelection = event.target.closest('[data-monitor-select]');
+  if (monitorSelection) showMonitorDelivery(monitorSelection.dataset.monitorSelect);
   const selection = event.target.closest('[data-select]');
   if (selection) {
     state.selectedId = selection.dataset.select;
@@ -201,7 +226,22 @@ byId('clear-filters').addEventListener('click', () => {
   byId('delivery-status').value = 'all';
   render();
 });
-byId('monitor-delivery').addEventListener('change', event => { state.selectedId = event.target.value; render(); });
+function showMonitorDelivery(id) {
+  if (!state.data?.deliveries.some(delivery => delivery.id === id)) return;
+  state.selectedId = id;
+  state.monitorView = 'detail';
+  render();
+  byId('selected-heading').focus({ preventScroll: true });
+  byId('monitor-toolbar').scrollIntoView({ block: 'nearest' });
+}
+byId('monitor-back').addEventListener('click', () => {
+  state.monitorView = 'list';
+  render();
+  byId('monitor-deliveries').querySelector(`[data-monitor-select="${CSS.escape(state.selectedId || '')}"]`)?.focus();
+});
+byId('monitor-current').addEventListener('click', () => {
+  showMonitorDelivery(state.data?.deliveries.find(delivery => delivery.status === 'current')?.id);
+});
 const tabs = [...document.querySelectorAll('#page-manage [data-tab]')];
 tabs.forEach((button, index) => {
   button.addEventListener('click', () => { state.tab = button.dataset.tab; renderTabs(); });

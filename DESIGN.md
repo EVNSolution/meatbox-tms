@@ -28,6 +28,7 @@
 - 목록: existing table, filters and selection summary. Equal control heights.
 - 관리: full route, explicit edit mode, row handles, save/cancel; selected delivery events and notification copy.
 - 관제: large map placeholder, selected delivery ETA and delivery timeline. No route controls or duplicate vehicle cards.
+- Monitoring uses a right-hand delivery list with sequence, name, status and ETA. Selecting a row opens its summary, ETA and timeline in the same sidebar; 배송지 목록 returns to the list. Explicit links retain their selected delivery; the navigation menu opens the list. 현재 배송지 보기 is available during delivery, and live progress never changes an explicit selection.
 - Customer: no operator sidebar; preserve desktop phone viewer and right timeline, responsive mobile body.
 - Legacy control route opens monitoring; legacy customer summary goes to the customer viewer.
 
@@ -57,6 +58,7 @@
 - Header wraps deliberately; operator navigation becomes a compact horizontal menu on narrow screens.
 - Customer phone remains 390×780 on desktop; small screens use the responsive customer page.
 - Guide stays within the viewport; long content scrolls inside it. Collapsed launcher occupies only a small footprint.
+- On narrow monitoring screens, place delivery selection and ETA before the 720px map, and the delivery timeline after it. ETA cells use equal padding and one divider between the two rows.
 
 ## Interaction states
 - Existing connection notices cover loading and offline state.
