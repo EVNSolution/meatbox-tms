@@ -1,0 +1,76 @@
+:root { color-scheme: light; --driver-line: #dce0e6; --driver-muted: #667085; --driver-bg: #f3f4f6; }
+* { box-sizing: border-box; }
+html, body { min-width: 320px; min-height: 100%; margin: 0; }
+body { color: var(--meatbox-ink); background: var(--driver-bg); font-size: 14px; line-height: 1.5; }
+button { font: inherit; }
+.driver-page { min-width: 0; }
+.driver-intro { min-height: 108px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 24px 20px; background: #fff; border-bottom: 1px solid var(--driver-line); }
+.driver-intro h1 { margin: 0; font-size: 28px; line-height: 1.3; letter-spacing: -.035em; }
+.driver-intro p { margin: 6px 0 0; color: var(--driver-muted); }
+.driver-clock { color: var(--meatbox-red); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.driver-workspace { display: grid; grid-template-columns: 390px minmax(260px, 420px); justify-content: center; align-items: start; gap: 32px; padding: 32px 24px 80px; }
+.driver-device { width: 390px; padding: 8px; border-radius: 38px; background: #24262b; }
+.driver-device-screen { min-height: 720px; overflow: hidden; border-radius: 30px; background: var(--driver-bg); }
+.driver-profile { display: flex; align-items: center; gap: 10px; padding: 40px 18px 16px; color: #fff; background: #263345; }
+.driver-profile img { width: 36px; height: 36px; border-radius: 8px; }
+.driver-profile strong, .driver-profile span { display: block; }
+.driver-profile strong { font-size: 16px; font-weight: 700; }
+.driver-profile span { margin-top: 2px; color: #d0d5dd; font-size: 12px; }
+.driver-card { margin: 12px 14px; padding: 16px; background: #fff; border: 1px solid var(--driver-line); border-radius: 8px; }
+.driver-card h2 { margin: 8px 0 4px; font-size: 19px; line-height: 1.35; }
+.driver-card p { margin: 0; color: var(--driver-muted); font-size: 12px; }
+.driver-status { display: inline-flex; min-height: 24px; align-items: center; padding: 3px 8px; color: #344054; background: #f2f4f7; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.driver-status[data-tone="active"] { color: #fff; background: var(--meatbox-red); }
+.driver-status[data-tone="done"] { color: #067647; background: #ecfdf3; }
+.driver-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0 0; }
+.driver-stats div { padding: 10px 8px; background: #f9fafb; border-radius: 6px; text-align: center; }
+.driver-stats dt { color: var(--driver-muted); font-size: 10px; }
+.driver-stats dd { margin: 2px 0 0; font-size: 15px; font-weight: 700; }
+.driver-complete { width: 100%; min-height: 48px; margin-top: 12px; color: #fff; background: var(--meatbox-red); border: 1px solid var(--meatbox-red); border-radius: 6px; font-weight: 600; cursor: pointer; }
+.driver-complete:disabled { color: #98a2b3; background: #f2f4f7; border-color: #eaecf0; cursor: default; }
+.driver-action-note { margin-top: 8px !important; text-align: center; }
+.driver-card-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.driver-card-heading h2 { margin: 0; font-size: 15px; }
+.driver-card-heading a { color: var(--meatbox-red); font-size: 12px; font-weight: 600; text-decoration: none; }
+.driver-route { margin: 12px 0 0; padding: 0; list-style: none; }
+.driver-route li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 52px; padding: 8px 0; border-bottom: 1px solid #eaecf0; }
+.driver-route li:last-child { border-bottom: 0; }
+.driver-route-number { width: 26px; height: 26px; display: grid; place-items: center; color: #fff; background: #667085; border-radius: 50%; font-size: 11px; font-weight: 700; }
+.driver-route li[data-status="current"] .driver-route-number { background: var(--meatbox-red); }
+.driver-route li[data-status="done"] .driver-route-number { background: #15803d; }
+.driver-route-copy strong, .driver-route-copy span { display: block; }
+.driver-route-copy strong { font-size: 13px; font-weight: 600; }
+.driver-route-copy span, .driver-route-state { color: var(--driver-muted); font-size: 11px; }
+.driver-route li[data-status="done"] .driver-route-copy strong, .driver-route li[data-status="skipped"] .driver-route-copy strong { color: #98a2b3; text-decoration: line-through; }
+.driver-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 12px 14px 20px; overflow: hidden; background: var(--driver-line); border: 1px solid var(--driver-line); border-radius: 8px; }
+.driver-totals div { padding: 12px 6px; background: #fff; text-align: center; }
+.driver-totals strong, .driver-totals span { display: block; }
+.driver-totals strong { font-size: 17px; }
+.driver-totals span { margin-top: 2px; color: var(--driver-muted); font-size: 10px; }
+.driver-note { padding: 22px; background: #fff; border: 1px solid var(--driver-line); border-radius: 8px; }
+.driver-note h2 { margin: 0; font-size: 16px; }
+.driver-note p { margin: 10px 0 0; color: var(--driver-muted); line-height: 1.7; }
+.driver-noscript { position: fixed; inset: 0; z-index: 100; margin: 0; padding: 40px 20px; background: #fff; }
+@media (max-width: 860px) {
+  .driver-intro { min-height: 96px; padding: 20px 16px; }
+  .driver-workspace { grid-template-columns: minmax(0, 390px); justify-content: stretch; gap: 16px; padding: 20px 16px 72px; }
+  .driver-device { width: 100%; max-width: 390px; justify-self: center; }
+  .driver-note { max-width: 390px; justify-self: center; }
+}
+@media (max-width: 520px) {
+  .driver-intro { display: block; padding: 20px 16px; }
+  .driver-intro h1 { font-size: 25px; }
+  .driver-clock { display: block; margin-top: 8px; font-size: 18px; }
+  .driver-workspace { padding: 12px 8px 64px; }
+  .driver-device { padding: 0; border-radius: 0; background: transparent; }
+  .driver-device-screen { min-height: 0; border-radius: 0; }
+  .driver-profile { padding-top: 18px; }
+}
+
+.driver-intro p, .driver-profile span { word-break: keep-all; overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .driver-stats { gap: 4px; }
+  .driver-stats div { min-width: 0; padding: 10px 4px; }
+  .driver-stats dt, .driver-stats dd { white-space: nowrap; }
+  .driver-stats dd { font-size: 13px; }
+}

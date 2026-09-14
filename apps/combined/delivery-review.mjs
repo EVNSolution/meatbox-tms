@@ -5,7 +5,12 @@ const stopName = stop => `${stop.sequence}번 ${stop.name}`;
 
 export function deliveryLinks(id) {
   const query = /^S[1-8]$/.test(id || '') ? `?id=${id}` : '';
-  return { mobile: `/combined/mobile-customer.html${query}`, operator: `/combined/${query}#/control` };
+  return {
+    mobile: `/combined/mobile-customer.html${query}`,
+    customer: `/combined/mobile-customer.html${query}`,
+    driver: `/combined/driver.html${query}`,
+    operator: `/combined/${query}#/control`,
+  };
 }
 
 export function deliveryContext(state, selected) {
