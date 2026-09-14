@@ -6,6 +6,7 @@ const { randomUUID } = require('node:crypto');
 const { WebSocketServer } = require('ws');
 const { createAccess, AccessError } = require('./lib/access');
 const { arriveStop, completeStop } = require('./lib/scenario-controls');
+const { validRouteOrder, applyRouteOrder } = require('./lib/route-order');
 const { page, loginPage, registerPage, homePage } = require('./apps/portal/pages');
 const { Simulation } = require('./workspaces/sanghyun-scenario/src/simulation');
 const routeData = require('./workspaces/sanghyun-scenario/src/route-data');
@@ -27,6 +28,7 @@ function safeNext(value) {
 }
 function validCommand(msg) {
   if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return false;
+  if (msg.type === 'set_route_order') return validRouteOrder(msg);
   if (['advance', 'place_order', 'reset', 'inject_traffic', 'inject_dwell'].includes(msg.type)) return true;
   if (msg.type === 'complete_stop') return msg.stopId === undefined || /^S[1-8]$/.test(msg.stopId);
   if (msg.type === 'arrive_stop') return /^S[1-8]$/.test(msg.stopId);
@@ -194,6 +196,9 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
           case 'inject_traffic': sim.injectTraffic(); break;
           case 'inject_dwell': sim.injectDwell(); break;
           case 'reorder': sim.reorder(msg.stopId, msg.dir); break;
+          case 'set_route_order':
+            if (!applyRouteOrder(sim, msg)) ws.send(JSON.stringify({ type: 'error', error: 'ROUTE_CHANGED' }));
+            break;
           case 'toggle_skip': sim.toggleSkip(msg.stopId); break;
           case 'arrive_stop': arriveStop(sim, msg.stopId); break;
           case 'complete_stop': completeStop(sim, msg.stopId); break;

@@ -1,4 +1,3 @@
-import { deliveryLinks } from './delivery-review.mjs';
 import { adaptSimulation } from './simulation-adapter.mjs';
 import { mountDemoShell } from './demo-shell.mjs';
 import { connectSimulation } from './simulation-client.mjs';
@@ -37,7 +36,6 @@ function syncOperatorLinks() {
   if (id === lastId) return;
   lastId = id;
   shell.select(id);
-  for (const link of document.querySelectorAll('[data-operator-link]')) link.href = deliveryLinks(id).operator;
 }
 new MutationObserver(syncOperatorLinks).observe(document.getElementById('account-name'), { childList: true });
 syncOperatorLinks();
