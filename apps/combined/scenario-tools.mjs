@@ -1,4 +1,5 @@
 import { scenarioGuide } from './scenario-guide.mjs';
+import { deliveryContext, deliveryChanges } from './delivery-review.mjs';
 
 const storageKey = 'meatbox-combined-tools-position';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -45,6 +46,8 @@ export function mountScenarioTools({ onSend }) {
   advanced.innerHTML = '<summary>배속·초기화 및 상세 설정</summary>';
   let node = panel.querySelector('#scenario-completed');
   while (node) { const next = node.nextElementSibling; advanced.append(node); node = next; }
+  panel.querySelector('.scenario-current').insertAdjacentHTML('beforeend', '<p class="scenario-context" id="scenario-vehicle"></p><p class="scenario-context" id="scenario-customer"></p>');
+  advanced.firstElementChild.insertAdjacentHTML('afterend', '<p id="scenario-context-note"></p><details class="scenario-guide-details"><summary id="scenario-change-summary">단계를 진행하면 전후 변화를 확인할 수 있습니다.</summary><p id="scenario-change-note"></p><ul class="scenario-change-rows" id="scenario-change-rows"></ul></details>');
   panel.querySelector('.scenario-body').append(advanced);
   document.body.append(panel);
 
@@ -56,6 +59,9 @@ export function mountScenarioTools({ onSend }) {
   let nextAction = null;
   let pending = false;
   let connected = false;
+  let selectedId;
+  let latest;
+  let lastChanges;
   const put = (id, text) => { panel.querySelector(`#${id}`).textContent = text || ''; };
 
   function move(x, y) {
@@ -74,7 +80,7 @@ export function mountScenarioTools({ onSend }) {
     body.hidden = !expanded;
     panel.dataset.expanded = String(expanded);
     toggle.setAttribute('aria-expanded', String(expanded));
-    toggle.textContent = expanded ? '접기 −' : '펼치기 +';
+    toggle.textContent = expanded ? '접기 −' : '시연 가이드 +';
     keepInView();
   }
 
@@ -136,7 +142,27 @@ export function mountScenarioTools({ onSend }) {
     }
   } catch {}
 
+  function renderContext() {
+    if (!latest) return;
+    const selected = latest.deliveries.find(stop => stop.id === (selectedId === undefined ? latest.customerStopId : selectedId));
+    const context = deliveryContext(latest, selected);
+    put('scenario-vehicle', `차량 · ${context.vehicle}`);
+    put('scenario-customer', `선택 배송 · ${context.customer}`);
+    put('scenario-context-note', context.note);
+    const own = lastChanges?.deliveries[selected?.id]?.rows || [];
+    let rows = lastChanges ? [...lastChanges.global, ...own] : [];
+    if (lastChanges && !rows.length) {
+      const other = Object.values(lastChanges.deliveries)[0];
+      if (other) rows = other.rows.map(row => ({ ...row, label: `${other.name} · ${row.label}` }));
+    }
+    const first = rows[0];
+    put('scenario-change-summary', first ? `최근 변동 ${lastChanges.time} · ${first.label}: ${first.before} → ${first.after}` : '단계를 진행하면 전후 변화를 확인할 수 있습니다.');
+    put('scenario-change-note', lastChanges && selected && !own.length ? `${selected.name}의 고객 안내는 이 변동에서 바뀌지 않았습니다.` : lastChanges ? '선택 배송과 전체 진행의 변경 내용입니다.' : '이 페이지를 연 이후의 변경 내용입니다.');
+    panel.querySelector('#scenario-change-rows').innerHTML = rows.map(row => `<li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.before)} → ${escapeHtml(row.after)}</span></li>`).join('');
+  }
+
   return {
+    select(id) { selectedId = id; renderContext(); },
     showError(message) {
       expand(true);
       advanced.open = true;
@@ -147,6 +173,13 @@ export function mountScenarioTools({ onSend }) {
     },
     update(state, isConnected) {
       connected = isConnected;
+      if (state) {
+        if (state.phase === 'unordered' && latest?.phase !== 'unordered') lastChanges = null;
+        const changes = deliveryChanges(latest, state);
+        if (changes) lastChanges = changes;
+        latest = state;
+        renderContext();
+      }
       const guide = scenarioGuide(state);
       nextAction = guide;
       pending = false;

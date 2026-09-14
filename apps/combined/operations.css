@@ -1,0 +1,52 @@
+.list-toolbar .field input, .list-toolbar .field select, .list-toolbar > .button { height: 40px; min-height: 40px; line-height: 20px; padding: 9px 10px; }
+.list-toolbar .field:nth-child(2) { flex: 0 0 150px; }
+.management-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: 20px; align-items: start; }
+.monitor-selection { display: flex; gap: 20px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.monitor-selection .selected-heading { flex: 1; padding: 12px 16px; }
+.monitor-selection .field { flex: 0 1 240px; }
+.monitor-layout { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 16px; align-items: start; }
+.monitor-layout .map-preview { margin: 0; width: 100%; height: 720px; }
+.monitor-detail { display: grid; gap: 16px; min-width: 0; }
+.monitor-detail .eta-grid { grid-template-columns: 1fr; }
+.monitor-detail .eta-secondary { border-left: 0; border-top: 1px solid var(--border); }
+.monitor-detail .key-values { grid-template-columns: 1fr 1fr; }
+.monitor-detail .key-values > div { display: block; min-width: 0; padding: 10px 12px; border-right: 0; }
+.monitor-detail .key-values dd { margin-top: 4px; overflow-wrap: anywhere; }
+.monitor-detail .eta-value { font-size: 40px; }
+.route-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
+.route-heading h2 { margin: 0 0 4px; font-size: 18px; }
+.route-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+.route-edit-actions { display: flex; gap: 8px; }
+.route-help, .route-message { margin: 0; padding: 12px 16px; color: var(--muted); font-size: 12px; }
+.route-message { border-top: 1px solid var(--border); color: var(--action); }
+.route-message[data-error="true"] { color: #b42318; }
+.route-list { list-style: none; margin: 0; padding: 0; }
+.route-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 78px; padding: 12px 16px; border-top: 1px solid var(--border); }
+.route-row.selected { background: var(--selection, #f0f3f7); box-shadow: inset 3px 0 var(--action); }
+.route-row[data-drop="true"] { box-shadow: inset 0 3px #bd0c56; }
+.route-row.editing { grid-template-columns: 28px 24px minmax(0, 1fr) auto; }
+.route-number { color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
+.route-select { display: grid; gap: 5px; min-width: 0; padding: 0; border: 0; color: var(--text); background: none; text-align: left; font: inherit; cursor: pointer; }
+.route-select small { color: var(--muted); overflow-wrap: anywhere; line-height: 1.5; }
+.route-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.route-row-actions { display: flex; gap: 4px; align-items: center; }
+.route-handle, .route-move { padding: 0; width: 28px; min-height: 36px; border: 1px solid var(--border); border-radius: 3px; color: var(--action); background: #fff; cursor: pointer; }
+.route-handle { cursor: grab; font-size: 18px; touch-action: none; }
+.route-handle:active { cursor: grabbing; }
+.route-handle:disabled, .route-move:disabled { opacity: .4; cursor: default; }
+.route-hold { min-height: 34px; padding: 5px 8px; border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 3px; cursor: pointer; }
+.route-locked { color: var(--muted); font-size: 12px; }
+.route-draft { color: #a80b4d; font-size: 12px; }
+@media (max-width: 1100px) {
+  .management-layout { grid-template-columns: minmax(0, 1fr); }
+  .monitor-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+}
+@media (max-width: 767px) {
+  .list-toolbar .field input, .list-toolbar .field select, .list-toolbar > .button { height: 44px; min-height: 44px; }
+  .monitor-selection { flex-wrap: wrap; }
+  .monitor-selection .field { flex-basis: 100%; }
+  .monitor-layout { grid-template-columns: minmax(0, 1fr); }
+  .route-row, .route-row.editing { padding: 12px 8px; gap: 6px; }
+  .route-row-actions { flex-wrap: wrap; max-width: 64px; }
+  .route-heading { padding: 12px; }
+}

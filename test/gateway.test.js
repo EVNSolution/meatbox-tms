@@ -91,7 +91,10 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   assert.ok(common.includes('${location.host}/ws/simulation'));
   assert.ok(common.includes("fetch('/scenario/api/route-data')"));
   const combined = await (await get('/combined/', cookie)).text();
-  assert.match(combined, /href="\.\/mobile-customer\.html"/);
+  const shell = await (await get('/combined/demo-shell.mjs', cookie)).text();
+  assert.match(shell, /data-viewer="customer"/);
+  assert.match(combined, /data-page="manage"/);
+  for (const asset of ['/combined/route-editor.mjs', '/combined/operations.css']) assert.equal((await get(asset, cookie)).status, 200);
   assert.doesNotMatch(combined, /href="\/ui-layout\/#\/design"/);
   assert.match(combined, /href="\.\/map-preview\.css"/);
   const layout = await (await get('/ui-layout/', cookie)).text();
@@ -150,6 +153,13 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   const completed = await commandState({ type: 'complete_stop', stopId: 'S1' }, state => state.order[0].status === 'done');
   assert.ok(completed.order[0].deliveredTime);
   assert.equal(completed.truck.toId, 'S2');
+  const routeOrder = completed.order.map(stop => stop.id);
+  [routeOrder[3], routeOrder[5]] = [routeOrder[5], routeOrder[3]];
+  const routeRequest = { type: 'set_route_order', order: routeOrder, expectedOrder: completed.order.map(stop => stop.id), expectedStatuses: completed.order.map(stop => stop.status), expectedPhase: completed.phase };
+  assert.equal(validCommand(routeRequest), true);
+  const reordered = await commandState(routeRequest, state => state.order[3].id === routeOrder[3]);
+  assert.equal(reordered.order[0].status, 'done');
+  assert.equal(reordered.truck.toId, 'S2');
   assert.equal((await post('/logout', {}, cookie, 'https://attacker.invalid')).status, 403);
   const closed = once(ws, 'close'); assert.equal((await post('/logout', {}, cookie)).status, 303);
   assert.equal((await closed)[0], 4401);
