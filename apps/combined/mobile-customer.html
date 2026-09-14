@@ -6,8 +6,10 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#ffffff">
   <title>고객 뷰어 · 미트박스 TMS 시연</title>
+  <link rel="icon" type="image/webp" href="./assets/meatbox-app.webp">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
   <link rel="stylesheet" href="/scenario/shared.css">
+  <link rel="stylesheet" href="./brand.css">
   <link rel="stylesheet" href="./mobile-customer.css">
   <link rel="stylesheet" href="./scenario-tools.css">
   <link rel="stylesheet" href="./demo-shell.css">
@@ -17,12 +19,13 @@
 <body>
   <header class="demo-header" id="demo-header"></header>
   <div class="demo-layout">
+    <aside class="demo-navigation" id="demo-navigation"></aside>
     <main class="demo-main">
       <p class="demo-connection" id="customer-connection" role="status">시연에 연결하고 있습니다.</p>
 
   <section id="account-picker" aria-labelledby="picker-title">
     <div class="picker-content">
-      <p class="eyebrow">MEATBOX · 고객 시나리오</p>
+      <p class="eyebrow">미트박스 · 고객 시나리오</p>
       <h1 id="picker-title">배송 조회</h1>
       <p class="picker-description">주문과 배송을 조회할 매장을 선택해 주세요.</p>
       <div id="account-list"><p class="loading-copy" role="status">배송지 목록을 불러오고 있습니다.</p><a href="">다시 불러오기</a></div>
@@ -34,13 +37,13 @@
       <section class="mobile-viewer" aria-label="고객 모바일 뷰어">
         <div class="viewer-speaker" aria-hidden="true"></div>
 <div class="push-banner" id="push" role="status" aria-live="polite" aria-atomic="true">
-      <div class="icon" aria-hidden="true">M</div>
+      <div class="icon" aria-hidden="true"><img src="./assets/meatbox-app.webp" alt=""></div>
       <div class="push-copy"><div class="title" id="push-title"></div><div class="body" id="push-body"></div></div>
       <div class="when" id="push-when"></div>
     </div>
         <div class="viewer-screen screen" tabindex="0" role="region" aria-label="고객 모바일 화면, 스크롤해서 주문과 알림 확인">
 <div class="customer-heading">
-      <p class="logo">MEATBOX <small>새벽배송</small></p>
+      <p class="logo"><img src="./assets/meatbox-logo.svg" width="105" height="25" alt="미트박스"><small>새벽배송</small></p>
       <h1>주문·배송 조회</h1>
       <div class="store-heading"><strong id="account-name">배송지 선택</strong><button type="button" class="btn ghost" id="switch-account">매장 변경</button></div>
     </div>
@@ -74,7 +77,7 @@
 
         <section class="card" id="talk-card" aria-labelledby="talk-heading">
           <div class="talk">
-            <h2 class="ch" id="talk-heading"><span class="avatar" aria-hidden="true">M</span>미트박스 알림톡 <span class="demo-label">시연</span></h2>
+            <h2 class="ch" id="talk-heading"><span class="avatar" aria-hidden="true"><img src="./assets/meatbox-app.webp" alt=""></span>미트박스 알림톡 <span class="demo-label">시연</span></h2>
             <div id="talk-list"><p class="empty">아직 도착한 알림이 없어요</p></div>
           </div>
         </section>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>배송원 뷰어 · 미트박스 TMS 시연</title>
+  <link rel="icon" type="image/webp" href="./assets/meatbox-app.webp">
+  <link rel="stylesheet" href="./brand.css">
+  <link rel="stylesheet" href="./driver.css">
+  <link rel="stylesheet" href="./scenario-tools.css">
+  <link rel="stylesheet" href="./demo-shell.css">
+  <script src="/auth-check.js" defer></script>
+  <script type="module" src="./driver.mjs"></script>
+</head>
+<body>
+  <header class="demo-header" id="demo-header"></header>
+  <div class="demo-layout">
+    <aside class="demo-navigation" id="demo-navigation"></aside>
+    <main class="demo-main driver-page">
+      <section class="driver-intro">
+        <div><h1>배송원 뷰어</h1><p>현재 목적지와 배송 순서를 확인하고, 현장 완료를 기록합니다.</p></div>
+        <span class="driver-clock" id="driver-clock">--:--</span>
+      </section>
+      <p class="demo-connection" id="driver-connection" role="status">시연에 연결하고 있습니다.</p>
+      <div class="driver-workspace" id="driver-workspace" hidden>
+        <section class="driver-device" aria-label="배송원 모바일 화면">
+          <div class="driver-device-screen">
+            <header class="driver-profile"><img src="./assets/meatbox-app.webp" alt=""><div><strong id="driver-name">배송원</strong><span id="driver-vehicle">차량 확인 중</span></div></header>
+            <section class="driver-card driver-current" aria-labelledby="driver-current-title">
+              <span class="driver-status" id="driver-status">대기</span>
+              <h2 id="driver-current-title">현재 목적지 확인 중</h2>
+              <p id="driver-address"></p>
+              <dl class="driver-stats"><div><dt>남은 거리</dt><dd id="driver-distance">—</dd></div><div><dt>하차 수량</dt><dd id="driver-boxes">—</dd></div><div><dt>진행</dt><dd id="driver-progress">—</dd></div></dl>
+              <button type="button" class="driver-complete" id="driver-complete" disabled>하차 완료 스캔</button>
+              <p class="driver-action-note" id="driver-action-note">차량 도착 후 완료할 수 있습니다.</p>
+            </section>
+            <section class="driver-card" aria-labelledby="driver-route-title"><div class="driver-card-heading"><h2 id="driver-route-title">오늘 배송 순서</h2><a id="driver-manage-link" href="/combined/#/control">배송 관제</a></div><ol class="driver-route" id="driver-route"></ol></section>
+            <section class="driver-totals" aria-label="배송 요약"><div><strong id="driver-done">0/0</strong><span>완료 배송</span></div><div><strong id="driver-left">0</strong><span>잔여 박스</span></div><div><strong id="driver-finish">—</strong><span>완료 예상</span></div></section>
+          </div>
+        </section>
+        <aside class="driver-note"><h2>배송 관리</h2><p>순서 변경과 보류는 배송 관제에서 처리합니다.</p></aside>
+      </div>
+    </main>
+  </div>
+  <noscript><p class="driver-noscript">배송 시나리오를 보려면 JavaScript를 활성화해 주세요.</p></noscript>
+</body>
+</html>

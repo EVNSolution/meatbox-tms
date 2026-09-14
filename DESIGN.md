@@ -1,14 +1,14 @@
 # Design
 
 ## Source of truth
-- Status: Active. User approved 목록·관리·관제 on 2026-09-14.
+- Status: Active. User approved applying the local reference to the actual app and authorized deployment on 2026-09-14.
 - Last refreshed: 2026-09-14.
-- Primary surfaces: combined operator workspace and mobile customer viewer.
-- Evidence: `../design.md`, `workspaces/jiin-ui/index.html`, its CSS, the current combined viewer, and the user's navigation and floating-guide corrections.
+- Primary surfaces: combined operator, customer and driver viewers.
+- Evidence: `../design.md`, `../previews/terminal-view/` approved reference and official assets, the current combined viewer, and the user's navigation and floating-guide corrections.
 - This contract governs the combined demo. Owner snapshots remain unchanged.
 
 ## Brand
-- Restrained operations UI, readable tables, clear selection. Magenta identifies the brand and floating presentation controls.
+- Restrained operations UI, readable tables, clear selection. Use the original Meatbox logo and app icon from the official reference assets. Logo/navigation red is #E60028; brand ink is #212322; search/presentation accent remains #DB0E64.
 - Avoid decorative dashboards, fabricated device data, and developer command names in normal workflows.
 
 ## Product goals
@@ -21,15 +21,19 @@
 - Presenter: progress and explain the scenario using a movable guide.
 - Operator: find deliveries, edit remaining order, inspect events and monitor ETA.
 - Customer reviewer: inspect the preserved mobile screen and its right-hand timeline.
+- Driver reviewer: check the current destination and record completion after arrival.
 
 ## Information architecture
-- Header: brand → 배송 시연 → 운영 뷰어 / 고객 뷰어 → 시연 안내.
-- Operator left menu: 배송 목록 / 배송 관리 / 배송 관제.
+- Header: official brand → 운영 뷰어 / 고객 뷰어 / 배송원 뷰어 → 시연 안내.
+- Operator left menu: 주문 관리 / 배송 목록 / 배송 관제. Viewer switching preserves selected delivery, filters and last operator page; customer/driver viewers do not select an operator item.
 - 목록: existing table, filters and selection summary. Equal control heights.
-- 관리: full route, explicit edit mode, row handles, save/cancel; selected delivery events and notification copy.
-- 관제: large map placeholder, selected delivery ETA and delivery timeline. No route controls or duplicate vehicle cards.
-- Monitoring uses a right-hand delivery list with sequence, name, status and ETA. Selecting a row opens its summary, ETA and timeline in the same sidebar; 배송지 목록 returns to the list. Explicit links retain their selected delivery; the navigation menu opens the list. 현재 배송지 보기 is available during delivery, and live progress never changes an explicit selection.
-- Customer: no operator sidebar; preserve desktop phone viewer and right timeline, responsive mobile body.
+- 주문 관리: list only orders actually received in the shared simulation, with existing item/box/status data and a link to the same delivery. Do not invent production order identifiers or CRUD.
+- 관리: full route, explicit edit mode, row handles, save/cancel in the 배송 관제 right-side 배송 관리 tab; preserve pending/current/completed/held and stale-save safeguards.
+- 관제: selected delivery ETA, delivery timeline, events/customer notices and a right-side 배송지 목록 / 배송 관리 tab group. A map-free monitoring layout is the default; retain the existing map placeholder behind an explicit 지도 미리보기 disclosure. No actual map integration.
+- Monitoring uses a right-hand delivery list with sequence, name, status and ETA. Selecting a row shows its summary, ETA and timeline in the main column; 배송지 목록 focuses the list in the right-hand panel. Explicit links retain their selected delivery; the navigation menu opens the list. 현재 배송지 보기 is available during delivery, and live progress never changes an explicit selection.
+- Customer: shared three-axis header/rail, preserve desktop phone viewer and right timeline and responsive mobile body.
+- Driver: same authenticated simulation, current destination and ordered stops; reuse existing completion behavior, available only after actual simulated arrival. Keep current/selected delivery distinct.
+- Legacy #/manage routes redirect to #/control with the management tab selected.
 - Legacy control route opens monitoring; legacy customer summary goes to the customer viewer.
 
 ## Design principles
@@ -40,7 +44,9 @@
 
 ## Visual language
 - Reuse `apps/combined/styles.css` tokens and the original UI's typography, panels, table density and left navigation.
-- White surfaces, gray workspace, 3px radii and restrained borders. Standard controls are 40px high (44px touch layouts).
+- White surfaces, gray workspace, role-based radii 4/6/8/12px. Standard controls are 40px high (44px touch layouts). Pretendard Variable is self-hosted: body400, menus/states500, sections/buttons600, titles/times700.
+- No left inset shadow, left pseudo strip or thick left border on any element. Selected rows use surface/text/badge state. Business tabs are full-rail-width 48px centered rectangles, radius0; active text and a straight right 3px rule use #E60028. Viewer tabs use an absolute bottom 3px rule that does not affect height.
+- Desktop header56px; at <=860px brand row44px + viewer row44px + border1px. Left rail92px/72px narrow. Content title begins24px below desktop header,20px narrow; no redundant operator eyebrow. Delivery metadata uses stacked rows, label64px + gap12px + flexible value, baseline aligned and padding12px 0.
 - Large operations map remains a 720px reference height in document flow, with only 지도 미리보기 copy.
 
 ## Components
@@ -56,10 +62,10 @@
 - Preserve reduced-motion styles and avoid communicating state by color alone.
 
 ## Responsive behavior
-- Header wraps deliberately; operator navigation becomes a compact horizontal menu on narrow screens.
+- Header wraps deliberately into two rows at <=860px; the operator rail stays vertical and narrows to72px. At <=520px viewer tabs divide the available row equally.
 - Customer phone remains 390×780 on desktop; small screens use the responsive customer page.
 - Guide stays within the viewport; long content scrolls inside it. Collapsed launcher occupies only a small footprint.
-- On narrow monitoring screens, place delivery selection and ETA before the 720px map, and the delivery timeline after it. ETA cells use equal padding and one divider between the two rows.
+- On narrow monitoring screens, stack the list/management panel, selected delivery details, timeline, events and collapsed map preview. ETA cells use equal padding and one divider between the two rows.
 
 ## Interaction states
 - Existing connection notices cover loading and offline state.
@@ -75,8 +81,8 @@
 ## Implementation constraints
 - Vanilla HTML/CSS/JS; no new dependency.
 - Preserve both original workspace snapshots and the simulation algorithms.
-- Plan: restructure shell and page composition, move review context into guide, add guarded draft route editing, then validate navigation/filters/save/cancel/first completion and responsive visuals.
+- Approved rollout: apply approved assets/tokens and three-axis shell, add simulation-backed order/driver viewers, absorb existing management into control, then validate navigation/filter/selection restoration, save/cancel, first completion and responsive visuals. Use the existing authenticated release process; preserve production accounts, simulation algorithms and original snapshots.
 - Regression evidence: original snapshot checks and existing simulation tests, targeted route-update tests, browser interactions and screenshots.
 
 ## Open questions
-- None blocking this approved three-menu structure. A real map/data integration remains outside this demo change.
+- None blocking this approved local adaptation. Production order/API and device contracts are not established by this demo. A real map/data integration remains outside this demo change.

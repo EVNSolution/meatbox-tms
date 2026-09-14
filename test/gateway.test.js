@@ -39,7 +39,7 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   t.after(async () => { await demo.close(); await fs.rm(dir, { recursive: true, force: true }); });
   const get = (url, cookie) => fetch(base + url, { redirect: 'manual', headers: cookie ? { cookie } : {} });
   const post = (url, data, cookie, requestOrigin = origin) => fetch(base + url, { method: 'POST', redirect: 'manual', headers: { origin: requestOrigin, 'content-type': 'application/x-www-form-urlencoded', ...(cookie ? { cookie } : {}) }, body: new URLSearchParams(data) });
-  for (const route of ['/', '/scenario/', '/scenario/present', '/scenario/common.js', '/ui-layout/styles.css', '/combined/app.mjs', '/combined/', '/combined/mobile-customer.html?id=S5', '/combined/mobile-customer.css', '/combined/map-preview.css', '/combined/demo-shell.mjs', '/combined/simulation-client.mjs']) {
+  for (const route of ['/', '/scenario/', '/scenario/present', '/scenario/common.js', '/ui-layout/styles.css', '/combined/app.mjs', '/combined/', '/combined/mobile-customer.html?id=S5', '/combined/mobile-customer.css', '/combined/map-preview.css', '/combined/demo-shell.mjs', '/combined/simulation-client.mjs', '/combined/driver.html', '/combined/driver.mjs', '/combined/assets/meatbox-logo.svg']) {
     const res = await get(route); assert.equal(res.status, 302, route); assert.match(res.headers.get('location'), /^\/login\?next=/);
   }
   for (const route of ['/api/session', '/scenario/api/route-data']) assert.equal((await get(route)).status, 401, route);
@@ -93,8 +93,10 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   const combined = await (await get('/combined/', cookie)).text();
   const shell = await (await get('/combined/demo-shell.mjs', cookie)).text();
   assert.match(shell, /data-viewer="customer"/);
-  assert.match(combined, /data-page="manage"/);
-  for (const asset of ['/combined/route-editor.mjs', '/combined/operations.css']) assert.equal((await get(asset, cookie)).status, 200);
+  assert.match(combined, /data-page="orders"/);
+  assert.doesNotMatch(combined, /data-page="manage"/);
+  assert.match(combined, /data-control-tab="management"/);
+  for (const asset of ['/combined/route-editor.mjs', '/combined/operations.css', '/combined/operations-model.mjs', '/combined/brand.css', '/combined/assets/meatbox-logo.svg', '/combined/assets/meatbox-app.webp', '/combined/driver.html']) assert.equal((await get(asset, cookie)).status, 200);
   assert.doesNotMatch(combined, /href="\/ui-layout\/#\/design"/);
   assert.match(combined, /href="\.\/map-preview\.css"/);
   const layout = await (await get('/ui-layout/', cookie)).text();

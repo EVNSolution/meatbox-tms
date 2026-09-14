@@ -7,6 +7,8 @@
   <meta name="referrer" content="no-referrer">
   <title>운영 뷰어 · 미트박스 TMS 시연</title>
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./brand.css">
+  <link rel="icon" href="./assets/meatbox-app.webp">
   <link rel="stylesheet" href="./scenario-tools.css">
   <link rel="stylesheet" href="./map-preview.css">
   <link rel="stylesheet" href="./demo-shell.css">
@@ -20,20 +22,20 @@
     <aside class="demo-navigation" id="demo-navigation"></aside>
     <main class="page-body demo-main">
       <section class="page-intro" aria-labelledby="page-heading">
-        <div><p class="eyebrow" id="page-eyebrow">차량 1대 · 배송지 8곳</p><h1 id="page-heading" tabindex="-1">배송 현황</h1><p class="intro-copy" id="page-description">배송 순서 · 고객 안내 ETA · 계산 ETA</p></div>
+        <div><h1 id="page-heading" tabindex="-1">배송 목록</h1><p class="intro-copy" id="page-description">배송 순서 · 고객 안내 ETA · 계산 ETA</p></div>
         <div class="page-actions"><div class="summary-counts" id="summary-counts" aria-label="현재 배송 요약"></div></div>
       </section>
       <section class="connection-panel view-content" id="connection-panel" aria-live="polite">
         <div class="panel loading-state"><span class="loading-dot" aria-hidden="true"></span><div><strong id="connection-title">실시간 시뮬레이션에 연결하고 있습니다.</strong><p id="connection-detail">잠시만 기다려 주세요.</p></div><button type="button" class="button" id="retry-connection" hidden>다시 연결</button></div>
       </section>
       <div id="live-pages" hidden>
-        <section id="page-deliveries" class="page-view view-content" data-page="deliveries" aria-label="배송 현황">
+        <section id="page-deliveries" class="page-view view-content" data-page="deliveries" aria-label="배송 목록">
           <div class="deliveries-layout">
             <section class="panel delivery-list-panel" aria-labelledby="delivery-list-heading">
               <div class="panel-heading"><h2 id="delivery-list-heading">배송 목록</h2><span id="delivery-count" class="muted"></span></div>
               <div class="list-toolbar">
-                <label class="field"><span>배송 검색</span><input type="search" id="delivery-search" placeholder="정차지·주소 검색" autocomplete="off"></label>
-                <label class="field"><span>배송 상태</span><select id="delivery-status"><option value="all">전체 상태</option><option value="pending">대기</option><option value="current">배송 중</option><option value="done">완료</option><option value="skipped">건너뜀</option></select></label>
+                <label class="field"><span>배송 검색</span><span class="search-control"><span data-field-icon="search"></span><input type="search" id="delivery-search" placeholder="정차지·주소 검색" autocomplete="off"></span></label>
+                <label class="field"><span>배송 상태</span><select id="delivery-status"><option value="all">전체 상태</option><option value="pending">대기</option><option value="current">배송 중</option><option value="done">완료</option><option value="skipped">보류</option></select></label>
                 <button type="button" class="button subtle" id="clear-filters">초기화</button>
               </div>
               <div class="table-scroll" role="region" aria-label="배송 목록 표" tabindex="0"><table class="delivery-table"><caption class="sr-only">실시간 시뮬레이션 배송 목록</caption><thead><tr><th scope="col">배송 순서와 배송지</th><th scope="col">상태</th><th scope="col">고객 공식 ETA</th><th scope="col">계산 ETA</th><th scope="col">도착 및 완료</th></tr></thead><tbody id="delivery-rows"></tbody></table></div>
@@ -42,44 +44,56 @@
             <aside class="panel delivery-selection" id="delivery-selection" aria-label="선택 배송 요약"></aside>
           </div>
         </section>
-        <section id="page-manage" class="page-view view-content" data-page="manage" aria-label="배송 관리" hidden>
-          <div class="management-layout">
-            <section class="panel" id="route-editor" aria-label="차량 배송 순서"></section>
-            <section class="panel detail-panel" aria-label="선택 배송 이력">
-              <div class="panel-heading"><h2 id="manage-selected-name">선택 배송 이력</h2></div>
-              <div class="detail-tabs" role="tablist" aria-label="배송 이력">
-                <button type="button" role="tab" id="tab-events" aria-selected="true" aria-controls="panel-events" data-tab="events">사건 이력</button>
-                <button type="button" role="tab" id="tab-notifications" aria-selected="false" aria-controls="panel-notifications" tabindex="-1" data-tab="notifications">고객 알림 문구</button>
+        <section id="page-orders" class="page-view view-content" data-page="orders" aria-label="주문 관리" hidden>
+          <div class="orders-layout">
+            <section class="panel" aria-labelledby="order-list-heading">
+              <div class="panel-heading"><h2 id="order-list-heading">접수 주문</h2><span id="order-count" class="muted"></span></div>
+              <div class="list-toolbar">
+                <label class="field"><span>주문 검색</span><span class="search-control"><span data-field-icon="search"></span><input type="search" id="order-search" placeholder="매장·상품 검색" autocomplete="off"></span></label>
+                <label class="field"><span>주문 상태</span><select id="order-status"><option value="all">전체 상태</option><option value="preparing">출고 준비</option><option value="shipping">배송 중</option><option value="done">완료</option><option value="held">보류</option></select></label>
+                <button type="button" class="button subtle" id="clear-order-filters">초기화</button>
               </div>
-              <div class="tab-panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events"><p class="notification-description">차량 전체 사건 · 최신순</p><ol class="timeline" id="event-list"></ol></div>
-              <div class="tab-panel" role="tabpanel" id="panel-notifications" aria-labelledby="tab-notifications" hidden><div id="notification-list"></div></div>
+              <div class="table-scroll" role="region" aria-label="접수 주문 표" tabindex="0"><table class="delivery-table"><caption class="sr-only">시연에 접수된 주문</caption><thead><tr><th scope="col">주문 매장</th><th scope="col">진행 상태</th><th scope="col">주문 상품</th><th scope="col">박스</th><th scope="col">배송 연결</th></tr></thead><tbody id="order-rows"></tbody></table></div>
+              <div class="empty-state" id="order-empty" hidden><strong>조회 결과가 없습니다.</strong><p>주문 접수 여부나 조회 조건을 확인해 주세요.</p></div>
             </section>
+            <aside class="panel" id="order-selection" aria-label="선택 주문 상세"></aside>
           </div>
+          <p class="footer-note">시연에 접수된 주문 기준입니다. 실제 주문 시스템과 연결되어 있지 않습니다.</p>
         </section>
         <section id="page-control" class="page-view view-content" data-page="control" aria-label="배송 관제" hidden>
           <div class="monitor-layout">
-            <section class="map-preview panel" id="map-preview" aria-labelledby="map-preview-heading"><div><h2 id="map-preview-heading">지도 미리보기</h2></div></section>
-            <div class="monitor-sidebar">
-              <section class="panel" id="monitor-list-panel" aria-labelledby="monitor-list-heading">
-                <div class="panel-heading monitor-toolbar">
-                  <h2 id="monitor-list-heading">배송지 <span id="monitor-count" class="muted"></span></h2>
-                  <button type="button" class="button subtle" id="monitor-current" data-monitor-current hidden>현재 배송지 보기</button>
-                </div>
-                <ol class="monitor-deliveries" id="monitor-deliveries"></ol>
-              </section>
-              <div class="monitor-detail" id="monitor-detail" hidden>
+            <div class="monitor-workspace">
+              <div class="monitor-detail" id="monitor-detail">
                 <section id="selected-heading" class="panel monitor-selected" aria-label="선택 배송" tabindex="-1">
-                  <div class="monitor-title-row">
-                    <button type="button" class="monitor-back" id="monitor-back" aria-label="배송지 목록으로 돌아가기" title="배송지 목록">←</button>
-                    <h2 id="monitor-selected-name"></h2><span id="monitor-selected-status"></span>
-                  </div>
+                  <div class="monitor-title-row"><h2 id="monitor-selected-name"></h2><span id="monitor-selected-status"></span><button type="button" class="button subtle" id="monitor-back">배송지 목록</button></div>
                   <div class="monitor-meta-row"><span id="monitor-selected-meta"></span><button type="button" class="button subtle" id="monitor-current-detail" data-monitor-current hidden>현재 배송지 보기</button></div>
                   <p class="monitor-address" id="monitor-selected-address"></p>
                 </section>
                 <section class="panel" id="eta-panel" aria-labelledby="eta-heading"></section>
                 <section class="panel detail-panel" id="monitor-timeline" aria-labelledby="monitor-timeline-heading"><div class="panel-heading"><h2 id="monitor-timeline-heading">배송 타임라인</h2></div><div class="tab-panel"><ol class="timeline" id="delivery-timeline"></ol></div></section>
               </div>
+              <section class="panel detail-panel" aria-label="선택 배송 이력">
+                <div class="panel-heading"><h2 id="manage-selected-name">선택 배송 이력</h2></div>
+                <div class="detail-tabs" role="tablist" aria-label="배송 이력">
+                  <button type="button" role="tab" id="tab-events" aria-selected="true" aria-controls="panel-events" data-tab="events">사건 이력</button>
+                  <button type="button" role="tab" id="tab-notifications" aria-selected="false" aria-controls="panel-notifications" tabindex="-1" data-tab="notifications">고객 알림 문구</button>
+                </div>
+                <div class="tab-panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events"><p class="notification-description">차량 전체 사건 · 최신순</p><ol class="timeline" id="event-list"></ol></div>
+                <div class="tab-panel" role="tabpanel" id="panel-notifications" aria-labelledby="tab-notifications" hidden><div id="notification-list"></div></div>
+              </section>
+              <details class="map-disclosure"><summary>지도 미리보기</summary><section class="map-preview panel" id="map-preview" aria-labelledby="map-preview-heading"><h2 id="map-preview-heading">지도 미리보기</h2></section></details>
             </div>
+            <aside class="monitor-sidebar panel" aria-label="배송 관제 관리 영역">
+              <div class="detail-tabs control-tabs" role="tablist" aria-label="관제 관리">
+                <button type="button" role="tab" id="tab-monitor" aria-selected="true" aria-controls="monitor-list-panel" data-control-tab="monitor">배송지 목록</button>
+                <button type="button" role="tab" id="tab-management" aria-selected="false" aria-controls="route-editor" tabindex="-1" data-control-tab="management">배송 관리</button>
+              </div>
+              <section id="monitor-list-panel" role="tabpanel" aria-labelledby="tab-monitor">
+                <div class="panel-heading monitor-toolbar"><h2 id="monitor-list-heading">배송지 <span id="monitor-count" class="muted"></span></h2><button type="button" class="button subtle" id="monitor-current" data-monitor-current hidden>현재 배송지 보기</button></div>
+                <ol class="monitor-deliveries" id="monitor-deliveries"></ol>
+              </section>
+              <section id="route-editor" role="tabpanel" aria-labelledby="tab-management" hidden></section>
+            </aside>
           </div>
         </section>
       </div>

@@ -82,7 +82,7 @@
   display: block;
   color: #a80b4d;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.25;
 }
 
@@ -106,7 +106,7 @@
   border: 1px solid #bd0c56;
   border-radius: var(--radius, 3px);
   font: inherit;
-  font-weight: 750;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -127,17 +127,17 @@
 .scenario-clock-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 0 12px; border-bottom: 1px solid var(--border, #dce0e6); }
 .scenario-clock-row > div { display: flex; align-items: center; gap: 12px; }
 .scenario-clock-row span { color: var(--muted, #61656e); font-size: 12px; }
-.scenario-clock-row time { color: var(--action, #263345); font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.15; }
-.scenario-label { display: block; color: var(--muted, #61656e); font-size: 12px; font-weight: 650; }
+.scenario-clock-row time { color: var(--action, #263345); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.scenario-label { display: block; color: var(--muted, #61656e); font-size: 12px; font-weight: 600; }
 .scenario-current { padding: 12px 0; }
 .scenario-current h2 { margin: 3px 0 5px; color: var(--action, #263345); font-size: 17px; line-height: 1.4; }
 .scenario-current p, .scenario-next p { margin: 0; color: #4c525c; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .scenario-next { display: grid; gap: 8px; padding: 12px; background: #fff6fa; border: 1px solid #efbfd3; border-radius: var(--radius, 3px); }
 .scenario-next-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; }
 .scenario-next-heading strong { color: #a80b4d; font-size: 15px; }
-.scenario-next-heading time { margin-left: auto; font-size: 14px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.scenario-next-heading time { margin-left: auto; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 #scenario-elapsed { color: var(--muted, #61656e); font-size: 12px; }
-.scenario-primary { width: 100%; min-height: 44px; padding: 10px; color: #fff; background: #a80b4d; border: 1px solid #a80b4d; border-radius: var(--radius, 3px); font: inherit; font-weight: 750; cursor: pointer; }
+.scenario-primary { width: 100%; min-height: 44px; padding: 10px; color: #fff; background: #a80b4d; border: 1px solid #a80b4d; border-radius: var(--radius, 3px); font: inherit; font-weight: 600; cursor: pointer; }
 .scenario-primary:hover { background: #8d0941; }
 .scenario-palette button:disabled { opacity: .5; cursor: default; }
 .scenario-completed { margin: 10px 0 0; padding: 10px; color: #0e662f; background: #edf8f0; border: 1px solid #99d2aa; font-size: 12px; line-height: 1.6; }
@@ -211,7 +211,7 @@
   background: #f0f2f4;
   border-radius: 2px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .scenario-buttons button[data-scenario][aria-pressed="true"] .scenario-code {
@@ -238,7 +238,7 @@
 .scenario-footer a {
   color: #a80b4d;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .speed-controls {
@@ -265,7 +265,7 @@
   border: 1px solid var(--border-strong, #aeb5bf);
   border-radius: var(--radius, 3px);
   font: inherit;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .speed-controls button[aria-pressed="true"] {
@@ -291,7 +291,7 @@
   border: 1px solid var(--border, #dce0e6);
   border-radius: var(--radius, 3px);
   font: inherit;
-  font-weight: 750;
+  font-weight: 600;
   cursor: pointer;
 }
 

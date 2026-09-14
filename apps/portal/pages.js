@@ -25,7 +25,7 @@ function registerPage({ errors = {}, values = {} } = {}) {
 }
 function homePage(user) {
   return page('시연 안내', `<section class="intro-row"><div><p class="eyebrow">미트박스 TMS · 팀 회의용</p><h1>배송 시연</h1><p class="intro">주문 접수부터 배송 완료까지 진행합니다.</p></div></section>
-    <section class="demo-entry" aria-labelledby="demo-entry-title"><div><span class="tag accent">통합 시연</span><h2 id="demo-entry-title">배송 시나리오</h2><p>차량 1대 · 배송지 8곳<br>운영 화면 · 고객 화면</p><p class="demo-entry-flow">주문 → 출고 준비 → 배송 출발 → 도착·완료</p></div><a class="button primary" href="/combined/">시연 시작 <span aria-hidden="true">→</span></a></section>
+    <section class="demo-entry" aria-labelledby="demo-entry-title"><div><span class="tag accent">통합 시연</span><h2 id="demo-entry-title">배송 시나리오</h2><p>차량 1대 · 배송지 8곳<br>운영 뷰어 · 고객 뷰어 · 배송원 뷰어</p><p class="demo-entry-flow">주문 → 출고 준비 → 배송 출발 → 도착·완료</p></div><a class="button primary" href="/combined/">시연 시작 <span aria-hidden="true">→</span></a></section>
     <section class="review-originals" aria-labelledby="originals-title"><div><h2 id="originals-title">작업 원본</h2></div><a href="/scenario/"><strong>상현 시나리오 원본</strong><span>고객·기사·지도 관제·발표 리모컨 ↗</span></a><a href="/ui-layout/#/design"><strong>클라인 UI 원본</strong><span>화면 배치·컴포넌트·디자인 가이드 ↗</span></a></section>
     <p class="meeting-note">시연과 상현 시나리오는 진행 상태가 연결됩니다. 클라인 UI는 별도 화면입니다.<br>가상 데이터 · 실제 차량 연결·결제·알림 발송 없음</p>`, { user, wide: true });
 }
