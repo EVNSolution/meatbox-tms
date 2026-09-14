@@ -10,7 +10,6 @@
 .viewer-tabs a { display: flex; align-items: center; justify-content: center; min-height: 62px; padding: 10px 6px; border-left: 3px solid transparent; border-radius: 3px; text-align: center; text-decoration: none; color: #61656e; font: 13px/1.5 Arial, "Apple SD Gothic Neo", sans-serif; }
 .viewer-tabs a[aria-current="page"] { border-left-color: #263345; color: #263345; background: #f0f1f4; font-weight: 700; }
 .viewer-tabs a:hover { background: #f5f6f8; }
-#demo-guide { padding: 20px 20px 0; }
 .operator-pages { display: flex; gap: 8px; padding: 20px 20px 0; }
 .operator-pages a { padding: 8px 12px; color: #61656e; border-bottom: 2px solid transparent; text-decoration: none; }
 .operator-pages a[aria-current="page"] { color: #263345; border-bottom-color: #263345; font-weight: 700; }
@@ -22,7 +21,6 @@
   .demo-layout { grid-template-columns: 72px minmax(0, 1fr); }
   .viewer-tabs { padding: 12px 6px; }
   .viewer-tabs a { font-size: 12px; }
-  #demo-guide { padding: 12px 12px 0; }
   .operator-pages { padding: 12px 12px 0; gap: 4px; }
   .operator-pages a { padding: 8px; font-size: 12px; }
 }
