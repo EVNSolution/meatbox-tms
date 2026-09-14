@@ -35,7 +35,7 @@ export function mountRouteEditor({ element, onSend, onSelect }) {
       <div class="route-heading"><div><h2>차량 배송 순서</h2><p>${escapeHtml(latest.vehicle?.plate)} · ${escapeHtml(latest.vehicle?.driver)} · ${rows.length}곳</p></div><div class="route-edit-actions">${draft
         ? `<button class="button subtle" data-route-action="cancel" data-focus="cancel" ${pending ? 'disabled' : ''}>취소</button><button class="button primary" data-route-action="save" data-focus="save" ${!changed() || pending || !connected ? 'disabled' : ''}>${pending ? '저장 중…' : '변경 저장'}</button>`
         : `<button class="button" data-route-action="edit" data-focus="edit" ${!connected || rows.filter(stop => stop.status === 'pending').length < 2 ? 'disabled' : ''}>순서 편집</button>`}</div></div>
-      <p class="route-help">${draft ? '손잡이를 끌거나 ↑↓로 순서를 바꾼 뒤 저장하세요. 배송 중·완료·보류 행은 고정됩니다.' : '배송을 선택하면 오른쪽에서 이력을 확인합니다. 순서 변경은 편집 후 저장합니다.'}</p>
+      <p class="route-help">${draft ? '손잡이를 끌거나 ↑↓로 순서를 바꾼 뒤 저장하세요. 배송 중·완료·보류 행은 고정됩니다.' : '배송지를 눌러 이력을 확인하세요. 순서를 바꾸려면 ‘순서 편집’을 누르세요.'}</p>
       <ol class="route-list">${rows.map((stop, index) => {
         const movable = draft && stop.status === 'pending';
         const eligible = rows.filter(row => row.status === 'pending');

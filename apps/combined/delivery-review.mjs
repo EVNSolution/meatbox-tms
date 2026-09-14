@@ -22,8 +22,8 @@ export function deliveryContext(state, selected) {
   else if (current?.id === selected.id) note = state.truck?.dwelling ? '차량이 이 매장에 도착했습니다. 하차 후 배송 완료를 기록합니다.' : '차량이 지금 보고 있는 매장으로 이동 중입니다.';
   else if (current) {
     const before = state.deliveries.slice(0, state.deliveries.indexOf(selected)).filter(stop => ['pending', 'current'].includes(stop.status)).length;
-    note = `이 매장보다 앞선 배송 ${before}곳이 남아 있습니다. 다른 매장의 완료와 이 매장의 완료는 별도로 표시됩니다.`;
-  } else note = '출고 준비 중입니다. 배송 출발 후 차량의 현재 목적지를 확인할 수 있습니다.';
+    note = `앞선 배송 ${before}곳이 남아 있습니다. 배송 완료는 매장별로 표시합니다.`;
+  } else note = '출고 준비 중입니다. 출발하면 현재 목적지가 표시됩니다.';
   if (state.phase === 'done' && selected?.status === 'done') note = `보고 있는 배송은 ${selected.completedAt || '시각 미확인'}에 완료되었고, 전체 배송 시연도 종료되었습니다.`;
   return { vehicle, customer: selected ? `${stopName(selected)} · ${selected.customerStatus.label}` : '선택 없음', note };
 }

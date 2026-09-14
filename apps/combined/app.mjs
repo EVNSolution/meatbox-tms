@@ -5,9 +5,9 @@ import { deliveryLinks } from './delivery-review.mjs';
 import { mountRouteEditor } from './route-editor.mjs';
 
 const pages = {
-  deliveries: { title: '배송 현황', eyebrow: '차량 1대의 배송 8곳', description: '배송 순서와 고객 공식 ETA, 계산 ETA를 함께 확인합니다.' },
-  manage: { title: '배송 관리', eyebrow: '운영 뷰어', description: '차량의 배송 순서를 편집하고 사건 이력과 고객 알림 문구를 확인합니다.' },
-  control: { title: '배송 관제', eyebrow: '운영 뷰어', description: '선택 배송의 ETA와 배송 진행을 지도 옆에서 확인합니다.' },
+  deliveries: { title: '배송 현황', eyebrow: '차량 1대 · 배송지 8곳', description: '배송 순서 · 고객 안내 ETA · 계산 ETA' },
+  manage: { title: '배송 관리', eyebrow: '운영 뷰어', description: '배송 순서 편집 · 사건 이력 · 고객 알림' },
+  control: { title: '배송 관제', eyebrow: '운영 뷰어', description: '지도 · ETA · 배송 진행' },
 };
 const statusLabels = { pending: '대기', current: '배송 중', done: '완료', skipped: '건너뜀' };
 const state = {
@@ -159,13 +159,13 @@ function renderControl(visible, selected) {
     <div class="eta-grid"><div class="eta-primary"><p class="eyebrow">${selected.status === 'done' ? '배송 완료 시각' : '고객 공식 ETA'}</p><p class="eta-value">${escapeHtml(etaDisplay(selected))}</p><p class="muted">${selected.status === 'done' ? '배송 완료 기록' : selected.ordered && selected.officialEta?.updatedAt ? `${escapeHtml(selected.officialEta.updatedAt)} 갱신` : '갱신 시각 미확인'}</p></div><div class="eta-secondary"><dl class="key-values">${keyValue('계산 ETA', calculatedEtaText(selected))}${keyValue('현재 순서', `${selected.sequence}번째`)}${keyValue('실제 도착', selected.arrivedAt)}${keyValue('배송 완료', selected.completedAt)}</dl></div></div>`;
   byId('delivery-timeline').innerHTML = selected.timeline.length
     ? selected.timeline.map(item => `<li><time class="event-time">${escapeHtml(item.time || '')}</time><div class="event-copy"><span class="event-kind">${escapeHtml(({ done: '완료', current: '현재 단계', pending: '예정' })[item.state] || '미확인')}</span><h3>${escapeHtml(item.label)}</h3></div></li>`).join('')
-    : '<li class="empty-state">제공된 고객 타임라인이 없습니다.</li>';
+    : '<li class="empty-state">배송 기록이 없습니다.</li>';
   byId('event-list').innerHTML = state.data.events.length
     ? state.data.events.map(event => `<li><time class="event-time">${escapeHtml(event.time || '')}</time><div class="event-copy"><span class="event-kind">${escapeHtml(({ system: '시나리오', notify: '알림 문구', eta: 'ETA 변경', stage: '배송 단계', info: '진행 정보', incident: '사건' })[event.type] || '진행 정보')}</span><p>${escapeHtml(event.message)}</p></div></li>`).join('')
-    : '<li class="empty-state">제공된 사건이 없습니다.</li>';
-  byId('notification-list').innerHTML = '<p class="notification-description">시뮬레이션이 만든 시연 문구입니다. 실제 발송·전달·수신 결과가 아닙니다.</p>' + (selected.notices.length
+    : '<li class="empty-state">사건 기록이 없습니다.</li>';
+  byId('notification-list').innerHTML = '<p class="notification-description">시연용 알림입니다. 실제로 발송되지 않습니다.</p>' + (selected.notices.length
     ? selected.notices.map(notice => `<section class="notification-item"><div class="notification-labels">${notice.time ? `<span class="muted">${escapeHtml(notice.time)}</span>` : ''}</div><h3>${escapeHtml(notice.title)}</h3><p class="notification-copy">${escapeHtml(notice.body)}</p></section>`).join('')
-    : '<div class="empty-state compact"><strong>제공된 알림 문구가 없습니다.</strong></div>');
+    : '<div class="empty-state compact"><strong>알림이 없습니다.</strong></div>');
 }
 
 function renderTabs() {
