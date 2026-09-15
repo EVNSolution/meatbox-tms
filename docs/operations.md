@@ -62,6 +62,7 @@ sudo -u meatbox-demo node /opt/meatbox-demo/current/scripts/manage-access.js dis
 - 서비스 재시작 뒤 인증된 HTTPS 화면에서 배차 관리, 지도 기반 배송 관제, 자원 관리 세 탭, 배송원 금일 배차/근무 이력/사진 확인, 고객 알림과 세 뷰어를 확인합니다.
 - 고객 알림과 배송팁은 시연 메모리에만 기록됩니다. 실제 앱 푸시, 알림톡 또는 배송원 장치 전송을 배포 성공 조건으로 주장하지 않습니다.
 - 임시 QA 계정을 사용했다면 확인 뒤 비활성화하고 초대 파일, 쿠키와 작업용 SSH 키를 정리합니다.
+- 계정 생성·비활성화 CLI는 `sudo -u meatbox-demo`로 실행합니다. 계정 파일을 원자적으로 교체하므로 root로 실행하면 서비스가 읽지 못하는 root 소유 파일이 생길 수 있습니다. 파일 소유자 `meatbox-demo:meatbox-demo`와 권한 `0600`을 확인합니다.
 
 세부 기능 경계와 검증 항목은 [다차량 운영 계획](fleet-operations-plan.md)과 [테스트 명세](fleet-operations-test-spec.md)를 따릅니다.
 
