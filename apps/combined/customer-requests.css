@@ -14,6 +14,6 @@
 .customer-request-icon { display: block; width: 20px; height: 20px; }
 .customer-requests-empty strong { font-size: 13px; }
 .customer-requests-empty > p:last-child { margin: 4px 0 0; color: #667085; font-size: 11px; }
-.customer-requests-compact { display: inline-flex; align-items: center; gap: 2px; min-height: 28px; padding: 3px 7px; border: 1px solid #f2c94c; border-radius: 9px; color: #b42318; background: #fffaf0; }
-.customer-requests-compact .customer-request-icon { width: 17px; height: 17px; }
-.customer-requests-compact > span { margin-left: 2px; font-size: 10px; font-weight: 800; }
+.customer-requests-compact { display: inline-flex; align-items: center; gap: 6px; }
+.customer-request-badge { display: inline-grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; cursor: pointer; border: 1px solid #f2c94c; border-radius: 8px; color: #b42318; background: #fffaf0; }
+.customer-request-badge:hover { background: #fff3d6; }

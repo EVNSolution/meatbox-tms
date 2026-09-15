@@ -255,7 +255,8 @@ test('production cookie secure and request redirects/commands are bounded', asyn
   assert.equal(validCommand({ type: 'inject_dwell' }), false);
   assert.equal(validCommand({ type: 'set_scenario', scenario: 'shipping', stopId: 'S1' }), true);
   assert.equal(validCommand({ type: 'reorder', stopId: 'S9', dir: 'up' }), false);
-  for (const confirmedRequestIds of [null, 'S1-refrigerator', [12], ['S9-doorstep'], ['S1-unknown'], Array(9).fill('S1-doorstep')]) {
+  assert.equal(validCommand({ type: 'complete_stop', stopId: 'S6', confirmedRequestIds: ['S6-indoor'] }), true);
+  for (const confirmedRequestIds of [null, 'S1-refrigerator', [12], ['S9-doorstep'], ['S1-unknown'], ['S6-unknown'], Array(9).fill('S1-doorstep')]) {
     assert.equal(validCommand({ type: 'complete_stop', stopId: 'S1', confirmedRequestIds }), false);
   }
 });

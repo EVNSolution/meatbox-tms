@@ -53,7 +53,8 @@ button:disabled { cursor: default; }
 .dv-today-status strong { margin-top: 2px; font-size: 15px; }
 .dv-execution { position: relative; margin: 0 18px 12px; padding: 14px; border: 1px solid #fac5ce; background: #fff9fa; border-radius: 14px; }
 .dv-current-request { position: absolute; top: 10px; right: 10px; }
-.dv-execution:has(.dv-current-request) h3 { padding-right: 78px; }
+.dv-execution:has(.dv-current-request) h3 { padding-right: 52px; }
+.dv-execution:has(.customer-request-badge:nth-child(2)) h3 { padding-right: 102px; }
 .dv-eyebrow { margin: 0 0 4px; color: var(--driver-muted); font-size: 10px; font-weight: 800; }
 .dv-execution h3 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 900; }
 .dv-execution p.dv-muted { margin: 4px 0 12px; }
