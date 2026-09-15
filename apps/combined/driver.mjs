@@ -15,6 +15,7 @@ import { movePendingOrder } from './route-editor.mjs';
 import { mountDriverMap } from './driver-map.mjs';
 import { openDriverSettings } from './driver-settings.mjs';
 import { driverHistoryForDate, exampleHistoryDates, sourceDriverHistoryForDate } from './driver-history.mjs';
+import { renderDriverHistoryCalendar, shiftHistoryMonth } from './driver-history-calendar.mjs';
 import { referenceIcon } from './reference-icons.mjs';
 import { renderCustomerRequests } from './customer-requests.mjs';
 
@@ -38,8 +39,8 @@ let tab = 'delivery', screen = 'main', group = null, routeCompleted = null, orde
 let draft = null, base = null, editMapOpen = true, drag = null, pending = null, pendingTimer;
 let sheet = null, returnFocus = null, proofUrl = null, detailTab = 'order';
 let proofCheckedIds = new Set();
-let historyDate = new Date().toLocaleDateString('sv-SE');
-let historySourceDate = null, historyRequest = 0;
+let historyDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+let historySourceDate = null, historyVehicleId = null, historySelectionKey = null;
 const historyCache = new Map();
 const tipDrafts = new Map();
 const shell = mountDemoShell({ viewer: 'driver', onSelect: selectScenarioDelivery,
@@ -134,7 +135,7 @@ function render() {
   if (latest.sourceData?.date !== historySourceDate) {
     historySourceDate = latest.sourceData?.date || null;
     if (historySourceDate) historyDate = historySourceDate;
-    historyRequest += 1;
+    historyVehicleId = null;
   }
   const route = reconcileDriverRoute(routeCompleted, latest.phase === 'done' && model.vehicle?.live !== false, group);
   routeCompleted = route.completed; group = route.group;
@@ -179,6 +180,7 @@ function render() {
   }
   byId('dv-route-selector').hidden = screen === 'edit';
   byId('dv-route-choice').hidden = group === 'history';
+  byId('dv-tabs').hidden = group === 'history';
   byId('dv-delivery').hidden = screen !== 'main' || tab !== 'delivery' || group === 'history';
   byId('dv-map-panel').hidden = screen !== 'main' || tab !== 'map' || group === 'history';
   byId('dv-history').hidden = screen !== 'main' || group !== 'history';
@@ -246,27 +248,40 @@ function renderDelivery() {
   patch('dv-delivery', `<header class="dv-delivery-heading"><div><h2>${escapeHtml(title)}</h2><p>${summary(model.deliveries)}</p></div><div class="dv-heading-actions"><button class="dv-button dv-soft" data-action="orders">주문 목록</button><button class="dv-button dv-primary" data-action="edit" ${disabled(dispatchReadOnly() || model.vehicle?.live === false || !connected || pending || model.deliveries.filter(stop => stop.status === 'pending').length < 2)}>순서 편집</button></div></header><section class="dv-today-status" aria-label="배차 진행 및 완료 현황"><div><span>진행·대기</span><strong>${model.todayCounts.active}곳</strong></div><div><span>완료</span><strong>${model.todayCounts.done}곳</strong></div><div><span>보류</span><strong>${model.todayCounts.skipped}곳</strong></div></section><section class="dv-eta" aria-label="배송 예상 시간"><div><span>${departureLabel}</span><strong>${escapeHtml(departure)}</strong></div>${icon('arrow')}<div><span>${finishLabel}</span><strong>${escapeHtml(finish)}</strong></div></section><section class="dv-execution"><p class="dv-eyebrow">${latest.phase === 'done' ? '완료된 배차' : '지금 가는 배송지'}</p>${compactRequest(model.current)}<h3>${escapeHtml(model.destination)}</h3><p class="dv-muted">${escapeHtml(model.address)}</p>${executionButtons()}</section><ol class="dv-route">${model.deliveries.map(stop => `<li>${stopCard(stop)}</li>`).join('')}</ol>`);
 }
 function renderHistory() {
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+  const calendar = renderDriverHistoryCalendar(historyDate, latest.sourceData?.dates || exampleHistoryDates, today, Boolean(latest.sourceData));
+  const heading = `<header class="dv-delivery-heading"><div><h2>근무 이력</h2><p>달력에서 날짜를 선택해 주세요.</p></div></header>`;
+  const selectedHeading = `<h3 class="dv-history-selected">${escapeHtml(historyDate.replaceAll('-', '.'))} 이력</h3>`;
   if (latest.sourceData) {
     const model = view();
-    const identity = { driver: model.vehicle?.driver, plate: vehicleDisplay(model.vehicle), originalGroupId: model.deliveries[0]?.originalGroupId };
+    const vehicle = dispatchPending()
+      ? latest.fleetVehicles.find(item => item.id === historyVehicleId) || latest.vehicle
+      : model.vehicle;
+    const identity = { driver: vehicle?.driver, plate: vehicleDisplay(vehicle), originalGroupId: vehicle?.id };
     const cacheKey = `${historyDate}|${identity.driver}|${identity.originalGroupId || ''}`;
-    const heading = `<header class="dv-delivery-heading"><div><h2>근무 이력</h2><p>선택 날짜의 배차 내역입니다.</p></div></header><div class="dv-history-picker"><label class="dv-field" for="dv-history-date">조회 날짜</label><input id="dv-history-date" type="date" value="${escapeHtml(historyDate)}"></div>`;
-    const draw = records => patch('dv-history', heading + (records.map(item => `<article class="dv-history-card"><header><div><h3>${escapeHtml(item.label)}</h3></div><strong>${escapeHtml(item.vehicle)}</strong></header><dl class="dv-key-values"><div><dt>배차일</dt><dd>${escapeHtml(item.date)}</dd></div><div><dt>배송 규모</dt><dd>${item.destinations}곳 / ${item.boxes}박스</dd></div></dl></article>`).join('') || '<div class="dv-empty">선택한 날짜에 이 배송원의 배차가 없습니다.</div>'));
-    if (historyCache.has(cacheKey)) { draw(historyCache.get(cacheKey)); return; }
-    patch('dv-history', `${heading}<div class="dv-empty">배차 내역을 불러오고 있습니다.</div>`);
-    const request = ++historyRequest;
-    sourceDriverHistoryForDate(historyDate, identity).then(records => {
-      if (request !== historyRequest || group !== 'history') return;
-      historyCache.set(cacheKey, records); draw(records);
-    }).catch(() => {
-      if (request === historyRequest && group === 'history') patch('dv-history', `${heading}<div class="dv-empty">배차 내역을 불러오지 못했습니다.</div>`);
-    });
+    historySelectionKey = cacheKey;
+    const selector = dispatchPending() ? `<div class="dv-history-driver"><label for="dv-history-driver">이력 조회 배송원</label><select id="dv-history-driver" data-focus="history-driver">${latest.fleetVehicles.map(item => `<option value="${escapeHtml(item.id)}"${item.id === vehicle?.id ? ' selected' : ''}>${escapeHtml(item.driver)} / ${escapeHtml(vehicleDisplay(item))}</option>`).join('')}</select></div>` : '';
+    const layout = heading + selector + calendar + selectedHeading;
+    if (!identity.driver) { patch('dv-history', `${layout}<p class="dv-empty">이력을 조회할 배송원 정보가 없습니다.</p>`); return; }
+    let cached = historyCache.get(cacheKey);
+    if (!cached) {
+      cached = { status: 'loading', records: [] };
+      historyCache.set(cacheKey, cached);
+      sourceDriverHistoryForDate(historyDate, identity).then(records => {
+        cached.status = 'ready'; cached.records = records;
+      }).catch(() => { cached.status = 'error'; }).finally(() => {
+        if (group === 'history' && historySelectionKey === cacheKey) renderHistory();
+      });
+    }
+    if (cached.status === 'loading') { patch('dv-history', `${layout}<div class="dv-empty" role="status">배차 내역을 불러오고 있습니다.</div>`); return; }
+    if (cached.status === 'error') { patch('dv-history', `${layout}<div class="dv-empty" role="status">배차 내역을 불러오지 못했습니다.<button type="button" class="dv-button" data-action="retry-history">다시 불러오기</button></div>`); return; }
+    const records = cached.records.map(item => `<article class="dv-history-card"><header><div><h3>${escapeHtml(item.label)}</h3></div></header><dl class="dv-key-values"><div><dt>배송 규모</dt><dd>${item.destinations}곳 / ${item.boxes}박스</dd></div></dl><p class="dv-muted">원본 배차 내역 · 실제 근무 시간 미제공</p></article>`).join('');
+    patch('dv-history', layout + (records || '<div class="dv-empty">선택한 날짜에 이 배송원의 배차가 없습니다.</div>'));
     return;
   }
   const history = driverHistoryForDate(historyDate);
-  const dates = exampleHistoryDates.map(date => `<button class="dv-history-date" data-history-date="${date}">${date.slice(5).replace('-', '.')}</button>`).join('');
   const records = history.map(item => `<article class="dv-history-card"><header><div><span class="dv-demo-badge">예시</span><h3>${escapeHtml(item.label)}</h3></div><strong>${escapeHtml(item.vehicle)}</strong></header><dl class="dv-key-values"><div><dt>근무 시간</dt><dd>${item.startedAt}–${item.endedAt}</dd></div><div><dt>배송 규모</dt><dd>${item.destinations}곳 / ${item.boxes}박스</dd></div></dl></article>`).join('');
-  patch('dv-history', `<header class="dv-delivery-heading"><div><h2>근무 이력</h2><p>운영 이력 서비스와 분리된 화면 확인용 더미입니다.</p></div></header><div class="dv-history-picker"><label class="dv-field" for="dv-history-date">조회 날짜</label><input id="dv-history-date" type="date" value="${historyDate}"><div class="dv-history-dates"><span>예시 제공 날짜</span>${dates}</div></div>${records || '<div class="dv-empty">선택한 날짜의 예시 기록이 없습니다.<span class="dv-muted">현재 완료 목록을 과거 이력으로 사용하지 않습니다.</span></div>'}`);
+  patch('dv-history', heading + calendar + selectedHeading + (records || '<div class="dv-empty">선택한 날짜의 예시 기록이 없습니다.</div>'));
 }
 function renderMapDetail() {
   if (!latest) return;
@@ -466,12 +481,14 @@ byId('dv-app').addEventListener('click', event => {
   if (target.dataset.tab) switchTab(target.dataset.tab);
   if (target.dataset.group) { group = target.dataset.group; tab = 'delivery'; screen = 'main'; draft = null; render(); }
   if (target.dataset.historyDate) { historyDate = target.dataset.historyDate; renderHistory(); }
+  if (target.dataset.historyMonth) { historyDate = shiftHistoryMonth(historyDate, Number(target.dataset.historyMonth)); renderHistory(); }
   if (target.dataset.orders) { orderGroup = target.dataset.orders; renderOrders(); }
   if (target.dataset.stop) openDetail(target.dataset.stop);
   if (target.dataset.requestInfo) openRequest(target.dataset.requestInfo);
   if (target.dataset.move) moveBy(target.dataset.move, Number(target.dataset.direction));
   if (target.dataset.assignment) showSheet({ title: target.dataset.assignment === 'return' ? '배송 반납' : '배송 전달', body: '<p class="dv-muted">배차 변경 기능이 연결되면 이용할 수 있습니다.</p><button class="dv-button dv-primary" disabled>배차 변경 대기</button>' });
   switch (target.dataset.action) {
+    case 'retry-history': historyCache.delete(historySelectionKey); renderHistory(); break;
     case 'orders': screen = 'orders'; render(); break;
     case 'back': screen = 'main'; render(); break;
     case 'edit': beginEdit(); break;
@@ -495,8 +512,8 @@ byId('dv-app').addEventListener('click', event => {
     }
   }
 });
-byId('dv-app').addEventListener('input', event => {
-  if (event.target.id === 'dv-history-date') { historyDate = event.target.value; renderHistory(); }
+byId('dv-app').addEventListener('change', event => {
+  if (event.target.id === 'dv-history-driver') { historyVehicleId = event.target.value; renderHistory(); }
 });
 byId('dv-edit-map-toggle').addEventListener('click', () => { editMapOpen = !editMapOpen; renderEditor(); if (editMapOpen) requestAnimationFrame(() => editMap.resize()); });
 byId('dv-edit-list').addEventListener('keydown', event => {

@@ -38,3 +38,15 @@ test('실데이터 근무 이력은 없는 날짜를 빈 기록으로 처리하�
   assert.deepEqual(await sourceDriverHistoryForDate('not-a-date', { driver: '홍길동' }, fetcher), []);
   assert.equal(calls, 1);
 });
+
+test('동명이인 배송원의 배차는 선택한 원본 그룹이 있으면 합치지 않는다', async () => {
+  const fetcher = async () => ({ ok: true, json: async () => ({
+    groups: [{ id: 'G1', label: '김기사' }, { id: 'G2', label: '김기사' }],
+    orders: [{ groupId: 'G1', boxes: 2 }, { groupId: 'G2', boxes: 9 }],
+  }) });
+  for (const [originalGroupId, boxes] of [['G1', 2], ['G2', 9]]) {
+    const [record] = await sourceDriverHistoryForDate('2026-09-16', { driver: '김기사', originalGroupId }, fetcher);
+    assert.equal(record.destinations, 1);
+    assert.equal(record.boxes, boxes);
+  }
+});

@@ -160,11 +160,26 @@ button:disabled { cursor: default; }
 .dv-request-card p { margin: 4px 0 0; color: var(--driver-muted); font-size: 11px; }
 .dv-request-confirm h3 { margin: 0; font-size: 18px; }
 .dv-request-confirm > .dv-button { width: 100%; margin-top: 12px; }
-.dv-history-picker { margin: 0 18px 16px; padding: 14px; border: 1px solid var(--driver-line); border-radius: 14px; }
-.dv-history-picker .dv-field { margin-top: 0; }
-.dv-history-picker input { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #d0d5dd; border-radius: 10px; background: #fff; }
-.dv-history-dates { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; color: var(--driver-muted); font-size: 10px; }
-.dv-history-date { min-height: 32px; padding: 5px 9px; border: 1px solid var(--driver-line); border-radius: 8px; color: #344054; background: #fff; font-size: 11px; }
+.dv-history-driver { display: grid; gap: 6px; margin: 0 18px 12px; }
+.dv-history-driver label { color: var(--driver-muted); font-size: 11px; }
+.dv-history-driver select { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid var(--driver-line); border-radius: 8px; background: #fff; }
+.dv-history-calendar { margin: 0 12px 16px; }
+.dv-history-calendar header { display: flex; align-items: center; justify-content: space-between; }
+.dv-history-calendar h3 { margin: 0; font-size: 18px; }
+.dv-calendar-month { width: 44px; height: 44px; border: 0; border-radius: 8px; background: #fff; color: #344054; font-size: 28px; }
+.dv-history-calendar table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.dv-history-calendar th { height: 28px; color: var(--driver-muted); font-size: 11px; font-weight: 500; }
+.dv-history-calendar td { padding: 2px 0; text-align: center; }
+.dv-calendar-day { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 100%; min-height: 44px; padding: 5px 0; border: 1px solid transparent; border-radius: 9px; color: #344054; background: #fff; font-size: 13px; }
+.dv-calendar-day i, .dv-calendar-legend i { width: 4px; height: 4px; flex: none; border-radius: 50%; background: var(--meatbox-red); }
+.dv-history-calendar :is(th, td):first-child, .dv-history-calendar td:first-child button { color: #b42318; }
+.dv-history-calendar :is(th, td):last-child, .dv-history-calendar td:last-child button { color: #175cd3; }
+.dv-calendar-day[aria-current="date"] { border-color: var(--meatbox-red); }
+.dv-calendar-day[aria-pressed="true"] { color: #fff !important; background: var(--meatbox-red); font-weight: 700; }
+.dv-calendar-day[aria-pressed="true"] i { background: #fff; }
+.dv-calendar-day:hover:not([aria-pressed="true"]), .dv-calendar-month:hover { background: var(--driver-tint); }
+.dv-calendar-legend { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 8px 0 0; color: var(--driver-muted); font-size: 10px; }
+.dv-history-selected { margin: 0 18px 10px; font-size: 14px; }
 .dv-history-card { margin: 0 18px 10px; padding: 14px; border: 1px solid var(--driver-line); border-radius: 14px; }
 .dv-history-card header { display: flex; justify-content: space-between; gap: 10px; }
 .dv-history-card h3 { display: inline; margin: 0 0 0 6px; font-size: 15px; }

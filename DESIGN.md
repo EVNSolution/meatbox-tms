@@ -1,5 +1,11 @@
 # Design
 
+## Driver work-history calendar correction (2026-09-16, local)
+
+- `근무 이력` opens a dedicated month calendar in the driver screen, with previous/next month, weekdays, selected date, today outline, and records below the calendar. Hide the delivery/map tab bar while this page is selected.
+- Source-date dots indicate available source dispatch files, not attendance or completed work. Selected-day records use the existing driver/date lookup; absent work times remain unavailable. Before current dispatch is published, a history-only driver selector allows dated lookup without changing today's assignment.
+- Month/day and history-driver selection remain local to this page. Reuse the existing calendar month model and preserve the independent example-history dataset. Pending fetches are cached by date and identity; old responses cannot replace the current selection, and a failed lookup offers retry.
+
 ## Customer viewer scenario extension (2026-09-16, local)
 
 - Source-backed customer viewers may rehearse all six stages before or after dispatch publication. These page-local previews never send an operational command or change source orders, assignments, or completion records. Historical operating dates remain read-only.

@@ -45,7 +45,8 @@ export async function sourceDriverHistoryForDate(date, identity, fetcher = fetch
   const day = await response.json();
   const groups = Array.isArray(day.groups) ? day.groups : [];
   const sameDriver = groups.filter(group => group.label === identity.driver);
-  const matchingGroups = new Set((sameDriver.length ? sameDriver : groups.filter(group => group.id === identity.originalGroupId)).map(group => group.id));
+  const selectedGroup = sameDriver.find(group => group.id === identity.originalGroupId);
+  const matchingGroups = new Set((selectedGroup ? [selectedGroup] : sameDriver.length ? sameDriver : groups.filter(group => group.id === identity.originalGroupId)).map(group => group.id));
   const orders = (Array.isArray(day.orders) ? day.orders : []).filter(order => matchingGroups.has(order.groupId));
   if (!orders.length) return [];
   return [{
