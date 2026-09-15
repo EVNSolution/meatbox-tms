@@ -32,3 +32,10 @@ test('보류 배송지를 제외하고 편집한 순서의 도로를 사용한�
   assert.deepEqual(model.road.features[1].geometry.coordinates, data.legs['S1>S3'].coords.map(([lat,lng]) => [lng,lat]));
   assert.deepEqual(model.road.features[2].geometry.coordinates, data.legs['S3>S5'].coords.map(([lat,lng]) => [lng,lat]));
 });
+
+test('출발 전에도 첫 대기 배송지의 저장 도로 위에 예시 차량을 표시한다', () => {
+  const pending = deliveries.map(stop => ({ ...stop, status: 'pending' }));
+  const coordinates = data.legs['MFC>S1'].coords.map(([lat, lng]) => [lng, lat]);
+  assert.deepEqual(driverMapModel(data, pending).vehicle, coordinates[Math.floor(coordinates.length * .4)]);
+  assert.equal(driverMapModel({ ...data, legs: {} }, pending).vehicle, null);
+});

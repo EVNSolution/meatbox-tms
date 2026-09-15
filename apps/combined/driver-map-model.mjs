@@ -7,6 +7,7 @@ export function driverMapModel(data, deliveries, dwelling = false) {
     const point = data?.points?.find(point => point.id === stop.id);
     return point && coordinate([point.lat, point.lng]) ? [{ ...stop, coordinate: [point.lng, point.lat] }] : [];
   });
+  const awaitingDeparture = !stops.some(stop => stop.status === 'current');
   let previous = 'MFC';
   let vehicle = null;
   const features = stops.flatMap(stop => {
@@ -14,6 +15,7 @@ export function driverMapModel(data, deliveries, dwelling = false) {
     previous = stop.id;
     if (!Array.isArray(leg) || leg.length < 3 || !leg.every(coordinate)) return [];
     const coordinates = leg.map(([lat, lng]) => [lng, lat]);
+    if (awaitingDeparture && !vehicle && stop.status === 'pending') vehicle = coordinates[Math.floor(coordinates.length * 0.4)];
     if (stop.status === 'current') vehicle = coordinates[dwelling ? coordinates.length - 1 : Math.floor(coordinates.length * 0.4)];
     return [{ type: 'Feature', properties: { status: stop.status }, geometry: { type: 'LineString', coordinates } }];
   });
