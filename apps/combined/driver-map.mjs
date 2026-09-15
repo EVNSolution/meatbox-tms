@@ -1,7 +1,15 @@
 import { driverMapModel } from './driver-map-model.mjs';
+import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
+
+export function syncDriverMapInteractions(map, wheelZoom, editing) {
+  if (!map) return;
+  for (const control of [map.scrollZoom, map.boxZoom, map.doubleClickZoom, map.touchZoomRotate]) editing ? control.disable() : control.enable();
+  wheelZoom?.setEnabled(!editing);
+  map.touchZoomRotate.disableRotation();
+}
 
 export function mountDriverMap(element, onSelect) {
-  let map, routeData, current, rendered = '', markers = [], failed = false;
+  let map, routeData, current, rendered = '', viewSignature = '', markers = [], failed = false, wheelZoom;
   const empty = document.createElement('p');
   empty.className = 'dv-map-empty';
   empty.textContent = '지도를 불러오고 있습니다.';
@@ -54,7 +62,13 @@ export function mountDriverMap(element, onSelect) {
       markers.push(new maplibregl.Marker({ element: truck }).setLngLat(model.vehicle).addTo(map));
     }
     const coordinates = [...model.points.map(point => point.coordinate), ...model.road.features.flatMap(feature => feature.geometry.coordinates)];
-    if (coordinates.length) {
+    const nextViewSignature = JSON.stringify([model.points.map(point => [point.id, point.coordinate]), model.road.features.map(feature => {
+      const line = feature.geometry.coordinates;
+      return [line.length, line[0], line.at(-1)];
+    })]);
+    if (!coordinates.length) viewSignature = '';
+    else if (nextViewSignature !== viewSignature) {
+      viewSignature = nextViewSignature;
       const bounds = coordinates.reduce((bounds, point) => bounds.extend(point), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
       map.fitBounds(bounds, { padding: { top: 45, bottom: 32, left: 30, right: 30 }, maxZoom: 15, duration: 0 });
     }
@@ -66,6 +80,8 @@ export function mountDriverMap(element, onSelect) {
       routeData = await response.json();
       maplibregl.setWorkerUrl(new URL('./assets/vendor/maplibre/maplibre-gl-csp-worker.js', import.meta.url).href);
       map = new maplibregl.Map({ container: canvas, style: new URL('./assets/maps/dsv-korea-v1.json', import.meta.url).href, center: [127.1, 37.5], zoom: 11, attributionControl: false, dragRotate: false, touchPitch: false, maxPitch: 0 });
+      wheelZoom = installModifierWheelZoom(map);
+      syncDriverMapInteractions(map, wheelZoom, current?.editing);
       map.touchZoomRotate.disableRotation();
       map.addControl(new maplibregl.AttributionControl({ compact: true }));
       const attribution = canvas.querySelector('.maplibregl-ctrl-attrib');
@@ -87,12 +103,9 @@ export function mountDriverMap(element, onSelect) {
   }
   return {
     update(deliveries, dwelling, editing = false) {
-      current = { deliveries, dwelling };
+      current = { deliveries, dwelling, editing };
       if (!map && !routeData && !failed) { routeData = {}; void load(); }
-      if (map) {
-        for (const control of [map.scrollZoom, map.boxZoom, map.doubleClickZoom, map.touchZoomRotate]) editing ? control.disable() : control.enable();
-        map.touchZoomRotate.disableRotation();
-      }
+      syncDriverMapInteractions(map, wheelZoom, editing);
       render();
     },
     resize() { render(true); },

@@ -1,0 +1,114 @@
+{
+  "measuredOn": "2026-09-15",
+  "encoding": {
+    "node": "v26.3.1",
+    "platform": "darwin/arm64",
+    "iterations": 30,
+    "caveat": "Synthetic in-process measurement. Fanout is arithmetic, excludes TLS/HTTP/maps and does not certify production concurrency or throughput.",
+    "results": [
+      {
+        "vehicles": 130,
+        "stops": 4550,
+        "boxes": 9100,
+        "initialBytes": 1526982,
+        "maxSingleStopUpdateBytes": 541,
+        "reductionPercent": 99.96,
+        "encodeP95Ms": 13.72,
+        "decodeP95Ms": 2.39,
+        "adaptP95Ms": 2.04,
+        "illustrativeFanout": [
+          {
+            "viewers": 130,
+            "updatesPerSecond": 1,
+            "fullMiBPerSecond": 189.31,
+            "deltaMiBPerSecond": 0.07
+          },
+          {
+            "viewers": 500,
+            "updatesPerSecond": 1,
+            "fullMiBPerSecond": 728.12,
+            "deltaMiBPerSecond": 0.26
+          }
+        ]
+      },
+      {
+        "vehicles": 260,
+        "stops": 9100,
+        "boxes": 18200,
+        "initialBytes": 3069302,
+        "maxSingleStopUpdateBytes": 541,
+        "reductionPercent": 99.98,
+        "encodeP95Ms": 30.86,
+        "decodeP95Ms": 2.17,
+        "adaptP95Ms": 2.7,
+        "illustrativeFanout": [
+          {
+            "viewers": 130,
+            "updatesPerSecond": 1,
+            "fullMiBPerSecond": 380.52,
+            "deltaMiBPerSecond": 0.07
+          },
+          {
+            "viewers": 500,
+            "updatesPerSecond": 1,
+            "fullMiBPerSecond": 1463.56,
+            "deltaMiBPerSecond": 0.26
+          }
+        ]
+      }
+    ]
+  },
+  "stream": {
+    "node": "v26.3.1",
+    "connections": 130,
+    "vehicles": 130,
+    "stops": 4550,
+    "initialAllReceivedMs": 1761.92,
+    "initialTotalBytes": 198510520,
+    "changesPerBatch": 130,
+    "batches": [
+      {
+        "allReceivedMs": 70.82,
+        "bytesPerClient": 50170
+      },
+      {
+        "allReceivedMs": 64.24,
+        "bytesPerClient": 50690
+      },
+      {
+        "allReceivedMs": 65.26,
+        "bytesPerClient": 50820
+      },
+      {
+        "allReceivedMs": 59.88,
+        "bytesPerClient": 50820
+      },
+      {
+        "allReceivedMs": 83.54,
+        "bytesPerClient": 50820
+      },
+      {
+        "allReceivedMs": 62.01,
+        "bytesPerClient": 50820
+      },
+      {
+        "allReceivedMs": 60.75,
+        "bytesPerClient": 50820
+      },
+      {
+        "allReceivedMs": 58.33,
+        "bytesPerClient": 50821
+      },
+      {
+        "allReceivedMs": 62.95,
+        "bytesPerClient": 50822
+      },
+      {
+        "allReceivedMs": 61.23,
+        "bytesPerClient": 50822
+      }
+    ],
+    "rssMiB": 726.8,
+    "caveat": "Loopback server and clients share one process; real file-backed demo session checks use one test account. RSS includes clients. Excludes TLS, external ingest, database, maps and production network; not an SLA."
+  }
+}

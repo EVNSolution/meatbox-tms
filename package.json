@@ -6,7 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "check:capacity": "node scripts/capacity-check.mjs",
+    "check:capacity:stream": "node scripts/capacity-stream-check.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",

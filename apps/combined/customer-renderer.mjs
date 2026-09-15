@@ -1,6 +1,8 @@
 import { referenceIcon } from './reference-icons.mjs';
 import { inboxState, noticeKey, visibleNotices, updateInbox } from './customer-inbox.mjs';
 import { customerDemoRoad } from './customer-demo-route.mjs';
+import { customerPickerPage, updateCustomerPickerState } from './customer-picker-model.mjs';
+import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
@@ -37,6 +39,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
   let selectedId;
   let routeData;
   let map;
+  let mapViewSignature = '';
   let homeMarker;
   let truckMarker;
   let popupBaseline = new Set();
@@ -45,6 +48,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
   let boot;
   let inbox = {};
   let inboxStorageKey;
+  let pickerState = { query: '', page: 1 };
   const notificationPanel = byId('customer-notifications');
 
   const queryId = () => new URLSearchParams(location.search).get('id');
@@ -57,12 +61,26 @@ export function mountCustomerRenderer({ mb, onSelect }) {
   const currentDeliveries = () => latest?.fleetDeliveries?.length ? latest.fleetDeliveries : latest?.deliveries || [];
   const currentDelivery = () => currentDeliveries().find(delivery => delivery.id === selectedId) ?? null;
 
+  function renderPicker() {
+    const result = customerPickerPage(currentDeliveries(), pickerState);
+    pickerState.page = result.page;
+    const search = byId('account-search');
+    if (search.value !== pickerState.query) search.value = pickerState.query;
+    byId('account-search-reset').disabled = !pickerState.query;
+    byId('account-result-count').textContent = result.total ? `검색 결과 ${result.total}개 중 ${result.start}-${result.end}개` : '검색 결과가 없습니다.';
+    byId('account-list').innerHTML = result.items.map(delivery => `<button class="acct" data-acct="${escapeHtml(delivery.id)}"${delivery.id === selectedId ? ' aria-current="true"' : ''}><span><b>${escapeHtml(delivery.name)}</b><span class="sub">${escapeHtml(delivery.address || '배송지 정보 없음')}</span></span><span class="bx">${escapeHtml(delivery.boxes ?? '—')}박스</span></button>`).join('') || '<p class="loading-copy">조건에 맞는 매장이 없습니다.</p>';
+    byId('account-page').textContent = `${result.page} / ${result.pageCount}`;
+    byId('account-previous').disabled = result.page <= 1;
+    byId('account-next').disabled = result.page >= result.pageCount;
+  }
+
   function showPicker() {
     hidePopup();
     setNotificationsOpen(false);
-    const deliveries = currentDeliveries();
-    byId('account-list').innerHTML = deliveries.map(delivery => `<button class="acct" data-acct="${escapeHtml(delivery.id)}"><span><b>${escapeHtml(delivery.name)}</b><br><span class="sub">${escapeHtml(delivery.address || '배송지 정보 없음')}</span></span><span class="bx">${escapeHtml(delivery.boxes ?? '—')}박스</span></button>`).join('') || '<p class="loading-copy">조회할 배송이 없습니다.</p>';
+    const wasHidden = byId('account-picker').hidden;
+    renderPicker();
     byId('account-picker').hidden = false;
+    if (wasHidden) requestAnimationFrame(() => byId('account-search').focus());
   }
 
   function select(id) {
@@ -156,22 +174,27 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     renderRoad(road);
     byId('map').hidden = !canMap;
     byId('map-empty').hidden = canMap;
-    if (!canMap || !map) return;
+    if (!canMap || !map) { mapViewSignature = ''; return; }
     map.resize();
     const home = [point.lng, point.lat];
+    const nextViewSignature = `${delivery.id}|${home}|${road.length}|${road[0] || ''}|${road.at(-1) || ''}`;
+    const viewChanged = nextViewSignature !== mapViewSignature;
+    mapViewSignature = nextViewSignature;
     if (!homeMarker) homeMarker = createMarker('store', home);
     else homeMarker.setLngLat(home);
     if (!road.length) {
       if (truckMarker) { truckMarker.remove(); truckMarker = null; }
-      map.jumpTo({ center: home, zoom: 15 });
+      if (viewChanged) map.jumpTo({ center: home, zoom: 15 });
       return;
     }
     const truck = delivery.arrivedAt ? road[road.length - 1] : road[0];
     if (!truckMarker) truckMarker = createMarker('vehicle', truck);
     else truckMarker.setLngLat(truck);
-    const bounds = new maplibregl.LngLatBounds(home, home);
-    road.forEach(coordinate => bounds.extend(coordinate));
-    map.fitBounds(bounds, { padding: { top: 56, bottom: 48, left: 48, right: 48 }, maxZoom: 15, duration: 0 });
+    if (viewChanged) {
+      const bounds = new maplibregl.LngLatBounds(home, home);
+      road.forEach(coordinate => bounds.extend(coordinate));
+      map.fitBounds(bounds, { padding: { top: 56, bottom: 48, left: 48, right: 48 }, maxZoom: 15, duration: 0 });
+    }
   }
 
   function render() {
@@ -204,6 +227,22 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     const button = event.target.closest('[data-acct]');
     if (button) select(button.dataset.acct);
   });
+  byId('account-search').addEventListener('input', event => {
+    pickerState = updateCustomerPickerState(pickerState, { query: event.currentTarget.value });
+    renderPicker();
+  });
+  byId('account-search-reset').addEventListener('click', () => {
+    pickerState = updateCustomerPickerState(pickerState, { query: '' });
+    renderPicker();
+    byId('account-search').focus();
+  });
+  for (const [id, direction] of [['account-previous', -1], ['account-next', 1]]) {
+    byId(id).addEventListener('click', () => {
+      pickerState = updateCustomerPickerState(pickerState, { page: pickerState.page + direction });
+      renderPicker();
+      byId('account-list').querySelector('button')?.focus();
+    });
+  }
   byId('switch-account').addEventListener('click', showPicker);
   byId('notification-bell').addEventListener('click', () => {
     const open = notificationPanel.hidden;
@@ -267,7 +306,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
       style: new URL('./assets/maps/dsv-korea-v1.json', import.meta.url).href,
       center: [126.995, 37.43], zoom: 10.35,
       maxBounds: [124.5, 33, 132, 39.5],
-      attributionControl: false, scrollZoom: false,
+      attributionControl: false, scrollZoom: true,
       dragRotate: false, touchPitch: false, pitchWithRotate: false, maxPitch: 0,
     });
     instance.touchZoomRotate.disableRotation();
@@ -288,6 +327,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     routeData = data;
     if (!map) {
       map = initMap(byId('map')).map;
+      installModifierWheelZoom(map);
       map.once('load', render);
     }
     render();
@@ -312,6 +352,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
       if (!selectedId) { popupBaseline = new Set(); showPicker(); return; }
       if (!currentDelivery()) { selectedId = null; showPicker(); return; }
       render();
+      if (!byId('account-picker').hidden) renderPicker();
     },
   };
 }

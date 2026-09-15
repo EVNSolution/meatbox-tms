@@ -1,10 +1,18 @@
+import { createStateReceiver } from './state-frames.mjs';
+
 // Both viewers use one connection per page, including the original customer renderer.
 export function connectSimulation({ onState, onStatus, onError }) {
   let socket;
   let timer;
   let boot;
+  let reconnectAttempt = 0;
   let stopped = false;
   const login = () => location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search + location.hash));
+
+  function reconnect() {
+    const delay = Math.min(30_000, 1500 * 2 ** Math.min(reconnectAttempt++, 5));
+    timer = setTimeout(connect, delay + Math.floor(Math.random() * 1000));
+  }
 
   async function connect() {
     if (stopped) return;
@@ -15,7 +23,8 @@ export function connectSimulation({ onState, onStatus, onError }) {
       if (response.status === 401) return login();
       if (!response.ok) throw new Error('세션 확인 실패');
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      socket = new WebSocket(`${protocol}//${location.host}/ws/simulation`);
+      const receiver = createStateReceiver();
+      socket = new WebSocket(`${protocol}//${location.host}/ws/simulation`, 'meatbox-state-v2');
       socket.addEventListener('message', event => {
         let message;
         try { message = JSON.parse(event.data); } catch { return; }
@@ -24,21 +33,24 @@ export function connectSimulation({ onState, onStatus, onError }) {
           if (boot && boot !== message.boot) return location.reload();
           boot = message.boot;
         }
-        if (message.type !== 'state') return;
-        try { onState(message.state, { boot }); onStatus(true, ''); }
-        catch { onStatus(false, '받은 배송 정보를 표시할 수 없습니다.'); }
+        if (!['state', 'state_patch'].includes(message.type)) return;
+        let state;
+        try { state = receiver.receive(message); }
+        catch { socket.close(); return; }
+        try { onState(state, { boot }); reconnectAttempt = 0; onStatus(true, ''); }
+        catch { onStatus(false, '받은 배송 정보를 표시할 수 없습니다.'); socket.close(); }
       });
       socket.addEventListener('close', event => {
         if (stopped) return;
         onStatus(false, '연결이 끊겼습니다. 자동으로 다시 연결합니다.');
         if ([1008, 4401, 4403].includes(event.code) || /auth|login|session/i.test(event.reason)) return login();
-        timer = setTimeout(connect, 1500);
+        reconnect();
       });
       socket.addEventListener('error', () => socket.close());
     } catch {
       if (stopped) return;
       onStatus(false, '서버에 연결할 수 없습니다. 자동으로 다시 연결합니다.');
-      timer = setTimeout(connect, 1500);
+      reconnect();
     }
   }
   connect();

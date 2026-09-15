@@ -72,12 +72,22 @@ body:has(#account-picker:not([hidden])) .mobile-shell { visibility: hidden; }
 .back-link { color: var(--ink-3); font-size: 13px; margin-bottom: 32px; }
 .picker-content h1 { font-size: 32px; }
 .picker-description { color: var(--ink-3); font-size: 14px; margin-bottom: 28px; }
+.account-search-tools { margin-bottom: 16px; }
+.account-search-tools > label { display: block; margin-bottom: 6px; color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.account-search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.account-search-row input { min-width: 0; height: 44px; padding: 0 12px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+.account-search-row button, .account-pagination button { min-width: 68px; min-height: 44px; padding: 0 14px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-weight: 600; cursor: pointer; }
+.account-search-row button:disabled, .account-pagination button:disabled { color: #92969e; background: #f6f7f8; cursor: default; }
+#account-result-count { min-height: 21px; margin: 8px 0 0; color: var(--ink-3); font-size: 13px; }
 #account-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .loading-copy { grid-column: 1 / -1; }
 .acct { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 18px 16px; cursor: pointer; font: inherit; line-height: 1.5; color: var(--ink); }
 .acct:hover { border-color: var(--red); background: var(--red-soft); }
-.acct .sub { display: inline-block; font-size: 12px; color: var(--ink-3); margin-top: 4px; overflow-wrap: anywhere; }
+.acct[aria-current="true"] { border-color: var(--red); }
+.acct .sub { display: block; font-size: 12px; color: var(--ink-3); margin-top: 4px; overflow-wrap: anywhere; }
 .acct .bx { margin-left: auto; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.account-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 20px; }
+#account-page { min-width: 64px; color: var(--ink-2); font-size: 13px; text-align: center; }
 .no-script { position: fixed; inset: 0; z-index: 300; background: #fff; padding: 40px 20px; }
 @media (max-width: 767px) {
   .preview-bar-inner { padding: env(safe-area-inset-top) 16px 0; }

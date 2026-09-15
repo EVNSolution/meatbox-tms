@@ -1,5 +1,6 @@
 import { referenceIcon } from './reference-icons.mjs';
-const ORDER_POSITIONS = [[18, 24], [34, 63], [47, 38], [60, 72], [69, 21], [78, 51], [26, 81], [52, 12]];
+import { customerDemoRoad } from './customer-demo-route.mjs';
+import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 export function volumeScenario(deliveries, value = 100) {
@@ -18,13 +19,81 @@ const vehiclesFor = data => Array.isArray(data?.fleetVehicles) ? data.fleetVehic
 const boxesText = boxes => Number.isFinite(boxes) && boxes >= 0 ? `${boxes.toLocaleString('ko-KR')}박스` : '미확인';
 const vehicleIdFor = (delivery, fallbackVehicleId) => delivery?.vehicle?.id ?? delivery?.vehicleId ?? fallbackVehicleId ?? null;
 
-export function mountOrderPlanning({ element, onSelect = () => {} }) {
+export function orderMapModel(deliveries, routeData) {
+  const points = new Map((routeData?.points || []).filter(point =>
+    typeof point?.id === 'string' && Number.isFinite(point.lng) && Number.isFinite(point.lat)
+    && Math.abs(point.lng) <= 180 && Math.abs(point.lat) <= 90
+  ).map(point => [point.id, [point.lng, point.lat]]));
+  const mapped = (deliveries || []).flatMap(delivery => points.has(delivery.id) ? [{ delivery, coordinates: points.get(delivery.id) }] : []);
+  const preferredStopId = mapped[0]?.delivery.id;
+  const roadStopIds = [preferredStopId, ...(routeData?.points || []).map(point => point.id)].filter(id => id && id !== 'MFC');
+  const vehicle = roadStopIds.map(id => customerDemoRoad(routeData, id)[0]).find(Boolean) || null;
+  return { mapped, unknownCount: Math.max(0, (deliveries?.length || 0) - mapped.length), vehicle };
+}
+
+function createOrderMap(element) {
+  maplibregl.setWorkerUrl(new URL('./assets/vendor/maplibre/maplibre-gl-csp-worker.js', import.meta.url).href);
+  const map = new maplibregl.Map({
+    container: element,
+    style: new URL('./assets/maps/dsv-korea-v1.json', import.meta.url).href,
+    center: [126.995, 37.43], zoom: 10.35,
+    maxBounds: [124.5, 33, 132, 39.5],
+    attributionControl: false, scrollZoom: true,
+    dragRotate: false, touchPitch: false, pitchWithRotate: false, maxPitch: 0,
+  });
+  map.touchZoomRotate.disableRotation();
+  map.addControl(new maplibregl.AttributionControl({ compact: true }));
+  const attribution = element.querySelector('.maplibregl-ctrl-attrib');
+  if (attribution) {
+    const collapse = () => {
+      if (!attribution.classList.contains('maplibregl-compact-show')) return;
+      observer.disconnect();
+      attribution.querySelector('summary')?.click();
+    };
+    const observer = new MutationObserver(collapse);
+    observer.observe(attribution, { attributes: true, attributeFilter: ['class'] });
+    collapse();
+    map.once('remove', () => observer.disconnect());
+  }
+  return map;
+}
+
+function createOrderMarker(map, delivery, coordinates) {
+  const element = document.createElement('button');
+  element.type = 'button';
+  element.className = 'order-map-marker';
+  element.dataset.orderMarker = delivery.id;
+  element.setAttribute('aria-label', `${delivery.name || delivery.id} ${boxesText(delivery.boxes)} 선택`);
+  const marker = new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat(coordinates).addTo(map);
+  return { element, remove: () => marker.remove() };
+}
+
+function createOrderVehicleMarker(map, coordinates) {
+  const element = document.createElement('div');
+  element.className = 'order-map-vehicle';
+  element.setAttribute('aria-label', '예시 차량 위치');
+  const marker = new maplibregl.Marker({ element }).setLngLat(coordinates).addTo(map);
+  return { element, remove: () => marker.remove() };
+}
+
+export function mountOrderPlanning({
+  element,
+  onSelect = () => {},
+  loadRouteData = () => fetch('/scenario/api/route-data').then(response => {
+    if (!response.ok) throw new Error('route data unavailable');
+    return response.json();
+  }),
+  mapFactory = createOrderMap,
+  markerFactory = createOrderMarker,
+  vehicleMarkerFactory = createOrderVehicleMarker,
+}) {
   if (!element) throw new TypeError('주문 배차 영역이 필요합니다.');
   element.innerHTML = `
     <section class="order-map-panel" aria-labelledby="order-map-heading">
       <div class="order-map-heading"><div><h2 id="order-map-heading">주문 배차 지도</h2><p>권역별 주문과 배차 차량</p></div><span class="order-map-count" data-order-map-count>0건</span></div>
       <div class="order-map-canvas" data-order-map-canvas aria-label="주문 위치">
         <div class="order-map-layer" data-order-map-layer></div>
+        <p class="order-map-status" data-order-map-status role="status">지도 준비 중</p>
         <div class="order-map-toolbar"><label for="order-vehicle-filter">차량</label><select id="order-vehicle-filter" data-order-vehicle></select></div>
         <button type="button" class="order-scenario-trigger" data-order-scenario-open aria-haspopup="dialog">지도 시나리오</button>
         <section class="order-map-selection" data-order-selection aria-live="polite"><span>선택 주문</span><strong>지도에서 주문을 선택해 주세요.</strong></section>
@@ -46,6 +115,7 @@ export function mountOrderPlanning({ element, onSelect = () => {} }) {
   const vehicleSelect = query('[data-order-vehicle]');
   const canvas = query('[data-order-map-canvas]');
   const layer = query('[data-order-map-layer]');
+  const mapStatus = query('[data-order-map-status]');
   const count = query('[data-order-map-count]');
   const selection = query('[data-order-selection]');
   const summary = query('[data-order-map-summary]');
@@ -67,8 +137,17 @@ export function mountOrderPlanning({ element, onSelect = () => {} }) {
   let lastExternalSelectedId = null;
   let lastExternalVehicleId = null;
   let vehicleSignature = '';
-  let sceneSignature = '';
+  let markerSignature = '';
+  let geometrySignature = '';
   let visibleDeliveries = [];
+  let routeData = null;
+  let map = null;
+  let routePromise = null;
+  let mapMarkers = [];
+  let resizeObserver = null;
+  let wheelZoom = null;
+  let destroyed = false;
+  let mapFailure = '';
   const selectedVehicle = () => (data?.fleetVehicles || []).find(vehicle => vehicle.id === selectedVehicleId) ?? data?.vehicle ?? null;
 
   function syncControls() {
@@ -96,21 +175,65 @@ export function mountOrderPlanning({ element, onSelect = () => {} }) {
     const source = deliveriesFor(data) || [];
     const fallbackVehicleId = source === data?.deliveries ? data?.vehicle?.id : null;
     const vehicleDeliveries = source.filter(delivery => vehicleIdFor(delivery, fallbackVehicleId) === selectedVehicleId);
-    visibleDeliveries = vehicleDeliveries.slice(0, ORDER_POSITIONS.length);
+    visibleDeliveries = vehicleDeliveries;
     if (!visibleDeliveries.some(delivery => delivery.id === selectedDeliveryId)) selectedDeliveryId = null;
-    const nextSignature = visibleDeliveries.map(delivery => `${delivery.id}:${delivery.name}:${delivery.boxes}`).join('|');
-    if (nextSignature !== sceneSignature) {
-      sceneSignature = nextSignature;
-      const orders = visibleDeliveries.map((delivery, index) => {
-        const [top, left] = ORDER_POSITIONS[index];
-        return `<button type="button" class="order-map-marker" data-order-marker="${escapeHtml(delivery.id)}" style="--marker-top:${top}%;--marker-left:${left}%" aria-label="${escapeHtml(delivery.name || delivery.id)} ${boxesText(delivery.boxes)} 선택"></button>`;
-      }).join('');
-      layer.innerHTML = `<div class="order-marker-layer">${orders}</div>`;
+    const model = orderMapModel(visibleDeliveries, routeData);
+    const nextMarkerSignature = `${model.mapped.map(({ delivery, coordinates }) => `${delivery.id}:${delivery.name}:${delivery.boxes}:${coordinates}`).join('|')}|vehicle:${model.vehicle}`;
+    const nextGeometrySignature = `${selectedVehicleId}|${model.mapped.map(({ delivery, coordinates }) => `${delivery.id}:${coordinates}`).join('|')}|vehicle:${model.vehicle}`;
+    if (map && nextMarkerSignature !== markerSignature) {
+      markerSignature = nextMarkerSignature;
+      mapMarkers.splice(0).forEach(marker => marker.remove());
+      mapMarkers = model.mapped.map(({ delivery, coordinates }) => markerFactory(map, delivery, coordinates));
+      if (model.vehicle) mapMarkers.push(vehicleMarkerFactory(map, model.vehicle));
     }
-    layer.querySelectorAll('[data-order-marker]').forEach(marker => marker.setAttribute('aria-pressed', String(marker.dataset.orderMarker === selectedDeliveryId)));
-    count.textContent = visibleDeliveries.length === vehicleDeliveries.length ? `${vehicleDeliveries.length}건` : `지도 ${visibleDeliveries.length} / ${vehicleDeliveries.length}건`;
+    mapMarkers.forEach(marker => marker.element.setAttribute('aria-pressed', String(marker.element.dataset.orderMarker === selectedDeliveryId)));
+    if (map && nextGeometrySignature !== geometrySignature) {
+      geometrySignature = nextGeometrySignature;
+      const coordinates = [...model.mapped.map(item => item.coordinates), model.vehicle].filter(Boolean);
+      if (coordinates.length === 1) map.jumpTo({ center: coordinates[0], zoom: 15 });
+      if (coordinates.length > 1) {
+        const lngs = coordinates.map(point => point[0]);
+        const lats = coordinates.map(point => point[1]);
+        map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: { top: 72, bottom: 92, left: 48, right: 48 }, maxZoom: 15, duration: 0 });
+      }
+    }
+    count.textContent = model.unknownCount ? `지도 ${model.mapped.length}건 / 위치 미등록 ${model.unknownCount}건` : `${model.mapped.length}건`;
+    mapStatus.hidden = Boolean(model.mapped.length || model.vehicle);
+    if (!model.mapped.length && !model.vehicle) mapStatus.textContent = mapFailure || (routeData ? '배송지 위치 정보가 등록되지 않았습니다.' : '배송지 위치를 불러오고 있습니다.');
     updateSelection();
     syncControls();
+  }
+
+  function ensureMap() {
+    if (!map) {
+      try {
+        map = mapFactory(layer);
+        wheelZoom = installModifierWheelZoom(map);
+        mapFailure = '';
+        resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(() => map?.resize()) : null;
+        resizeObserver?.observe(canvas);
+      } catch {
+        mapFailure = '지도를 불러오지 못했습니다. 새로고침해 주세요.';
+        mapStatus.hidden = false;
+        mapStatus.textContent = mapFailure;
+        return;
+      }
+    }
+    map.resize?.();
+    if (routeData || routePromise) return;
+    routePromise = Promise.resolve(loadRouteData()).then(value => {
+      if (destroyed) return;
+      routeData = value;
+      routePromise = null;
+      markerSignature = '';
+      geometrySignature = '';
+      renderScene();
+    }).catch(() => {
+      if (destroyed) return;
+      routePromise = null;
+      mapStatus.hidden = false;
+      mapStatus.textContent = '배송지 위치를 불러오지 못했습니다. 다시 시도해 주세요.';
+    });
   }
 
   function updateVehicles() {
@@ -137,7 +260,7 @@ export function mountOrderPlanning({ element, onSelect = () => {} }) {
   listen(number, 'change', event => { editingPercent = false; setPercent(event.target.value); });
   listen(number, 'blur', event => { editingPercent = false; setPercent(event.target.value); });
   listen(reset, 'click', () => setPercent(100));
-  listen(vehicleSelect, 'change', event => { selectedVehicleId = event.target.value; selectedDeliveryId = null; sceneSignature = ''; renderScene(); });
+  listen(vehicleSelect, 'change', event => { selectedVehicleId = event.target.value; selectedDeliveryId = null; renderScene(); });
   listen(canvas, 'click', event => { const marker = event.target.closest('[data-order-marker]'); if (!marker) return; selectedDeliveryId = marker.dataset.orderMarker; renderScene(); onSelect(selectedDeliveryId); });
   listen(trigger, 'click', () => dialog.showModal());
   listen(dialog, 'close', () => trigger.focus());
@@ -158,8 +281,15 @@ export function mountOrderPlanning({ element, onSelect = () => {} }) {
       lastExternalVehicleId = externalVehicleId;
       if ((externalSelectionChanged || externalAssignmentChanged) && selected) { selectedVehicleId = externalVehicleId || selectedVehicleId; selectedDeliveryId = selected.id; }
       if (externalSelectionChanged && !externalSelectedId) selectedDeliveryId = null;
-      updateVehicles(); renderScene();
+      updateVehicles(); ensureMap(); renderScene();
     },
-    destroy() { listeners.splice(0).forEach(remove => remove()); },
+    destroy() {
+      destroyed = true;
+      listeners.splice(0).forEach(remove => remove());
+      resizeObserver?.disconnect();
+      mapMarkers.splice(0).forEach(marker => marker.remove());
+      wheelZoom?.remove();
+      map?.remove?.();
+    },
   };
 }

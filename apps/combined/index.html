@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <meta name="referrer" content="no-referrer">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>미트박스 TMS</title>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./brand.css">
@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./scenario-tools.css">
   <link rel="stylesheet" href="./demo-shell.css">
   <link rel="stylesheet" href="./operations.css">
+  <link rel="stylesheet" href="./assets/vendor/maplibre/maplibre-gl.css">
   <link rel="stylesheet" href="./order-planning.css">
   <script type="module" src="./app.mjs"></script>
 </head>
@@ -41,6 +42,10 @@
               </div>
               <div class="table-scroll fleet-table-scroll" role="region" aria-label="배송 목록 표" tabindex="0"><table class="delivery-table fleet-delivery-table"><caption class="sr-only">차량별 전체 배송 목록</caption><thead><tr><th scope="col">차량번호</th><th scope="col">배송원</th><th scope="col">순서</th><th scope="col">배송지</th><th scope="col">주소</th><th scope="col">박스</th><th scope="col">상태</th><th scope="col">운영 ETA</th><th scope="col">고객 안내</th><th scope="col">도착</th><th scope="col">완료</th></tr></thead><tbody id="delivery-rows"></tbody></table></div>
               <div class="empty-state" id="delivery-empty" hidden><strong>조회 결과가 없습니다.</strong><p>검색어나 상태 조건을 바꿔 주세요.</p></div>
+              <nav class="delivery-pagination" aria-label="배송 목록 페이지">
+                <p id="delivery-range" class="muted" aria-live="polite"></p>
+                <div><button type="button" class="button subtle" id="delivery-previous">이전</button><span id="delivery-page" aria-live="polite"></span><button type="button" class="button subtle" id="delivery-next">다음</button></div>
+              </nav>
             </section>
             <aside class="panel delivery-selection" id="delivery-selection" aria-label="선택 배송 요약"></aside>
           </div>
@@ -89,5 +94,6 @@
       <div class="notice-dialog-footer"><span id="customer-notice-count">0 / 300</span><div><button type="submit" class="button subtle" value="cancel" formnovalidate>취소</button><button type="button" class="button primary" id="send-customer-notice">팝업 보내기</button></div></div>
     </form>
   </dialog>
+  <script src="./assets/vendor/maplibre/maplibre-gl-csp.js"></script>
 </body>
 </html>

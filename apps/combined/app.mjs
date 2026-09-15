@@ -6,6 +6,7 @@ import { mountOrderPlanning } from './order-planning.mjs';
 import { mountRouteEditor } from './route-editor.mjs';
 import { referenceIcon } from './reference-icons.mjs';
 import { filterFleetDeliveries, normalizeVehicleFilter, operatorRoute, resolveDeliverySelection } from './operations-model.mjs';
+import { paginate, PAGE_SIZE } from './pagination-model.mjs';
 
 const pages = {
   orders: { title: '주문 관리', description: '접수 주문과 차량별 배송량' },
@@ -22,6 +23,7 @@ const state = {
   query: typeof saved.query === 'string' ? saved.query : '',
   status: ['all', ...Object.keys(statusLabels)].includes(saved.status) ? saved.status : 'all',
   vehicleId: typeof saved.vehicleId === 'string' ? saved.vehicleId : 'all',
+  deliveryPage: 1,
   tab: 'notifications',
   connected: false,
   pendingNotice: null,
@@ -106,17 +108,23 @@ function etaDisplay(delivery) {
 function render() {
   if (!state.data) return;
   state.vehicleId = normalizeVehicleFilter(state.vehicleId, state.data.fleetVehicles);
-  const visible = visibleDeliveries();
   const selected = selectedDelivery();
+  // Reveal the replacement when the selected delivery disappears on a live update.
+  if (selected && state.selectedId && selected.id !== state.selectedId) {
+    const index = visibleDeliveries().findIndex(delivery => delivery.id === selected.id);
+    state.deliveryPage = index < 0 ? 1 : Math.floor(index / PAGE_SIZE) + 1;
+  }
   if (selected) state.selectedId = selected.id;
   renderPage();
   renderSummary();
   renderReview(selected);
-  renderDeliveries(visible, selected);
-  orderPlanning.update(state.data, state.selectedId);
-  renderControl(selected);
-  routeEditor.update(routeEditorState(selected), selected?.id, state.connected);
-  renderTabs();
+  if (state.page === 'deliveries') renderDeliveries(visibleDeliveries(), selected);
+  if (state.page === 'orders') orderPlanning.update(state.data, state.selectedId);
+  if (state.page === 'control') {
+    renderControl(selected);
+    routeEditor.update(routeEditorState(selected), selected?.id, state.connected);
+    renderTabs();
+  }
   scenarioTools.update(state.data, state.connected);
 }
 
@@ -154,13 +162,19 @@ function renderReview(selected) {
 
 function renderDeliveries(visible, selected) {
   const total = (state.data.fleetDeliveries || state.data.deliveries).length;
+  const paged = paginate(visible, state.deliveryPage);
+  state.deliveryPage = paged.page;
   const vehicleSelect = byId('delivery-vehicle');
   const options = `<option value="all">전체 차량</option>${(state.data.fleetVehicles || []).map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.plate)} ${escapeHtml(vehicle.driver)}</option>`).join('')}`;
   if (vehicleSelect.innerHTML !== options) vehicleSelect.innerHTML = options;
   vehicleSelect.value = state.vehicleId;
   byId('delivery-count').textContent = `${visible.length} / ${total}건`;
   byId('delivery-empty').hidden = visible.length > 0;
-  renderInteractiveContent(byId('delivery-rows'), visible.map(delivery => `
+  byId('delivery-range').textContent = visible.length ? `${paged.start}–${paged.end} / ${paged.total}건` : '0건';
+  byId('delivery-page').textContent = `${paged.page} / ${paged.pageCount}`;
+  byId('delivery-previous').disabled = paged.page === 1;
+  byId('delivery-next').disabled = paged.page === paged.pageCount;
+  renderInteractiveContent(byId('delivery-rows'), paged.items.map(delivery => `
     <tr class="${delivery.id === state.selectedId ? 'selected' : ''}" data-delivery-row="${escapeHtml(delivery.id)}">
       <td title="${escapeHtml(delivery.vehicle?.plate || '차량 미확인')}">${escapeHtml(delivery.vehicle?.plate || '미확인')}</td>
       <td title="${escapeHtml(delivery.vehicle?.driver || '배송원 미확인')}">${escapeHtml(delivery.vehicle?.driver || '미확인')}</td>
@@ -174,9 +188,12 @@ function renderDeliveries(visible, selected) {
       <td>${escapeHtml(delivery.arrivedAt || '미확인')}</td>
       <td>${escapeHtml(delivery.completedAt || '미확인')}</td>
     </tr>`).join(''));
+  const selectionNote = !selected || paged.items.some(item => item.id === selected.id) ? ''
+    : visible.some(item => item.id === selected.id) ? '선택한 배송은 다른 페이지에 있습니다.'
+      : '선택한 배송은 현재 조회 조건에 포함되지 않습니다.';
   renderInteractiveContent(byId('delivery-selection'), selected ? `
     <div class="panel-heading"><h2>선택 배송</h2>${badge(statusLabels[selected.status] || '미확인', selected.statusTone)}</div>
-    <div class="selection-body">${visible.some(item => item.id === selected.id) ? '' : '<p class="selection-filter-note">선택한 배송은 현재 조회 조건에 포함되지 않습니다.</p>'}<p class="eyebrow">${selected.sequence}번째 배송</p><h3>${escapeHtml(selected.name)}</h3><p class="muted">${escapeHtml(selected.address)}</p><strong class="selection-eta">${escapeHtml(selected.preciseTimeText || calculatedEtaText(selected))}</strong><p class="muted">고객 안내 ${escapeHtml(selected.customerWindowText || publishedEtaText(selected))}</p><dl class="key-values selection-key-values">${keyValue('차량', selected.vehicle?.plate)}${keyValue('배송원', selected.vehicle?.driver)}${keyValue('권역', selected.vehicle?.region)}${keyValue('박스', selected.boxes === null ? '미확인' : `${selected.boxes}박스`)}</dl><section class="delivery-tip"><p class="eyebrow">배송팁</p>${selected.tip ? `<p>${escapeHtml(selected.tip.body)}</p><small>${escapeHtml(selected.tip.author)} (${escapeHtml(selected.tip.updatedAt)})</small>` : '<p class="muted">배송원이 작성한 배송팁이 없습니다.</p>'}</section><div class="selection-actions"><a class="button primary" href="#/control">배송 관제</a><a class="button" href="#/control/manage">배송 관리</a></div></div>`
+    <div class="selection-body">${selectionNote ? `<p class="selection-filter-note">${selectionNote}</p>` : ''}<p class="eyebrow">${selected.sequence}번째 배송</p><h3>${escapeHtml(selected.name)}</h3><p class="muted">${escapeHtml(selected.address)}</p><strong class="selection-eta">${escapeHtml(selected.preciseTimeText || calculatedEtaText(selected))}</strong><p class="muted">고객 안내 ${escapeHtml(selected.customerWindowText || publishedEtaText(selected))}</p><dl class="key-values selection-key-values">${keyValue('차량', selected.vehicle?.plate)}${keyValue('배송원', selected.vehicle?.driver)}${keyValue('권역', selected.vehicle?.region)}${keyValue('박스', selected.boxes === null ? '미확인' : `${selected.boxes}박스`)}</dl><section class="delivery-tip"><p class="eyebrow">배송팁</p>${selected.tip ? `<p>${escapeHtml(selected.tip.body)}</p><small>${escapeHtml(selected.tip.author)} (${escapeHtml(selected.tip.updatedAt)})</small>` : '<p class="muted">배송원이 작성한 배송팁이 없습니다.</p>'}</section><div class="selection-actions"><a class="button primary" href="#/control">배송 관제</a><a class="button" href="#/control/manage">배송 관리</a></div></div>`
     : '<div class="empty-state"><h2>선택할 배송이 없습니다.</h2><p>배송 데이터를 확인해 주세요.</p></div>');
 }
 
@@ -277,18 +294,21 @@ document.addEventListener('click', event => {
 });
 byId('delivery-search').value = state.query;
 byId('delivery-status').value = state.status;
-byId('delivery-search').addEventListener('input', event => { state.query = event.target.value; render(); });
-byId('delivery-vehicle').addEventListener('change', event => { state.vehicleId = event.target.value; render(); });
-byId('delivery-status').addEventListener('change', event => { state.status = event.target.value; render(); });
+byId('delivery-search').addEventListener('input', event => { state.query = event.target.value; state.deliveryPage = 1; render(); });
+byId('delivery-vehicle').addEventListener('change', event => { state.vehicleId = event.target.value; state.deliveryPage = 1; render(); });
+byId('delivery-status').addEventListener('change', event => { state.status = event.target.value; state.deliveryPage = 1; render(); });
 byId('clear-filters').addEventListener('click', () => {
   state.query = '';
   state.status = 'all';
   state.vehicleId = 'all';
+  state.deliveryPage = 1;
   byId('delivery-search').value = '';
   byId('delivery-status').value = 'all';
   byId('delivery-vehicle').value = 'all';
   render();
 });
+byId('delivery-previous').addEventListener('click', () => { state.deliveryPage -= 1; render(); });
+byId('delivery-next').addEventListener('click', () => { state.deliveryPage += 1; render(); });
 function showMonitorDelivery(id) {
   if (!(state.data?.fleetDeliveries || state.data?.deliveries || []).some(delivery => delivery.id === id)) return;
   state.selectedId = id;
