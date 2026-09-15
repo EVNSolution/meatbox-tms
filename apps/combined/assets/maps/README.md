@@ -8,7 +8,7 @@ The `dsv-korea-v1.json` style is copied unchanged from `04_CLEVER_Route/clever-d
 
 The sibling `vendor/maplibre` directory contains MapLibre GL JS 5.24.0 CSP browser and worker bundles, CSS and its license, copied from the same project's installed package. The worker is served from this authenticated origin. No CDN script or npm dependency is added.
 
-The DSV application map setup is in `clever-dsv-web/src/components/MapCanvas.tsx`; it uses MapLibre's default wheel interaction. Meatbox adds a Control-or-Command wheel gate in `map-wheel-zoom.mjs` while reusing the copied MapLibre CSS classes and animation for the blocking instruction screen. Touch interaction is unchanged.
+The DSV application map setup is in `clever-dsv-web/src/components/MapCanvas.tsx`; it uses MapLibre's default wheel interaction. Meatbox adds a Control-or-Command wheel gate to dispatch and control maps in `map-wheel-zoom.mjs`, reusing the copied MapLibre CSS classes and animation for the instruction screen. Customer and driver phone maps use the default wheel interaction without that screen. Driver route editing still locks zoom. Touch interaction is unchanged.
 
 Style SHA-256: `0acdfb023997c18119ea41cdb3e86affc7e7cdbf5d0b2f33c4f00daa575b9449`
 

@@ -1,15 +1,13 @@
 import { driverMapModel } from './driver-map-model.mjs';
-import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 
-export function syncDriverMapInteractions(map, wheelZoom, editing) {
+export function syncDriverMapInteractions(map, editing) {
   if (!map) return;
   for (const control of [map.scrollZoom, map.boxZoom, map.doubleClickZoom, map.touchZoomRotate]) editing ? control.disable() : control.enable();
-  wheelZoom?.setEnabled(!editing);
   map.touchZoomRotate.disableRotation();
 }
 
 export function mountDriverMap(element, onSelect) {
-  let map, routeData, current, rendered = '', viewSignature = '', markers = [], failed = false, wheelZoom;
+  let map, routeData, current, rendered = '', viewSignature = '', markers = [], failed = false;
   const empty = document.createElement('p');
   empty.className = 'dv-map-empty';
   empty.textContent = '지도를 불러오고 있습니다.';
@@ -80,8 +78,7 @@ export function mountDriverMap(element, onSelect) {
       routeData = await response.json();
       maplibregl.setWorkerUrl(new URL('./assets/vendor/maplibre/maplibre-gl-csp-worker.js', import.meta.url).href);
       map = new maplibregl.Map({ container: canvas, style: new URL('./assets/maps/dsv-korea-v1.json', import.meta.url).href, center: [127.1, 37.5], zoom: 11, attributionControl: false, dragRotate: false, touchPitch: false, maxPitch: 0 });
-      wheelZoom = installModifierWheelZoom(map);
-      syncDriverMapInteractions(map, wheelZoom, current?.editing);
+      syncDriverMapInteractions(map, current?.editing);
       map.touchZoomRotate.disableRotation();
       map.addControl(new maplibregl.AttributionControl({ compact: true }));
       const attribution = canvas.querySelector('.maplibregl-ctrl-attrib');
@@ -105,7 +102,7 @@ export function mountDriverMap(element, onSelect) {
     update(deliveries, dwelling, editing = false) {
       current = { deliveries, dwelling, editing };
       if (!map && !routeData && !failed) { routeData = {}; void load(); }
-      syncDriverMapInteractions(map, wheelZoom, editing);
+      syncDriverMapInteractions(map, editing);
       render();
     },
     resize() { render(true); },
