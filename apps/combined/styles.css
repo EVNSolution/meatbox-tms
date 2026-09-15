@@ -386,7 +386,8 @@ ol {
 .panel-heading h2,
 .panel-heading h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 600;
   line-height: 1.35;
   letter-spacing: -0.02em;
 }
@@ -563,8 +564,7 @@ ol {
 }
 
 .panel-heading {
-  min-height: 44px;
-  padding: 10px 14px;
+  padding: 20px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -574,47 +574,39 @@ ol {
 }
 
 .eta-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(180px, 0.65fr);
-  border-bottom: 1px solid var(--border);
+  display: block;
 }
 
 .eta-primary,
 .eta-secondary {
   min-width: 0;
-  padding: 16px;
 }
 
 .eta-primary {
-  background: #f8fafc;
+  padding: 22px 20px;
+  background: #f9fafb;
 }
 
 .eta-secondary {
-  padding: 0;
-  border-left: 1px solid var(--border);
+  padding: 8px 20px;
+  border-top: 1px solid var(--border);
 }
 
 .eta-secondary .key-values {
   grid-template-columns: minmax(0, 1fr);
-  padding: 8px 16px;
+  padding: 0;
 }
 
 .eta-secondary .key-values > div {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 12px;
-  align-items: baseline;
-  padding: 8px 0;
-  border-right: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  padding: 12px 0;
+  border: 0;
 }
 
-.eta-secondary .key-values > div:first-child {
-  padding-top: 0;
-}
-
-.eta-secondary .key-values > div:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
+.eta-secondary .key-values > div + div {
+  border-top: 1px solid #f2f4f7;
 }
 
 .eyebrow {
@@ -762,7 +754,7 @@ ol {
 }
 
 .tab-panel {
-  padding: 14px;
+  padding: 20px;
 }
 
 .tab-panel[hidden] {
@@ -1172,16 +1164,16 @@ ol {
 }
 
 .button {
-  min-height: 40px;
+  min-height: 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 6px 11px;
+  padding: 10px 15px;
   color: var(--action);
   background: #ffffff;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.2;
@@ -1270,12 +1262,6 @@ button:disabled {
   padding: 9px 12px 10px;
   border-top: 1px solid var(--border);
   background: #f8f9fb;
-}
-
-.page-footer {
-  max-width: 1600px;
-  margin: -4px auto 0;
-  padding: 0 20px 22px;
 }
 
 .sr-only {
@@ -1589,11 +1575,6 @@ button:disabled {
   padding: 16px 20px 24px;
 }
 
-.page-footer {
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
 .deliveries-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -1610,7 +1591,7 @@ button:disabled {
 .delivery-list-panel > .panel-heading,
 .delivery-selection > .panel-heading,
 .customer-context-panel > .panel-heading {
-  padding: 12px 14px;
+  padding: 20px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1619,7 +1600,7 @@ button:disabled {
   flex-wrap: wrap;
   align-items: end;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1726,7 +1707,7 @@ button:disabled {
 
 .selection-body,
 .context-body {
-  padding: 16px;
+  padding: 20px;
 }
 
 .selection-body h3 {
@@ -1771,7 +1752,10 @@ button:disabled {
 }
 
 .eta-secondary .key-values dd {
-  text-align: right;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
 }
 
 a.button {

@@ -8,7 +8,7 @@ export function connectSimulation({ onState, onStatus, onError }) {
 
   async function connect() {
     if (stopped) return;
-    onStatus(false, '시연에 연결하고 있습니다.');
+    onStatus(false, '배송 정보를 불러오고 있습니다.');
     try {
       const response = await fetch('/api/session', { headers: { accept: 'application/json' } });
       if (stopped) return;
@@ -25,8 +25,8 @@ export function connectSimulation({ onState, onStatus, onError }) {
           boot = message.boot;
         }
         if (message.type !== 'state') return;
-        try { onState(message.state); onStatus(true, ''); }
-        catch { onStatus(false, '받은 시연 상태를 표시할 수 없습니다.'); }
+        try { onState(message.state, { boot }); onStatus(true, ''); }
+        catch { onStatus(false, '받은 배송 정보를 표시할 수 없습니다.'); }
       });
       socket.addEventListener('close', event => {
         if (stopped) return;
@@ -44,7 +44,7 @@ export function connectSimulation({ onState, onStatus, onError }) {
   connect();
   return {
     send(type, extra = {}) {
-      if (socket?.readyState !== WebSocket.OPEN) { onError('시연에 다시 연결된 뒤 진행해 주세요.'); return; }
+      if (socket?.readyState !== WebSocket.OPEN) { onError('연결이 복구된 뒤 진행해 주세요.'); return; }
       socket.send(JSON.stringify({ type, ...extra }));
     },
     close() { stopped = true; clearTimeout(timer); socket?.close(); },

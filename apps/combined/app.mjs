@@ -5,12 +5,12 @@ import { deliveryLinks } from './delivery-review.mjs';
 import { mountOrderPlanning } from './order-planning.mjs';
 import { mountRouteEditor } from './route-editor.mjs';
 import { referenceIcon } from './reference-icons.mjs';
-import { filterFleetDeliveries, operatorRoute, resolveDeliverySelection } from './operations-model.mjs';
+import { filterFleetDeliveries, normalizeVehicleFilter, operatorRoute, resolveDeliverySelection } from './operations-model.mjs';
 
 const pages = {
-  orders: { title: '주문 관리', description: '접수 주문 · 차량별 배송량' },
-  deliveries: { title: '배송 목록', description: '130대 차량 · 전체 배송지 현황' },
-  control: { title: '배송 관제', description: '선택 차량 배송 진행 · 고객 알림 · 배송 관리' },
+  orders: { title: '주문 관리', description: '접수 주문과 차량별 배송량' },
+  deliveries: { title: '배송 목록', description: '전체 차량의 배송지 현황' },
+  control: { title: '배송 관제', description: '선택 차량의 배송 진행과 고객 알림, 배송 관리' },
 };
 const statusLabels = { pending: '대기', current: '배송 중', done: '완료', skipped: '보류' };
 let saved = {};
@@ -105,6 +105,7 @@ function etaDisplay(delivery) {
 
 function render() {
   if (!state.data) return;
+  state.vehicleId = normalizeVehicleFilter(state.vehicleId, state.data.fleetVehicles);
   const visible = visibleDeliveries();
   const selected = selectedDelivery();
   if (selected) state.selectedId = selected.id;
@@ -132,7 +133,6 @@ function renderPage() {
     sessionStorage.setItem('meatbox.operator.filters', JSON.stringify({ query: state.query, status: state.status, vehicleId: state.vehicleId }));
   } catch {}
   byId('page-description').textContent = page.description;
-  document.title = `${page.title} · 미트박스 TMS 시연`;
 }
 
 function renderSummary() {
@@ -155,15 +155,15 @@ function renderReview(selected) {
 function renderDeliveries(visible, selected) {
   const total = (state.data.fleetDeliveries || state.data.deliveries).length;
   const vehicleSelect = byId('delivery-vehicle');
-  const options = `<option value="all">전체 차량</option>${(state.data.fleetVehicles || []).map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.plate)} · ${escapeHtml(vehicle.driver)}</option>`).join('')}`;
+  const options = `<option value="all">전체 차량</option>${(state.data.fleetVehicles || []).map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.plate)} ${escapeHtml(vehicle.driver)}</option>`).join('')}`;
   if (vehicleSelect.innerHTML !== options) vehicleSelect.innerHTML = options;
-  if (state.vehicleId !== 'all' && !state.data.fleetVehicles?.some(vehicle => vehicle.id === state.vehicleId)) state.vehicleId = 'all';
   vehicleSelect.value = state.vehicleId;
   byId('delivery-count').textContent = `${visible.length} / ${total}건`;
   byId('delivery-empty').hidden = visible.length > 0;
   renderInteractiveContent(byId('delivery-rows'), visible.map(delivery => `
-    <tr class="${delivery.id === state.selectedId ? 'selected' : ''}">
-      <td title="${escapeHtml(`${delivery.vehicle?.plate || '차량 미확인'} · ${delivery.vehicle?.driver || '배송원 미확인'}`)}">${escapeHtml(delivery.vehicle?.plate || '미확인')} · ${escapeHtml(delivery.vehicle?.driver || '미확인')}</td>
+    <tr class="${delivery.id === state.selectedId ? 'selected' : ''}" data-delivery-row="${escapeHtml(delivery.id)}">
+      <td title="${escapeHtml(delivery.vehicle?.plate || '차량 미확인')}">${escapeHtml(delivery.vehicle?.plate || '미확인')}</td>
+      <td title="${escapeHtml(delivery.vehicle?.driver || '배송원 미확인')}">${escapeHtml(delivery.vehicle?.driver || '미확인')}</td>
       <td>${escapeHtml(delivery.sequence)}</td>
       <td><button type="button" class="delivery-select" data-select="${escapeHtml(delivery.id)}" aria-pressed="${delivery.id === state.selectedId}" title="${escapeHtml(delivery.name)}">${escapeHtml(delivery.name)}</button></td>
       <td class="fleet-address" title="${escapeHtml(delivery.address)}">${escapeHtml(delivery.address)}</td>
@@ -176,7 +176,7 @@ function renderDeliveries(visible, selected) {
     </tr>`).join(''));
   renderInteractiveContent(byId('delivery-selection'), selected ? `
     <div class="panel-heading"><h2>선택 배송</h2>${badge(statusLabels[selected.status] || '미확인', selected.statusTone)}</div>
-    <div class="selection-body">${visible.some(item => item.id === selected.id) ? '' : '<p class="selection-filter-note">선택한 배송은 현재 조회 조건에 포함되지 않습니다.</p>'}<p class="eyebrow">${selected.sequence}번째 배송</p><h3>${escapeHtml(selected.name)}</h3><p class="muted">${escapeHtml(selected.address)}</p><strong class="selection-eta">${escapeHtml(selected.preciseTimeText || calculatedEtaText(selected))}</strong><p class="muted">고객 안내 ${escapeHtml(selected.customerWindowText || publishedEtaText(selected))}</p><dl class="key-values selection-key-values">${keyValue('차량', selected.vehicle?.plate)}${keyValue('배송원', selected.vehicle?.driver)}${keyValue('권역', selected.vehicle?.region)}${keyValue('박스', selected.boxes === null ? '미확인' : `${selected.boxes}박스`)}</dl><section class="delivery-tip"><p class="eyebrow">배송팁</p>${selected.tip ? `<p>${escapeHtml(selected.tip.body)}</p><small>${escapeHtml(selected.tip.author)} · ${escapeHtml(selected.tip.updatedAt)}</small>` : '<p class="muted">배송원이 작성한 배송팁이 없습니다.</p>'}</section><div class="selection-actions"><a class="button primary" href="#/control">배송 관제</a><a class="button" href="#/control/manage">배송 관리</a></div></div>`
+    <div class="selection-body">${visible.some(item => item.id === selected.id) ? '' : '<p class="selection-filter-note">선택한 배송은 현재 조회 조건에 포함되지 않습니다.</p>'}<p class="eyebrow">${selected.sequence}번째 배송</p><h3>${escapeHtml(selected.name)}</h3><p class="muted">${escapeHtml(selected.address)}</p><strong class="selection-eta">${escapeHtml(selected.preciseTimeText || calculatedEtaText(selected))}</strong><p class="muted">고객 안내 ${escapeHtml(selected.customerWindowText || publishedEtaText(selected))}</p><dl class="key-values selection-key-values">${keyValue('차량', selected.vehicle?.plate)}${keyValue('배송원', selected.vehicle?.driver)}${keyValue('권역', selected.vehicle?.region)}${keyValue('박스', selected.boxes === null ? '미확인' : `${selected.boxes}박스`)}</dl><section class="delivery-tip"><p class="eyebrow">배송팁</p>${selected.tip ? `<p>${escapeHtml(selected.tip.body)}</p><small>${escapeHtml(selected.tip.author)} (${escapeHtml(selected.tip.updatedAt)})</small>` : '<p class="muted">배송원이 작성한 배송팁이 없습니다.</p>'}</section><div class="selection-actions"><a class="button primary" href="#/control">배송 관제</a><a class="button" href="#/control/manage">배송 관리</a></div></div>`
     : '<div class="empty-state"><h2>선택할 배송이 없습니다.</h2><p>배송 데이터를 확인해 주세요.</p></div>');
 }
 
@@ -196,13 +196,12 @@ function renderControl(selected) {
   byId('monitor-count').textContent = `${visible.length}곳`;
   byId('monitor-detail').hidden = !selected;
   byId('monitor-current').hidden = !current;
-  byId('monitor-current-detail').hidden = !current || current.id === selected?.id;
   const list = byId('monitor-deliveries');
   const rows = visible.map(delivery => {
     const isSelected = delivery.id === selected?.id;
     const timeLabel = delivery.status === 'done' ? '완료 시각' : delivery.ordered ? '도착 예정' : '계산 ETA';
     const time = delivery.ordered ? etaDisplay(delivery) : calculatedEtaText(delivery);
-    return `<li><button type="button" class="monitor-stop" data-monitor-select="${escapeHtml(delivery.id)}" aria-pressed="${isSelected}"><span class="monitor-stop-number">${delivery.sequence}</span><span class="monitor-stop-main"><strong>${escapeHtml(delivery.name)}</strong><span class="monitor-stop-status">${badge(statusLabels[delivery.status] || '미확인', delivery.statusTone)}${isSelected ? '<span>선택</span>' : ''}</span></span><span class="monitor-stop-time"><small>${timeLabel}</small><strong>${escapeHtml(time)}</strong></span></button></li>`;
+    return `<li><button type="button" class="monitor-stop" data-monitor-select="${escapeHtml(delivery.id)}" aria-pressed="${isSelected}" title="${escapeHtml(delivery.address)}"><span class="monitor-stop-number">${delivery.sequence}</span><strong class="monitor-stop-name">${escapeHtml(delivery.name)}</strong><span class="monitor-stop-status">${badge(statusLabels[delivery.status] || '미확인', delivery.statusTone)}</span><span class="monitor-stop-time"><span class="sr-only">${timeLabel} </span><strong>${escapeHtml(time)}</strong></span></button></li>`;
   }).join('') || '<li class="empty-state">배송지가 없습니다.</li>';
   if (list.innerHTML !== rows) {
     const focusedId = document.activeElement?.dataset.monitorSelect;
@@ -210,10 +209,6 @@ function renderControl(selected) {
     if (focusedId) list.querySelector(`[data-monitor-select="${CSS.escape(focusedId)}"]`)?.focus({ preventScroll: true });
   }
   byId('eta-panel').hidden = !selected;
-  byId('monitor-selected-name').textContent = selected?.name || '';
-  byId('monitor-selected-status').innerHTML = selected ? badge(statusLabels[selected.status] || '미확인', selected.statusTone) : '';
-  byId('monitor-selected-meta').textContent = selected ? `${selected.vehicle?.plate || '차량 미확인'} · ${selected.vehicle?.driver || '배송원 미확인'} · ${selected.sequence}번째 배송${selected.vehicle?.live ? '' : ' · 배차 예시'}` : '';
-  byId('monitor-selected-address').textContent = selected?.address || '';
   if (!selected) {
     byId('eta-panel').innerHTML = '';
     byId('delivery-timeline').innerHTML = '';
@@ -223,22 +218,24 @@ function renderControl(selected) {
   }
   byId('eta-panel').innerHTML = `
     <div class="panel-heading"><h2 id="eta-heading">ETA 배송 진행</h2><span class="muted">${escapeHtml(state.data.simClock || '시각 미확인')} 기준</span></div>
-    <div class="eta-grid"><div class="eta-primary"><p class="eyebrow">운영 ETA</p><p class="eta-value">${escapeHtml(selected.preciseTimeText || calculatedEtaText(selected))}</p><p class="muted">고객 안내 ${escapeHtml(selected.customerWindowText || publishedEtaText(selected))}</p></div><div class="eta-secondary"><dl class="key-values eta-facts">${keyValue('현재 순서', `${selected.sequence}번째`)}${keyValue('상태', statusLabels[selected.status] || '미확인')}${keyValue('실제 도착', selected.arrivedAt)}${keyValue('배송 완료', selected.completedAt)}</dl></div></div>`;
+    <div class="eta-grid"><div class="eta-primary"><p class="eyebrow">운영 ETA</p><p class="eta-value">${escapeHtml(selected.preciseTimeText || calculatedEtaText(selected))}</p></div><div class="eta-secondary"><dl class="key-values eta-facts" aria-label="배송 진행">${keyValue('현재 순서', `${selected.sequence}번째`)}${keyValue('상태', statusLabels[selected.status] || '미확인')}</dl><dl class="key-values eta-facts" aria-label="실제 처리 시각">${keyValue('실제 도착', selected.arrivedAt)}${keyValue('배송 완료', selected.completedAt)}</dl></div></div>`;
   byId('delivery-timeline').innerHTML = selected.timeline.length
-    ? selected.timeline.map(item => `<li><time class="event-time">${escapeHtml(item.time || '')}</time><div class="event-copy"><span class="event-kind">${escapeHtml(({ done: '완료', current: '현재 단계', pending: '예정' })[item.state] || '미확인')}</span><h3>${escapeHtml(item.label)}</h3></div></li>`).join('')
+    ? selected.timeline.map(item => `<li><time class="event-time"${item.time ? '' : ' aria-label="시각 미확인"'}>${escapeHtml(item.time || '-')}</time><div class="event-copy"><span class="event-kind">${escapeHtml(({ done: '완료', current: '현재 단계', pending: '예정' })[item.state] || '미확인')}</span><h3>${escapeHtml(item.label)}</h3></div></li>`).join('')
     : '<li class="empty-state">배송 기록이 없습니다.</li>';
   const events = selected.vehicle?.live ? state.data.events : [];
   byId('event-list').innerHTML = events.length
-    ? events.map(event => `<li><time class="event-time">${escapeHtml(event.time || '')}</time><div class="event-copy"><span class="event-kind">${escapeHtml(({ system: '시나리오', notify: '고객 알림', eta: 'ETA 변경', stage: '배송 단계', info: '진행 정보', incident: '사건' })[event.type] || '진행 정보')}</span><p>${escapeHtml(event.message)}</p></div></li>`).join('')
+    ? events.map(event => `<li><time class="event-time">${escapeHtml(event.time || '-')}</time><div class="event-copy"><span class="event-kind">${escapeHtml(({ notify: '고객 알림', eta: 'ETA 변경', stage: '처리 이력', info: '진행 정보', incident: '사건', driver: '배송 관리' })[event.type] || '진행 정보')}</span><p>${escapeHtml(event.message)}</p></div></li>`).join('')
     : '<li class="empty-state">사건 기록이 없습니다.</li>';
   byId('open-notice-dialog').disabled = !state.connected || !!state.pendingNotice;
-  byId('open-notice-dialog').title = state.connected ? '' : '시연 연결이 복구된 뒤 작성할 수 있습니다.';
+  byId('open-notice-dialog').title = state.connected ? '' : '연결이 복구된 뒤 작성할 수 있습니다.';
   const status = byId('notice-send-status');
   status.hidden = !state.noticeMessage && !state.pendingNotice;
   status.dataset.error = String(state.noticeError);
   status.textContent = state.pendingNotice ? '고객 화면에 안내를 전달하고 있습니다.' : state.noticeMessage;
-  byId('notification-list').innerHTML = selected.notices?.length
-    ? selected.notices.map(notice => `<section class="notification-item"><div class="notification-labels"><time>${escapeHtml(notice.time || '시각 미확인')}</time><span>${escapeHtml(notice.channel || '고객 팝업')} · ${escapeHtml(notice.status || '발송')}</span></div><h3>${escapeHtml(notice.title || '고객 안내')}</h3><p class="notification-copy">${escapeHtml(notice.body)}</p><small>대상 ${escapeHtml(selected.name)}${notice.author ? ` · 작성 ${escapeHtml(notice.author)}` : ''}</small></section>`).join('')
+  const notifications = byId('notification-list');
+  const expanded = new Set([...notifications.querySelectorAll('details[open]')].map(item => item.dataset.noticeId));
+  notifications.innerHTML = selected.notices?.length
+    ? [...selected.notices].reverse().map(notice => `<details class="notification-item" data-notice-id="${escapeHtml(notice.id)}"${expanded.has(String(notice.id)) ? ' open' : ''}><summary>${referenceIcon('expand')}<span class="notification-summary"><time class="event-time">${escapeHtml(notice.time || '-')}</time><strong>${escapeHtml(notice.title || '고객 안내')}</strong><span class="notification-channel">${escapeHtml(notice.channel || '고객 팝업')} 발송</span></span></summary><div class="notification-detail"><p class="notification-copy">${escapeHtml(notice.body)}</p><small>대상 ${escapeHtml(selected.name)}${notice.author ? ` (작성 ${escapeHtml(notice.author)})` : ''}</small></div></details>`).join('')
     : '<div class="empty-state compact"><strong>고객 알림이 없습니다.</strong></div>';
 }
 
@@ -269,8 +266,11 @@ document.addEventListener('click', event => {
   const monitorSelection = event.target.closest('[data-monitor-select]');
   if (monitorSelection) showMonitorDelivery(monitorSelection.dataset.monitorSelect);
   const selection = event.target.closest('[data-select]');
-  if (selection) {
-    state.selectedId = selection.dataset.select;
+  const row = event.target.closest('[data-delivery-row]');
+  const independentAction = event.target.closest('button, a, input, select, textarea, [role="button"]');
+  const selectedId = selection?.dataset.select || (!independentAction && row?.dataset.deliveryRow);
+  if (selectedId) {
+    state.selectedId = selectedId;
     render();
   }
 
@@ -293,15 +293,9 @@ function showMonitorDelivery(id) {
   if (!(state.data?.fleetDeliveries || state.data?.deliveries || []).some(delivery => delivery.id === id)) return;
   state.selectedId = id;
   render();
-  byId('selected-heading').focus({ preventScroll: true });
-  byId('selected-heading').scrollIntoView({ block: 'nearest' });
+  byId('eta-panel').focus({ preventScroll: true });
+  byId('eta-panel').scrollIntoView({ block: 'nearest' });
 }
-byId('monitor-back').addEventListener('click', () => {
-  state.controlTab = 'monitor';
-  history.replaceState(null, '', '#/control');
-  renderTabs();
-  byId('monitor-deliveries').querySelector(`[data-monitor-select="${CSS.escape(state.selectedId || '')}"]`)?.focus();
-});
 document.querySelectorAll('[data-monitor-current]').forEach(button => button.addEventListener('click', () => {
   showMonitorDelivery(selectedVehicleRoute(selectedDelivery()).find(delivery => delivery.status === 'current')?.id);
 }));
@@ -355,7 +349,7 @@ const noticeBody = byId('customer-notice-body');
 byId('open-notice-dialog').addEventListener('click', event => {
   const selected = selectedDelivery();
   if (!selected || state.pendingNotice) return;
-  byId('customer-notice-target').textContent = `${selected.name} · ${selected.vehicle?.plate || '차량 미확인'}`;
+  byId('customer-notice-target').textContent = `${selected.name} (${selected.vehicle?.plate || '차량 미확인'})`;
   noticeBody.value = '';
   noticeBody.setCustomValidity('');
   byId('customer-notice-count').textContent = '0 / 300';
@@ -367,7 +361,7 @@ byId('send-customer-notice').addEventListener('click', () => {
   const selected = selectedDelivery();
   const body = noticeBody.value.trim();
   if (!selected || !state.connected || state.pendingNotice) {
-    state.noticeMessage = '시연 연결이 복구된 뒤 다시 보내 주세요.'; state.noticeError = true; render(); return;
+    state.noticeMessage = '연결이 복구된 뒤 다시 보내 주세요.'; state.noticeError = true; render(); return;
   }
   if (!body || body.length > 300) {
     noticeBody.setCustomValidity(body ? '안내 문구는 300자 이내로 작성해 주세요.' : '안내 문구를 입력해 주세요.');

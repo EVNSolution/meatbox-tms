@@ -28,6 +28,8 @@ test('auth forms expose native constraints and accessible inline validation targ
   assert.doesNotMatch(signup, /class="field-help"|class="field-error"/);
   assert.match(login, /name="username"[^>]*pattern=/);
   assert.match(login, /portal-validation\.js/);
+  assert.match(login, /<h1>로그인<\/h1>/);
+  assert.doesNotMatch(login, /데모 로그인|시연을 시작|팀 회의용 데모/);
 });
 
 test('all branches, APIs and WebSocket require the same authenticated session', async t => {
@@ -76,25 +78,51 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   const setCookie = login.headers.get('set-cookie');
   assert.match(setCookie, /HttpOnly/); assert.match(setCookie, /SameSite=Strict/);
   const cookie = setCookie.split(';')[0];
-  const home = await (await get('/', cookie)).text();
-  for (const link of ['/scenario/', '/ui-layout/#/design', '/combined/']) assert.ok(home.includes(`href="${link}"`));
-  assert.ok(!home.includes('/dev/register'));
+  const root = await get('/', cookie);
+  assert.equal(root.status, 308);
+  assert.equal(root.headers.get('location'), '/combined/');
   assert.equal((await get('/api/session', cookie)).status, 200);
-  for (const route of ['/scenario/', '/scenario/customer', '/scenario/driver', '/scenario/control', '/scenario/present', '/ui-layout/', '/combined/']) assert.equal((await get(route, cookie)).status, 200, route);
-  const scenarioResponse = await get('/scenario/customer', cookie);
-  assert.equal(scenarioResponse.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
-  const scenario = await scenarioResponse.text();
-  assert.ok(scenario.includes('src="/scenario/common.js"')); assert.ok(scenario.includes('/auth-check.js'));
-  assert.equal((scenario.match(/integrity="sha384-/g) || []).length, 2);
-  assert.equal((scenario.match(/crossorigin="anonymous"/g) || []).length, 2);
-  const presenter = await (await get('/scenario/present', cookie)).text();
-  assert.match(presenter, /#traffic,#dwell\{display:none!important\}/);
-  assert.match(presenter, /id="traffic"/);
-  assert.match(presenter, /id="dwell"/);
+  for (const route of ['/ui-layout/', '/combined/']) assert.equal((await get(route, cookie)).status, 200, route);
+  const scenarioEntries = {
+    '/scenario/': '/scenario/customer',
+    '/scenario/index.html?id=S5': '/scenario/customer?id=S5',
+    '/scenario/customer.html?id=S5': '/scenario/customer?id=S5',
+  };
+  for (const [route, location] of Object.entries(scenarioEntries)) {
+    const response = await get(route, cookie);
+    assert.equal(response.status, 308, route);
+    assert.equal(response.headers.get('location'), location, route);
+  }
+  const combinedAliases = {
+    '/customer?id=S5': '/combined/mobile-customer.html?id=S5',
+    '/driver?id=S5': '/combined/driver.html?id=S5',
+    '/control': '/combined/#/control',
+    '/present': '/combined/',
+  };
+  for (const [route, location] of Object.entries(combinedAliases)) {
+    const response = await get(route, cookie);
+    assert.equal(response.status, 308, route);
+    assert.equal(response.headers.get('location'), location, route);
+  }
+  for (const view of ['customer', 'driver', 'control', 'present']) {
+    const response = await get(`/scenario/${view}`, cookie);
+    assert.equal(response.status, 200, view);
+    const html = await response.text();
+    assert.match(html, /<title>미트박스 TMS<\/title>/);
+    assert.match(html, new RegExp(`src="/scenario/${view}\\.js"`));
+    assert.match(html, /src="\/scenario\/common\.js"/);
+    assert.match(html, /src="\/auth-check\.js" defer/);
+    assert.match(html, /#traffic,#dwell\{display:none!important\}/);
+    if (['customer', 'control'].includes(view)) {
+      assert.equal((html.match(/integrity="sha384-/g) || []).length, 2, view);
+      assert.equal((html.match(/crossorigin="anonymous"/g) || []).length, 2, view);
+    }
+  }
   const common = await (await get('/scenario/common.js', cookie)).text();
   assert.ok(common.includes('${location.host}/ws/simulation'));
   assert.ok(common.includes("fetch('/scenario/api/route-data')"));
   const combined = await (await get('/combined/', cookie)).text();
+  assert.match(combined, /<title>미트박스 TMS<\/title>/);
   const shell = await (await get('/combined/demo-shell.mjs', cookie)).text();
   assert.match(shell, /data-viewer="customer"/);
   assert.match(combined, /data-page="orders"/);
@@ -106,7 +134,16 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   assert.match(combined, /id="order-planning"/);
   assert.doesNotMatch(combined, /map-preview|monitor-map-toggle|monitor-map-preview/);
   const layout = await (await get('/ui-layout/', cookie)).text();
+  assert.match(layout, /<title>미트박스 TMS<\/title>/);
+  assert.match(await (await get('/ui-layout/index.html', cookie)).text(), /<title>미트박스 TMS<\/title>/);
+  const layoutApp = await (await get('/ui-layout/app.mjs', cookie)).text();
+  assert.match(layoutApp, /document\.title = '미트박스 TMS';/);
+  assert.doesNotMatch(layoutApp, /document\.title = `\$\{page\.title\}/);
   assert.match(layout, /href="\/combined\/map-preview\.css"/);
+  const referenceAuth = await (await get('/auth-check.js', cookie)).text();
+  assert.match(referenceAuth, /home\.href = '\/combined\/'/);
+  assert.match(referenceAuth, /운영 화면으로/);
+  assert.doesNotMatch(referenceAuth, /작업 선택/);
   const mapCss = await get('/combined/map-preview.css', cookie);
   assert.equal(mapCss.status, 200);
   assert.match(mapCss.headers.get('content-type'), /text\/css/);
@@ -114,14 +151,25 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   assert.equal(mobileResponse.status, 200);
   assert.equal(mobileResponse.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
   const mobile = await mobileResponse.text();
+  assert.match(mobile, /<title>미트박스 TMS<\/title>/);
   for (const script of ['./mobile-customer-links.mjs', '/auth-check.js']) assert.ok(mobile.includes(`src="${script}"`), script);
   assert.doesNotMatch(mobile, /src="\/scenario\/common\.js"/);
-  assert.equal((mobile.match(/integrity="sha384-/g) || []).length, 2);
+  assert.match(mobile, /assets\/vendor\/maplibre\/maplibre-gl-csp\.js/);
+  assert.doesNotMatch(mobile, /leaflet/);
+  const policy = mobileResponse.headers.get('content-security-policy');
+  assert.match(policy, /worker-src 'self';/);
+  assert.match(policy, /connect-src 'self' https:\/\/tiles\.openfreemap\.org /);
+  assert.doesNotMatch(policy, /unsafe-eval|worker-src[^;]*blob:|connect-src[^;]*\*/);
+  for (const asset of ['app-viewer.css', 'assets/maps/dsv-korea-v1.json', 'assets/vendor/maplibre/maplibre-gl-csp-worker.js']) {
+    assert.equal((await get(`/combined/${asset}`)).status, 302, asset);
+    assert.equal((await get(`/combined/${asset}`, cookie)).status, 200, asset);
+  }
   const customerEntry = await (await get('/combined/mobile-customer-links.mjs', cookie)).text();
   assert.match(customerEntry, /from '\.\/customer-renderer\.mjs'/);
   assert.equal((customerEntry.match(/connectSimulation\(/g) || []).length, 1);
   assert.doesNotMatch(customerEntry, /\/scenario\/customer\.js/);
   assert.equal((await get('/combined/customer-renderer.mjs', cookie)).status, 200);
+  assert.match(await (await get('/combined/driver.html', cookie)).text(), /<title>미트박스 TMS<\/title>/);
   const mobileCss = await get('/combined/mobile-customer.css', cookie);
   assert.equal(mobileCss.status, 200);
   assert.match(mobileCss.headers.get('content-type'), /text\/css/);
@@ -140,8 +188,6 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   await denied({ origin }); await denied({ cookie, origin: 'https://attacker.invalid' }); await denied({ cookie, origin }, '/');
   const ws = new WebSocket(base.replace('http', 'ws') + '/ws/simulation', { headers: { cookie, origin } });
   const first = await once(ws, 'message'); assert.equal(JSON.parse(first[0]).type, 'state');
-  const nextState = once(ws, 'message'); ws.send(JSON.stringify({ type: 'place_order' }));
-  assert.equal(JSON.parse((await nextState)[0]).state.phase, 'idle');
   async function commandState(command, matches) {
     const result = new Promise((resolve, reject) => {
       const timer = setTimeout(() => { ws.off('message', receive); reject(new Error(`No state for ${command.type}`)); }, 2000);
@@ -156,9 +202,8 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
     ws.send(JSON.stringify(command));
     return result;
   }
-  for (const simClock of ['05:50', '06:05', '06:20', '06:30']) {
-    await commandState({ type: 'advance' }, state => state.simClock === simClock);
-  }
+  const shipping = await commandState({ type: 'set_scenario', scenario: 'shipping', stopId: 'S1' }, state => state.scenarioPreset === 'shipping' && state.scenarioStopId === 'S1');
+  assert.equal(shipping.simClock, '06:30');
   const arrived = await commandState({ type: 'arrive_stop', stopId: 'S1' }, state => state.truck.dwelling && state.truck.fromId === 'S1');
   assert.ok(arrived.order[0].arrivedTime);
   assert.equal(arrived.order[0].deliveredTime, null);
@@ -190,8 +235,13 @@ test('production cookie secure and request redirects/commands are bounded', asyn
   assert.match(response.headers.get('set-cookie'), /; Secure/);
   for (const unsafe of ['//evil.invalid', '/\\evil.invalid', 'https://evil.invalid', '/login', '/dev/register', ['bad']]) assert.equal(safeNext(unsafe), '/');
   assert.equal(safeNext('/combined/#/customer'), '/combined/#/customer');
+  assert.equal(validCommand({ type: 'advance' }), false);
+  assert.equal(validCommand({ type: 'place_order' }), false);
   assert.equal(validCommand({ type: 'speed', value: -10 }), false);
-  assert.equal(validCommand({ type: 'speed', value: 20 }), true);
+  assert.equal(validCommand({ type: 'speed', value: 20 }), false);
+  assert.equal(validCommand({ type: 'inject_traffic' }), false);
+  assert.equal(validCommand({ type: 'inject_dwell' }), false);
+  assert.equal(validCommand({ type: 'set_scenario', scenario: 'shipping', stopId: 'S1' }), true);
   assert.equal(validCommand({ type: 'reorder', stopId: 'S9', dir: 'up' }), false);
 });
 

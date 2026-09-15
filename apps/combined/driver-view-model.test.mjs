@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { driverTipDelivery, driverViewModel } from './driver-view-model.mjs';
+import {
+  completionProofIsCurrent,
+  driverMapDelivery,
+  driverTipDelivery,
+  driverViewModel,
+  reconcileDriverRoute,
+} from './driver-view-model.mjs';
 
 const state = dwelling => ({
   phase: 'delivering',
@@ -38,4 +44,24 @@ test('배송원 완료 처리는 연결된 차량이 현재 배송지에 도착�
   assert.equal(arrived.progress, '1/4');
   assert.equal(arrived.finishEta, '09:20');
   assert.equal(driverViewModel(state(false), true).distance, '1.8km');
+});
+
+test('배차 완료 경계에서만 그룹을 자동 전환한다', () => {
+  assert.deepEqual(reconcileDriverRoute(null, false, null), { changed: false, completed: false, group: 'active' });
+  assert.deepEqual(reconcileDriverRoute(false, false, 'completed'), { changed: false, completed: false, group: 'completed' });
+  assert.deepEqual(reconcileDriverRoute(false, true, 'active'), { changed: true, completed: true, group: 'completed' });
+  assert.deepEqual(reconcileDriverRoute(true, false, 'completed'), { changed: true, completed: false, group: 'active' });
+});
+
+test('보류된 지도 선택은 현재 운행 중인 유효 배송지로 바꾼다', () => {
+  const deliveries = state(false).deliveries;
+  assert.equal(driverMapDelivery(deliveries, 'S2').id, 'S2');
+  assert.equal(driverMapDelivery(deliveries, 'S4').id, 'S1');
+  assert.equal(driverMapDelivery(deliveries.map(stop => ({ ...stop, status: 'skipped' })), 'S4'), null);
+});
+
+test('완료 시트는 같은 배송지의 도착 상태가 유지될 때만 유효하다', () => {
+  assert.equal(completionProofIsCurrent(state(true), 'S1'), true);
+  assert.equal(completionProofIsCurrent(state(true), 'S2'), false);
+  assert.equal(completionProofIsCurrent(state(false), 'S1'), false);
 });

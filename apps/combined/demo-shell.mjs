@@ -25,7 +25,7 @@ function lastOperatorLink(base) {
 export function mountDemoShell({ viewer, onSend }) {
   let currentLinks = deliveryLinks(new URLSearchParams(location.search).get('id'));
   document.body.dataset.viewer = viewer;
-  document.getElementById('demo-header').innerHTML = `<a class="demo-brand" href="/combined/"><img src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a><nav class="viewer-switch" aria-label="뷰어 선택"><a data-viewer="operator" href="${lastOperatorLink(currentLinks.operator)}">운영 뷰어</a><a data-viewer="customer" href="${currentLinks.customer}">고객 뷰어</a><a data-viewer="driver" href="${currentLinks.driver}">배송원 뷰어</a></nav><a class="demo-entry-link" href="/">시연 안내</a>`;
+  document.getElementById('demo-header').innerHTML = `<a class="demo-brand" href="/combined/"><img src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a><nav class="viewer-switch" aria-label="뷰어 선택"><a data-viewer="operator" href="${lastOperatorLink(currentLinks.operator)}">운영 뷰어</a><a data-viewer="customer" href="${currentLinks.customer}">고객 뷰어</a><a data-viewer="driver" href="${currentLinks.driver}">배송원 뷰어</a></nav>`;
   const navigation = document.getElementById('demo-navigation');
   if (navigation) navigation.innerHTML = `<nav class="operator-pages" aria-label="운영 업무"><span class="operator-axis">운영 메뉴</span><a href="${operatorLink(currentLinks.operator, 'orders')}" data-page-link="orders">주문 관리</a><a href="${operatorLink(currentLinks.operator, 'deliveries')}" data-page-link="deliveries">배송 목록</a><a href="${operatorLink(currentLinks.operator, 'control')}" data-page-link="control">배송 관제</a></nav>`;
   document.querySelector(`#demo-header [data-viewer="${viewer}"]`).setAttribute('aria-current', 'page');

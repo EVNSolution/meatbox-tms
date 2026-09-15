@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { operatorRoute, filterFleetDeliveries, resolveDeliverySelection } from './operations-model.mjs';
+import { operatorRoute, filterFleetDeliveries, normalizeVehicleFilter, resolveDeliverySelection } from './operations-model.mjs';
 
 test('management links resolve inside control and unknown links fall back safely', () => {
   for (const hash of ['#/manage', '#/control/manage']) assert.deepEqual(operatorRoute(hash), {page:'control', controlTab:'management'});
@@ -17,6 +17,14 @@ test('fleet deliveries filter by vehicle, status, destination, address, and driv
   assert.deepEqual(filterFleetDeliveries(rows, {query:' 송파 ',status:'current'}).map(item=>item.id), ['S1']);
   assert.deepEqual(filterFleetDeliveries(rows, {query:'박서준'}).map(item=>item.id), ['V2-S1']);
   assert.deepEqual(filterFleetDeliveries(rows, {query:'없는 배송지'}), []);
+});
+
+test('선택 차량이 새 데이터에서 사라지면 전체 차량 필터로 복구한다', () => {
+  const vehicles = [{ id: 'V2' }];
+  assert.equal(normalizeVehicleFilter('V1', vehicles), 'all');
+  assert.equal(normalizeVehicleFilter('V2', vehicles), 'V2');
+  assert.equal(normalizeVehicleFilter('all', vehicles), 'all');
+  assert.equal(normalizeVehicleFilter('V1'), 'all');
 });
 
 
