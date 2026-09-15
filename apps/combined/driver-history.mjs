@@ -36,3 +36,25 @@ export const exampleHistoryDates = [...new Set(exampleHistory.map(item => item.d
 export function driverHistoryForDate(date) {
   return exampleHistory.filter(item => item.date === date).map(item => ({ ...item }));
 }
+
+export async function sourceDriverHistoryForDate(date, identity, fetcher = fetch) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !identity?.driver) return [];
+  const response = await fetcher(`/api/dispatch-data/days/${date}`);
+  if (response.status === 404) return [];
+  if (!response.ok) throw new Error('source history unavailable');
+  const day = await response.json();
+  const groups = Array.isArray(day.groups) ? day.groups : [];
+  const sameDriver = groups.filter(group => group.label === identity.driver);
+  const matchingGroups = new Set((sameDriver.length ? sameDriver : groups.filter(group => group.id === identity.originalGroupId)).map(group => group.id));
+  const orders = (Array.isArray(day.orders) ? day.orders : []).filter(order => matchingGroups.has(order.groupId));
+  if (!orders.length) return [];
+  return [{
+    date,
+    id: `SOURCE-${date}-${identity.originalGroupId || identity.driver}`,
+    label: `${identity.driver} 배차`,
+    vehicle: identity.plate || '차량 정보 미제공',
+    destinations: orders.length,
+    boxes: orders.reduce((sum, order) => sum + (Number(order.boxes) || 0), 0),
+    sourceRows: orders.reduce((sum, order) => sum + (Number(order.sourceRows) || 0), 0),
+  }];
+}

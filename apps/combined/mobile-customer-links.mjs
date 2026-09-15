@@ -11,8 +11,8 @@ const renderer = mountCustomerRenderer({ onSelect: id => shell.select(id) });
 const simulation = connectSimulation({
   onState(raw, context) {
     adapted = adaptSimulation(raw);
-    renderer.update(adapted, raw, context);
-    shell.update(adapted, true);
+    const selected = renderer.update(adapted, raw, context);
+    shell.update(selected || adapted, true);
   },
   onStatus(value, message) {
     connected = value;

@@ -2,13 +2,64 @@ import { referenceIcon } from './reference-icons.mjs';
 import { inboxState, noticeKey, visibleNotices, updateInbox } from './customer-inbox.mjs';
 import { customerDemoRoad } from './customer-demo-route.mjs';
 import { customerPickerPage, updateCustomerPickerState } from './customer-picker-model.mjs';
+import { sourceVehicleContext } from './source-context.mjs';
+import { transportConditionText } from './source-viewer-plan.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 export function customerEtaText(delivery) {
+  if (delivery?.dispatchPending) return '배차 확정 대기';
   if (delivery?.status === 'done') return delivery.completedAt ? `${delivery.completedAt} 배송 완료` : '배송 완료';
   if (delivery?.status === 'skipped') return '배송이 보류되었습니다';
-  return delivery?.customerWindowText || '도착 예정 시간 계산 중';
+  if (delivery?.status === 'current' && delivery.arrivedAt) return `${delivery.arrivedAt} 도착`;
+  return delivery?.customerWindowText
+    ? `${delivery.customerWindowText}${delivery.etaSource === 'operating-plan' ? ' 도착 예정' : ''}`
+    : '시간 정보 미제공';
+}
+
+const validCoordinate = value => Array.isArray(value) && value.length === 2
+  && value.every(Number.isFinite) && Math.abs(value[0]) <= 180 && Math.abs(value[1]) <= 90;
+
+export function customerViewerDeliveries(state) {
+  if (!state?.sourceData) return state?.fleetDeliveries?.length ? state.fleetDeliveries : state?.deliveries || [];
+  if (!state.dispatch || state.dispatch.phase === 'published') return Array.isArray(state.fleetDeliveries) ? state.fleetDeliveries : [];
+  return (Array.isArray(state.dispatchOrders) ? state.dispatchOrders : []).map(order => {
+    const safe = { ...order };
+    for (const key of ['vehicle', 'vehicleId', 'driver', 'plate', 'currentGroupId', 'officialEta', 'calculatedEta', 'preciseTimeText',
+      'customerWindowText', 'customerWindowStart', 'customerWindowEnd', 'etaSource', 'arrivedAt', 'completedAt']) delete safe[key];
+    return {
+      ...safe,
+      status: 'pending',
+      statusTone: 'neutral',
+      customerStatus: { key: 'dispatch-waiting', label: '배차 대기' },
+      customerStatusTone: 'neutral',
+      ordered: true,
+      timeline: [],
+      dispatchPending: true,
+    };
+  });
+}
+
+export function customerMapView(delivery, state, routeData) {
+  if (state?.sourceData) {
+    const home = validCoordinate(delivery?.coordinates) ? [...delivery.coordinates] : null;
+    if (state.dispatch && state.dispatch.phase !== 'published') return { home, road: [], truck: null };
+    const vehicle = delivery?.vehicle || state.fleetVehicles?.find(item => item.id === delivery?.vehicleId) || state.vehicle;
+    const operationPosition = state.vehicleStates?.[vehicle?.id]?.truck || state.truck;
+    const operationCoordinates = operationPosition && [operationPosition.lng, operationPosition.lat];
+    const truck = delivery?.status !== 'done' && operationPosition?.locationSource === 'demo' && validCoordinate(operationCoordinates)
+      ? operationCoordinates
+      : delivery?.status !== 'done' && vehicle?.location?.source === 'demo' && validCoordinate(vehicle.location.coordinates)
+        ? [...vehicle.location.coordinates]
+      : null;
+    return { home, road: [], truck };
+  }
+  const point = routeData?.points?.find(item => item.id === delivery?.id);
+  if (!point || !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return { home: null, road: [], truck: null };
+  const home = [point.lng, point.lat];
+  const road = delivery.status !== 'done' ? customerDemoRoad(routeData, delivery.id) : [];
+  const truck = road.length ? (delivery.arrivedAt ? road.at(-1) : road[0]) : null;
+  return { home, road, truck };
 }
 
 export function customerNoticeBody(notice, delivery) {
@@ -34,9 +85,10 @@ export function customerPopupState(previousIds, notices) {
 
 export function mountCustomerRenderer({ mb, onSelect }) {
   const byId = id => document.getElementById(id);
-  let latest;
+  let latest, fullLatest;
   let selectedId;
   let routeData;
+  let routeLoading = false, routeFailed = false;
   let map;
   let mapViewSignature = '';
   let homeMarker;
@@ -57,7 +109,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     url.searchParams.set('id', id);
     history.replaceState(null, '', url);
   };
-  const currentDeliveries = () => latest?.fleetDeliveries?.length ? latest.fleetDeliveries : latest?.deliveries || [];
+  const currentDeliveries = () => customerViewerDeliveries(latest);
   const currentDelivery = () => currentDeliveries().find(delivery => delivery.id === selectedId) ?? null;
 
   function renderPicker() {
@@ -86,6 +138,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     hidePopup();
     setNotificationsOpen(false);
     selectedId = id;
+    latest = sourceVehicleContext(fullLatest, selectedId);
     rememberSelection(id);
     popupBaseline = new Set(currentDelivery()?.notices?.map(notice => notice.id).filter(Boolean) || []);
     byId('account-picker').hidden = true;
@@ -167,31 +220,35 @@ export function mountCustomerRenderer({ mb, onSelect }) {
   }
 
   function updateMap(delivery) {
-    const point = routeData?.points?.find(item => item.id === delivery.id);
-    const canMap = Boolean(map && point && Number.isFinite(point.lat) && Number.isFinite(point.lng));
-    const road = canMap && delivery.status !== 'done' ? customerDemoRoad(routeData, delivery.id) : [];
+    const view = customerMapView(delivery, latest, routeData);
+    const canMap = Boolean(map && view.home);
+    const road = canMap ? view.road : [];
+    byId('map').setAttribute('aria-label', latest.sourceData
+      ? delivery.dispatchPending ? '배송지 위치 지도' : '배송지와 차량 위치 지도'
+      : '예시 차량 위치와 매장까지의 도로 경로 지도');
     renderRoad(road);
     byId('map').hidden = !canMap;
     byId('map-empty').hidden = canMap;
     if (!canMap || !map) { mapViewSignature = ''; return; }
     map.resize();
-    const home = [point.lng, point.lat];
-    const nextViewSignature = `${delivery.id}|${home}|${road.length}|${road[0] || ''}|${road.at(-1) || ''}`;
+    const home = view.home;
+    const nextViewSignature = `${delivery.id}|${home}|${view.truck || ''}|${road.length}|${road[0] || ''}|${road.at(-1) || ''}`;
     const viewChanged = nextViewSignature !== mapViewSignature;
     mapViewSignature = nextViewSignature;
     if (!homeMarker) homeMarker = createMarker('store', home);
     else homeMarker.setLngLat(home);
-    if (!road.length) {
+    if (!view.truck) {
       if (truckMarker) { truckMarker.remove(); truckMarker = null; }
       if (viewChanged) map.jumpTo({ center: home, zoom: 15 });
       return;
     }
-    const truck = delivery.arrivedAt ? road[road.length - 1] : road[0];
-    if (!truckMarker) truckMarker = createMarker('vehicle', truck);
+    const truck = view.truck;
+    if (!truckMarker) truckMarker = createMarker('vehicle', truck, Boolean(latest.sourceData));
     else truckMarker.setLngLat(truck);
     if (viewChanged) {
       const bounds = new maplibregl.LngLatBounds(home, home);
       road.forEach(coordinate => bounds.extend(coordinate));
+      bounds.extend(truck);
       map.fitBounds(bounds, { padding: { top: 56, bottom: 48, left: 48, right: 48 }, maxZoom: 15, duration: 0 });
     }
   }
@@ -207,12 +264,18 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     byId('eta-text').textContent = customerEtaText(delivery);
     byId('eta-address').textContent = delivery.address || '배송지 정보 없음';
     byId('eta-boxes').textContent = delivery.boxes != null ? `${delivery.boxes}박스` : '미확인';
+    const transport = byId('eta-transport');
+    if (transport) {
+      transport.textContent = latest.sourceData ? transportConditionText(delivery) : '';
+      transport.parentElement.hidden = !transport.textContent;
+    }
     byId('eta-delta').className = 'eta-delta';
     byId('eta-note').classList.remove('show');
-    byId('order-no').textContent = delivery.orderNo || '';
+    byId('order-no').textContent = delivery.orderNumber || delivery.orderNo || '주문 번호 미제공';
     byId('order-items').innerHTML = (delivery.items || []).map(item => `<div class="item-row prod"><div><div class="nm">${escapeHtml(item.name)}</div><div class="op">${escapeHtml(item.opt)}</div></div><div class="qty">×${escapeHtml(item.qty)}</div></div>`).join('') || '<p class="empty">상품 상세 정보가 없습니다.</p>';
     byId('order-boxes').textContent = delivery.boxes != null ? `총 ${delivery.boxes}박스` : '박스 수량 미확인';
-    byId('timeline').innerHTML = (delivery.timeline || []).map(item => `<li class="${escapeHtml(item.state)}">${escapeHtml(item.label)}${item.time ? `<span class="t">${escapeHtml(item.time)}</span>` : ''}</li>`).join('') || '<li>배송 이력 준비 중</li>';
+    byId('timeline').innerHTML = (delivery.timeline || []).map(item => `<li class="${escapeHtml(item.state)}">${escapeHtml(item.label)}${item.time ? `<span class="t">${escapeHtml(item.time)}</span>` : ''}</li>`).join('')
+      || `<li>${delivery.dispatchPending ? '배차 확정 대기' : '배송 이력 준비 중'}</li>`;
     const notices = delivery.notices || [];
     renderInbox();
     const popupState = customerPopupState(popupBaseline, notices);
@@ -291,10 +354,10 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     if (!response.ok) throw new Error('route data unavailable');
     return response.json();
   }));
-  function createMarker(kind, coordinates) {
+  function createMarker(kind, coordinates, operational = false) {
     const element = document.createElement('div');
     element.className = `customer-map-marker customer-map-marker--${kind}`;
-    element.setAttribute('aria-label', kind === 'store' ? '매장 위치' : '예시 차량 위치');
+    element.setAttribute('aria-label', kind === 'store' ? '매장 위치' : operational ? '차량 위치' : '예시 차량 위치');
     if (kind === 'store') element.innerHTML = '<span class="customer-map-house" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 3.2 3.5 8.4v8.1h4v-5h5v5h4V8.4L10 3.2Z"/></svg></span>';
     return new maplibregl.Marker({ element, anchor: kind === 'store' ? 'bottom' : 'center' }).setLngLat(coordinates).addTo(map);
   }
@@ -322,36 +385,54 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     instance.once('remove', () => observer.disconnect());
     return { map: instance };
   });
-  Promise.resolve(loadRouteData()).then(data => {
-    routeData = data;
+  function ensureMap() {
     if (!map) {
       map = initMap(byId('map')).map;
       map.once('load', render);
     }
-    render();
-  }).catch(() => {
-    byId('map').hidden = true;
-    byId('map-empty').hidden = false;
-    byId('map-empty').textContent = '지도를 불러오지 못했습니다. 새로고침해 주세요.';
-  });
+  }
+  ensureMap();
+  function loadLegacyRoute() {
+    if (routeData || routeLoading || routeFailed) return;
+    routeLoading = true;
+    Promise.resolve(loadRouteData()).then(data => {
+      routeData = data;
+      render();
+    }).catch(() => {
+      routeFailed = true;
+      byId('map').hidden = true;
+      byId('map-empty').hidden = false;
+      byId('map-empty').textContent = '지도를 불러오지 못했습니다. 새로고침해 주세요.';
+    }).finally(() => { routeLoading = false; });
+  }
 
   return {
     select,
     update(state, _raw, context = {}) {
       boot = context.boot;
+      fullLatest = state;
       latest = state;
+      if (!state.sourceData) loadLegacyRoute();
       byId('customer-clock').textContent = state.simClock || '--:--';
       const requested = queryId() || (() => { try { return localStorage.getItem('mb-account'); } catch { return null; } })();
-      if (!selectedId && requested && currentDeliveries().some(delivery => delivery.id === requested)) {
-        selectedId = requested;
+      const available = currentDeliveries();
+      const fallback = state.sourceData?.defaultStopId;
+      const candidate = available.some(delivery => delivery.id === requested) ? requested
+        : available.some(delivery => delivery.id === fallback) ? fallback : null;
+      if ((!selectedId || !available.some(delivery => delivery.id === selectedId)) && candidate) {
+        selectedId = candidate;
+        latest = sourceVehicleContext(fullLatest, selectedId);
+        rememberSelection(selectedId);
         popupBaseline = new Set(currentDelivery()?.notices?.map(notice => notice.id).filter(Boolean) || []);
         byId('account-picker').hidden = true;
         onSelect?.(selectedId);
       }
-      if (!selectedId) { popupBaseline = new Set(); showPicker(); return; }
-      if (!currentDelivery()) { selectedId = null; showPicker(); return; }
+      latest = sourceVehicleContext(fullLatest, selectedId);
+      if (!selectedId) { popupBaseline = new Set(); showPicker(); return latest; }
+      if (!currentDelivery()) { selectedId = null; showPicker(); return latest; }
       render();
       if (!byId('account-picker').hidden) renderPicker();
+      return latest;
     },
   };
 }

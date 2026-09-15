@@ -1,12 +1,68 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { customerEtaText, customerNoticeBody, customerPopupState, nextCustomerPopup } from './customer-renderer.mjs';
+import { customerEtaText, customerMapView, customerNoticeBody, customerPopupState, customerViewerDeliveries, nextCustomerPopup } from './customer-renderer.mjs';
 
 test('고객에게는 정확 ETA 대신 30분 범위만 표시한다', () => {
   const delivery = { customerWindowText: '08:00~09:00', preciseTimeText: '08:30', status: 'current' };
   assert.equal(customerEtaText(delivery), '08:00~09:00');
   assert.equal(customerNoticeBody({ kind: 'departure', body: '08:30 도착 예정입니다.' }, delivery), '08:00~09:00 도착 예정입니다.');
   assert.equal(customerEtaText({ status: 'done', completedAt: '08:42' }), '08:42 배송 완료');
+  assert.equal(customerEtaText({ status: 'pending' }), '시간 정보 미제공');
+});
+
+test('운영 계획은 도착 예정으로 표시하고 실제 완료 시각은 바꾸지 않는다', () => {
+  const delivery = { etaSource: 'operating-plan', customerWindowText: '08:00 ~ 09:00', status: 'pending' };
+  assert.equal(customerEtaText(delivery), '08:00 ~ 09:00 도착 예정');
+  assert.equal(customerEtaText({ ...delivery, status: 'done', completedAt: '08:24' }), '08:24 배송 완료');
+  assert.equal(customerEtaText({ ...delivery, status: 'current', arrivedAt: '08:18' }), '08:18 도착');
+  assert.equal(customerEtaText({ ...delivery, status: 'skipped' }), '배송이 보류되었습니다');
+});
+
+test('배차 전과 계산안은 고객 주문만 남기고 기사·차량·ETA를 공개하지 않는다', () => {
+  const order = {
+    id: 'O1', name: '고객 매장', address: '서울', boxes: 3, coordinates: [127.1, 37.5], vehicleId: 'draft-vehicle', driver: '계산 기사',
+    status: 'done', completedAt: '08:30', preciseTimeText: '08:10', customerWindowText: '07:40 ~ 08:40',
+    notices: [{ id: 'notice', body: '주문 안내' }], timeline: [{ label: '배송 완료', time: '08:30' }],
+  };
+  for (const phase of ['unplanned', 'draft']) {
+    const source = { sourceData: { date: '2026-09-16' }, dispatch: { phase }, dispatchOrders: [order], fleetDeliveries: [] };
+    const before = structuredClone(source);
+    const [visible] = customerViewerDeliveries(source);
+    assert.equal(visible.id, 'O1');
+    assert.equal(visible.status, 'pending');
+    assert.equal(visible.customerStatus.label, '배차 대기');
+    assert.equal(visible.dispatchPending, true);
+    assert.equal(visible.vehicleId, undefined);
+    assert.equal(visible.driver, undefined);
+    assert.equal(visible.preciseTimeText, undefined);
+    assert.equal(visible.customerWindowText, undefined);
+    assert.equal(visible.completedAt, undefined);
+    assert.deepEqual(visible.notices, order.notices);
+    assert.equal(customerEtaText(visible), '배차 확정 대기');
+    assert.deepEqual(customerMapView(visible, source, {}), { home: [127.1, 37.5], road: [], truck: null });
+    assert.deepEqual(source, before);
+  }
+});
+
+test('배차 확정 뒤에는 확정 주문만 고객 화면에 사용한다', () => {
+  const confirmed = { id: 'C1', vehicleId: 'V1', status: 'pending' };
+  const state = { sourceData: { date: '2026-09-16' }, dispatch: { phase: 'published' }, dispatchOrders: [{ id: 'D1' }], fleetDeliveries: [confirmed] };
+  assert.deepEqual(customerViewerDeliveries(state), [confirmed]);
+});
+
+test('실데이터 고객 지도는 주문 좌표와 데모 차량 위치만 쓰고 기존 S1 도로를 섞지 않는다', () => {
+  const delivery = { id: 'ord-real', vehicleId: 'real-a', status: 'current', coordinates: [127.12, 37.44] };
+  const state = {
+    sourceData: { date: '2025-09-12' },
+    fleetVehicles: [{ id: 'real-a', location: { source: 'demo', coordinates: [127.1, 37.5] } }],
+    vehicleStates: { 'real-a': { truck: { locationSource: 'demo', lng: 127.11, lat: 37.51 } } },
+  };
+  assert.deepEqual(customerMapView(delivery, state, { points: [{ id: 'S1', lng: 1, lat: 2 }], legs: {} }), {
+    home: [127.12, 37.44], road: [], truck: [127.11, 37.51],
+  });
+  assert.deepEqual(customerMapView({ ...delivery, status: 'done' }, state, {}), {
+    home: [127.12, 37.44], road: [], truck: null,
+  });
 });
 
 test('운영자가 작성한 고객 안내는 ETA 시각과 같아도 원문을 유지한다', () => {

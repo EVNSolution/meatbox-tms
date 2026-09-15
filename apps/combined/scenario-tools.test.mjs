@@ -50,3 +50,13 @@ test('순서가 없거나 다음 항목이 다른 차량이면 다음 배송지�
   assert.equal(nextScenarioTarget({ deliveries: route }, 'S1'), null);
   assert.equal(nextScenarioTarget({ deliveries: [live, { ...stop('S2'), vehicleId: 'V2' }] }, 'S1'), null);
 });
+
+
+test('과거와 미확정 날짜는 시나리오 변경과 다음 배송지 진행을 막는다', () => {
+  const stop = { id: 'O1', vehicleId: 'G1', vehicle: { live: true } };
+  for (const dispatch of [{ phase: 'published', readOnly: true }, { phase: 'draft', readOnly: false }, { phase: 'unplanned', readOnly: false }]) {
+    const value = { dispatch, customerStopId: 'O1', fleetDeliveries: [stop], deliveries: [stop] };
+    assert.equal(scenarioSelectionState(value, stop, true).controllable, false);
+    assert.equal(nextScenarioTarget(value, 'O1'), null);
+  }
+});

@@ -26,7 +26,7 @@ export function renderCustomerRequests(stop, { compact = false, confirmation = f
     if (!items?.length) return '';
     return `<span class="customer-requests-compact" role="group" aria-label="고객 요청">${items.map(item => `<button type="button" class="customer-request-badge" data-request-info="${escapeHtml(item.id)}" data-focus="request-${escapeHtml(item.id)}" aria-label="${escapeHtml(item.label)} 요청 내용 보기" aria-haspopup="dialog" title="${escapeHtml(item.label)}">${requestIcon(item.kind)}</button>`).join('')}</span>`;
   }
-  if (items === null) return '<section class="customer-requests customer-requests-empty"><p class="customer-requests-heading">고객 요청</p><strong>정보 미수신</strong><p>고객 요청 데이터가 연결되지 않았습니다.</p></section>';
+  if (items === null) return '<section class="customer-requests customer-requests-empty"><p class="customer-requests-heading">고객 요청</p><strong>정보 미수신</strong><p>고객 요청이 아직 확인되지 않았습니다.</p></section>';
   if (items.length === 0) return '<section class="customer-requests customer-requests-empty"><p class="customer-requests-heading">고객 요청</p><strong>요청 없음</strong><p>이 배송지에 등록된 고객 요청이 없습니다.</p></section>';
   const checked = new Set(checkedIds);
   const content = items.map(item => confirmation

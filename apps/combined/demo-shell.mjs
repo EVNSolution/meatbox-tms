@@ -1,5 +1,7 @@
+import { mountDatePicker } from './date-picker.mjs';
 import { deliveryLinks } from './delivery-review.mjs';
 import { mountScenarioTools } from './scenario-tools.mjs';
+import { sourceVehicleContext } from './source-context.mjs';
 
 const operatorStorageKey = 'meatbox.operator.page';
 const operatorHashStorageKey = 'meatbox.operator.hash';
@@ -23,7 +25,8 @@ function lastOperatorLink(base) {
 }
 
 export function mountDemoShell({ viewer, onSend, onSelect }) {
-  let currentLinks = deliveryLinks(new URLSearchParams(location.search).get('id'));
+  let currentDate = new URLSearchParams(location.search).get('date');
+  let currentLinks = deliveryLinks(new URLSearchParams(location.search).get('id'), currentDate);
   document.body.dataset.viewer = viewer;
   document.getElementById('demo-header').innerHTML = `<a class="demo-brand" href="/combined/"><img src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a><nav class="viewer-switch" aria-label="뷰어 선택"><a data-viewer="operator" href="${lastOperatorLink(currentLinks.operator)}">운영 뷰어</a><a data-viewer="customer" href="${currentLinks.customer}">고객 뷰어</a><a data-viewer="driver" href="${currentLinks.driver}">배송원 뷰어</a></nav>`;
   const navigation = document.getElementById('demo-navigation');
@@ -44,15 +47,36 @@ export function mountDemoShell({ viewer, onSend, onSelect }) {
     syncOperatorHash();
   }
   const guide = mountScenarioTools({ onSend, onSelect });
+  const sourceBar = document.createElement('div');
+  sourceBar.className = 'viewer-source-context'; sourceBar.hidden = true;
+  sourceBar.innerHTML = '<span>운영일</span><div data-viewer-date></div>';
+  document.getElementById('demo-header').insertAdjacentElement('afterend', sourceBar);
+  const sourceDatePicker = mountDatePicker({ element: sourceBar.querySelector('[data-viewer-date]'), label: '운영일', onChange: date => {
+    if (!latest?.sourceData?.dates?.some(item => item.date === date)) return;
+    window.dispatchEvent(new CustomEvent('meatbox:source-date', { detail: date }));
+  } });
   let lastId;
+  let latest;
+  let isConnected = false;
   return {
-    update(state, connected) { guide.update(state, connected); },
+    update(state, connected) {
+      latest = state || latest;
+      isConnected = connected;
+      guide.update(sourceVehicleContext(latest, lastId), connected);
+      sourceBar.hidden = !latest?.sourceData;
+      if (latest?.sourceData) {
+        const { date, dates = [] } = latest.sourceData;
+        sourceDatePicker.update({ value: date, dates, disabled: !connected });
+        if (date !== currentDate) { currentDate = date; const id = lastId; lastId = undefined; this.select(id); }
+      }
+    },
     showError(message) { guide.showError(message); },
     select(id) {
       if (id === lastId) return;
       lastId = id;
       guide.select(id);
-      currentLinks = deliveryLinks(id);
+      guide.update(sourceVehicleContext(latest, id), isConnected);
+      currentLinks = deliveryLinks(id, currentDate);
       document.querySelector('#demo-header [data-viewer="operator"]').href = viewer === 'operator' && /^#\/(?:orders|deliveries|control(?:\/manage)?)$/.test(location.hash) ? currentLinks.operator.replace(/#\/control$/, location.hash) : lastOperatorLink(currentLinks.operator);
       document.querySelector('#demo-header [data-viewer="customer"]').href = currentLinks.customer;
       document.querySelector('#demo-header [data-viewer="driver"]').href = currentLinks.driver;

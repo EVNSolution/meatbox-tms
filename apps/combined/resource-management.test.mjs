@@ -68,6 +68,22 @@ test('차량·배송원·배정 배송지의 실제 값으로 검색한다', () 
   assert.deepEqual(resourceManagementModel(data, '김기사').visible.map(item => item.id), ['V1', 'V2']);
 });
 
+test('운영 날짜와 배송 권역을 표시용 모델에 보존한다', () => {
+  const model = resourceManagementModel({
+    sourceData: { date: '2026-09-16', defaultVehicleId: 'V2' },
+    fleetVehicles: vehicles,
+    fleetDeliveries: [
+      { ...deliveries[0], regionName: '서울 송파구', orderNumber: 'PAY-101' },
+      { ...deliveries[1], regionName: '서울 송파구' },
+      { ...deliveries[2], regionName: '서울 강남구' },
+    ],
+  }, 'PAY-101');
+  assert.deepEqual(model.visible.map(item => item.id), ['V1']);
+  assert.equal(model.resources[0].sourceDate, '2026-09-16');
+  assert.equal(model.resources[0].sourceMode, true);
+  assert.deepEqual(model.resources[0].originRegions, ['서울 송파구']);
+});
+
 class FakeNode {
   constructor() {
     this.innerHTML = '';
@@ -124,7 +140,7 @@ const clickTarget = (attribute, value) => ({
   },
 });
 
-test('탭 전환과 실제 차량·배송지 ID 콜백을 기존 배송지 영역에 연결한다', () => {
+test('당일 주문 선택은 내부 ID 콜백만 보내고 누적 대장으로 전환하지 않는다', () => {
   const { element, destinationElement, tabs, nodes } = fixture();
   const selectedVehicles = [];
   const selectedDeliveries = [];
@@ -147,6 +163,10 @@ test('탭 전환과 실제 차량·배송지 ID 콜백을 기존 배송지 영�
   assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /완료<\/dt><dd><strong>1곳<\/strong><span>8박스/);
   assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /잔여<\/dt><dd><strong>1곳<\/strong><span>0박스/);
   assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /보류<\/dt><dd><strong>1곳<\/strong><span>0박스/);
+  const visible = nodes['[data-resource-detail="drivers"]'].innerHTML.replace(/<[^>]+>/g, '');
+  assert.doesNotMatch(visible, /ID|S1|S2|V1/);
+  assert.match(visible, /가락점송파구/);
+  assert.match(visible, /당일 배정 주문/);
 
   element.listeners.click({ target: clickTarget('data-resource-select', 'V2') });
   assert.deepEqual(selectedVehicles, ['V2']);
@@ -154,8 +174,8 @@ test('탭 전환과 실제 차량·배송지 ID 콜백을 기존 배송지 영�
 
   element.listeners.click({ target: clickTarget('data-resource-delivery', 'S3') });
   assert.deepEqual(selectedDeliveries, ['S3']);
-  assert.equal(destinationElement.hidden, false);
-  assert.equal(tabs[2].focused, true);
+  assert.equal(destinationElement.hidden, true);
+  assert.equal(tabs[0].attributes['aria-selected'], 'true');
 
   let prevented = false;
   element.listeners.keydown({ target: tabs[2], key: 'ArrowRight', preventDefault() { prevented = true; } });
@@ -164,14 +184,35 @@ test('탭 전환과 실제 차량·배송지 ID 콜백을 기존 배송지 영�
   resources.destroy();
 });
 
-test('배정 배송지 조회는 차량 필터 콜백 후 배송지 탭으로 이동한다', () => {
-  const { element, destinationElement } = fixture();
+test('기본 차량과 운영 기준일을 자원 상세 기본값으로 쓴다', () => {
+  const { element, destinationElement, nodes } = fixture();
+  const resources = mountResourceManagement({ element, destinationElement });
+  resources.update({
+    sourceData: { date: '2026-09-16', defaultVehicleId: 'V2' },
+    fleetVehicles: [{ ...vehicles[0], location: { label: '경기 성남 예시 위치' } }, { ...vehicles[1], location: { label: '서울 강남 예시 위치' } }],
+    fleetDeliveries: deliveries.map(delivery => ({ ...delivery, regionName: delivery.vehicleId === 'V2' ? '서울 강남구' : '서울 송파구' })),
+  }, null);
+  element.listeners.click({ target: clickTarget('data-resource-tab', 'drivers') });
+  assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /서울 2 차량 배정/);
+  assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /2026-09-16 배송 지표/);
+  assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /배송 권역<\/dt><dd>서울 강남구/);
+  assert.doesNotMatch(nodes['[data-resource-detail="drivers"]'].innerHTML, /원본|로컬|시연|데모|예시/);
+  element.listeners.click({ target: clickTarget('data-resource-tab', 'vehicles') });
+  assert.match(nodes['[data-resource-detail="vehicles"]'].innerHTML, /운영 상태<\/dt><dd>배차 운영/);
+  assert.match(nodes['[data-resource-detail="vehicles"]'].innerHTML, /차량 위치<\/dt><dd>서울 강남 위치/);
+  assert.doesNotMatch(nodes['[data-resource-detail="vehicles"]'].innerHTML, /원본|로컬|시연|데모|예시/);
+  resources.destroy();
+});
+
+test('차량 선택은 당일 상세를 유지하며 배송지 대장과 혼합하지 않는다', () => {
+  const { element, destinationElement, nodes } = fixture();
   const selectedVehicles = [];
   const resources = mountResourceManagement({ element, destinationElement, onSelectVehicle: id => selectedVehicles.push(id) });
   resources.update({ fleetVehicles: vehicles, fleetDeliveries: deliveries }, 'S1');
   element.listeners.click({ target: clickTarget('data-resource-tab', 'vehicles') });
-  element.listeners.click({ target: clickTarget('data-resource-assignments', 'V1') });
+  element.listeners.click({ target: clickTarget('data-resource-select', 'V1') });
   assert.deepEqual(selectedVehicles, ['V1']);
-  assert.equal(destinationElement.hidden, false);
+  assert.equal(destinationElement.hidden, true);
+  assert.doesNotMatch(nodes['[data-resource-detail="vehicles"]'].innerHTML.replace(/<[^>]+>/g, ''), /ID|S1|V1/);
   resources.destroy();
 });

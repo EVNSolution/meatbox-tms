@@ -16,7 +16,7 @@ export function canSetScenario(delivery) {
 }
 
 export function scenarioSelectionState(state, target, connected) {
-  const controllable = canSetScenario(target);
+  const controllable = !state?.dispatch?.readOnly && (!state?.dispatch || state.dispatch.phase === 'published') && canSetScenario(target);
   const current = scenarioGuide(state);
   const hasPresetMetadata = Boolean(state && Object.hasOwn(state, 'scenarioPreset'));
   const activeScenario = current && (!hasPresetMetadata || state.scenarioStopId === target?.id) ? current.scenario : null;
@@ -28,7 +28,7 @@ export function scenarioSelectionState(state, target, connected) {
 
 export function nextScenarioTarget(state, selectedId) {
   const target = selectedScenarioTarget(state, selectedId);
-  if (!canSetScenario(target)) return null;
+  if (state?.dispatch?.readOnly || (state?.dispatch && state.dispatch.phase !== 'published') || !canSetScenario(target)) return null;
   const route = state?.deliveries || [];
   const index = route.findIndex(delivery => delivery.id === target.id);
   const next = index >= 0 ? route[index + 1] : null;
@@ -96,9 +96,11 @@ export function mountScenarioTools({ onSend, onSelect }) {
     if (!connected) note.textContent = '연결이 복구되면 상태를 선택할 수 있습니다.';
     else if (target && !controllable) note.textContent = '조회 전용 배송은 상태를 변경할 수 없습니다.';
     else if (!target) note.textContent = '실시간 차량의 배송지를 선택하면 상태를 변경할 수 있습니다.';
-    else note.textContent = '원하는 상태를 순서와 관계없이 선택할 수 있습니다.';
+    else note.textContent = latest?.sourceData ? '완료는 배송원 뷰어에서 사진을 확인한 뒤 처리합니다.' : '원하는 상태를 순서와 관계없이 선택할 수 있습니다.';
     buttons.forEach(button => {
-      button.disabled = unavailable || pending;
+      const sourceCompletion = latest?.sourceData && button.dataset.scenario === 'completed';
+      button.disabled = unavailable || pending || Boolean(sourceCompletion) || Boolean(latest?.sourceData && target?.status === 'done');
+      button.title = sourceCompletion ? '배송원 뷰어에서 사진 확인 후 완료할 수 있습니다.' : '';
       button.setAttribute('aria-pressed', String(button.dataset.scenario === activeScenario));
     });
   }
