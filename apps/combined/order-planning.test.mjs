@@ -14,7 +14,7 @@ class FakeNode {
 }
 
 function fixture() {
-  const names = ['vehicle', 'map-canvas', 'map-layer', 'map-status', 'map-status-text', 'map-retry', 'map-count', 'selection', 'map-summary', 'scenario-dialog', 'scenario-open', 'scenario-close', 'volume-range', 'volume-number', 'volume-display', 'baseline', 'target', 'total-vehicles', 'total-destinations', 'assignments', 'volume-note'];
+  const names = ['vehicle', 'map-canvas', 'map-layer', 'map-status', 'map-status-text', 'map-retry', 'map-count', 'selection', 'map-summary', 'scenario-dialog', 'scenario-open', 'scenario-close', 'volume-range', 'volume-number', 'volume-display', 'baseline', 'target', 'total-vehicles', 'total-destinations', 'total-duration', 'timing-note', 'assignments', 'volume-note'];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
   const element = new FakeNode();
   element.querySelector = selector => nodes[selector.match(/data-order-([^\]]+)/)?.[1]];
@@ -224,29 +224,67 @@ test('주문 시나리오는 배송지와 박스를 차량 ID별로 합산하고
   assert.deepEqual(summary.assignments.map(item => [item.vehicle.id, item.destinations, item.boxes]), [['V1', 2, 20], ['V2', 1, 20]]);
 });
 
-test('차량 목록은 고정 시나리오 출발, 마지막 도착 ETA, 최종 인도 완료 예측을 구분한다', () => {
+test('차량 목록은 고정 출발, 마지막 도착 ETA, 시뮬레이션 최종 인도 완료를 구분한다', () => {
   const { element, nodes } = fixture();
   mount({ element }).update({
     ...data,
     vehicle: { ...vehicles[0], departure: { time: '06:30', source: 'scenario-baseline' } },
-    fleetVehicles: [{ ...vehicles[0], departure: { time: '06:30', source: 'scenario-baseline' } }, vehicles[1]],
-    kpi: { finishEta: '09:20' },
+    fleetVehicles: [{ ...vehicles[0], live: true, departure: { time: '06:30', source: 'scenario-baseline' } }, vehicles[1]],
+    kpi: { finishEta: '09:20', vehicleTiming: { source: 'simulation', departureMs: 23_400_000, completionMs: 35_100_000, remainingSeconds: 7_200, durationSeconds: 11_700, completed: false, heldStops: 0, estimatedStops: 2 } },
   }, 'S1');
   assert.match(nodes.vehicle.innerHTML, /고정 출발 \(시나리오 기준\) <strong>06:30/);
   assert.match(nodes.vehicle.innerHTML, /마지막 도착 ETA <strong>09:20/);
-  assert.match(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>미등록/);
+  assert.match(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>09:45 예상/);
   assert.doesNotMatch(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>09:20/);
   assert.equal(nodes['total-vehicles'].textContent, '2대');
   assert.equal(nodes['total-destinations'].textContent, '3곳');
+  assert.equal(nodes['total-duration'].textContent, '3시간 15분');
+  assert.match(nodes['timing-note'].textContent, /시간 확인 1\/2대, 나머지 1대 미확인\. 시뮬레이션 계산값/);
   assert.match(nodes.assignments.innerHTML, /배정 배송지 2곳/);
   assert.doesNotMatch(nodes.assignments.innerHTML, /가구/);
 
   const completed = fixture();
   const completedPlanning = mount(completed);
-  completedPlanning.update({ ...data, kpi: { finishEta: '09:20 완료' } }, 'S1');
+  completedPlanning.update({
+    ...data,
+    vehicle: { ...vehicles[0], live: true },
+    fleetVehicles: [{ ...vehicles[0], live: true }, vehicles[1]],
+    kpi: { finishEta: '09:20 완료', vehicleTiming: { source: 'simulation', departureMs: 23_400_000, completionMs: 35_100_000, remainingSeconds: 0, durationSeconds: 11_700, completed: true, heldStops: 0, estimatedStops: 2 } },
+  }, 'S1');
   assert.match(completed.nodes.vehicle.innerHTML, /마지막 도착 ETA <strong>ETA 미해당/);
   assert.doesNotMatch(completed.nodes.vehicle.innerHTML, /마지막 도착 ETA <strong>09:20 완료/);
+  assert.match(completed.nodes.vehicle.innerHTML, /최종 인도 완료 <strong>09:45 완료/);
   completedPlanning.destroy();
+});
+
+test('보류 배송지가 있으면 차량과 전체 집계에서 완료 시간을 확정하지 않는다', () => {
+  const { element, nodes } = fixture();
+  mount({ element }).update({
+    ...data,
+    vehicle: { ...vehicles[0], live: true },
+    fleetVehicles: [{ ...vehicles[0], live: true }, vehicles[1]],
+    kpi: { finishEta: '09:20', vehicleTiming: { source: 'simulation', departureMs: 23_400_000, completionMs: 35_100_000, remainingSeconds: 7_200, durationSeconds: 11_700, completed: false, heldStops: 1, estimatedStops: 1 } },
+  }, 'S1');
+  assert.match(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>보류 1곳, 미확인/);
+  assert.equal(nodes['total-duration'].textContent, '미확인');
+  assert.match(nodes['timing-note'].textContent, /시간 확인 0\/2대, 나머지 2대 미확인/);
+});
+
+test('최종 완료 시각은 분 단위로 반올림하고 자정을 넘긴 일수를 보존한다', () => {
+  const { element, nodes } = fixture();
+  const planning = mount({ element });
+  const timed = completionMs => ({
+    ...data,
+    vehicle: { ...vehicles[0], live: true },
+    fleetVehicles: [{ ...vehicles[0], live: true }, vehicles[1]],
+    kpi: { finishEta: '23:50', vehicleTiming: { source: 'simulation', departureMs: 23_400_000, completionMs, remainingSeconds: 1_000, durationSeconds: (completionMs - 23_400_000) / 1000, completed: false, heldStops: 0, estimatedStops: 1 } },
+  });
+  planning.update(timed(86_430_001), 'S1');
+  assert.match(nodes.vehicle.innerHTML, /마지막 도착 ETA <strong>23:50/);
+  assert.match(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>다음날 00:01 예상/);
+  planning.update(timed(173_700_000), 'S1');
+  assert.match(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>\+2일 00:15 예상/);
+  planning.destroy();
 });
 
 test('비율 입력은 원본 상태와 지도 주문 수량을 보존하고 복귀 버튼은 없다', () => {

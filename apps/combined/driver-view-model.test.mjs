@@ -15,7 +15,7 @@ const state = dwelling => ({
   truck: { dwelling, remainingM: 1830 },
   vehicle: { id: 'V1' },
   deliveries: [
-    { id: 'S1', vehicleId: 'V1', name: '문정갈비', address: '서울 송파구', boxes: 10, status: 'current' },
+    { id: 'S1', vehicleId: 'V1', name: '문정갈비', address: '서울 송파구', boxes: 10, status: 'current', customerRequests: { source: 'example', items: [{ id: 'S1-refrigerator', kind: 'refrigerator', label: '매장 냉장고 안에 보관', required: true }] } },
     { id: 'S2', vehicleId: 'V1', name: '한우마을', address: '서울 강남구', boxes: 8, status: 'pending' },
     { id: 'S3', vehicleId: 'V1', name: '완료매장', address: '서울 서초구', boxes: 4, status: 'done' },
     { id: 'S4', vehicleId: 'V1', name: '보류매장', address: '서울 광진구', boxes: 6, status: 'skipped' },
@@ -80,11 +80,25 @@ test('완료 시트는 같은 배송지의 도착 상태가 유지될 때만 유
   assert.equal(completionProofIsCurrent(state(false), 'S1'), false);
 });
 
-test('배송 완료 확인은 현재 도착 상태, 연결, 필수 사진이 모두 있어야 가능하다', () => {
-  assert.equal(completionProofCanSubmit(state(true), true, 'S1', true), true);
+test('배송 완료 확인은 현재 도착 상태, 연결, 사진과 필수 고객 요청 확인이 모두 있어야 가능하다', () => {
+  assert.equal(completionProofCanSubmit(state(true), true, 'S1', true, ['S1-refrigerator']), true);
+  assert.equal(completionProofCanSubmit(state(true), true, 'S1', true), false);
   assert.equal(completionProofCanSubmit(state(true), true, 'S1', false), false);
   assert.equal(completionProofCanSubmit(state(true), false, 'S1', true), false);
   assert.equal(completionProofCanSubmit(state(true), true, 'S2', true), false);
+});
+
+test('요청이 없으면 사진만으로 완료 가능하고 현재 요청 ID가 바뀌면 이전 확인은 무효다', () => {
+  const noRequest = state(true);
+  noRequest.deliveries[0].customerRequests = { source: 'example', items: [] };
+  assert.equal(completionProofCanSubmit(noRequest, true, 'S1', true), true);
+  const multiple = state(true);
+  multiple.deliveries[0].customerRequests.items.push({ id: 'S1-handoff', kind: 'handoff', label: '직접 전달', required: true });
+  assert.equal(completionProofCanSubmit(multiple, true, 'S1', true, ['S1-refrigerator']), false);
+  assert.equal(completionProofCanSubmit(multiple, true, 'S1', true, ['S1-refrigerator', 'S1-handoff']), true);
+  const changed = state(true);
+  changed.deliveries[0].customerRequests.items[0].id = 'S1-new-request';
+  assert.equal(completionProofCanSubmit(changed, true, 'S1', true, ['S1-refrigerator']), false);
 });
 
 test('도착 상태가 유지돼도 연결이 끊기면 증빙 시트를 닫고 새 사진을 요구한다', () => {

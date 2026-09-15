@@ -23,6 +23,18 @@ function assignedSummary(deliveries) {
   };
 }
 
+function progressSummary(deliveries) {
+  if (deliveries === null) return { completed: assignedSummary(null), remaining: assignedSummary(null), held: assignedSummary(null) };
+  const completed = deliveries.filter(delivery => delivery.status === 'done');
+  const remaining = deliveries.filter(delivery => delivery.status !== 'done');
+  const held = deliveries.filter(delivery => delivery.status === 'skipped');
+  return {
+    completed: assignedSummary(completed),
+    remaining: assignedSummary(remaining),
+    held: assignedSummary(held),
+  };
+}
+
 export function resourceManagementModel(data, query = '') {
   const vehicles = Array.isArray(data?.fleetVehicles) ? data.fleetVehicles.filter(vehicle => vehicle?.id) : [];
   const deliveries = sourceDeliveries(data);
@@ -38,6 +50,7 @@ export function resourceManagementModel(data, query = '') {
       vehicle,
       deliveries: assigned,
       summary: assignedSummary(assigned),
+      progress: progressSummary(assigned),
       searchText: [vehicle.id, vehicle.plate, vehicle.driver, vehicle.region, ...(assigned || []).flatMap(delivery => [delivery.id, delivery.name, delivery.address])]
         .map(value => String(value ?? '').toLocaleLowerCase('ko-KR')).join(' '),
     };
@@ -88,7 +101,6 @@ function resourceDetail(resource, kind) {
   const eyebrow = kind === 'drivers' ? '차량별 배정 배송원' : '차량';
   const unknownFields = kind === 'drivers' ? `
     <div><dt>성향</dt><dd>미등록</dd></div>
-    <div><dt>업무 지표</dt><dd>미등록</dd></div>
     <div><dt>메인 권역</dt><dd>미등록</dd></div>` : `
     <div><dt>배정 권역</dt><dd>${escapeHtml(displayText(vehicle.region))}</dd></div>
     <div><dt>운영 상태</dt><dd>${escapeHtml(displayText(vehicle.status))}</dd></div>`;
@@ -100,6 +112,15 @@ function resourceDetail(resource, kind) {
       <div><dt>배정 박스</dt><dd>${escapeHtml(formatCount(resource.summary.boxCount, '박스'))}</dd></div>
       ${unknownFields}
     </dl>
+    <section class="resource-progress" aria-label="당일 배송 지표">
+      <h4>당일 배송 지표</h4>
+      <dl>
+        <div><dt>완료</dt><dd><strong>${escapeHtml(formatCount(resource.progress.completed.destinationCount, '곳'))}</strong><span>${escapeHtml(formatCount(resource.progress.completed.boxCount, '박스'))}</span></dd></div>
+        <div><dt>잔여</dt><dd><strong>${escapeHtml(formatCount(resource.progress.remaining.destinationCount, '곳'))}</strong><span>${escapeHtml(formatCount(resource.progress.remaining.boxCount, '박스'))}</span></dd></div>
+        <div><dt>보류</dt><dd><strong>${escapeHtml(formatCount(resource.progress.held.destinationCount, '곳'))}</strong><span>${escapeHtml(formatCount(resource.progress.held.boxCount, '박스'))}</span></dd></div>
+      </dl>
+      <p>보류 배송은 잔여에 포함됩니다.</p>
+    </section>
     <button type="button" class="button primary resource-view-assignments" data-resource-assignments="${escapeHtml(vehicle.id)}">배정 배송지 조회</button>
     <section class="resource-assignments" aria-label="${escapeHtml(title)} 배정 배송지"><h4>연결된 배송지</h4>${assignmentList(resource)}</section>
   </div>`;

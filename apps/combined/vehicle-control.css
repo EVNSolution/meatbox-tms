@@ -111,3 +111,6 @@
 @media (max-width: 740px) {
   .control-management-actions .button, .control-record-filters button { min-height: 44px; }
 }
+
+.control-timing-note { margin: 0 20px 16px; font-size: 12px; }
+.support-data td small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }

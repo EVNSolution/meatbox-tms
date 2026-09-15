@@ -121,6 +121,11 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   const common = await (await get('/scenario/common.js', cookie)).text();
   assert.ok(common.includes('${location.host}/ws/simulation'));
   assert.ok(common.includes("fetch('/scenario/api/route-data')"));
+  const referenceDriver = await (await get('/scenario/driver.js', cookie)).text();
+  assert.doesNotMatch(referenceDriver, /MB\.send\('complete_stop'\)/);
+  assert.match(referenceDriver, /location\.assign\('\/combined\/driver\.html\?id='/);
+  assert.match(referenceDriver, /currentStopId = current\?\.id/);
+  assert.match(referenceDriver, /사진 확인 후 배송 완료/);
   const combined = await (await get('/combined/', cookie)).text();
   assert.match(combined, /<title>미트박스 TMS<\/title>/);
   const shell = await (await get('/combined/demo-shell.mjs', cookie)).text();
@@ -210,7 +215,11 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   const arrived = await commandState({ type: 'arrive_stop', stopId: 'S1' }, state => state.truck.dwelling && state.truck.fromId === 'S1');
   assert.ok(arrived.order[0].arrivedTime);
   assert.equal(arrived.order[0].deliveredTime, null);
-  const completed = await commandState({ type: 'complete_stop', stopId: 'S1' }, state => state.order[0].status === 'done');
+  const rejectedCompletion = once(ws, 'message');
+  ws.send(JSON.stringify({ type: 'complete_stop', stopId: 'S1' }));
+  assert.deepEqual(JSON.parse((await rejectedCompletion)[0]), { type: 'error', error: 'COMPLETION_NOT_READY' });
+  assert.equal(demo.sim.snapshot().order[0].deliveredTime, null);
+  const completed = await commandState({ type: 'complete_stop', stopId: 'S1', confirmedRequestIds: ['S1-refrigerator'] }, state => state.order[0].status === 'done');
   assert.ok(completed.order[0].deliveredTime);
   assert.equal(completed.truck.toId, 'S2');
   const routeOrder = completed.order.map(stop => stop.id);
@@ -246,6 +255,9 @@ test('production cookie secure and request redirects/commands are bounded', asyn
   assert.equal(validCommand({ type: 'inject_dwell' }), false);
   assert.equal(validCommand({ type: 'set_scenario', scenario: 'shipping', stopId: 'S1' }), true);
   assert.equal(validCommand({ type: 'reorder', stopId: 'S9', dir: 'up' }), false);
+  for (const confirmedRequestIds of [null, 'S1-refrigerator', [12], ['S9-doorstep'], ['S1-unknown'], Array(9).fill('S1-doorstep')]) {
+    assert.equal(validCommand({ type: 'complete_stop', stopId: 'S1', confirmedRequestIds }), false);
+  }
 });
 
 test('original owner snapshots remain byte-for-byte intact', async () => {

@@ -197,7 +197,9 @@ try {
   await screenshot('driver-camera-example', driver);
   await driver.locator('[data-proof-next]').click();
   check('Confirmation retains the selected photograph', /delivery-proof-example\.jpg$/.test(await driver.locator('.dv-proof-thumb img').getAttribute('src')));
-  check('Photo enables final confirmation', await driver.locator('[data-proof-confirm]').isEnabled());
+  check('Photo alone cannot bypass required customer requests', await driver.locator('[data-proof-confirm]').isDisabled());
+  await driver.locator('[data-request-check="S1-refrigerator"]').check();
+  check('Photo and all required requests enable final confirmation', await driver.locator('[data-proof-confirm]').isEnabled());
   await screenshot('driver-confirmation', driver);
   await driver.locator('[data-proof-confirm]').click();
   await matches('#driver-done', /1\/8|1/ , driver);

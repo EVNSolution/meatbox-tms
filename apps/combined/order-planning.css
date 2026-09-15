@@ -54,6 +54,7 @@
 .order-plan-summary div { padding: 10px; background: #fff; }
 .order-plan-summary dt { color: var(--muted); font-size: 10px; }
 .order-plan-summary dd { margin: 3px 0 0; font-size: 13px; font-weight: 700; }
+.order-timing-note { margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .order-assignment-section { margin-top: 16px; }
 .order-assignment-section h3 { margin: 0; font-size: 14px; }
 .order-assignment-section > p { margin: 4px 0 10px; color: var(--muted); font-size: 11px; }

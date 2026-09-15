@@ -1,4 +1,5 @@
 import { referenceIcon } from './reference-icons.mjs';
+import { renderCustomerRequests } from './customer-requests.mjs';
 import { createOrderMap, createOrderMarker, orderMapModel } from './order-planning.mjs';
 import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 import { vehicleOperations, sortVehicleOperations, resolveControlVehicle, resolveControlDelivery, vehicleEvents, deliveryRecords, controlPosition } from './vehicle-operations-model.mjs';
@@ -6,6 +7,16 @@ import { vehicleOperations, sortVehicleOperations, resolveControlVehicle, resolv
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const count = (value, unit = '') => value === null || value === undefined ? '미확인' : `${value.toLocaleString('ko-KR')}${unit}`;
 const labels = { pending: '대기', current: '배송 중', done: '완료', skipped: '보류' };
+const durationText = minutes => Number.isFinite(minutes) ? `${minutes}분` : '미확인';
+const clockText = value => {
+  if (!Number.isFinite(value)) return '미확인';
+  const minutes = Math.round(value / 60000), days = Math.floor(minutes / 1440);
+  return `${days === 1 ? '다음날 ' : days > 1 ? `+${days}일 ` : ''}${String(Math.floor(minutes / 60) % 24).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+};
+const completionText = row => row.heldStops ? `보류 ${row.heldStops}곳, 미확인`
+  : Number.isFinite(row.timing?.completionMs) ? `${clockText(row.timing.completionMs)}${row.timing.completed ? ' 완료' : ' 예상'}` : '미확인';
+const remainingText = row => `${row.heldStops && Number.isFinite(row.remainingMinutes) ? '보류 제외 ' : ''}${durationText(row.remainingMinutes)}`;
+
 const factRows = facts => facts.length ? facts.map(fact => `<li><time>${esc(fact.time || '-')}</time><span>${esc(fact.message)}</span></li>`).join('') : '<li class="muted">기록된 사건이 없습니다.</li>';
 
 export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery, onOpenNotice, onOpenManagement, onOpenRoute = () => {},
@@ -67,16 +78,16 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   function renderVehicles() {
     const visible = sortVehicleOperations(rows, sort).filter(item => `${item.vehicle.id} ${item.vehicle.plate} ${item.vehicle.driver}`.toLocaleLowerCase('ko-KR').includes(search));
     find('[data-control-count]').textContent = `${visible.length}대`;
-    replacePreservingFocus(list, visible.map(item => `<button type="button" class="control-vehicle-row" data-control-vehicle="${esc(item.vehicle.id)}" aria-pressed="${item.vehicle.id === row?.vehicle.id}"><span><strong>${esc(item.vehicle.plate || item.vehicle.id)}</strong><small>${esc(item.vehicle.driver || '배송원 미등록')}</small></span><span aria-label="남은 배송지">${count(item.remainingStops)}</span><span aria-label="남은 박스">${count(item.remainingBoxes)}</span><span class="muted" aria-label="예상 소요 시간 미확인">미확인</span></button>`).join('') || '<p class="empty-state">조회 결과가 없습니다.</p>', '[data-control-vehicle]');
+    replacePreservingFocus(list, visible.map(item => `<button type="button" class="control-vehicle-row" data-control-vehicle="${esc(item.vehicle.id)}" aria-pressed="${item.vehicle.id === row?.vehicle.id}"><span><strong>${esc(item.vehicle.plate || item.vehicle.id)}</strong><small>${esc(item.vehicle.driver || '배송원 미등록')}</small></span><span aria-label="남은 배송지">${count(item.remainingStops)}</span><span aria-label="남은 박스">${count(item.remainingBoxes)}</span><span class="muted" aria-label="${esc(`예상 소요 시간 ${remainingText(item)}`)}">${esc(remainingText(item))}</span></button>`).join('') || '<p class="empty-state">조회 결과가 없습니다.</p>', '[data-control-vehicle]');
   }
 
   function renderSummary() {
-    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.plate || row.vehicle.id)}</h2><p>${esc(row.vehicle.driver || '배송원 미등록')}</p></div><span class="badge">${row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>미확인</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.vehicle.departure?.time || '미등록')}${row.vehicle.departure ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 완료 예상</dt><dd>인도 완료 예측 미연결</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>` : '<p class="empty-state">차량 데이터가 없습니다.</p>';
+    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.plate || row.vehicle.id)}</h2><p>${esc(row.vehicle.driver || '배송원 미등록')}</p></div><span class="badge">${row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.vehicle.departure?.time || '미등록')}${row.vehicle.departure ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${row.timing ? '<p class="muted control-timing-note">기존 이동·하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}` : '<p class="empty-state">차량 데이터가 없습니다.</p>';
     find('[data-control-detail-title]').textContent = row ? `${row.vehicle.plate || row.vehicle.id} 상세` : '차량 상세';
   }
 
   function stopContents(stop) {
-    return `<div class="control-stop-body"><p class="muted">${esc(stop.address || '주소 미등록')}</p><dl class="control-stop-facts"><div><dt>배정 박스</dt><dd>${count(stop.boxes, '박스')}</dd></div><div><dt>도착 ETA</dt><dd>${esc(stop.preciseTimeText || stop.calculatedEta || '미확인')}</dd></div></dl><section class="control-request"><h4>${referenceIcon('location')}고객 요청</h4><p>고객 요청 정보가 아직 수신되지 않았습니다.</p></section><section class="control-tip"><h4>배송원 팁</h4><p>${esc(stop.tip?.body || '등록된 배송팁이 없습니다.')}</p>${stop.tip ? `<small>${esc(stop.tip.author)} (${esc(stop.tip.updatedAt || '시각 미확인')})</small>` : ''}</section><button type="button" class="button control-open-records" data-control-manage="${esc(stop.id)}">이력·알림 보기</button></div>`;
+    return `<div class="control-stop-body"><p class="muted">${esc(stop.address || '주소 미등록')}</p><dl class="control-stop-facts"><div><dt>배정 박스</dt><dd>${count(stop.boxes, '박스')}</dd></div><div><dt>도착 ETA</dt><dd>${esc(stop.preciseTimeText || stop.calculatedEta || '미확인')}</dd></div></dl><section class="control-request">${renderCustomerRequests(stop)}</section><section class="control-tip"><h4>배송원 팁</h4><p>${esc(stop.tip?.body || '등록된 배송팁이 없습니다.')}</p>${stop.tip ? `<small>${esc(stop.tip.author)} (${esc(stop.tip.updatedAt || '시각 미확인')})</small>` : ''}</section><button type="button" class="button control-open-records" data-control-manage="${esc(stop.id)}">이력·알림 보기</button></div>`;
   }
 
   function renderStops() {
@@ -111,7 +122,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   }
 
   function renderSupport() {
-    find('[data-support-data]').innerHTML = `<h3>수신 차량 원자료</h3><p class="muted">완수 속도는 실제 완료 사건의 시간 구간이 필요합니다. 현재 시뮬레이션 기록으로 실제 작업 속도를 산출하지 않습니다.</p><div class="support-table-scroll"><table><thead><tr><th>차량</th><th>완료 / 배정</th><th>마지막 도착 ETA</th><th>완료 예상</th><th>실제 완수 속도</th><th>안정 레벨</th></tr></thead><tbody>${rows.map(item => `<tr><th>${esc(item.vehicle.plate || item.vehicle.id)}</th><td>${item.completed.length} / ${item.deliveries.length}곳</td><td>${esc(item.lastArrivalEta || '미확인')}</td><td>미연결</td><td>실데이터 대기</td><td>기준 미정</td></tr>`).join('')}</tbody></table></div>`;
+    find('[data-support-data]').innerHTML = `<h3>수신 차량 원자료</h3><p class="muted">완수 속도는 실제 완료 사건의 시간 구간이 필요합니다. 현재 시뮬레이션 기록으로 실제 작업 속도를 산출하지 않습니다.</p><div class="support-table-scroll"><table><thead><tr><th>차량</th><th>완료 / 배정</th><th>마지막 도착 ETA</th><th>완료 예상</th><th>실제 완수 속도</th><th>안정 레벨</th></tr></thead><tbody>${rows.map(item => `<tr><th>${esc(item.vehicle.plate || item.vehicle.id)}</th><td>${item.completed.length} / ${item.deliveries.length}곳</td><td>${esc(item.lastArrivalEta || '미확인')}</td><td>${esc(completionText(item))}${item.timing ? '<small>시뮬레이션 계산값</small>' : ''}</td><td>실데이터 대기</td><td>기준 미정</td></tr>`).join('')}</tbody></table></div>`;
   }
 
   function renderMap() {
