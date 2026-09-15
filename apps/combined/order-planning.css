@@ -15,6 +15,7 @@
 .order-map-marker::before { width: 24.8px; height: 32.24px; background: url('./assets/maps/dsv-destination-marker.svg') center / contain no-repeat; content: ''; }
 .order-map-marker[aria-pressed="true"]::before { filter: brightness(.8); }
 .order-map-marker:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; border-radius: 4px; }
+.order-map-vehicle { z-index: 1; width: 64px; height: 64px; background: url('./assets/maps/dsv-vehicle-marker.svg') center / contain no-repeat; }
 .order-map-selection { left: 12px; bottom: 12px; max-width: min(430px, calc(100% - 24px)); padding: 12px 14px; border-radius: 6px; }
 .order-map-selection span { display: block; color: var(--muted); font-size: 10px; font-weight: 600; }
 .order-map-selection strong { display: block; margin-top: 2px; font-size: 13px; }

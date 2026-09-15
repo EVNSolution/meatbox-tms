@@ -1,4 +1,6 @@
 import { referenceIcon } from './reference-icons.mjs';
+import { customerDemoRoad } from './customer-demo-route.mjs';
+import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 export function volumeScenario(deliveries, value = 100) {
@@ -23,7 +25,10 @@ export function orderMapModel(deliveries, routeData) {
     && Math.abs(point.lng) <= 180 && Math.abs(point.lat) <= 90
   ).map(point => [point.id, [point.lng, point.lat]]));
   const mapped = (deliveries || []).flatMap(delivery => points.has(delivery.id) ? [{ delivery, coordinates: points.get(delivery.id) }] : []);
-  return { mapped, unknownCount: Math.max(0, (deliveries?.length || 0) - mapped.length) };
+  const preferredStopId = mapped[0]?.delivery.id;
+  const roadStopIds = [preferredStopId, ...(routeData?.points || []).map(point => point.id)].filter(id => id && id !== 'MFC');
+  const vehicle = roadStopIds.map(id => customerDemoRoad(routeData, id)[0]).find(Boolean) || null;
+  return { mapped, unknownCount: Math.max(0, (deliveries?.length || 0) - mapped.length), vehicle };
 }
 
 function createOrderMap(element) {
@@ -33,7 +38,7 @@ function createOrderMap(element) {
     style: new URL('./assets/maps/dsv-korea-v1.json', import.meta.url).href,
     center: [126.995, 37.43], zoom: 10.35,
     maxBounds: [124.5, 33, 132, 39.5],
-    attributionControl: false, scrollZoom: false,
+    attributionControl: false, scrollZoom: true,
     dragRotate: false, touchPitch: false, pitchWithRotate: false, maxPitch: 0,
   });
   map.touchZoomRotate.disableRotation();
@@ -63,6 +68,14 @@ function createOrderMarker(map, delivery, coordinates) {
   return { element, remove: () => marker.remove() };
 }
 
+function createOrderVehicleMarker(map, coordinates) {
+  const element = document.createElement('div');
+  element.className = 'order-map-vehicle';
+  element.setAttribute('aria-label', '예시 차량 위치');
+  const marker = new maplibregl.Marker({ element }).setLngLat(coordinates).addTo(map);
+  return { element, remove: () => marker.remove() };
+}
+
 export function mountOrderPlanning({
   element,
   onSelect = () => {},
@@ -72,6 +85,7 @@ export function mountOrderPlanning({
   }),
   mapFactory = createOrderMap,
   markerFactory = createOrderMarker,
+  vehicleMarkerFactory = createOrderVehicleMarker,
 }) {
   if (!element) throw new TypeError('주문 배차 영역이 필요합니다.');
   element.innerHTML = `
@@ -131,6 +145,7 @@ export function mountOrderPlanning({
   let routePromise = null;
   let mapMarkers = [];
   let resizeObserver = null;
+  let wheelZoom = null;
   let destroyed = false;
   let mapFailure = '';
   const selectedVehicle = () => (data?.fleetVehicles || []).find(vehicle => vehicle.id === selectedVehicleId) ?? data?.vehicle ?? null;
@@ -163,17 +178,18 @@ export function mountOrderPlanning({
     visibleDeliveries = vehicleDeliveries;
     if (!visibleDeliveries.some(delivery => delivery.id === selectedDeliveryId)) selectedDeliveryId = null;
     const model = orderMapModel(visibleDeliveries, routeData);
-    const nextMarkerSignature = model.mapped.map(({ delivery, coordinates }) => `${delivery.id}:${delivery.name}:${delivery.boxes}:${coordinates}`).join('|');
-    const nextGeometrySignature = `${selectedVehicleId}|${model.mapped.map(({ delivery, coordinates }) => `${delivery.id}:${coordinates}`).join('|')}`;
+    const nextMarkerSignature = `${model.mapped.map(({ delivery, coordinates }) => `${delivery.id}:${delivery.name}:${delivery.boxes}:${coordinates}`).join('|')}|vehicle:${model.vehicle}`;
+    const nextGeometrySignature = `${selectedVehicleId}|${model.mapped.map(({ delivery, coordinates }) => `${delivery.id}:${coordinates}`).join('|')}|vehicle:${model.vehicle}`;
     if (map && nextMarkerSignature !== markerSignature) {
       markerSignature = nextMarkerSignature;
       mapMarkers.splice(0).forEach(marker => marker.remove());
       mapMarkers = model.mapped.map(({ delivery, coordinates }) => markerFactory(map, delivery, coordinates));
+      if (model.vehicle) mapMarkers.push(vehicleMarkerFactory(map, model.vehicle));
     }
     mapMarkers.forEach(marker => marker.element.setAttribute('aria-pressed', String(marker.element.dataset.orderMarker === selectedDeliveryId)));
     if (map && nextGeometrySignature !== geometrySignature) {
       geometrySignature = nextGeometrySignature;
-      const coordinates = model.mapped.map(item => item.coordinates);
+      const coordinates = [...model.mapped.map(item => item.coordinates), model.vehicle].filter(Boolean);
       if (coordinates.length === 1) map.jumpTo({ center: coordinates[0], zoom: 15 });
       if (coordinates.length > 1) {
         const lngs = coordinates.map(point => point[0]);
@@ -182,8 +198,8 @@ export function mountOrderPlanning({
       }
     }
     count.textContent = model.unknownCount ? `지도 ${model.mapped.length}건 / 위치 미등록 ${model.unknownCount}건` : `${model.mapped.length}건`;
-    mapStatus.hidden = Boolean(model.mapped.length);
-    if (!model.mapped.length) mapStatus.textContent = mapFailure || (routeData ? '선택 차량의 위치 정보가 등록되지 않았습니다.' : '배송지 위치를 불러오고 있습니다.');
+    mapStatus.hidden = Boolean(model.mapped.length || model.vehicle);
+    if (!model.mapped.length && !model.vehicle) mapStatus.textContent = mapFailure || (routeData ? '배송지 위치 정보가 등록되지 않았습니다.' : '배송지 위치를 불러오고 있습니다.');
     updateSelection();
     syncControls();
   }
@@ -192,6 +208,7 @@ export function mountOrderPlanning({
     if (!map) {
       try {
         map = mapFactory(layer);
+        wheelZoom = installModifierWheelZoom(map);
         mapFailure = '';
         resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(() => map?.resize()) : null;
         resizeObserver?.observe(canvas);
@@ -271,6 +288,7 @@ export function mountOrderPlanning({
       listeners.splice(0).forEach(remove => remove());
       resizeObserver?.disconnect();
       mapMarkers.splice(0).forEach(marker => marker.remove());
+      wheelZoom?.remove();
       map?.remove?.();
     },
   };

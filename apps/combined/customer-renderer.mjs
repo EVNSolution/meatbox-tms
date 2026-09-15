@@ -2,6 +2,7 @@ import { referenceIcon } from './reference-icons.mjs';
 import { inboxState, noticeKey, visibleNotices, updateInbox } from './customer-inbox.mjs';
 import { customerDemoRoad } from './customer-demo-route.mjs';
 import { customerPickerPage, updateCustomerPickerState } from './customer-picker-model.mjs';
+import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
@@ -38,6 +39,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
   let selectedId;
   let routeData;
   let map;
+  let mapViewSignature = '';
   let homeMarker;
   let truckMarker;
   let popupBaseline = new Set();
@@ -172,22 +174,27 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     renderRoad(road);
     byId('map').hidden = !canMap;
     byId('map-empty').hidden = canMap;
-    if (!canMap || !map) return;
+    if (!canMap || !map) { mapViewSignature = ''; return; }
     map.resize();
     const home = [point.lng, point.lat];
+    const nextViewSignature = `${delivery.id}|${home}|${road.length}|${road[0] || ''}|${road.at(-1) || ''}`;
+    const viewChanged = nextViewSignature !== mapViewSignature;
+    mapViewSignature = nextViewSignature;
     if (!homeMarker) homeMarker = createMarker('store', home);
     else homeMarker.setLngLat(home);
     if (!road.length) {
       if (truckMarker) { truckMarker.remove(); truckMarker = null; }
-      map.jumpTo({ center: home, zoom: 15 });
+      if (viewChanged) map.jumpTo({ center: home, zoom: 15 });
       return;
     }
     const truck = delivery.arrivedAt ? road[road.length - 1] : road[0];
     if (!truckMarker) truckMarker = createMarker('vehicle', truck);
     else truckMarker.setLngLat(truck);
-    const bounds = new maplibregl.LngLatBounds(home, home);
-    road.forEach(coordinate => bounds.extend(coordinate));
-    map.fitBounds(bounds, { padding: { top: 56, bottom: 48, left: 48, right: 48 }, maxZoom: 15, duration: 0 });
+    if (viewChanged) {
+      const bounds = new maplibregl.LngLatBounds(home, home);
+      road.forEach(coordinate => bounds.extend(coordinate));
+      map.fitBounds(bounds, { padding: { top: 56, bottom: 48, left: 48, right: 48 }, maxZoom: 15, duration: 0 });
+    }
   }
 
   function render() {
@@ -299,7 +306,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
       style: new URL('./assets/maps/dsv-korea-v1.json', import.meta.url).href,
       center: [126.995, 37.43], zoom: 10.35,
       maxBounds: [124.5, 33, 132, 39.5],
-      attributionControl: false, scrollZoom: false,
+      attributionControl: false, scrollZoom: true,
       dragRotate: false, touchPitch: false, pitchWithRotate: false, maxPitch: 0,
     });
     instance.touchZoomRotate.disableRotation();
@@ -320,6 +327,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     routeData = data;
     if (!map) {
       map = initMap(byId('map')).map;
+      installModifierWheelZoom(map);
       map.once('load', render);
     }
     render();

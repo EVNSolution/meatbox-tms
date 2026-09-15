@@ -66,7 +66,12 @@ test('등록 좌표만 지도에 표시하고 여덟 곳을 넘겨도 자르지 
   assert.equal(model.mapped.length, 10);
   assert.equal(model.unknownCount, 2);
   assert.deepEqual(model.mapped[9].coordinates, [127.09, 37.59]);
-  assert.deepEqual(orderMapModel(many, null), { mapped: [], unknownCount: 12 });
+  assert.deepEqual(orderMapModel(many, null), { mapped: [], unknownCount: 12, vehicle: null });
+  const withRoad = orderMapModel([many[0]], {
+    points: [points[0]],
+    legs: { 'MFC>S1': { coords: [[37.4, 127], [37.45, 127.01], [37.5, 127.02], [37.55, 127.03], [37.6, 127.04]] } },
+  });
+  assert.deepEqual(withRoad.vehicle, [127.02, 37.5]);
 });
 
 test('주문 화면이 열릴 때만 지도를 만들고 등록된 모든 좌표에 마커를 둔다', async () => {
@@ -100,11 +105,17 @@ test('좌표 없는 차량으로 바꾸면 이전 마커를 지우고 원래 차
   const points = live.map((delivery, index) => ({ id: delivery.id, lng: 127 + index / 100, lat: 37.5 + index / 100 }));
   let created = 0;
   let removed = 0;
+  let vehicleCreated = 0;
+  let vehicleRemoved = 0;
   const planning = mount({ element }, {
-    loadRouteData: () => ({ points }),
+    loadRouteData: () => ({ points, legs: { 'MFC>S1': { coords: [[37.4, 127], [37.45, 127.01], [37.5, 127.02], [37.55, 127.03], [37.6, 127.04]] } } }),
     markerFactory: (_map, delivery) => {
       created += 1;
       return { element: { dataset: { orderMarker: delivery.id }, setAttribute() {} }, remove() { removed += 1; } };
+    },
+    vehicleMarkerFactory: () => {
+      vehicleCreated += 1;
+      return { element: { dataset: {}, setAttribute() {} }, remove() { vehicleRemoved += 1; } };
     },
   });
   planning.update({
@@ -114,13 +125,19 @@ test('좌표 없는 차량으로 바꾸면 이전 마커를 지우고 원래 차
   }, 'S1');
   await Promise.resolve();
   assert.equal(created, 8);
+  assert.equal(vehicleCreated, 1);
 
   input(nodes, 'vehicle', 'V130', 'change');
   assert.equal(removed, 8);
+  assert.equal(vehicleRemoved, 1);
+  assert.equal(vehicleCreated, 2);
   assert.equal(nodes['map-count'].textContent, '지도 0건 / 위치 미등록 35건');
+  assert.equal(nodes['map-status'].hidden, true);
 
   input(nodes, 'vehicle', 'V1', 'change');
   assert.equal(created, 16);
+  assert.equal(vehicleRemoved, 2);
+  assert.equal(vehicleCreated, 3);
   assert.equal(nodes['map-count'].textContent, '8건');
   planning.destroy();
 });
