@@ -160,9 +160,6 @@ button:disabled { cursor: default; }
 .dv-request-card p { margin: 4px 0 0; color: var(--driver-muted); font-size: 11px; }
 .dv-request-confirm h3 { margin: 0; font-size: 18px; }
 .dv-request-confirm > .dv-button { width: 100%; margin-top: 12px; }
-.dv-history-driver { display: grid; gap: 6px; margin: 0 18px 12px; }
-.dv-history-driver label { color: var(--driver-muted); font-size: 11px; }
-.dv-history-driver select { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid var(--driver-line); border-radius: 8px; background: #fff; }
 .dv-history-calendar { margin: 0 12px 16px; }
 .dv-history-calendar header { display: flex; align-items: center; justify-content: space-between; }
 .dv-history-calendar h3 { margin: 0; font-size: 18px; }
