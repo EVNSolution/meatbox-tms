@@ -1,4 +1,5 @@
 import { referenceIcon } from './reference-icons.mjs';
+import { presentationCandidateIds } from './dispatch-presentation.mjs';
 
 const PHASE_LABELS = {
   unplanned: '배차 전',
@@ -307,6 +308,7 @@ export function mountDispatchWorkflow({ element, onCommand = () => {} } = {}) {
         search.value = '';
         selected = new Set([
           ...next.candidateIds,
+          ...presentationCandidateIds(next),
           ...next.candidates.filter(candidate => candidate.locked).map(candidate => candidate.id),
         ]);
         showError('');

@@ -220,3 +220,36 @@ test('기준이 없으면 계산을 정직하게 비활성화하고 draftVersion
   assert.equal(nodes.publish.textContent, '전체 배차 전송');
   workflow.destroy();
 });
+
+test('발표 명단은 9월16일 배차 전에만 초기 선택하고 수동 선택과 다른 날짜를 보존한다', async () => {
+  const { presentationFleet } = await import('./dispatch-presentation.mjs');
+  const candidates = presentationFleet.vehicleIds.map(id => ({ id, driver: id }));
+  const source = data({ dispatch: { ...data().dispatch, candidateIds: [] }, dispatchCandidates: candidates });
+  const { element, nodes } = fixture();
+  const commands = [];
+  const workflow = mountDispatchWorkflow({ element, onCommand: (...args) => commands.push(args) });
+  workflow.update(source);
+  assert.equal(nodes.selected.textContent, '80명 선택');
+  assert.equal(commands.length, 0);
+  nodes.clear.listeners.click();
+  workflow.update(source);
+  assert.equal(nodes.selected.textContent, '0명 선택');
+  workflow.update({ ...source, sourceData: { date: '2026-09-17' } });
+  assert.equal(nodes.selected.textContent, '0명 선택');
+  workflow.update(source);
+  assert.equal(nodes.selected.textContent, '80명 선택');
+  nodes.calculate.listeners.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(commands, [['calculate_dispatch', { vehicleIds: presentationFleet.vehicleIds }]]);
+  workflow.destroy();
+});
+
+test('발표 명단은 기존 계산·확정 후보와 불완전한 후보 자료에 적용하지 않는다', async () => {
+  const { presentationFleet, presentationCandidateIds } = await import('./dispatch-presentation.mjs');
+  const base = { date: presentationFleet.date, phase: 'unplanned', readOnly: false, candidateIds: [], candidates: presentationFleet.vehicleIds.map(id => ({ id })) };
+  assert.equal(new Set(presentationFleet.vehicleIds).size, 80);
+  for (const phase of ['draft', 'published', 'amending']) assert.deepEqual(presentationCandidateIds({ ...base, phase }), []);
+  assert.deepEqual(presentationCandidateIds({ ...base, readOnly: true }), []);
+  assert.deepEqual(presentationCandidateIds({ ...base, candidateIds: [presentationFleet.vehicleIds[0]] }), []);
+  assert.deepEqual(presentationCandidateIds({ ...base, candidates: base.candidates.slice(1) }), []);
+});

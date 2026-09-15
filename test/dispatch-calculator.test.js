@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const { calculateDispatch } = require('../lib/dispatch-calculator.js');
 
 const vehicle = id => ({ id, location: { coordinates: [0, 0], source: 'demo' } });
-const order = (id, groupId, boxes, coordinates) => ({ id, groupId, boxes, coordinates });
+const order = (id, groupId, boxes, coordinates, zoneIds) => ({ id, groupId, boxes, coordinates, ...(zoneIds === undefined ? {} : { zoneIds }) });
 const unit = (id, ...orderIds) => ({ id, orderIds });
 
 function fixture() {
@@ -53,6 +53,37 @@ test('지리적 묶음 안에서 박스 물량을 균형 있게 나누며 결과
 
   assert.deepEqual(first, second);
   assert.deepEqual(loads, { V1: 10, V2: 10 });
+});
+
+test('서로 다른 배송지라도 같은 권역이면 한 배송원에게 배차한다', () => {
+  const input = fixture();
+  input.orders[0].zoneIds = ['ZONE-A'];
+  input.orders[2].zoneIds = ['ZONE-A'];
+  const result = calculateDispatch(input);
+
+  assert.equal(result.W1, result.E1);
+  assert.deepEqual(Object.keys(result).sort(), input.orders.map(item => item.id).sort());
+});
+
+test('여러 권역을 공유하는 배송지는 연결된 모든 권역을 하나로 묶는다', () => {
+  const input = fixture();
+  input.orders[0].zoneIds = ['ZONE-A'];
+  input.orders[1].zoneIds = ['ZONE-A', 'ZONE-B'];
+  input.orders[2].zoneIds = ['ZONE-B'];
+  const before = structuredClone(input);
+  const result = calculateDispatch(input);
+
+  assert.equal(result.W1, result.W2);
+  assert.equal(result.W2, result.E1);
+  assert.deepEqual(input, before);
+});
+
+test('권역이 없는 배송지는 기존 배송지 단위 공간·물량 계산을 유지한다', () => {
+  const input = fixture();
+  const withEmptyZones = structuredClone(input);
+  for (const item of withEmptyZones.orders) item.zoneIds = [];
+
+  assert.deepEqual(calculateDispatch(withEmptyZones), calculateDispatch(input));
 });
 
 test('좌표 없는 묶음은 물량만으로 배분하고 큰 묶음은 그대로 유지한다', () => {
