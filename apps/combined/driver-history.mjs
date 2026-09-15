@@ -1,3 +1,6 @@
+import { sourceViewerPlan } from './source-viewer-plan.mjs';
+import { destinationKey } from './delivery-bundles.mjs';
+
 const exampleHistory = [
   {
     date: '2026-09-12',
@@ -41,8 +44,22 @@ export function selectedHistoryVehicle(vehicles, selectedVehicleId, routeVehicle
   return selectedVehicleId !== null ? vehicles.find(vehicle => vehicle.id === selectedVehicleId) || null : routeVehicle || null;
 }
 
+const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ''));
+const dateValue = value => typeof value === 'string' ? value : value?.date;
+
+export function driverOperatingDate(sourceData, today) {
+  if (validDate(sourceData?.operatingDate)) return sourceData.operatingDate;
+  if (validDate(sourceData?.today)) return sourceData.today;
+  const dates = (sourceData?.dates || []).map(dateValue);
+  return dates.includes('2026-09-16') ? '2026-09-16' : today;
+}
+
+export function latestPastHistoryDate(dates, operatingDate, fallback) {
+  return (dates || []).map(dateValue).filter(date => validDate(date) && date < operatingDate).sort().at(-1) || fallback;
+}
+
 export async function sourceDriverHistoryForDate(date, identity, fetcher = fetch) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !identity?.driver) return [];
+  if (!validDate(date) || !identity?.driver || (validDate(identity.operatingDate) && date >= identity.operatingDate)) return [];
   const response = await fetcher(`/api/dispatch-data/days/${date}`);
   if (response.status === 404) return [];
   if (!response.ok) throw new Error('source history unavailable');
@@ -54,13 +71,26 @@ export async function sourceDriverHistoryForDate(date, identity, fetcher = fetch
   const matchingGroups = new Set((selectedGroup ? [selectedGroup] : sameDriver).map(group => group.id));
   const orders = (Array.isArray(day.orders) ? day.orders : []).filter(order => matchingGroups.has(order.groupId));
   if (!orders.length) return [];
+  const boxValue = order => order.boxes != null && Number.isFinite(Number(order.boxes)) ? Number(order.boxes) : null;
+  const destinations = [...orders.reduce((groups, order) => {
+    const key = destinationKey(order);
+    const current = groups.get(key);
+    if (current) {
+      current.boxes = current.boxes == null || boxValue(order) == null ? null : current.boxes + boxValue(order);
+      current.sourceRows += Number(order.sourceRows) || 0;
+    } else groups.set(key, { ...order, boxes: boxValue(order), sourceRows: Number(order.sourceRows) || 0, status: 'pending' });
+    return groups;
+  }, new Map()).values()];
+  const plan = sourceViewerPlan({ date, deliveries: destinations });
   return [{
     date,
     id: `SOURCE-${date}-${identity.originalGroupId || identity.driver}`,
     label: `${identity.driver} 배차`,
     vehicle: identity.plate || '차량 정보 미제공',
-    destinations: orders.length,
-    boxes: orders.reduce((sum, order) => sum + (Number(order.boxes) || 0), 0),
+    destinations: destinations.length,
+    boxes: orders.every(order => boxValue(order) != null) ? orders.reduce((sum, order) => sum + boxValue(order), 0) : null,
     sourceRows: orders.reduce((sum, order) => sum + (Number(order.sourceRows) || 0), 0),
+    plannedStartAt: plan.timing?.completionMs == null ? null : plan.departureText,
+    plannedEndAt: plan.timing?.completionMs == null ? null : plan.finishText,
   }];
 }

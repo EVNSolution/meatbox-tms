@@ -46,3 +46,16 @@ test('같은 차량의 배송지 상세를 바꿔도 예상 운행 요약은 같
   assert.equal(other.deliveries[0].etaSource, 'operating-plan');
   assert.deepEqual(source, before);
 });
+
+test('하위 주문 링크를 같은 배송지의 대표 정차점으로 해석한다', () => {
+  const source = structuredClone(state);
+  source.sourceData.defaultStopId = 'O2';
+  source.fleetDeliveries = [
+    { id: 'O1', orderIds: ['O1', 'O2'], orders: [{ id: 'O1' }, { id: 'O2' }], vehicleId: 'G1', coordinates: [127.1, 37.5], status: 'pending' },
+    { id: 'O3', orderIds: ['O3'], orders: [{ id: 'O3' }], vehicleId: 'G2', coordinates: [127.3, 37.7], status: 'current' },
+  ];
+  const view = sourceVehicleContext(source, 'O2');
+  assert.equal(view.vehicle.id, 'G1');
+  assert.equal(view.customerStopId, 'O1');
+  assert.deepEqual(view.deliveries.map(stop => stop.id), ['O1']);
+});

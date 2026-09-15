@@ -16,7 +16,8 @@ test('페이지 달력은 요일별 월 전체와 선택일, 오늘, 원본 자�
   assert.match(html, /data-history-date="2026-09-14"[^>]*aria-pressed="true"/);
   assert.match(html, /data-history-date="2026-09-16"[^>]*aria-pressed="false"[^>]*aria-current="date"/);
   assert.match(html, /2026.09.14 월요일, 배차 자료 있음/);
-  assert.match(html, /원본 배차 자료가 있는 날/);
+  assert.match(html, /배차 기록이 있는 날/);
+  assert.doesNotMatch(html, /원본 배차/);
   assert.doesNotMatch(html, /type="date"|<dialog| disabled/);
 });
 

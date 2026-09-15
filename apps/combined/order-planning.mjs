@@ -3,6 +3,7 @@ import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 import { summarizeFleetTiming, vehicleOperations } from './vehicle-operations-model.mjs';
 import { mountDispatchMapLayers } from './dispatch-map-layer.mjs';
 import { paginate } from './pagination-model.mjs';
+import { bundleDeliveries } from './delivery-bundles.mjs';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 export function volumeScenario(deliveries, value = 100) {
@@ -21,8 +22,27 @@ const vehiclesFor = data => Array.isArray(data?.fleetVehicles) ? data.fleetVehic
 const boxesText = boxes => Number.isFinite(boxes) && boxes >= 0 ? `${boxes.toLocaleString('ko-KR')}박스` : '미확인';
 const vehicleIdFor = (delivery, fallbackVehicleId) => delivery?.vehicle?.id ?? delivery?.vehicleId ?? fallbackVehicleId ?? null;
 const countText = count => `${Number(count || 0).toLocaleString('ko-KR')}곳`;
-const clockText = value => {
+const planningVehicles = data => {
+  const vehicles = vehiclesFor(data);
+  if (!data?.dispatchSource || !data?.dispatch || data.dispatch.phase === 'unplanned') return vehicles;
+  const assignedIds = new Set((deliveriesFor(data) || []).map(stop => vehicleIdFor(stop)));
+  return vehicles.filter(vehicle => assignedIds.has(vehicle.id));
+};
+const planningOperations = data => {
+  if (!data?.dispatchSource) return vehicleOperations(data);
+  const actual = new Map((data.sourceOrders || []).map(order => [order.id, order]));
+  return vehicleOperations({ ...data,
+    sourceData: data.sourceData || { date: data.dispatchSource.date },
+    fleetVehicles: data?.dispatch?.phase === 'unplanned' ? [] : planningVehicles(data),
+    fleetDeliveries: data?.dispatch?.phase === 'published' && Array.isArray(data.sourceOrders) ? data.sourceOrders : (deliveriesFor(data) || []).map(order => {
+      const recorded = actual.get(order.id);
+      return recorded?.vehicleId === order.vehicleId ? { ...recorded, ...order } : order;
+    }),
+  });
+};
+const clockText = (value, date) => {
   if (!Number.isFinite(value)) return '미확인';
+  if (date) value -= Date.parse(`${date}T00:00:00+09:00`);
   const totalMinutes = Math.round(value / 60000);
   const days = Math.floor(totalMinutes / (24 * 60));
   const minutes = totalMinutes % (24 * 60);
@@ -38,15 +58,16 @@ const durationText = minutes => {
 
 export function orderAssignmentSummary(data) {
   const deliveries = deliveriesFor(data) || [];
-  const vehicles = vehiclesFor(data);
+  const vehicles = planningVehicles(data);
+  const destinations = data?.dispatchSource ? bundleDeliveries(deliveries) : deliveries;
   const fallbackVehicleId = deliveries === data?.deliveries ? data?.vehicle?.id : null;
   return {
     vehicles: vehicles.length,
-    destinations: deliveries.length,
+    destinations: destinations.length,
     boxes: volumeScenario(deliveries).baselineBoxes,
     assignments: vehicles.map(vehicle => {
       const assigned = deliveries.filter(delivery => vehicleIdFor(delivery, fallbackVehicleId) === vehicle.id);
-      return { vehicle, destinations: assigned.length, boxes: volumeScenario(assigned).baselineBoxes };
+      return { vehicle, destinations: data?.dispatchSource ? bundleDeliveries(assigned).length : assigned.length, orders: assigned.length, boxes: volumeScenario(assigned).baselineBoxes };
     }),
   };
 }
@@ -223,7 +244,7 @@ export function mountOrderPlanning({
     setText('[data-order-group-note]', isSource ? '주문 수신 순서' : '수신 순서');
     setText('[data-order-map-description]', isSource ? showAllPins ? '모든 주문 위치를 표시합니다.' : '확대하면 모든 주문 위치를 표시합니다.' : '전체 등록 주문과 선택 차량 배정');
     setText('[data-order-groups-label]', isSource ? data?.dispatch?.phase === 'unplanned' ? '후보 차량' : '배정 차량' : '총 차량');
-    setText('[data-order-orders-label]', isSource ? '주문 위치' : '총 배송지');
+    setText('[data-order-orders-label]', '총 배송지');
     setText('[data-order-assignment-note]', isSource ? data?.dispatch?.phase === 'unplanned' ? '배송원을 선택하고 배차 계산을 진행해 주세요.' : data?.dispatch?.phase === 'draft' ? '아직 전송하지 않은 배차 계산안입니다.' : data?.dispatch?.phase === 'amending' ? '확정 배차는 유지하고, 이 수정안을 다시 전송하기 전에 검토합니다.' : '확정된 배차의 주문과 박스 수입니다.' : '동일 차량 ID 단위이며 수신 순서로 표시합니다. 배송지를 가구 수로 환산하지 않습니다.');
     const regionControl = query('[data-order-region-control]');
     if (regionControl) regionControl.hidden = !isSource;
@@ -237,7 +258,7 @@ export function mountOrderPlanning({
   function syncControls() {
     const volume = volumeScenario(deliveriesFor(data), percent);
     const plan = orderAssignmentSummary(data);
-    const fleetTiming = summarizeFleetTiming(vehicleOperations(data));
+    const fleetTiming = summarizeFleetTiming(planningOperations(data));
     range.value = String(percent);
     if (!editingPercent) number.value = String(percent);
     display.textContent = `${percent}%`;
@@ -245,11 +266,12 @@ export function mountOrderPlanning({
     baseline.textContent = boxesText(volume.baselineBoxes);
     target.textContent = boxesText(volume.targetBoxes);
     totalVehicles.textContent = `${plan.vehicles.toLocaleString('ko-KR')}대`;
-    totalDestinations.textContent = imported() ? `${plan.destinations.toLocaleString('ko-KR')}건` : countText(plan.destinations);
+    totalDestinations.textContent = countText(plan.destinations);
     totalDuration.textContent = durationText(fleetTiming.durationMinutes);
     const unknownVehicles = fleetTiming.totalVehicles - fleetTiming.knownVehicles;
     timingNote.textContent = `시간 확인 ${fleetTiming.knownVehicles.toLocaleString('ko-KR')}/${fleetTiming.totalVehicles.toLocaleString('ko-KR')}대${unknownVehicles ? `, 나머지 ${unknownVehicles.toLocaleString('ko-KR')}대 미확인` : ''}. 시뮬레이션 계산값: 가장 이른 고정 출발부터 가장 늦은 최종 인도 완료까지`;
-    if (imported()) timingNote.textContent = '운행 시간이 등록되면 전체 소요 시간을 계산합니다.';
+    if (imported()) timingNote.textContent = data?.dispatch?.phase === 'unplanned' ? '배차 계산 후 차량별 출발과 완료 예상 시간을 확인할 수 있습니다.'
+      : `계획 시간 확인 ${fleetTiming.knownVehicles}/${fleetTiming.totalVehicles}대${unknownVehicles ? `, ${unknownVehicles}대 미확인` : ''}. ${clockText(fleetTiming.departureMs, data.dispatchSource.date)} 고정 출발부터 ${clockText(fleetTiming.completionMs, data.dispatchSource.date)} 최종 인도 완료 예상까지`;
     assignments.innerHTML = plan.assignments.map(({ vehicle, destinations, boxes }) => `<article><div><strong>${escapeHtml(vehicle.driver || '배송원 미확인')}</strong><span>${escapeHtml(vehicle.plate || vehicle.id)}</span></div><p><span>배정 배송지 ${countText(destinations)}</span><span>배정 박스 ${boxesText(boxes)}</span></p></article>`).join('') || '<p class="order-assignment-empty">배정 차량 데이터가 없습니다.</p>';
     note.textContent = volume.baselineBoxes === null ? '수량이 확인된 전체 주문 데이터가 필요합니다.'
       : '합계 기준의 물량 미리보기입니다. 주문별 수량과 배차는 변경하지 않습니다.';
@@ -257,7 +279,8 @@ export function mountOrderPlanning({
     if (imported()) {
       const stats = data.dispatchSource.summary;
       summary.innerHTML = `<span>주문 ${stats.orders.toLocaleString('ko-KR')}건</span><span>총 ${boxesText(stats.boxes)}</span><span>비교 ${percent}% (${boxesText(volume.targetBoxes)})</span>`;
-      assignments.innerHTML = plan.assignments.map(({ vehicle, destinations, boxes }) => `<article><div><strong>${escapeHtml(vehicle.driver)}</strong></div><p><span>주문 ${destinations.toLocaleString('ko-KR')}건</span><span>${boxesText(boxes)}</span></p></article>`).join('');
+      const times = new Map(planningOperations(data).map(row => [row.vehicle.id, row]));
+      assignments.innerHTML = plan.assignments.map(({ vehicle, destinations, orders, boxes }) => { const row = times.get(vehicle.id); return `<article><div><strong>${escapeHtml(vehicle.driver)}</strong><span>${escapeHtml(vehicle.plate)}</span></div><p><span>${countText(destinations)} / 주문 ${orders.toLocaleString('ko-KR')}건</span><span>${boxesText(boxes)}</span></p>${row ? `<p><span>고정 출발 ${escapeHtml(row.fixedDepartureText || '미확인')}</span><span>완료 예상 ${clockText(row.completionEtaMs, data.dispatchSource.date)}</span></p>` : ''}</article>`; }).join('');
     }
   }
 
@@ -471,8 +494,8 @@ export function mountOrderPlanning({
   }
 
   function updateVehicles() {
-    const vehicles = vehiclesFor(data);
-    const rows = vehicleOperations(data);
+    const vehicles = planningVehicles(data);
+    const rows = planningOperations(data);
     const rowsByVehicle = new Map(rows.map(row => [row.vehicle.id, row]));
     if (!vehicles.some(vehicle => vehicle.id === selectedVehicleId) && !(imported() && selectedVehicleId === 'all')) selectedVehicleId = imported() ? 'all' : vehicles.find(vehicle => vehicle.id === 'V1')?.id ?? vehicles[0]?.id ?? '';
     const source = deliveriesFor(data) || [];
@@ -485,15 +508,15 @@ export function mountOrderPlanning({
       const assigned = source.filter(delivery => vehicleIdFor(delivery, fallbackVehicleId) === vehicle.id);
       const boxes = volumeScenario(assigned).baselineBoxes;
       const departureLabel = vehicle.departure?.source === 'scenario-baseline' ? '고정 출발 (시나리오 기준)' : '고정 출발';
-      const departure = vehicle.departure?.time ? escapeHtml(vehicle.departure.time) : '미등록';
       const row = rowsByVehicle.get(vehicle.id);
+      const departure = escapeHtml(row?.fixedDepartureText || vehicle.departure?.time || '미등록');
       const lastArrival = row?.lastArrivalEta || (vehicle.live && /완료$/.test(data?.kpi?.finishEta || '') ? 'ETA 미해당' : '미등록');
       const held = row?.timing?.heldStops || 0;
       const completion = held ? `보류 ${countText(held)}, 미확인`
-        : Number.isFinite(row?.timing?.completionMs) ? `${clockText(row.timing.completionMs)}${row.timing.completed ? ' 완료' : ' 예상'}` : '미등록';
+        : Number.isFinite(row?.timing?.completionMs) ? `${clockText(row.timing.completionMs, data?.dispatchSource?.date)}${row.timing.completed ? ' 완료' : ' 예상'}` : '미등록';
       const completionLabel = row?.timing?.completed ? '최종 인도 완료' : '최종 인도 완료 예측';
       const regionLabel = `${vehicle.region || '권역 미등록'} / ${vehicle.location?.label?.replace(' 예시 위치', '') || '위치 미등록'}`;
-      if (imported()) return `<button type="button" data-order-vehicle-id="${escapeHtml(vehicle.id)}" aria-pressed="${vehicle.id === selectedVehicleId}"><span class="order-vehicle-name"><strong title="${escapeHtml(vehicle.driver)}">${escapeHtml(vehicle.driver)}</strong><small>${escapeHtml(vehicle.plate)}</small></span><span class="order-vehicle-load"><b>${data?.dispatch?.phase === 'unplanned' ? '배차 대기' : `주문 ${assigned.length.toLocaleString('ko-KR')}건`}</b><b>${boxesText(boxes)}</b></span><span class="order-source-regions" title="${escapeHtml(regionLabel)}">${escapeHtml(regionLabel)}</span></button>`;
+      if (imported()) return `<button type="button" data-order-vehicle-id="${escapeHtml(vehicle.id)}" aria-pressed="${vehicle.id === selectedVehicleId}"><span class="order-vehicle-name"><strong title="${escapeHtml(vehicle.driver)}">${escapeHtml(vehicle.driver)}</strong><small>${escapeHtml(vehicle.plate)}</small></span><span class="order-vehicle-load"><b>${data?.dispatch?.phase === 'unplanned' ? '배차 대기' : `${countText(bundleDeliveries(assigned).length)} / 주문 ${assigned.length.toLocaleString('ko-KR')}건`}</b><b>${boxesText(boxes)}</b></span><span class="order-source-regions" title="${escapeHtml(regionLabel)}">${escapeHtml(regionLabel)}</span></button>`;
       return `<button type="button" data-order-vehicle-id="${escapeHtml(vehicle.id)}" aria-pressed="${vehicle.id === selectedVehicleId}"><span class="order-vehicle-name"><strong>${escapeHtml(vehicle.plate || vehicle.id)}</strong><small>${escapeHtml(vehicle.driver || '배송원 미확인')}</small></span><span class="order-vehicle-load"><b>${countText(assigned.length)}</b><b>${boxesText(boxes)}</b></span><span class="order-vehicle-times"><span>${departureLabel} <strong>${departure}</strong></span><span>마지막 도착 ETA <strong>${escapeHtml(lastArrival)}</strong></span><span>${completionLabel} <strong>${escapeHtml(completion)}</strong></span></span></button>`;
     }).join('') || '<p class="order-vehicle-empty">배차 차량이 없습니다.</p>';
     if (imported()) vehicleSelect.innerHTML = `<button type="button" data-order-vehicle-id="all" aria-pressed="${selectedVehicleId === 'all'}"><span class="order-vehicle-name"><strong>${data?.dispatch?.phase === 'unplanned' ? '전체 주문' : '전체 차량'}</strong><small>${vehicles.length}대</small></span><span class="order-vehicle-load"><b>주문 ${source.length.toLocaleString('ko-KR')}건</b><b>${boxesText(volumeScenario(source).baselineBoxes)}</b></span></button>` + vehicleSelect.innerHTML;

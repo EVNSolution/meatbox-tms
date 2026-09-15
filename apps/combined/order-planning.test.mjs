@@ -622,3 +622,30 @@ test('전체 핀 스위치는 지도와 주문을 유지하고 날짜/차량 변
   assert.deepEqual(input, before);
   planning.destroy();
 });
+
+test('계산안은 배정 차량만 집계하고 같은 배송지 주문은 한 곳과 원래 박스로 표시한다', () => {
+  const source = importedPlanningData('2026-09-16');
+  source.dispatch = { phase: 'draft', candidateIds: ['G1'] };
+  source.fleetDeliveries = source.fleetDeliveries.map((order, index) => ({ ...order, vehicleId: 'G1', status: 'pending', ...(index === 1 ? { name: '주문 1', address: '서울 1' } : {}) }));
+  const before = structuredClone(source);
+  const summary = orderAssignmentSummary(source);
+  assert.equal(summary.vehicles, 1);
+  assert.equal(summary.destinations, 2);
+  assert.deepEqual(summary.assignments.map(row => [row.orders, row.destinations, row.boxes]), [[3, 2, 21]]);
+  const { element, nodes } = fixture();
+  let pinCount = 0;
+  const planning = mount({ element }, { layerFactory: () => ({ update({ points }) { pinCount = points.features.length; }, destroy() {} }) });
+  planning.update(source);
+  assert.equal(nodes['total-vehicles'].textContent, '1대');
+  assert.equal(nodes['total-destinations'].textContent, '2곳');
+  assert.notEqual(nodes['total-duration'].textContent, '미확인');
+  assert.match(nodes['timing-note'].textContent, /계획 시간 확인 1\/1대/);
+  assert.match(nodes['timing-note'].textContent, /06:30 고정 출발/);
+  assert.doesNotMatch(nodes.assignments.innerHTML, /\+\d{3,}일/);
+  assert.match(nodes.assignments.innerHTML, /2곳 \/ 주문 3건/);
+  assert.match(nodes.assignments.innerHTML, /고정 출발 06:30/);
+  assert.doesNotMatch(nodes.vehicle.innerHTML, /data-order-vehicle-id="G2"/);
+  assert.equal(pinCount, 3);
+  assert.deepEqual(source, before);
+  planning.destroy();
+});

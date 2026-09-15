@@ -1,10 +1,12 @@
 import { sourceViewerPlan } from './source-viewer-plan.mjs';
 
+const deliveryFor = (deliveries, id) => deliveries.find(stop => stop.id === id || stop.orderIds?.includes(id));
+
 // Source state contains every vehicle; each viewer operates on its selected route.
 export function sourceVehicleContext(data, selectedId) {
   if (!data?.sourceData || data.customerDemo) return data;
-  const selected = data.fleetDeliveries.find(stop => stop.id === selectedId)
-    ?? data.fleetDeliveries.find(stop => stop.id === data.sourceData.defaultStopId)
+  const selected = deliveryFor(data.fleetDeliveries, selectedId)
+    ?? deliveryFor(data.fleetDeliveries, data.sourceData.defaultStopId)
     ?? data.fleetDeliveries[0];
   const vehicle = data.fleetVehicles.find(item => item.id === selected?.vehicleId)
     ?? data.fleetVehicles.find(item => item.id === data.sourceData.defaultVehicleId);

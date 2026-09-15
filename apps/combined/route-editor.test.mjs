@@ -80,6 +80,24 @@ test('direct route entry starts editing once and preserves the moved draft on re
   assert.deepEqual(sent, [['set_route_order', { order: ['S1', 'S3', 'S2'], expectedOrder: ['S1', 'S2', 'S3'], expectedStatuses: ['current', 'pending', 'pending'], expectedPhase: 'shipping' }]]);
 });
 
+test('묶음 편집은 시작 시점의 원본 하위 주문 ID와 상태를 CAS 기준으로 보존한다', () => {
+  const { editor, click, action, sent } = editorFixture();
+  const state = editableState();
+  state.deliveries = [
+    { ...state.deliveries[0], orderIds: ['A1', 'A2'], orders: [{ id: 'A1', status: 'done' }, { id: 'A2', status: 'current' }] },
+    { ...state.deliveries[1], orderIds: ['B1', 'B2'], orders: [{ id: 'B1', status: 'pending' }, { id: 'B2', status: 'pending' }] },
+    { ...state.deliveries[2], orderIds: ['C1'], orders: [{ id: 'C1', status: 'pending' }] },
+  ];
+  editor.update(state, 'S1', true);
+  editor.beginEdit();
+  moveSecond(click);
+  action('save');
+  assert.deepEqual(sent[0][1], {
+    order: ['S1', 'S3', 'S2'], expectedOrder: ['A1', 'A2', 'B1', 'B2', 'C1'],
+    expectedStatuses: ['done', 'current', 'pending', 'pending', 'pending'], expectedPhase: 'shipping',
+  });
+});
+
 test('direct entry retains cancel, stale-state and read-only protections', () => {
   const { editor, element, click, action, sent } = editorFixture();
   const state = editableState();

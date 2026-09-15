@@ -37,3 +37,32 @@ test('고객 공개 ETA는 정확 시각 대신 약속 시간대를 우선한다
     officialEta: { time: '08:35' },
   }), '08:05 ~ 09:05');
 });
+
+test('원본 배차 상태는 주문을 보존하고 운행 화면만 물리 배송지로 투영한다', () => {
+  const raw = {
+    sourceData: { date: '2026-09-16', defaultVehicleId: 'V1', defaultStopId: 'O2' },
+    fleetVehicles: [{ id: 'V1' }, { id: 'V2' }], vehicleStates: { V1: { truck: { fromId: 'O2', toId: 'O2', atStopId: 'O2' } } }, vehicle: { id: 'V1' },
+    fleetDeliveries: [
+      { id: 'O1', vehicleId: 'V1', name: '매장', address: '서울', boxes: 2, status: 'pending' },
+      { id: 'O2', vehicleId: 'V1', name: '매장', address: '서울', boxes: 3, status: 'current' },
+      { id: 'O3', vehicleId: 'V2', name: '매장', address: '서울', boxes: 4, status: 'pending' },
+    ],
+    deliveries: [], dispatchOrders: [{ id: 'O1' }, { id: 'O2' }], customerStopId: 'O2', scenarioStopId: 'O2',
+    truck: { fromId: 'MFC', toId: 'O2', atStopId: null },
+  };
+  const data = adaptSimulation(raw);
+  assert.equal(data.sourceOrders, raw.fleetDeliveries);
+  assert.deepEqual(data.sourceOrders.map(order => order.id), ['O1', 'O2', 'O3']);
+  assert.deepEqual(data.fleetDeliveries.map(stop => stop.orderIds), [['O1', 'O2'], ['O3']]);
+  assert.deepEqual(data.deliveries.map(stop => stop.id), ['O1']);
+  assert.equal(data.customerStopId, 'O1');
+  assert.equal(data.scenarioStopId, 'O1');
+  assert.equal(data.sourceData.defaultStopId, 'O1');
+  assert.deepEqual(data.dispatchOrders, raw.dispatchOrders);
+  assert.deepEqual(data.truck, { fromId: 'MFC', toId: 'O1', atStopId: null });
+  assert.deepEqual(data.vehicleStates.V1.truck, { fromId: 'O1', toId: 'O1', atStopId: 'O1' });
+});
+
+test('불완전한 source 상태는 레거시 상태로 오인하지 않는다', () => {
+  assert.throws(() => adaptSimulation({ sourceData: 'invalid', fleetDeliveries: [], fleetVehicles: [], vehicleStates: {} }), /배송 자료/);
+});

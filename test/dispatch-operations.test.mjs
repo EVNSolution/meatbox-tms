@@ -26,6 +26,11 @@ function day(date = '2026-09-16') {
 
 const command = (operations, body) => operations.command({ expectedRevision: operations.revision, ...body });
 const calculator = ({ orders }) => Object.fromEntries(orders.map(order => [order.id, order.id === 'O4' ? 'G2' : 'G1']));
+const confirmedRequests = (operations, orderIds) => [...new Set(operations.snapshot().fleetDeliveries
+  .filter(order => orderIds.includes(order.id))
+  .flatMap(order => order.customerRequests?.items || [])
+  .filter(request => request.required)
+  .map(request => request.id))];
 
 test('오늘과 미래 주문은 초기 미배차로 보이고 원본 기사 그룹은 후보로만 보존한다', () => {
   const source = day();
@@ -240,7 +245,7 @@ function publishedOperations() {
 test('수정안은 기존 운행과 분리되며 다시 전송할 때만 배정이 바뀌고 기록을 보존한다', () => {
   const operations = publishedOperations();
   command(operations, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1', scenario: 'arrived' });
-  command(operations, { type: 'complete_stop', vehicleId: 'G1', stopId: 'O1', hasPhoto: true });
+  command(operations, { type: 'complete_stop', vehicleId: 'G1', stopId: 'O1', hasPhoto: true, confirmedRequestIds: confirmedRequests(operations, ['O1', 'O2']) });
   command(operations, { type: 'set_delivery_tip', vehicleId: 'G2', stopId: 'O4', body: '출입문 옆' });
   const confirmed = operations.snapshot();
   const started = command(operations, { type: 'begin_dispatch_revision' });
@@ -295,7 +300,7 @@ test('수정 중 출발한 배송지를 다시 전송하면 원자적으로 거�
 test('운행을 마친 차량에 다시 전송한 잔여 주문은 출발 가능한 대기 상태가 된다', () => {
   const operations = publishedOperations();
   command(operations, { type: 'set_scenario', vehicleId: 'G2', stopId: 'O4', scenario: 'arrived' });
-  command(operations, { type: 'complete_stop', vehicleId: 'G2', stopId: 'O4', hasPhoto: true });
+  command(operations, { type: 'complete_stop', vehicleId: 'G2', stopId: 'O4', hasPhoto: true, confirmedRequestIds: confirmedRequests(operations, ['O4']) });
   assert.equal(operations.snapshot().vehicleStates.G2.phase, 'done');
   command(operations, { type: 'begin_dispatch_revision' });
   command(operations, { type: 'reassign', orderIds: ['O3'], targetVehicleId: 'G2' });

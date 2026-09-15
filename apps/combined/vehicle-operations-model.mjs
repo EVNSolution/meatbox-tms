@@ -1,4 +1,7 @@
-export const fleetDeliveries = data => data?.fleetDeliveries ?? data?.deliveries ?? [];
+import { bundleDeliveries } from './delivery-bundles.mjs';
+import { sourceViewerPlan } from './source-viewer-plan.mjs';
+
+export const fleetDeliveries = data => bundleDeliveries(data?.fleetDeliveries ?? data?.deliveries ?? []);
 
 export function sumBoxes(deliveries) {
   return deliveries.every(stop => Number.isFinite(stop.boxes) && stop.boxes >= 0)
@@ -15,13 +18,20 @@ export function vehicleOperations(data) {
   const vehicles = data?.fleetVehicles ?? (data?.vehicle ? [data.vehicle] : []);
   const liveVehicleIds = vehicles.filter(vehicle => vehicle.live).map(vehicle => vehicle.id);
   return vehicles.map(vehicle => {
-    const deliveries = groups.get(vehicle.id) || [];
+    const assigned = groups.get(vehicle.id) || [];
+    const sourcePlan = data?.sourceData ? sourceViewerPlan({
+      date: data.sourceData.date,
+      deliveries: assigned,
+      events: data.events,
+      vehicleId: vehicle.id,
+    }) : null;
+    const deliveries = sourcePlan?.deliveries ?? assigned;
     const liveTiming = data?.vehicleStates?.[vehicle.id]?.timing ?? data?.kpi?.vehicleTiming;
     const timingOwnerMatches = liveTiming?.vehicleId
       ? liveTiming.vehicleId === vehicle.id
       : liveVehicleIds.length === 1 && liveVehicleIds[0] === vehicle.id;
-    const timing = !data?.sourceData && vehicle.live && liveTiming?.source === 'simulation' && timingOwnerMatches
-      ? liveTiming : null;
+    const timing = sourcePlan?.timing ?? (!data?.sourceData && vehicle.live
+      && liveTiming?.source === 'simulation' && timingOwnerMatches ? liveTiming : null);
     const liveOwnerMatches = liveTiming?.source === 'simulation'
       ? timingOwnerMatches : liveVehicleIds.length === 1 && liveVehicleIds[0] === vehicle.id;
     // Held assignments remain unfinished work; never hide them from the workload.
@@ -35,11 +45,22 @@ export function vehicleOperations(data) {
       totalBoxes: sumBoxes(deliveries),
       heldStops: remaining.filter(stop => stop.status === 'skipped').length,
       timing,
-      remainingMinutes: Number.isFinite(timing?.remainingSeconds) ? Math.round(timing.remainingSeconds / 60) : null,
-      durationMinutes: Number.isFinite(timing?.durationSeconds) ? Math.round(timing.durationSeconds / 60) : null,
+      remainingMinutes: Number.isFinite(timing?.remainingMinutes) ? timing.remainingMinutes
+        : Number.isFinite(timing?.remainingSeconds) ? Math.round(timing.remainingSeconds / 60) : null,
+      durationMinutes: Number.isFinite(timing?.durationMinutes) ? timing.durationMinutes
+        : Number.isFinite(timing?.durationSeconds) ? Math.round(timing.durationSeconds / 60) : null,
       completionEtaMs: Number.isFinite(timing?.completionMs) ? timing.completionMs : null,
-      lastArrivalEta: !data?.sourceData && vehicle.live && liveOwnerMatches && /^\d{2}:\d{2}$/.test(data?.kpi?.finishEta || '')
-        ? data.kpi.finishEta : null,
+      completionText: sourcePlan?.finishText ?? null,
+      fixedDepartureText: sourcePlan?.departureText ?? vehicle.departure?.time ?? null,
+      lastArrivalEta: sourcePlan?.timing?.lastArrivalText
+        ?? (!data?.sourceData && vehicle.live && liveOwnerMatches && /^\d{2}:\d{2}$/.test(data?.kpi?.finishEta || '')
+          ? data.kpi.finishEta : null),
+      actualSpeed: Number.isFinite(timing?.actualDepartureMs) && Number.isFinite(timing?.latestActualCompletionMs)
+        && timing.latestActualCompletionMs > timing.actualDepartureMs && timing.actualCompletedStops > 0
+        ? {
+            completedStops: timing.actualCompletedStops,
+            elapsedMinutes: Math.max(1, Math.round((timing.latestActualCompletionMs - timing.actualDepartureMs) / 60000)),
+          } : null,
     };
   });
 }
@@ -102,16 +123,22 @@ export function vehicleEvents(data, vehicleId) {
 
 export function deliveryFacts(data, stop) {
   if (!stop) return [];
-  const explicit = [...(data?.events ?? [])].reverse().filter(event => event.stopId === stop.id &&
+  const stopIds = new Set(stop.orderIds ?? [stop.id]);
+  const explicit = [...(data?.events ?? [])].reverse().filter(event => stopIds.has(event.stopId) &&
     (!event.vehicleId || event.vehicleId === stop.vehicleId));
   const facts = [...explicit];
   const labels = new Map([['주문 접수', '주문 접수 완료'], ['결제 완료', '주문 접수 완료'], ['인근 배송 중', '배송지 도착']]);
-  const actions = { received: '주문 접수 완료', picking: '피킹 중', ready: '상차 대기', shipping: '배송 중', arrived: '배송지 도착', completed: '배송 완료' };
-  const seen = new Set(explicit.map(event => `${event.time}|${actions[event.action] || event.message.replace(`${stop.name} `, '')}`));
+  const actions = { received: '주문 접수 완료', picking: '피킹 중', ready: '상차 대기', shipping: '배송 출발', arrived: '배송지 도착', completed: '배송 완료' };
+  const canonicalMessage = item => {
+    const message = actions[item.action] || labels.get(item.label) || item.message?.replace(`${stop.name} `, '') || item.label;
+    if (/배송\s*(?:출발|중)$/.test(message || '')) return '배송 출발';
+    return message;
+  };
+  const seen = new Set(explicit.map(event => `${event.time}|${canonicalMessage(event)}`));
   for (const item of stop.timeline ?? []) {
     if (!item.time || !['done', 'current'].includes(item.state) || /예정/.test(item.label)) continue;
     if (item.label === '인근 배송 중' && !stop.arrivedAt) continue;
-    const message = labels.get(item.label) || item.label;
+    const message = canonicalMessage(item);
     const key = `${item.time}|${message}`;
     if (!seen.has(key)) { facts.push({ time: item.time, type: 'stage', message }); seen.add(key); }
   }

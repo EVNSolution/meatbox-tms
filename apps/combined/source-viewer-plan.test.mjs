@@ -69,6 +69,72 @@ test('실제 출발 사건은 계획 출발을 바꾸지 않고 별도 운영 �
   assert.deepEqual(events, before);
 });
 
+test('실제 사건의 초는 이력과 같은 분으로 내리고 이후 계산 ETA는 분 단위 반올림한다', () => {
+  const shippingAt = Date.parse('2026-09-16T08:28:45+09:00');
+  const plan = sourceViewerPlan({
+    date: '2026-09-16', deliveries: [stop('A', [127, 37.5])], vehicleId: 'V1',
+    events: [{ action: 'shipping', vehicleId: 'V1', ts: shippingAt, time: '08:28' }],
+  });
+  assert.equal(plan.timing.actualDepartureText, '08:28');
+  assert.equal(plan.deliveries[0].preciseTimeText, '08:49');
+
+  const completed = sourceViewerPlan({
+    date: '2026-09-16', deliveries: [stop('A', [127, 37.5], { status: 'done' })], vehicleId: 'V1',
+    events: [{ action: 'completed', vehicleId: 'V1', stopId: 'A', ts: shippingAt, time: '08:28' }],
+  });
+  assert.equal(completed.finishText, '08:28');
+  assert.equal(completed.timing.lastArrivalText, '08:28');
+});
+
+test('늦은 실제 출발은 고정 출발을 보존하면서 남은 계획 ETA를 과거 밖으로 민다', () => {
+  const events = [{ action: 'shipping', vehicleId: 'V1', time: '07:58' }];
+  const plan = sourceViewerPlan({ date: '2026-09-16', deliveries: [
+    stop('A', [127, 37.5]), stop('B', [127, 37.5]),
+  ], events, vehicleId: 'V1' });
+  assert.equal(plan.departureText, '06:30');
+  assert.equal(plan.timing.actualDepartureText, '07:58');
+  assert.equal(plan.deliveries[0].preciseTimeText, '08:18');
+  assert.equal(plan.deliveries[0].customerWindowText, '07:48 ~ 08:48');
+  assert.equal(plan.deliveries[1].preciseTimeText, '08:22');
+  assert.equal(plan.finishText, '08:26');
+  assert.equal(plan.timing.remainingMinutes, 28);
+  assert.equal(plan.timing.durationMinutes, 116);
+});
+
+test('이전 운영 계획 메타데이터가 일부 빠져도 늦은 출발 뒤 과거 고객 범위를 재사용하지 않는다', () => {
+  const delivery = stop('A', [127, 37.5], {
+    calculatedEta: '06:50', preciseTimeText: '06:50',
+    customerWindowStart: '06:20', customerWindowEnd: '07:20', customerWindowText: '06:20 ~ 07:20',
+    etaSource: 'operating-plan',
+  });
+  const plan = sourceViewerPlan({
+    date: '2026-09-16', deliveries: [delivery], vehicleId: 'V1',
+    events: [{ action: 'shipping', vehicleId: 'V1', time: '07:58' }],
+  });
+  assert.equal(plan.deliveries[0].preciseTimeText, '08:18');
+  assert.equal(plan.deliveries[0].customerWindowText, '07:48 ~ 08:48');
+  assert.equal(delivery.customerWindowText, '06:20 ~ 07:20');
+});
+
+test('실제 도착과 완료는 이후 남은 예상의 기준이며 다른 차량 사건은 섞이지 않는다', () => {
+  const deliveries = [
+    stop('A', [127, 37.5], { status: 'done' }),
+    stop('B', [127, 37.5], { status: 'current' }),
+    stop('C', [127, 37.5]),
+  ];
+  const events = [
+    { action: 'shipping', vehicleId: 'V1', time: '07:58' },
+    { action: 'completed', vehicleId: 'V1', stopId: 'A', time: '07:59' },
+    { action: 'arrived', vehicleId: 'V1', stopId: 'B', time: '08:06' },
+    { action: 'completed', vehicleId: 'V2', stopId: 'A', time: '11:00' },
+  ];
+  const plan = sourceViewerPlan({ date: '2026-09-16', deliveries, events, vehicleId: 'V1' });
+  assert.equal(plan.deliveries[2].preciseTimeText, '08:10');
+  assert.equal(plan.finishText, '08:14');
+  assert.equal(plan.timing.remainingMinutes, 8);
+  assert.equal(plan.timing.lastArrivalText, '08:10');
+});
+
 test('자정 이후 예상과 실제 시각을 다음날로 표시한다', () => {
   const deliveries = [stop('A', [127, 37.5], { status: 'done', completedAt: '23:58' }), stop('B', [127, 37.5])];
   const plan = sourceViewerPlan({ date: '2026-09-16', deliveries });

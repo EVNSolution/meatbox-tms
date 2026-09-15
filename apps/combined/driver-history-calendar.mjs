@@ -25,6 +25,6 @@ export function renderDriverHistoryCalendar(selectedDate, dates, today, source =
   return `<section class="dv-history-calendar" aria-label="근무 이력 달력">
     <header><button type="button" class="dv-calendar-month" data-history-month="-1" data-focus="history-previous" aria-label="근무 이력 이전 달">‹</button><h3 aria-live="polite">${model.title}</h3><button type="button" class="dv-calendar-month" data-history-month="1" data-focus="history-next" aria-label="근무 이력 다음 달">›</button></header>
     <table aria-label="${model.title} 근무 이력"><thead><tr>${weekdays.map(day => `<th scope="col">${day}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
-    <p class="dv-calendar-legend"><i aria-hidden="true"></i>${source ? '원본 배차 자료가 있는 날' : '예시 근무 이력이 있는 날'}</p>
+    <p class="dv-calendar-legend"><i aria-hidden="true"></i>${source ? '배차 기록이 있는 날' : '예시 근무 이력이 있는 날'}</p>
   </section>`;
 }

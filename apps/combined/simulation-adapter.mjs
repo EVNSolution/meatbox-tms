@@ -1,3 +1,5 @@
+import { bundleDeliveries } from './delivery-bundles.mjs';
+
 const escapeText = value => String(value ?? '');
 
 function noticeTitle(notice) {
@@ -60,8 +62,27 @@ function adaptOperationEvent(event) {
 
 export function adaptSimulation(snapshot) {
   if (snapshot?.sourceData) {
-    if (!Array.isArray(snapshot.fleetDeliveries) || !Array.isArray(snapshot.fleetVehicles) || !snapshot.vehicleStates) throw new TypeError('배송 자료를 확인해 주세요.');
-    return snapshot;
+    if (typeof snapshot.sourceData !== 'object' || !Array.isArray(snapshot.fleetDeliveries)
+      || !Array.isArray(snapshot.fleetVehicles) || !snapshot.vehicleStates) throw new TypeError('배송 자료를 확인해 주세요.');
+    const sourceOrders = snapshot.fleetDeliveries;
+    const fleetDeliveries = bundleDeliveries(sourceOrders);
+    const representativeId = id => fleetDeliveries.find(stop => stop.id === id || stop.orderIds.includes(id))?.id ?? null;
+    const canonicalStopId = id => representativeId(id) ?? id ?? null;
+    const adaptTruck = truck => truck && ({ ...truck,
+      fromId: canonicalStopId(truck.fromId), toId: canonicalStopId(truck.toId), atStopId: canonicalStopId(truck.atStopId),
+    });
+    const selectedVehicleId = snapshot.vehicle?.id ?? snapshot.sourceData.defaultVehicleId;
+    return {
+      ...snapshot,
+      sourceData: { ...snapshot.sourceData, defaultStopId: representativeId(snapshot.sourceData.defaultStopId) },
+      sourceOrders,
+      fleetDeliveries,
+      deliveries: fleetDeliveries.filter(stop => stop.vehicleId === selectedVehicleId),
+      vehicleStates: Object.fromEntries(Object.entries(snapshot.vehicleStates).map(([id, state]) => [id, { ...state, truck: adaptTruck(state?.truck) }])),
+      truck: adaptTruck(snapshot.truck),
+      customerStopId: representativeId(snapshot.customerStopId ?? snapshot.sourceData.defaultStopId),
+      scenarioStopId: representativeId(snapshot.scenarioStopId),
+    };
   }
   if (!snapshot || !Array.isArray(snapshot.order)) {
     throw new TypeError('배송 상태에 order 배열이 필요합니다.');

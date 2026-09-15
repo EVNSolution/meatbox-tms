@@ -166,7 +166,7 @@ test('당일 주문 선택은 내부 ID 콜백만 보내고 누적 대장으로 
   const visible = nodes['[data-resource-detail="drivers"]'].innerHTML.replace(/<[^>]+>/g, '');
   assert.doesNotMatch(visible, /ID|S1|S2|V1/);
   assert.match(visible, /가락점송파구/);
-  assert.match(visible, /당일 배정 주문/);
+  assert.match(visible, /당일 배정 배송지/);
 
   element.listeners.click({ target: clickTarget('data-resource-select', 'V2') });
   assert.deepEqual(selectedVehicles, ['V2']);
@@ -215,4 +215,16 @@ test('차량 선택은 당일 상세를 유지하며 배송지 대장과 혼합�
   assert.equal(destinationElement.hidden, true);
   assert.doesNotMatch(nodes['[data-resource-detail="vehicles"]'].innerHTML.replace(/<[^>]+>/g, ''), /ID|S1|V1/);
   resources.destroy();
+});
+
+test('같은 배송지 주문은 한 곳으로 집계하고 하위 주문의 권역과 결제번호도 검색한다', () => {
+  const model = resourceManagementModel({ sourceData: { date: '2026-09-16' }, fleetVehicles: vehicles,
+    fleetDeliveries: [
+      { id: 'A', vehicleId: 'V1', name: '같은 매장', address: '같은 주소', regionName: '권역 1', orderNumber: '111', boxes: 2, status: 'done' },
+      { id: 'B', vehicleId: 'V1', name: '같은 매장', address: '같은 주소', regionName: '권역 2', orderNumber: '222', boxes: 3, status: 'done' },
+    ] }, '222');
+  assert.equal(model.visible.length, 1);
+  assert.deepEqual(model.resources[0].summary, { destinationCount: 1, boxCount: 5 });
+  assert.deepEqual(model.resources[0].progress.completed, { destinationCount: 1, boxCount: 5 });
+  assert.deepEqual(model.resources[0].originRegions, ['권역 1', '권역 2']);
 });
