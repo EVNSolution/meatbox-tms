@@ -120,7 +120,7 @@ test('겹친 주문을 중복 제거하고 선택 주문과 선택 그룹을 먼
   mounted.destroy();
 });
 
-test('권역은 주문보다 아래에 그리며 직접 선택한 권역만 강조한다', async () => {
+test('권역은 주문보다 아래에 그리며 선택 주문과 차량의 권역만 강조한다', async () => {
   const map = new FakeMap();
   const regions = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { zoneId: 'Z1', label: '권역 1', quality: 'source' }, geometry: { type: 'Polygon', coordinates: [] } }] };
   const mounted = mountDispatchMapLayers(map);
@@ -129,7 +129,7 @@ test('권역은 주문보다 아래에 그리며 직접 선택한 권역만 강�
   assert.ok(map.layerOrder.indexOf('dispatch-regions-fill') < map.layerOrder.indexOf('dispatch-orders-all'));
   assert.ok(map.layerOrder.indexOf('dispatch-orders-group') < map.layerOrder.indexOf('dispatch-order-selected'));
   assert.equal(map.layers.get('dispatch-orders-group').layout['text-field'], undefined);
-  assert.deepEqual(map.layers.get('dispatch-order-selected').layout['text-field'], ['get', 'label']);
+  assert.equal(map.layers.get('dispatch-order-selected').layout['text-field'], undefined);
   assert.deepEqual(map.filters.get('dispatch-regions-selected'), ['in', ['get', 'zoneId'], ['literal', ['Z1']]]);
   assert.equal(map.visibility.get('dispatch-regions-fill:visibility'), 'visible');
   assert.equal(map.getSource('dispatch-regions-source').setDataCalls, 1);
@@ -178,7 +178,7 @@ test('MapLibre가 예외 없이 레이어 오류만 보내도 실패를 알리�
   mounted.destroy();
 });
 
-test('주문이 없는 클릭만 권역 선택으로 보내고 비동기 준비 중 파괴하면 자원을 남기지 않는다', async () => {
+test('마커 외 클릭은 권역 면에서도 선택을 해제하고 비동기 파괴 시 자원을 남기지 않는다', async () => {
   const map = new FakeMap();
   const picked = [];
   const mounted = mountDispatchMapLayers(map, { onPick: (...args) => picked.push(args) });
@@ -186,7 +186,8 @@ test('주문이 없는 클릭만 권역 선택으로 보내고 비동기 준비 
   await flush();
   map.queries.push([], [{ properties: { zoneId: 'Z7' } }]);
   map.fire('click', { point: { x: 20, y: 30 } });
-  assert.deepEqual(picked, [[[], { zoneId: 'Z7' }]]);
+  assert.deepEqual(picked, [[[]]]);
+  assert.deepEqual(map.lastQueryLayers, ['dispatch-order-selected', 'dispatch-orders-group', 'dispatch-orders-all']);
   mounted.destroy();
   assert.equal(map.layers.size, 0);
   assert.equal(map.sources.size, 0);
@@ -257,10 +258,10 @@ test('동일 위치 주문은 낮은 배율에 하나만 보이고 숨긴 핀은
   await flush();
   const feature = { ...visible[1], layer: { id: 'dispatch-orders-all' } };
   map.queries.push([feature]); map.fire('click');
-  assert.deepEqual(picked, []);
+  assert.deepEqual(picked, [[[]]]);
   zoom = 14;
   map.queries.push([feature]); map.fire('click');
-  assert.deepEqual(picked, [[['O1']]]);
+  assert.deepEqual(picked.at(-1), [['O1']]);
   zoom = 8;
   map.queries.push([{ ...feature, layer: { id: 'dispatch-orders-group' } }]); map.fire('click');
   assert.deepEqual(picked.at(-1), [['O1']]);
@@ -311,7 +312,8 @@ test('전체 핀 보기는 줌 숨김과 클릭 제한을 해제하고 생략 �
   assert.equal(base.paint['icon-opacity'][2].at(-2), 0.5);
   const count = picked.length;
   map.queries.push([hit]); map.fire('click');
-  assert.equal(picked.length, count);
+  assert.equal(picked.length, count + 1);
+  assert.deepEqual(picked.at(-1), []);
   mounted.update({ showAllPins: true, selectedGroupId: null });
   assert.equal(base.paint['icon-opacity'], 1);
   assert.equal(source.setDataCalls, 1, '토글로 좌표 자료를 재전송하지 않는다');

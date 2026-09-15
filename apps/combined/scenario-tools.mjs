@@ -16,7 +16,8 @@ export function canSetScenario(delivery) {
 }
 
 export function scenarioSelectionState(state, target, connected) {
-  const controllable = !state?.dispatch?.readOnly && (!state?.dispatch || state.dispatch.phase === 'published') && canSetScenario(target);
+  const controllable = !state?.dispatch?.readOnly && (state?.customerDemo ? Boolean(target)
+    : (!state?.dispatch || ['published', 'amending'].includes(state.dispatch.phase)) && canSetScenario(target));
   const current = scenarioGuide(state);
   const hasPresetMetadata = Boolean(state && Object.hasOwn(state, 'scenarioPreset'));
   const activeScenario = current && (!hasPresetMetadata || state.scenarioStopId === target?.id) ? current.scenario : null;
@@ -28,7 +29,12 @@ export function scenarioSelectionState(state, target, connected) {
 
 export function nextScenarioTarget(state, selectedId) {
   const target = selectedScenarioTarget(state, selectedId);
-  if (state?.dispatch?.readOnly || (state?.dispatch && state.dispatch.phase !== 'published') || !canSetScenario(target)) return null;
+  if (state?.customerDemo && !state.dispatch?.readOnly) {
+    const route = state.deliveries || [];
+    const index = route.findIndex(delivery => delivery.id === target?.id);
+    return index >= 0 ? route[index + 1] || null : null;
+  }
+  if (state?.dispatch?.readOnly || (state?.dispatch && !['published', 'amending'].includes(state.dispatch.phase)) || !canSetScenario(target)) return null;
   const route = state?.deliveries || [];
   const index = route.findIndex(delivery => delivery.id === target.id);
   const next = index >= 0 ? route[index + 1] : null;
@@ -51,6 +57,10 @@ export function mountScenarioTools({ onSend, onSelect }) {
       <div class="scenario-groups">
         ${scenarioGroups.map(group => `<fieldset class="scenario-group"><legend>${group.label}</legend><div class="scenario-buttons">${group.scenarios.map(scenario => `<button type="button" data-scenario="${scenario.id}" aria-pressed="false">${scenario.label}</button>`).join('')}</div></fieldset>`).join('')}
       </div>
+      <div class="scenario-demo-actions" hidden>
+        <button type="button" class="scenario-next" id="customer-random-position">차량 위치 바꾸기</button>
+        <button type="button" class="scenario-next" id="customer-reset-scenario">시연 초기화</button>
+      </div>
       <p class="scenario-note" id="scenario-note"></p>
       <p class="scenario-error" id="scenario-error" role="alert" hidden></p>
     </div>`;
@@ -63,6 +73,8 @@ export function mountScenarioTools({ onSend, onSelect }) {
   const nextButton = panel.querySelector('#scenario-next');
   const error = panel.querySelector('#scenario-error');
   const buttons = [...panel.querySelectorAll('[data-scenario]')];
+  const randomButton = panel.querySelector('#customer-random-position');
+  const resetButton = panel.querySelector('#customer-reset-scenario');
   let selectedId;
   let latest;
   let connected = false;
@@ -85,6 +97,11 @@ export function mountScenarioTools({ onSend, onSelect }) {
     const { activeScenario, controllable, status: statusText } = selection;
     status.textContent = statusText;
     const unavailable = !connected || !controllable;
+    const customerDemo = Boolean(latest?.customerDemo);
+    panel.querySelector('#scenario-tools-heading').textContent = customerDemo ? '고객 시연' : '시나리오';
+    panel.querySelector('.scenario-demo-actions').hidden = !customerDemo;
+    randomButton.disabled = unavailable || pending || !target?.customerDemo?.truck || Boolean(target?.arrivedAt);
+    resetButton.disabled = unavailable || pending;
     const next = nextScenarioTarget(latest, selectedId);
     nextButton.disabled = unavailable || pending || !next;
     const last = controllable && !next && latest?.deliveries?.at(-1)?.id === target.id;
@@ -96,10 +113,11 @@ export function mountScenarioTools({ onSend, onSelect }) {
     if (!connected) note.textContent = '연결이 복구되면 상태를 선택할 수 있습니다.';
     else if (target && !controllable) note.textContent = '조회 전용 배송은 상태를 변경할 수 없습니다.';
     else if (!target) note.textContent = '실시간 차량의 배송지를 선택하면 상태를 변경할 수 있습니다.';
-    else note.textContent = latest?.sourceData ? '완료는 배송원 뷰어에서 사진을 확인한 뒤 처리합니다.' : '원하는 상태를 순서와 관계없이 선택할 수 있습니다.';
+    else note.textContent = customerDemo ? '선택한 매장에서만 시연합니다. 실제 배차·배송 완료 기록에는 반영되지 않습니다.'
+      : latest?.sourceData ? '완료는 배송원 뷰어에서 사진을 확인한 뒤 처리합니다.' : '원하는 상태를 순서와 관계없이 선택할 수 있습니다.';
     buttons.forEach(button => {
-      const sourceCompletion = latest?.sourceData && button.dataset.scenario === 'completed';
-      button.disabled = unavailable || pending || Boolean(sourceCompletion) || Boolean(latest?.sourceData && target?.status === 'done');
+      const sourceCompletion = latest?.sourceData && !customerDemo && button.dataset.scenario === 'completed';
+      button.disabled = unavailable || pending || Boolean(sourceCompletion) || Boolean(latest?.sourceData && !customerDemo && target?.status === 'done');
       button.title = sourceCompletion ? '배송원 뷰어에서 사진 확인 후 완료할 수 있습니다.' : '';
       button.setAttribute('aria-pressed', String(button.dataset.scenario === activeScenario));
     });
@@ -110,6 +128,14 @@ export function mountScenarioTools({ onSend, onSelect }) {
     const next = nextScenarioTarget(latest, selectedId);
     if (next) onSelect(next.id);
   });
+
+  for (const [button, type] of [[randomButton, 'randomize_customer_position'], [resetButton, 'reset_customer_demo']]) {
+    button.addEventListener('click', () => {
+      const target = selectedScenarioTarget(latest, selectedId);
+      if (button.disabled || !latest?.customerDemo || !target) return;
+      onSend(type, { stopId: target.id });
+    });
+  }
 
   toggle.addEventListener('click', () => {
     expand(body.hidden);
@@ -126,7 +152,7 @@ export function mountScenarioTools({ onSend, onSelect }) {
     const button = event.target.closest('[data-scenario]');
     if (!button || button.disabled) return;
     const target = selectedScenarioTarget(latest, selectedId);
-    if (!canSetScenario(target)) return;
+    if (!scenarioSelectionState(latest, target, connected).controllable) return;
     if (latest?.scenarioPreset === button.dataset.scenario && latest?.scenarioStopId === target.id) return;
     pending = true;
     error.hidden = true;

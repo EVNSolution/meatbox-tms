@@ -15,6 +15,9 @@
 .dispatch-workflow-summary summary strong { color: #27322c; font-size: 13px; }
 .dispatch-workflow-summary-counts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; }
 .dispatch-workflow-summary[open] summary { border-radius: 8px 8px 0 0; }
+.dispatch-workflow-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px 12px; padding: 10px 12px; border: 1px solid #b8d8c9; border-radius: 8px; color: #245845; background: #f0faf5; font-size: 12px; }
+.dispatch-workflow-notice.error { border-color: #efc2bd; color: #9f241b; background: #fff5f4; }
+.dispatch-workflow-notice a { color: inherit; font-weight: 700; white-space: nowrap; }
 .dispatch-workflow-dialog { width: min(620px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 0; overflow: auto; border: 1px solid #d9dfdc; border-radius: 14px; color: var(--meatbox-ink, #212322); background: #fff; box-shadow: 0 18px 48px rgb(24 43 35 / 24%); font-family: var(--meatbox-font, sans-serif); }
 .dispatch-workflow-dialog::backdrop { background: rgb(22 30 26 / 28%); }
 .dispatch-workflow-dialog-panel { padding: 20px; }
@@ -68,6 +71,7 @@
   .dispatch-workflow-actions small { text-align: right; }
   .dispatch-workflow-actions .button { min-width: 0; padding-inline: 8px; font-size: 11px; }
   .dispatch-workflow-summary { padding-inline: 12px; }
+  .dispatch-workflow-notice { align-items: flex-start; flex-direction: column; margin-inline: 12px; }
   .dispatch-workflow-summary summary { align-items: flex-start; flex-direction: column; gap: 3px; }
   .dispatch-workflow-summary-counts { justify-content: flex-start; }
   .dispatch-workflow-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }

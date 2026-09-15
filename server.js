@@ -9,6 +9,7 @@ const { WebSocketServer } = require('ws');
 const { createAccess, AccessError } = require('./lib/access');
 const { createDispatchDataRouter } = require('./lib/dispatch-data');
 const { createSourceOperationsRouter } = require('./lib/source-operations-router');
+const { calculateDispatch } = require('./lib/dispatch-calculator');
 const { arriveStop, completeStop } = require('./lib/scenario-controls');
 const { validRouteOrder, applyRouteOrder } = require('./lib/route-order');
 const { page, loginPage, registerPage } = require('./apps/portal/pages');
@@ -51,7 +52,7 @@ function validCommand(msg) {
   return false;
 }
 
-function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env.PUBLIC_ORIGIN, access = createAccess({ file: accessFile }), dispatchDataDir = process.env.DISPATCH_DATA_DIR || path.join(ROOT, '.runtime/dispatch-data'), dispatchCalculator = null } = {}) {
+function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env.PUBLIC_ORIGIN, access = createAccess({ file: accessFile }), dispatchDataDir = process.env.DISPATCH_DATA_DIR || path.join(ROOT, '.runtime/dispatch-data'), dispatchCalculator = calculateDispatch } = {}) {
   if (!origin || new URL(origin).origin !== origin) throw new Error('PUBLIC_ORIGIN must be an exact origin');
   const secure = new URL(origin).protocol === 'https:';
   if (!secure && !['127.0.0.1', 'localhost', '[::1]'].includes(new URL(origin).hostname)) throw new Error('Public access requires HTTPS');

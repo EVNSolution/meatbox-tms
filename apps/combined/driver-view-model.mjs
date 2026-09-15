@@ -3,6 +3,29 @@ import { requestsConfirmed } from './customer-requests.mjs';
 const phaseLabels = { unordered: '배차 대기', idle: '배차 대기', preparing: '상차 중', delivering: '배송 중', done: '배송 완료' };
 const distanceText = metres => Number.isFinite(metres) ? metres >= 1000 ? `${(metres / 1000).toFixed(1)}km` : `${Math.round(metres)}m` : '이동 중';
 
+export function driverHasConfirmedDispatch(state) {
+  if (!state?.sourceData) return true;
+  return ['published', 'amending'].includes(state.dispatch?.phase) && Boolean(state.fleetDeliveries?.length);
+}
+
+export function driverConfirmedVehicles(state) {
+  if (!state?.sourceData) return state?.fleetVehicles?.length ? state.fleetVehicles : [state?.vehicle].filter(Boolean);
+  const assigned = new Set((state.fleetDeliveries || []).map(stop => stop.vehicleId));
+  return (state.fleetVehicles || []).filter(vehicle => assigned.has(vehicle.id));
+}
+
+export function driverCanStart(state, connected = true, vehicle = state?.vehicle) {
+  const startPhases = state?.sourceData ? ['idle', 'preparing'] : ['preparing'];
+  return Boolean(connected && vehicle?.live !== false && driverHasConfirmedDispatch(state)
+    && startPhases.includes(state?.phase) && state?.deliveries?.some(stop => stop.status === 'pending'));
+}
+
+export function driverCanArrive(state, connected = true) {
+  const current = state?.deliveries?.find(stop => stop.status === 'current');
+  return Boolean(state?.sourceData && connected && driverHasConfirmedDispatch(state) && state.phase === 'delivering'
+    && current && !state.truck?.dwelling && state.truck?.toId === current.id);
+}
+
 export function driverViewModel(state, connected = true, selectedId = null) {
   const selected = driverTipDelivery(state, selectedId);
   const selectedVehicleId = selected?.vehicle?.id ?? selected?.vehicleId ?? null;

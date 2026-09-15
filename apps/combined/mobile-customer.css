@@ -159,3 +159,4 @@ body:has(#account-picker:not([hidden])) .mobile-shell { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .customer-push, .customer-notifications { animation: none; transition: none; }
 }
+.customer-demo-label { margin: 8px 0 0; color: #667085; font-size: 11px; line-height: 1.5; }

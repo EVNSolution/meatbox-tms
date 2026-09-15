@@ -104,3 +104,14 @@ test('한 번의 상태 전환에서 여러 알림이 들어오면 마지막 상
   assert.equal(nextCustomerPopup(previous, notices).id, 3);
   assert.equal(nextCustomerPopup(new Set([1, 2, 3]), [...notices, { id: 4, kind: 'shipping' }]).id, 4);
 });
+
+test('수정안 작성 중에도 고객은 기존 확정 배차와 차량 위치를 본다', () => {
+  const confirmed = { id: 'O1', vehicleId: 'G1', status: 'current', coordinates: [127.1, 37.5] };
+  const state = {
+    sourceData: { date: '2026-09-16' }, dispatch: { phase: 'amending' },
+    dispatchOrders: [{ ...confirmed, vehicleId: 'G2' }], fleetDeliveries: [confirmed],
+    fleetVehicles: [{ id: 'G1', location: { source: 'demo', coordinates: [127.11, 37.51] } }],
+  };
+  assert.deepEqual(customerViewerDeliveries(state), [confirmed]);
+  assert.deepEqual(customerMapView(confirmed, state, {}).truck, [127.11, 37.51]);
+});
