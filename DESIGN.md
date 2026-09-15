@@ -1,8 +1,8 @@
 # Design
 
 ## Source of truth
-- Status: Active. The current 130-vehicle sample was reviewed and deployed on 2026-09-14; its counts are not a fixed product contract.
-- Last refreshed: 2026-09-14.
+- Status: Active for the local vehicle-operations redesign. The 130-vehicle sample is not a fixed product contract. Deployment of this redesign is outside the current scope.
+- Last refreshed: 2026-09-15.
 - Primary surfaces: combined operator, customer and driver viewers.
 - Evidence: `../design.md`, `../previews/terminal-view/` approved reference and official assets, the current combined viewer, `/Users/jiin/Downloads/미트박스 TMS 역할 요약.docx`, and the user's fleet-operation corrections.
 - This contract governs the combined demo. Owner snapshots remain unchanged.
@@ -13,11 +13,11 @@
 - Avoid decorative dashboards, fabricated device data, and developer command names in normal workflows.
 
 ## Product goals
-- Make operational jobs distinct while keeping one shared scenario and selected delivery across the fleet supplied by the current data.
-- Let operators scan received orders on a map, compare many deliveries in a thin list, and monitor one selected delivery without duplicated detail.
+- Make operational jobs distinct while keeping one shared scenario, selected vehicle and separate destination detail across the received fleet.
+- Let operators scan received orders on a map, compare many deliveries in a thin list, and monitor selected vehicles and inspect destination facts.
 - Make presentation stages, time, changes and next action explainable in the guide.
 - Non-goals: real order coordinates, region boundaries, route-allocation algorithms, production integrations and external customer-message delivery.
-- Success: operators can use the order map, data-sized delivery list, selected-delivery monitoring, customer notices and delivery tips without mistaking synthetic values or volume previews for live data.
+- Success: operators can use the order map, data-sized delivery list, vehicle-first monitoring, customer notices and delivery tips without mistaking synthetic values or volume previews for live data.
 
 ## Personas and jobs
 - Presenter: select a prepared order or delivery scene using a movable guide.
@@ -27,13 +27,19 @@
 
 ## Information architecture
 - Header: official brand → 운영 뷰어 / 고객 뷰어 / 배송원 뷰어. 인증 후 루트는 운영 뷰어로 바로 연결한다.
-- Operator left menu: 주문 관리 / 배송 목록 / 배송 관제. Viewer switching preserves selected delivery, filters and last operator page; customer/driver viewers do not select an operator item.
-- 목록: all destinations from the received data in 44px single-line rows, with vehicle/status/search filters and a separate selected-delivery summary. Clicking any non-action area of a delivery or route row selects that destination while the native name button keeps keyboard operation.
-- 주문 관리: a wide order-allocation map for already-received orders. Keep quantity controls out of the body; a corner `지도 시나리오` popup previews a target volume from 80% to 120%, using the sum of received delivery boxes as the 100% baseline. Default and reset return to 100%. The preview does not redistribute boxes or mutate orders, vehicles, ETA, notices or route order. Show the original order marker box values. Treat a missing baseline as unknown and explicit empty data or zero as zero. Do not create vehicle-position markers or invent region boundaries, paths, allocation results or algorithm scores.
-- 관리: full route, explicit edit mode, row handles, save/cancel in the 배송 관제 right-side 배송 관리 tab; preserve pending/current/completed/held and stale-save safeguards.
-- 관제: one selected delivery's precise ETA, arrival, completion, timeline, events and customer notices. Omit the customer time window from the compact operator ETA card. Remove the device panel and control-page map. The right side contains the selected vehicle's thin destination list and live V1 route management.
-- Monitoring never repeats the selected destination as a second detail card. Explicit links retain their selected delivery; live progress never changes an explicit selection. Synthetic selections stay synthetic and never open V1 route or completion actions.
-- Customer: shared three-axis header/rail, preserve desktop phone viewer and right timeline and responsive mobile body.
+- Operator left menu: 배차 관리 / 배송 관제 / 자원 관리. Preserve legacy orders/deliveries/control route IDs. Viewer switching preserves selected delivery, filters and last operator page; customer/driver viewers do not select an operator item.
+- 배차 관리: left vehicle list plus ALL coordinate-bearing order markers. Emphasize selected-vehicle orders with draw order and non-color cues, without hiding markers or changing coordinates. No vehicle markers on this map. Show location-unregistered counts.
+- 주문 시나리오: received-box total 80–120% local preview, total vehicles/destinations/boxes and individual driver assignments. Use delivery-ID destination counts and boxes; do not infer unique households. Aggregate duration awaits a contract. Never mutate source quantities, assignment or ETA.
+- Distinguish fixed scenario departure, last arrival ETA and final handoff-completion forecast. Only show supplied values with their meaning; missing forecasts remain unknown.
+- 권역: explanatory example text only. No polygons, inside counts, pin dispatch actions, region editing or allocation algorithm until real region data exists.
+- 배송 관제: vehicle remaining workload comparison, explicit vehicle selection, map and a right vehicle card with expandable destinations. Keep current vehicle summary stable during historical stop inspection. Received order is the initial UI order, not a business priority; selectable sorts place unknown values last.
+- Control map: selected vehicle remaining registered stops and supplied position with provenance. Simulation position is labeled and never used as actual GPS for support dispatch. Missing route geometry has no straight-line substitute.
+- Right detail: expandable destinations show status, address, boxes, ETA, customer requests and driver tips. An 이력·알림 보기 action opens 배송 관리 for that destination without changing current vehicle operation context. Keep customer handoff requests, driver tips and product storage separate.
+- 배송 관리 defaults to the selected destination and chronological records, with 전체 / 처리 이력 / 고객 알림 filters and notice composition. Keep the target visible above the bounded record list. Planned stages are not history; targetless events remain in a separate vehicle section.
+- 지원배차: reasoned waiting entry point until stability levels, actual positions and call/accept/reassignment contracts exist. No invented score or successful instruction.
+- 자원 관리: 배송원 / 차량 / 배송지 tabs; keep search, pagination, selection and tips. Names alone are not identity keys. Unknown tendencies, metrics and main areas stay unregistered.
+- 배송 순서 관리 opens the existing route editor directly in edit mode within 배송 관리, without an additional edit-button step. Re-entry preserves any existing draft, preserving draft/save/cancel/protected-stop/stale-save behavior. Cancel discards unsaved edits and returns to records. Reset discards only unsaved edits while staying in the editor. Save stays in edit mode after acknowledgment and rebases the draft on the saved order. No separate back-to-records button. Synthetic resources never open live V1 execution commands.
+- Customer and driver: shared header with viewer switching, no left operator menu. Use the full available page width while preserving the phone frame, right detail and responsive mobile body.
 - Driver: same authenticated simulation, selected live destination and ordered stops. Keep current/selected delivery distinct and disable scenario changes for synthetic vehicles.
 - Legacy #/manage routes redirect to #/control with the management tab selected.
 - Legacy control route opens monitoring; legacy customer summary goes to the customer viewer.
@@ -51,9 +57,9 @@
 - Reuse `apps/combined/styles.css` tokens and the original UI's typography, panels, table density and left navigation.
 - White surfaces, gray workspace, role-based radii 4/6/8/12px. Standard controls are 40px high (44px touch layouts). Pretendard Variable is self-hosted: body400, menus/states500, sections/buttons600, titles/times700.
 - No left inset shadow, left pseudo strip or thick left border on any element. Selected rows use surface/text/badge state. Business tabs are full-rail-width 48px centered rectangles, radius0; active text and a straight right 3px rule use #E60028. Viewer tabs use an absolute bottom 3px rule that does not affect height.
-- Desktop header56px; at <=860px brand row44px + viewer row44px + border1px. Left rail92px/72px narrow. Content title begins24px below desktop header,20px narrow; no redundant operator eyebrow. Delivery metadata uses stacked rows, label64px + gap12px + flexible value, baseline aligned and padding12px 0.
-- Actual operator cards follow the approved guide with 20px headers, 18px/600 headings and 42px buttons. The compact ETA card is the sole exception: its header uses 8px vertical padding and a 14px/20px heading; thin dividers separate operating ETA, current sequence and status, and actual arrival and completion. All three groups use 8px vertical padding and equal height on desktop, without a customer time-window line or selected-destination summary card above them. Reserve at least 200px for the ETA and keep each fact label/value together with a 2px gap; do not force equal widths that wrap labels.
-- The order map is the only map in the combined operator viewer. Red example order markers are UI positions rather than geographic claims; vehicles have no map marker until real coordinates arrive.
+- Desktop header56px; at <=860px brand row44px + viewer row44px + border1px. Operator-only left rail92px/72px narrow. Content title begins24px below desktop header,20px narrow; no redundant operator eyebrow. Delivery metadata uses stacked rows, label64px + gap12px + flexible value, baseline aligned and padding12px 0.
+- Operator cards use compact 14–20px headers and 40–44px actions. The vehicle workload summary groups remaining destinations, boxes and supplied duration; running facts use label/value rows. Keep current-stop facts distinct from the expanded historical destination. Do not force equal widths that wrap labels.
+- Dispatch and control reuse the DSV/OFM map, collapsed attribution and Command/Control-wheel guidance. Dispatch shows all registered orders; control shows selected-vehicle remaining stops with truthful position provenance.
 - Delivery rows are 44px single lines on desktop. Arrival and completion share one outer border and one internal divider; responsive stacking must not double or break that border.
 - Delivery tables give vehicle number and driver separate fixed-width columns of 140px and 90px; the address absorbs extra width. Page descriptions use natural sentences without decorative middle-dot separators. Preserve dots within geographic names such as 송파·강남.
 - Design monitoring lists for at least 60 deliveries per vehicle: timeline/event rows are 32px, destination rows 40px and route-management rows 44px on desktop. Keep 44px touch actions in narrow layouts. Timeline, events, notifications, destinations and route management each scroll inside a bounded list; headers, tabs and actions stay outside that scroll area.
@@ -63,7 +69,7 @@
 - Reuse existing ETA, timeline and event semantics while separating the customer time window from the precise operator ETA.
 - An order-planning component owns the order markers and selected vehicle. Its corner popup owns only the browser-side 80–120% target-volume preview without changing source boxes, fleet, ETA or route state or generating vehicle positions.
 - Customer notices and delivery tips are simulation records shared through the authenticated gateway. No screen claims external delivery.
-- Monitoring starts with the ETA card; destination selection remains in the right-side list and its current-destination button. Keep ETA facts and the timeline compact, preserve empty time columns explicitly, and retain 44px mobile action targets.
+- Monitoring starts with vehicle workload and a map; expandable destination details remain in the right vehicle card. Keep ETA facts and the timeline compact, preserve empty time columns explicitly, and retain 44px mobile action targets.
 - Shared shell owns header viewer switching and the floating manual scenario selector. Scenario buttons target only live V1 stops `S1` through `S8`.
 - A route editor owns temporary order, handle interactions and save/cancel; backend validates a full update before applying it.
 - Route selection, draft moves and cancellation preserve the route-list scroll position. Drag edge scrolling moves the list itself, not the document. A 60-stop isolated UI fixture verifies the final row remains selectable and editable without altering the active local scenario.
@@ -78,7 +84,7 @@
 - Header wraps deliberately into two rows at <=860px; the operator rail stays vertical and narrows to72px. At <=520px viewer tabs divide the available row equally.
 - Customer and driver viewers share `app-viewer.css`: 390×780 phone, 8px frame, 38px outer radius, 30px screen radius, speaker and internal scrolling. Both use the same title band, 32px workspace spacing and 420px side-panel limit. Below 1000px the panels stack; below 520px the frame is omitted in both views while the screen retains bounded scrolling. Customer interior follows the approved compact white composition. Driver interior follows the explicitly requested Clever Driver reference below.
 - Guide and map-scenario popup stay within the viewport. Collapsed launcher occupies only a small footprint.
-- On narrow monitoring screens, stack ETA, timeline, events and the selected-vehicle list. ETA responds to its card width: below 520px, stack the two fact groups to the right of the ETA; below 380px, move them below the ETA. Dividers follow group boundaries and labels remain on one line.
+- On narrow monitoring screens, stack vehicle comparison, the selected-vehicle map and the right detail card. ETA responds to its card width: below 520px, stack the two fact groups to the right of the ETA; below 380px, move them below the ETA. Dividers follow group boundaries and labels remain on one line.
 - At 320px and 390px, the order map and corner scenario popup stay within the viewport, and delivery rows keep at least 44px action height.
 
 ## Interaction states
@@ -99,18 +105,18 @@
 - Use concise Korean task labels and specific status/time text.
 - Operation history describes recorded outcomes such as order receipt, picking, departure, arrival and completion. Do not expose manual preset commands or simulation setup messages, or join destination and action with decorative middle dots. Keep the current in-memory history readable without resetting the scenario.
 - Distinguish precise operator ETA, customer promise window, actual arrival and completion. The `±15 minutes at 80%` document target is an accuracy KPI, not the customer window or notice threshold.
-- Keep introductions short and natural; prefer 차량 1대 · 배송지 8곳 over 차량 1대의 배송 8곳. Do not insert a portal guide between login and the product. Keep the Sanghyun and Klein originals available only at their direct reference URLs.
+- Keep introductions short and natural; use 차량 1대, 배송지 8곳 without decorative separators. Do not insert a portal guide between login and the product. Keep the Sanghyun and Klein originals available only at their direct reference URLs.
 
 ## Implementation constraints
 - Vanilla HTML/CSS/JS. The customer map uses the unchanged DSV `dsv-korea-v1` OpenFreeMap style and locally vendored MapLibre GL JS 5.24.0 CSP bundles and license from `clever-dsv-web`. Allow only its tile host and same-origin worker; OSRM routing is separate. Preserve actual coordinate and missing-coordinate behavior. The driver map uses the same local style and stored OSRM road legs. No npm dependency is added.
 - Preserve both original workspace snapshots and the simulation algorithms. Remove automatic 500ms simulation progress, speed controls, and accident and dwell-delay controls from the combined flow without editing the preserved workspace sources. Current `OperatingSimulation` arrival and completion commands use single preset transitions; the bounded tick fallback remains only for generic original-simulation regression.
-- Keep the current 130-vehicle and 395-destination fixture as temporary UI sample data, while deriving visible fleet, destination and box totals from each received snapshot. Customer ETA-window policy, notices and tips remain in the gateway wrapper and combined adapter.
+- Keep the current 130-vehicle and 4,523-destination fixture as temporary UI sample data, while deriving visible fleet, destination and box totals from each received snapshot. Customer ETA-window policy, notices and tips remain in the gateway wrapper and combined adapter.
 - Keep `adapted.deliveries` as the current live V1 stops. Use `adapted.fleetDeliveries` and `adapted.fleetVehicles` for the received list sizes. Current fixture IDs may follow `V{2..130}-S{1..3}`, but those counts and identifiers are not future import requirements.
 - `set_scenario` accepts only `received`, `picking`, `ready`, `shipping`, `arrived` and `completed` for live stop IDs `S1` through `S8`. Authentication, Origin validation, throttling, notice bounds, route CAS and the customer ETA policy remain in force.
 - Legacy WebSocket progress commands `advance`, `place_order`, `speed`, `traffic` and `dwell` are rejected. Driver arrival and completion controls map to one `arrived` or `completed` scenario transition.
 - `/scenario/` opens the preserved Sanghyun customer reference, and `/scenario/customer`, `/scenario/driver`, `/scenario/control`, `/scenario/present` serve their matching preserved HTML through the authenticated gateway. The gateway rewrites asset paths, normalizes the product title and hides retired traffic/dwell controls without editing frozen sources.
 - Retain timers used for authentication cleanup, command-window cleanup and browser WebSocket reconnection. The scenario itself has no continuous timer.
-- Approved rollout and acceptance criteria are defined in [docs/fleet-operations-plan.md](docs/fleet-operations-plan.md) and [docs/fleet-operations-test-spec.md](docs/fleet-operations-test-spec.md). Use the existing authenticated release process and preserve production accounts.
+- The current source of truth is [docs/vehicle-operations-redesign-plan.md](docs/vehicle-operations-redesign-plan.md), overriding conflicting older fleet decisions. This scope ends at local implementation and verification; deployment is a separate request.
 - Regression evidence: fixture-integrity and 80%/100%/120% preview tests, original snapshot checks, authentication and route-CAS tests, responsive browser interactions and deployment postchecks.
 
 ## Open questions
@@ -134,8 +140,36 @@
 
 ## Driver viewer reference port
 - User-approved source: `04_CLEVER_Route/clever-driver-app`, reference HEAD `bc1ad55b312061164bde75673bb401ef9e989592`. Read `DriverWorkspace`, `DeliveryScreen`, `DeliveryMapScreen`, `DeliverySpaceScreen`, `DestinationNotesSheet`, `DeliveryProofModal`, and `DriverSettingsModal`. Retain Meatbox names, logo, red palette, Pretendard, and the shared 390×780 phone shell.
-- Match the native two-tab structure: 배송 and 지도. Keep the app header, settings/logout entries, active/completed route selector, route summary, start/final ETA, execution actions, numbered stop cards, order list, sequence editing, destination bottom sheet, completion proof sheet, settings and inquiry subviews. Scroll content inside the phone while its bottom tabs stay fixed.
+- Match the native two-tab structure: 배송 and 지도. Keep the app header, settings/logout entries, 금일 배차/근무 이력 selector and native date calendar, route summary, start/final ETA, execution actions, numbered stop cards, order list, sequence editing, destination bottom sheet, completion proof sheet, settings and inquiry subviews. Scroll content inside the phone while its bottom tabs stay fixed.
 - Map occupies 56 percent above the destination detail panel. Display numbered stop markers and the existing lime vehicle asset. Only stored OSRM geometry defines lines and the example vehicle coordinate; missing or malformed legs remain absent. The map theme and attribution behave like the customer map.
 - Sequence editing uses a temporary order, protects current/completed/held destinations, supports pointer handles and keyboard moves, and saves with the existing expected-order/status/phase compare-and-set contract. Cancellation changes nothing. Live status changes invalidate a stale draft.
-- Completion remains guarded by the current live vehicle reaching its stop. Completion and tip success require the returned server state, with pending/disconnected/error states. Photo selection is a local preview only; this gateway has no proof upload contract.
+- Completion remains guarded by the current live vehicle reaching its stop. Completion and tip success require the returned server state, with pending/disconnected/error states. The completion button opens the evidence camera; a local photo is required before the customer-request confirmation button can send complete_stop. Closing, changing the current stop or losing the connection discards that proof. There is no proof upload or persistent work-history service. The calendar uses a separately labeled demo dataset, never the current completed stops.
 - Native account, permission, inquiry and assignment services are absent. Keep their screen structure and truthful unavailable states; do not invent accounts, unassigned orders, inquiry records, remote sends or account deletion success. Product order counts are unavailable: show authoritative destination/box totals and item details rather than relabeling line items as orders.
+
+## Vehicle operations open decisions (2026-09-15)
+- Photo upload and persistent evidence storage remain unconnected; the local required-photo confirmation flow is decided.
+- Support levels, actual positions, nearby criteria and external instructions have no contract.
+- Destination IDs and boxes are the chosen units, and received order is the default. Aggregate duration and final handoff-completion forecasting still need data and definitions.
+- Driver identity/metrics and customer request categories are unavailable. Calendar demo records are available; actual dated work-history integration is not.
+- Existing brand, phone frame, clock, customer notifications, house/lime markers and half-size driver markers remain in force. No implementation/deployment claim follows from this document update.
+
+
+## Confirmed workflow updates (2026-09-15, during implementation)
+- Delivery completion opens the evidence camera. A photo is required, then the confirmation button sends the existing guarded completion command. No upload/persistent photo service exists: explicitly describe the local preview boundary. Cancel/rephoto never completes a stop; stale current-stop context blocks confirmation.
+- Use destination ID count and boxes, not inferred unique households. Default order is received order; workload sorts are optional views.
+- Support compares expected completion and actual completion pace when available. Show source facts and keep level thresholds undefined; do not invent rates or levels.
+- Work history uses a separate clearly labeled dated demo dataset. Current completed stops are not historic records; actual persistent work-history integration remains absent.
+
+
+## Local verification (2026-09-15)
+- The confirmed local redesign is implemented and verified: 165 automated tests, 59 browser checks with no JavaScript errors, 22 modified/new JavaScript syntax checks, diff whitespace checks and the existing capacity/130-connection loopback checks passed.
+- Requirement results and reproducible evidence are recorded in `docs/vehicle-operations-redesign-plan.md`, section 10. This does not certify real GPS, physical photo capture, persistent evidence/history, external instructions or deployment.
+- Final handoff/duration forecasts, support level and command contracts, customer request data and driver metrics remain waiting states. Real region/pin dispatch functions remain intentionally unimplemented.
+
+
+## Follow-up presentation changes (2026-09-15)
+- Remove the red vehicle count from the dispatch list heading and the red registration counts from the map heading. Retain vehicle totals in existing page/scenario summaries and move location registration counts into a collapsed disclosure below the map. Selected vehicle names use normal ink with the existing selected-row surface.
+- Remove the scenario reset-to-100 button; keep the range and numeric controls.
+- The completion camera uses the user-supplied photograph when Photo or Retake is clicked. This is a demo capture action; do not add a separate example-photo button or badge. Retain required-photo and stale/disconnected-proof protections.
+
+- Driver settings uses a centered eight-tooth circular gear, with the existing 22px icon / 40px button and 1.7px stroke. Avoid translated or vertically stretched gear outlines.

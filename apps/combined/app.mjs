@@ -7,11 +7,14 @@ import { mountRouteEditor } from './route-editor.mjs';
 import { referenceIcon } from './reference-icons.mjs';
 import { filterFleetDeliveries, normalizeVehicleFilter, operatorRoute, resolveDeliverySelection } from './operations-model.mjs';
 import { paginate, PAGE_SIZE } from './pagination-model.mjs';
+import { mountVehicleControl } from './vehicle-control.mjs';
+import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from './vehicle-operations-model.mjs';
+import { mountResourceManagement } from './resource-management.mjs';
 
 const pages = {
-  orders: { title: '주문 관리', description: '접수 주문과 차량별 배송량' },
-  deliveries: { title: '배송 목록', description: '전체 차량의 배송지 현황' },
-  control: { title: '배송 관제', description: '선택 차량의 배송 진행과 고객 알림, 배송 관리' },
+  orders: { title: '배차 관리', description: '차량별 배정과 전체 주문 위치' },
+  deliveries: { title: '자원 관리', description: '배송원, 차량과 배송지 정보' },
+  control: { title: '배송 관제', description: '차량별 남은 업무와 현재 운행, 배송지별 처리 이력' },
 };
 const statusLabels = { pending: '대기', current: '배송 중', done: '완료', skipped: '보류' };
 let saved = {};
@@ -24,7 +27,8 @@ const state = {
   status: ['all', ...Object.keys(statusLabels)].includes(saved.status) ? saved.status : 'all',
   vehicleId: typeof saved.vehicleId === 'string' ? saved.vehicleId : 'all',
   deliveryPage: 1,
-  tab: 'notifications',
+  controlVehicleId: null,
+  noticeTargetId: null,
   connected: false,
   pendingNotice: null,
   noticeMessage: '',
@@ -37,8 +41,29 @@ const badge = (text, color = 'neutral') => `<span class="badge ${color}">${escap
 const keyValue = (label, value) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value ?? '미확인')}</dd></div>`;
 
 const scenarioTools = mountDemoShell({ viewer: 'operator', onSend: (type, extra) => simulation.send(type, extra) });
-const routeEditor = mountRouteEditor({ element: byId('route-editor'), onSend: (type, extra) => simulation.send(type, extra), onSelect: id => { state.selectedId = id; render(); } });
-const orderPlanning = mountOrderPlanning({ element: byId('order-planning'), onSelect: id => { state.selectedId = id; render(); } });
+const vehicleControl = mountVehicleControl({ element: byId('vehicle-control'),
+  onSelectVehicle: id => {
+    const row = vehicleOperations(state.data).find(item => item.vehicle.id === id);
+    state.controlVehicleId = id;
+    state.selectedId = row?.current?.id || row?.deliveries[0]?.id || null;
+    render();
+  }, onSelectDelivery: selectDelivery, onOpenNotice: openNotice,
+  onOpenManagement: id => { selectDelivery(id); activateControlTab('management'); byId('tab-management').focus({ preventScroll: true }); },
+  onOpenRoute: () => routeEditor.beginEdit(),
+});
+const routeEditor = mountRouteEditor({ element: byId('route-editor'), onSend: (type, extra) => simulation.send(type, extra), onSelect: selectDelivery,
+  onCancel: () => { vehicleControl.showRecords(); document.querySelector('[data-control-route]').focus(); },
+});
+const orderPlanning = mountOrderPlanning({ element: byId('order-planning'), onSelect: selectDelivery });
+const resourceManagement = mountResourceManagement({ element: byId('resource-management'), destinationElement: byId('resource-destinations'), onSelectDelivery: selectDelivery,
+  onSelectVehicle: id => { state.vehicleId = id; state.deliveryPage = 1; render(); },
+});
+function selectDelivery(id) {
+  state.selectedId = id;
+  const selected = (state.data?.fleetDeliveries || state.data?.deliveries || []).find(item => item.id === id);
+  if (selected) state.controlVehicleId = selected.vehicleId;
+  render();
+}
 if (location.hash === '#/customer') location.replace(deliveryLinks(state.selectedId).mobile);
 if (location.hash === '#/driver') location.replace(deliveryLinks(state.selectedId).driver);
 scenarioTools.update(null, false);
@@ -108,7 +133,13 @@ function etaDisplay(delivery) {
 function render() {
   if (!state.data) return;
   state.vehicleId = normalizeVehicleFilter(state.vehicleId, state.data.fleetVehicles);
-  const selected = selectedDelivery();
+  let selected = selectedDelivery();
+  const controlRow = state.page === 'control' ? resolveControlVehicle(vehicleOperations(state.data), state.controlVehicleId, selected?.id) : null;
+  if (state.page === 'control') {
+    state.controlVehicleId = controlRow?.vehicle.id || null;
+    selected = resolveControlDelivery(controlRow, state.selectedId);
+    state.selectedId = selected?.id || null;
+  }
   // Reveal the replacement when the selected delivery disappears on a live update.
   if (selected && state.selectedId && selected.id !== state.selectedId) {
     const index = visibleDeliveries().findIndex(delivery => delivery.id === selected.id);
@@ -118,11 +149,16 @@ function render() {
   renderPage();
   renderSummary();
   renderReview(selected);
-  if (state.page === 'deliveries') renderDeliveries(visibleDeliveries(), selected);
+  if (state.page === 'deliveries') { resourceManagement.update(state.data, state.selectedId); renderDeliveries(visibleDeliveries(), selected); }
   if (state.page === 'orders') orderPlanning.update(state.data, state.selectedId);
   if (state.page === 'control') {
-    renderControl(selected);
-    routeEditor.update(routeEditorState(selected), selected?.id, state.connected);
+    const row = controlRow;
+    vehicleControl.update({ ...state.data, connected: state.connected }, state.controlVehicleId, selected?.id);
+    routeEditor.update({ ...state.data, deliveries: row?.deliveries || [], vehicle: row?.vehicle || { live: false }, customerStopId: row?.vehicle.live ? state.data.customerStopId : null }, selected?.id, state.connected);
+    const noticeStatus = byId('notice-send-status');
+    noticeStatus.hidden = state.noticeTargetId !== selected?.id || (!state.noticeMessage && !state.pendingNotice);
+    noticeStatus.dataset.error = String(state.noticeError);
+    noticeStatus.textContent = state.pendingNotice ? '고객 화면에 안내를 전달하고 있습니다.' : state.noticeMessage;
     renderTabs();
   }
   scenarioTools.update(state.data, state.connected);
@@ -156,6 +192,9 @@ function renderReview(selected) {
   const url = new URL(location.href);
   if (selected && url.searchParams.get('id') !== selected.id) {
     url.searchParams.set('id', selected.id);
+    history.replaceState(null, '', url);
+  } else if (!selected && state.page === 'control' && url.searchParams.has('id')) {
+    url.searchParams.delete('id');
     history.replaceState(null, '', url);
   }
 }
@@ -197,65 +236,6 @@ function renderDeliveries(visible, selected) {
     : '<div class="empty-state"><h2>선택할 배송이 없습니다.</h2><p>배송 데이터를 확인해 주세요.</p></div>');
 }
 
-function selectedVehicleRoute(selected) {
-  if (!selected) return [];
-  return (state.data.fleetDeliveries || state.data.deliveries).filter(delivery => delivery.vehicleId === selected.vehicleId);
-}
-
-function routeEditorState(selected) {
-  const deliveries = selectedVehicleRoute(selected);
-  return { ...state.data, deliveries, vehicle: selected?.vehicle || state.data.vehicle, customerStopId: selected?.vehicle?.live ? state.data.customerStopId : null };
-}
-
-function renderControl(selected) {
-  const visible = selectedVehicleRoute(selected);
-  const current = visible.find(delivery => delivery.status === 'current');
-  byId('monitor-count').textContent = `${visible.length}곳`;
-  byId('monitor-detail').hidden = !selected;
-  byId('monitor-current').hidden = !current;
-  const list = byId('monitor-deliveries');
-  const rows = visible.map(delivery => {
-    const isSelected = delivery.id === selected?.id;
-    const timeLabel = delivery.status === 'done' ? '완료 시각' : delivery.ordered ? '도착 예정' : '계산 ETA';
-    const time = delivery.ordered ? etaDisplay(delivery) : calculatedEtaText(delivery);
-    return `<li><button type="button" class="monitor-stop" data-monitor-select="${escapeHtml(delivery.id)}" aria-pressed="${isSelected}" title="${escapeHtml(delivery.address)}"><span class="monitor-stop-number">${delivery.sequence}</span><strong class="monitor-stop-name">${escapeHtml(delivery.name)}</strong><span class="monitor-stop-status">${badge(statusLabels[delivery.status] || '미확인', delivery.statusTone)}</span><span class="monitor-stop-time"><span class="sr-only">${timeLabel} </span><strong>${escapeHtml(time)}</strong></span></button></li>`;
-  }).join('') || '<li class="empty-state">배송지가 없습니다.</li>';
-  if (list.innerHTML !== rows) {
-    const focusedId = document.activeElement?.dataset.monitorSelect;
-    list.innerHTML = rows;
-    if (focusedId) list.querySelector(`[data-monitor-select="${CSS.escape(focusedId)}"]`)?.focus({ preventScroll: true });
-  }
-  byId('eta-panel').hidden = !selected;
-  if (!selected) {
-    byId('eta-panel').innerHTML = '';
-    byId('delivery-timeline').innerHTML = '';
-    byId('event-list').innerHTML = '';
-    byId('notification-list').innerHTML = '';
-    return;
-  }
-  byId('eta-panel').innerHTML = `
-    <div class="panel-heading"><h2 id="eta-heading">ETA 배송 진행</h2><span class="muted">${escapeHtml(state.data.simClock || '시각 미확인')} 기준</span></div>
-    <div class="eta-grid"><div class="eta-primary"><p class="eyebrow">운영 ETA</p><p class="eta-value">${escapeHtml(selected.preciseTimeText || calculatedEtaText(selected))}</p></div><div class="eta-secondary"><dl class="key-values eta-facts" aria-label="배송 진행">${keyValue('현재 순서', `${selected.sequence}번째`)}${keyValue('상태', statusLabels[selected.status] || '미확인')}</dl><dl class="key-values eta-facts" aria-label="실제 처리 시각">${keyValue('실제 도착', selected.arrivedAt)}${keyValue('배송 완료', selected.completedAt)}</dl></div></div>`;
-  byId('delivery-timeline').innerHTML = selected.timeline.length
-    ? selected.timeline.map(item => `<li><time class="event-time"${item.time ? '' : ' aria-label="시각 미확인"'}>${escapeHtml(item.time || '-')}</time><div class="event-copy"><span class="event-kind">${escapeHtml(({ done: '완료', current: '현재 단계', pending: '예정' })[item.state] || '미확인')}</span><h3>${escapeHtml(item.label)}</h3></div></li>`).join('')
-    : '<li class="empty-state">배송 기록이 없습니다.</li>';
-  const events = selected.vehicle?.live ? state.data.events : [];
-  byId('event-list').innerHTML = events.length
-    ? events.map(event => `<li><time class="event-time">${escapeHtml(event.time || '-')}</time><div class="event-copy"><span class="event-kind">${escapeHtml(({ notify: '고객 알림', eta: 'ETA 변경', stage: '처리 이력', info: '진행 정보', incident: '사건', driver: '배송 관리' })[event.type] || '진행 정보')}</span><p>${escapeHtml(event.message)}</p></div></li>`).join('')
-    : '<li class="empty-state">사건 기록이 없습니다.</li>';
-  byId('open-notice-dialog').disabled = !state.connected || !!state.pendingNotice;
-  byId('open-notice-dialog').title = state.connected ? '' : '연결이 복구된 뒤 작성할 수 있습니다.';
-  const status = byId('notice-send-status');
-  status.hidden = !state.noticeMessage && !state.pendingNotice;
-  status.dataset.error = String(state.noticeError);
-  status.textContent = state.pendingNotice ? '고객 화면에 안내를 전달하고 있습니다.' : state.noticeMessage;
-  const notifications = byId('notification-list');
-  const expanded = new Set([...notifications.querySelectorAll('details[open]')].map(item => item.dataset.noticeId));
-  notifications.innerHTML = selected.notices?.length
-    ? [...selected.notices].reverse().map(notice => `<details class="notification-item" data-notice-id="${escapeHtml(notice.id)}"${expanded.has(String(notice.id)) ? ' open' : ''}><summary>${referenceIcon('expand')}<span class="notification-summary"><time class="event-time">${escapeHtml(notice.time || '-')}</time><strong>${escapeHtml(notice.title || '고객 안내')}</strong><span class="notification-channel">${escapeHtml(notice.channel || '고객 팝업')} 발송</span></span></summary><div class="notification-detail"><p class="notification-copy">${escapeHtml(notice.body)}</p><small>대상 ${escapeHtml(selected.name)}${notice.author ? ` (작성 ${escapeHtml(notice.author)})` : ''}</small></div></details>`).join('')
-    : '<div class="empty-state compact"><strong>고객 알림이 없습니다.</strong></div>';
-}
-
 function renderTabs() {
   document.querySelectorAll('[data-control-tab]').forEach(button => {
     const selected = button.dataset.controlTab === state.controlTab;
@@ -263,12 +243,7 @@ function renderTabs() {
     button.tabIndex = selected ? 0 : -1;
     byId(button.getAttribute('aria-controls')).hidden = !selected;
   });
-  document.querySelectorAll('#page-control [data-tab]').forEach(button => {
-    const selected = button.dataset.tab === state.tab;
-    button.setAttribute('aria-selected', String(selected));
-    button.tabIndex = selected ? 0 : -1;
-    byId(`panel-${button.dataset.tab}`).hidden = !selected;
-  });
+
 }
 
 window.addEventListener('hashchange', () => {
@@ -280,15 +255,12 @@ window.addEventListener('hashchange', () => {
 });
 document.addEventListener('click', event => {
 
-  const monitorSelection = event.target.closest('[data-monitor-select]');
-  if (monitorSelection) showMonitorDelivery(monitorSelection.dataset.monitorSelect);
   const selection = event.target.closest('[data-select]');
   const row = event.target.closest('[data-delivery-row]');
   const independentAction = event.target.closest('button, a, input, select, textarea, [role="button"]');
   const selectedId = selection?.dataset.select || (!independentAction && row?.dataset.deliveryRow);
   if (selectedId) {
-    state.selectedId = selectedId;
-    render();
+    selectDelivery(selectedId);
   }
 
 });
@@ -309,31 +281,6 @@ byId('clear-filters').addEventListener('click', () => {
 });
 byId('delivery-previous').addEventListener('click', () => { state.deliveryPage -= 1; render(); });
 byId('delivery-next').addEventListener('click', () => { state.deliveryPage += 1; render(); });
-function showMonitorDelivery(id) {
-  if (!(state.data?.fleetDeliveries || state.data?.deliveries || []).some(delivery => delivery.id === id)) return;
-  state.selectedId = id;
-  render();
-  byId('eta-panel').focus({ preventScroll: true });
-  byId('eta-panel').scrollIntoView({ block: 'nearest' });
-}
-document.querySelectorAll('[data-monitor-current]').forEach(button => button.addEventListener('click', () => {
-  showMonitorDelivery(selectedVehicleRoute(selectedDelivery()).find(delivery => delivery.status === 'current')?.id);
-}));
-const tabs = [...document.querySelectorAll('#page-control [data-tab]')];
-tabs.forEach((button, index) => {
-  button.addEventListener('click', () => { state.tab = button.dataset.tab; renderTabs(); });
-  button.addEventListener('keydown', event => {
-    const offsets = { ArrowRight: 1, ArrowLeft: -1 };
-    let next = offsets[event.key] === undefined ? null : (index + offsets[event.key] + tabs.length) % tabs.length;
-    if (event.key === 'Home') next = 0;
-    if (event.key === 'End') next = tabs.length - 1;
-    if (next === null) return;
-    event.preventDefault();
-    state.tab = tabs[next].dataset.tab;
-    renderTabs();
-    tabs[next].focus();
-  });
-});
 byId('retry-connection').addEventListener('click', () => location.reload());
 document.querySelector('.skip-link').addEventListener('click', event => { event.preventDefault(); byId('page-heading').focus(); });
 normalizeRoute();
@@ -343,14 +290,16 @@ function normalizeRoute() {
   if (location.hash !== hash) history.replaceState(null, '', hash);
 }
 
+function activateControlTab(tab) {
+  state.controlTab = tab;
+  const hash = tab === 'management' ? '#/control/manage' : '#/control';
+  if (location.hash !== hash) history.pushState(null, '', hash);
+  renderTabs();
+}
+
 const controlTabs = [...document.querySelectorAll('[data-control-tab]')];
 controlTabs.forEach((button, index) => {
-  const activate = target => {
-    state.controlTab = target.dataset.controlTab;
-    const hash = state.controlTab === 'management' ? '#/control/manage' : '#/control';
-    if (location.hash !== hash) history.pushState(null, '', hash);
-    renderTabs();
-  };
+  const activate = target => activateControlTab(target.dataset.controlTab);
   button.addEventListener('click', () => activate(button));
   button.addEventListener('keydown', event => {
     const offsets = { ArrowRight: 1, ArrowLeft: -1 };
@@ -366,19 +315,20 @@ controlTabs.forEach((button, index) => {
 
 const noticeDialog = byId('customer-notice-dialog');
 const noticeBody = byId('customer-notice-body');
-byId('open-notice-dialog').addEventListener('click', event => {
-  const selected = selectedDelivery();
-  if (!selected || state.pendingNotice) return;
+function openNotice(id) {
+  const selected = (state.data?.fleetDeliveries || []).find(item => item.id === id);
+  if (!selected || state.pendingNotice || !state.connected) return;
+  state.noticeTargetId = id;
   byId('customer-notice-target').textContent = `${selected.name} (${selected.vehicle?.plate || '차량 미확인'})`;
   noticeBody.value = '';
   noticeBody.setCustomValidity('');
   byId('customer-notice-count').textContent = '0 / 300';
   noticeDialog.showModal();
   queueMicrotask(() => noticeBody.focus());
-});
+}
 noticeBody.addEventListener('input', () => { byId('customer-notice-count').textContent = `${noticeBody.value.length} / 300`; });
 byId('send-customer-notice').addEventListener('click', () => {
-  const selected = selectedDelivery();
+  const selected = (state.data?.fleetDeliveries || []).find(item => item.id === state.noticeTargetId);
   const body = noticeBody.value.trim();
   if (!selected || !state.connected || state.pendingNotice) {
     state.noticeMessage = '연결이 복구된 뒤 다시 보내 주세요.'; state.noticeError = true; render(); return;

@@ -6,8 +6,13 @@ const base = {
   phase: 'delivering',
   simClock: '07:10',
   speed: 5,
+  simTime: 25_800_000,
   customerStopId: 'S5',
-  vehicles: [{ id: 'V1', plate: '서울87바 1234', driver: '김민수', region: '송파·강남', live: true }],
+  truck: { lat: 37.4926, lng: 127.1116, dwelling: false, dwellRemaining: 0 },
+  vehicles: [{
+    id: 'V1', plate: '서울87바 1234', driver: '김민수', region: '송파·강남', live: true,
+    departure: { time: '06:30', source: 'scenario-baseline' },
+  }],
   customers: {
     S5: {
       ordered: true,
@@ -48,9 +53,26 @@ test('고객 공식 ETA와 계산 ETA를 서로 다른 point 값으로 보존한
   assert.equal(result.deliveries[0].officialEta.updatedAt, '07:05');
   assert.equal(result.device, null);
   assert.equal(result.vehicle.id, 'V1');
+  assert.deepEqual(result.vehicle.departure, { time: '06:30', source: 'scenario-baseline' });
   assert.equal(result.customerStopId, 'S5');
   assert.equal(result.scenarioPreset, null);
   assert.equal(result.scenarioStopId, null);
+});
+
+test('시뮬레이션 시각과 차량 위치를 출처와 함께 보존한다', () => {
+  const result = adaptSimulation(base);
+  assert.equal(result.simTime, 25_800_000);
+  assert.deepEqual(result.truck, {
+    lat: 37.4926,
+    lng: 127.1116,
+    locationSource: 'simulation',
+    dwelling: false,
+    dwellRemaining: 0,
+  });
+
+  const withoutCoordinates = adaptSimulation({ ...base, simTime: undefined, truck: { dwelling: true, dwellRemaining: 30 } });
+  assert.equal(withoutCoordinates.simTime, null);
+  assert.equal(withoutCoordinates.truck.locationSource, null);
 });
 
 test('미주문, 완료, 건너뜀 상태와 공급된 시각만 그대로 옮긴다', () => {
@@ -134,6 +156,35 @@ test('기존 수동 조작 기록은 발생한 일로 표시하고 내부 시나
   assert.deepEqual(adaptSimulation({ ...base, events: [actual] }).events, [actual]);
 });
 
+test('사건의 원본 시각과 명시적 대상만 보존하고 문구로 대상을 추정하지 않는다', () => {
+  const targeted = {
+    id: 17,
+    ts: 25_800_000,
+    time: '07:10',
+    type: 'scan',
+    message: '구간 스캔: 문정갈비 도착',
+    vehicleId: 'V1',
+    stopId: 'S5',
+    action: 'arrived',
+  };
+  const untargeted = { ts: 25_740_000, time: '07:09', type: 'scan', message: 'V2 문정갈비 배송 완료' };
+  const [first, second] = adaptSimulation({ ...base, events: [targeted, untargeted] }).events;
+
+  assert.deepEqual(first, targeted);
+  assert.equal(second.ts, 25_740_000);
+  assert.equal(Object.hasOwn(second, 'id'), false);
+  assert.equal(Object.hasOwn(second, 'vehicleId'), false);
+  assert.equal(Object.hasOwn(second, 'stopId'), false);
+});
+
+test('고객 알림의 원본 타임스탬프를 보존한다', () => {
+  const result = adaptSimulation({
+    ...base,
+    notifications: [{ id: 3, stopId: 'S5', ts: 25_800_000, time: '07:10', title: '운영자 안내', body: '도착 전 연락', kind: 'manual' }],
+  });
+  assert.equal(result.deliveries[0].notices[0].ts, 25_800_000);
+});
+
 test('fleet 계약은 live 배송과 synthetic 배송을 한 목록으로 제공한다', () => {
   const input = structuredClone(base);
   input.order[0].vehicleId = 'V1';
@@ -163,11 +214,13 @@ test('fleet 계약은 live 배송과 synthetic 배송을 한 목록으로 제공
   assert.equal(result.scenarioStopId, 'S5');
   assert.deepEqual(result.fleetDeliveries.map(stop => stop.id), ['S5', 'V2-S1']);
   assert.equal(result.deliveries[0].vehicle.live, true);
+  assert.deepEqual(result.deliveries[0].vehicle.departure, { time: '06:30', source: 'scenario-baseline' });
   assert.equal(result.deliveries[0].preciseTimeText, '08:31');
   assert.equal(result.deliveries[0].customerWindowText, '08:01 ~ 09:01');
   assert.deepEqual(result.deliveries[0].tip, { body: '직접 작성한 팁', author: '김민수', updatedAt: '07:05' });
   assert.deepEqual(result.deliveries[0].notices.map(notice => [notice.id, notice.body]), [[7, '첫 안내'], [9, '최근 안내']]);
   assert.equal(result.fleetDeliveries[1].vehicle.live, false);
+  assert.equal(result.fleetDeliveries[1].vehicle.departure, null);
   assert.equal(result.fleetDeliveries[1].calculatedEta, null);
   assert.deepEqual(result.fleetDeliveries[1].notices.map(notice => [notice.id, notice.body]), [[8, '합성 안내']]);
 });

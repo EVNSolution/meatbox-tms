@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { volumeScenario, orderMapModel, mountOrderPlanning } from './order-planning.mjs';
+import { volumeScenario, orderAssignmentSummary, orderMapModel, mountOrderPlanning } from './order-planning.mjs';
 
 class FakeNode {
   constructor() { this.innerHTML = ''; this.value = ''; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.open = false; this.focused = false; }
@@ -14,7 +14,7 @@ class FakeNode {
 }
 
 function fixture() {
-  const names = ['vehicle', 'map-canvas', 'map-layer', 'map-status', 'map-count', 'selection', 'map-summary', 'scenario-dialog', 'scenario-open', 'scenario-close', 'volume-range', 'volume-number', 'volume-display', 'volume-reset', 'baseline', 'target', 'volume-note'];
+  const names = ['vehicle', 'map-canvas', 'map-layer', 'map-status', 'map-status-text', 'map-retry', 'map-count', 'selection', 'map-summary', 'scenario-dialog', 'scenario-open', 'scenario-close', 'volume-range', 'volume-number', 'volume-display', 'baseline', 'target', 'total-vehicles', 'total-destinations', 'assignments', 'volume-note'];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
   const element = new FakeNode();
   element.querySelector = selector => nodes[selector.match(/data-order-([^\]]+)/)?.[1]];
@@ -37,6 +37,7 @@ const deliveries = [
 ];
 const data = { vehicle: vehicles[0], fleetVehicles: vehicles, fleetDeliveries: deliveries };
 const input = (nodes, name, value, type = 'input') => nodes[name].listeners[type]({ target: { value: String(value) } });
+const selectVehicle = (nodes, id) => nodes.vehicle.listeners.click({ target: { closest: () => ({ dataset: { orderVehicleId: id } }) } });
 
 test('입력 물량을 100%로 삼고 80~120%의 합계만 미리 계산한다', () => {
   for (const [percent, targetBoxes] of [[80, 32], [100, 40], [120, 48]]) {
@@ -66,12 +67,12 @@ test('등록 좌표만 지도에 표시하고 여덟 곳을 넘겨도 자르지 
   assert.equal(model.mapped.length, 10);
   assert.equal(model.unknownCount, 2);
   assert.deepEqual(model.mapped[9].coordinates, [127.09, 37.59]);
-  assert.deepEqual(orderMapModel(many, null), { mapped: [], unknownCount: 12, vehicle: null });
+  assert.deepEqual(orderMapModel(many, null), { mapped: [], unknownCount: 12 });
   const withRoad = orderMapModel([many[0]], {
     points: [points[0]],
     legs: { 'MFC>S1': { coords: [[37.4, 127], [37.45, 127.01], [37.5, 127.02], [37.55, 127.03], [37.6, 127.04]] } },
   });
-  assert.deepEqual(withRoad.vehicle, [127.02, 37.5]);
+  assert.deepEqual(withRoad, { mapped: [{ delivery: many[0], coordinates: [127, 37.5] }], unknownCount: 0 });
 });
 
 test('주문 화면이 열릴 때만 지도를 만들고 등록된 모든 좌표에 마커를 둔다', async () => {
@@ -90,32 +91,61 @@ test('주문 화면이 열릴 때만 지도를 만들고 등록된 모든 좌표
   });
   assert.equal(maps, 0);
   planning.update({ vehicle: vehicles[0], fleetVehicles: [vehicles[0]], fleetDeliveries: many }, 'S10');
-  await Promise.resolve();
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(maps, 1);
   assert.equal(marked.length, 10);
-  assert.equal(nodes['map-count'].textContent, '10건');
+  assert.equal(nodes['map-count'].textContent, '지도 10곳 / 전체 위치 미등록 0곳 / 선택 차량 미등록 0곳');
   assert.match(nodes.selection.innerHTML, /주문 10/);
   planning.destroy();
 });
 
-test('좌표 없는 차량으로 바꾸면 이전 마커를 지우고 원래 차량으로 돌아오면 복원한다', async () => {
+test('위치 데이터 실패는 갱신으로 재요청하지 않고 명시적 재시도 뒤에만 확정 집계를 표시한다', async () => {
+  const { element, nodes } = fixture();
+  let attempts = 0;
+  const planning = mount({ element }, {
+    loadRouteData: () => {
+      attempts += 1;
+      if (attempts === 1) return Promise.reject(new Error('temporary failure'));
+      return { points: [{ id: 'S1', lng: 127, lat: 37.5 }] };
+    },
+  });
+  planning.update(data, 'S1');
+  assert.equal(nodes['map-count'].textContent, '위치 데이터 확인 중');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(attempts, 1);
+  assert.equal(nodes['map-count'].textContent, '위치 데이터 미확인');
+  assert.equal(nodes['map-status-text'].textContent, '배송지 위치 데이터를 불러오지 못했습니다.');
+  assert.equal(nodes['map-retry'].hidden, false);
+
+  planning.update({ ...data, simClock: '06:10' }, 'S1');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(attempts, 1);
+  assert.equal(nodes['map-count'].textContent, '위치 데이터 미확인');
+
+  nodes['map-retry'].listeners.click();
+  assert.equal(nodes['map-count'].textContent, '위치 데이터 확인 중');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(attempts, 2);
+  assert.equal(nodes['map-count'].textContent, '지도 1곳 / 전체 위치 미등록 2곳 / 선택 차량 미등록 1곳');
+  assert.equal(nodes['map-retry'].hidden, true);
+  planning.destroy();
+});
+
+test('차량을 바꿔도 전체 주문 마커와 좌표를 유지하고 선택 차량 소속만 강조한다', async () => {
   const { element, nodes } = fixture();
   const live = Array.from({ length: 8 }, (_, index) => ({ id: `S${index + 1}`, vehicleId: 'V1', name: `주문 ${index + 1}`, boxes: 2 }));
   const unmapped = Array.from({ length: 35 }, (_, index) => ({ id: `V130-S${index + 1}`, vehicleId: 'V130', name: `미등록 ${index + 1}`, boxes: 2 }));
   const points = live.map((delivery, index) => ({ id: delivery.id, lng: 127 + index / 100, lat: 37.5 + index / 100 }));
   let created = 0;
   let removed = 0;
-  let vehicleCreated = 0;
-  let vehicleRemoved = 0;
+  const markerAttributes = new Map();
   const planning = mount({ element }, {
     loadRouteData: () => ({ points, legs: { 'MFC>S1': { coords: [[37.4, 127], [37.45, 127.01], [37.5, 127.02], [37.55, 127.03], [37.6, 127.04]] } } }),
     markerFactory: (_map, delivery) => {
       created += 1;
-      return { element: { dataset: { orderMarker: delivery.id }, setAttribute() {} }, remove() { removed += 1; } };
-    },
-    vehicleMarkerFactory: () => {
-      vehicleCreated += 1;
-      return { element: { dataset: {}, setAttribute() {} }, remove() { vehicleRemoved += 1; } };
+      const attributes = {};
+      markerAttributes.set(delivery.id, attributes);
+      return { element: { dataset: { orderMarker: delivery.id }, setAttribute(name, value) { attributes[name] = value; } }, remove() { removed += 1; } };
     },
   });
   planning.update({
@@ -123,22 +153,21 @@ test('좌표 없는 차량으로 바꾸면 이전 마커를 지우고 원래 차
     fleetVehicles: [vehicles[0], { id: 'V130', plate: '예시 차량 130' }],
     fleetDeliveries: [...live, ...unmapped],
   }, 'S1');
-  await Promise.resolve();
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(created, 8);
-  assert.equal(vehicleCreated, 1);
+  assert.equal(markerAttributes.get('S1')['data-selected-vehicle'], 'true');
 
-  input(nodes, 'vehicle', 'V130', 'change');
-  assert.equal(removed, 8);
-  assert.equal(vehicleRemoved, 1);
-  assert.equal(vehicleCreated, 2);
-  assert.equal(nodes['map-count'].textContent, '지도 0건 / 위치 미등록 35건');
+  selectVehicle(nodes, 'V130');
+  assert.equal(created, 8);
+  assert.equal(removed, 0);
+  assert.equal(markerAttributes.get('S1')['data-selected-vehicle'], 'false');
+  assert.equal(nodes['map-count'].textContent, '지도 8곳 / 전체 위치 미등록 35곳 / 선택 차량 미등록 35곳');
   assert.equal(nodes['map-status'].hidden, true);
 
-  input(nodes, 'vehicle', 'V1', 'change');
-  assert.equal(created, 16);
-  assert.equal(vehicleRemoved, 2);
-  assert.equal(vehicleCreated, 3);
-  assert.equal(nodes['map-count'].textContent, '8건');
+  selectVehicle(nodes, 'V1');
+  assert.equal(created, 8);
+  assert.equal(markerAttributes.get('S1')['data-selected-vehicle'], 'true');
+  assert.equal(nodes['map-count'].textContent, '지도 8곳 / 전체 위치 미등록 35곳 / 선택 차량 미등록 0곳');
   planning.destroy();
 });
 
@@ -151,17 +180,17 @@ test('물량 비율 입력과 슬라이더에 이름과 80~120 경계를 제공�
   assert.equal(nodes['volume-range'].disabled, true);
 });
 
-test('차량 필터와 외부 주문 선택은 기준 총량이나 각 주문의 수량을 바꾸지 않는다', () => {
+test('차량 목록 선택과 외부 주문 선택은 기준 총량이나 각 주문의 수량을 바꾸지 않는다', () => {
   const { element, nodes } = fixture();
   const planning = mount({ element });
   planning.update(data, 'V2-S1');
-  assert.equal(nodes.vehicle.value, 'V2');
+  assert.match(nodes.vehicle.innerHTML, /data-order-vehicle-id="V2" aria-pressed="true"/);
   assert.match(nodes.selection.innerHTML, /주문 3/);
   assert.equal(nodes.baseline.textContent, '40박스');
-  input(nodes, 'vehicle', 'V1', 'change');
+  selectVehicle(nodes, 'V1');
   planning.update({ ...data, simClock: '06:10' }, 'V2-S1');
-  assert.equal(nodes.vehicle.value, 'V1');
-  assert.match(nodes['map-count'].textContent, /위치 미등록 2건/);
+  assert.match(nodes.vehicle.innerHTML, /data-order-vehicle-id="V1" aria-pressed="true"/);
+  assert.equal(nodes['map-count'].textContent, '위치 데이터 확인 중');
   assert.equal(nodes.baseline.textContent, '40박스');
   planning.destroy();
 });
@@ -170,7 +199,7 @@ test('같은 주문의 배차 차량이 바뀌면 새 차량과 주문 선택을
   const { element, nodes } = fixture();
   const planning = mount({ element });
   planning.update(data, 'S1');
-  assert.equal(nodes.vehicle.value, 'V1');
+  assert.match(nodes.vehicle.innerHTML, /data-order-vehicle-id="V1" aria-pressed="true"/);
 
   const reassigned = {
     ...data,
@@ -178,12 +207,49 @@ test('같은 주문의 배차 차량이 바뀌면 새 차량과 주문 선택을
   };
   planning.update(reassigned, 'S1');
 
-  assert.equal(nodes.vehicle.value, 'V2');
+  assert.match(nodes.vehicle.innerHTML, /data-order-vehicle-id="V2" aria-pressed="true"/);
   assert.match(nodes.selection.innerHTML, /주문 1/);
   planning.destroy();
 });
 
-test('비율 변경과 기준 복귀는 원본 상태와 지도 주문 수량을 보존한다', () => {
+test('주문 시나리오는 배송지와 박스를 차량 ID별로 합산하고 같은 이름 배송원을 합치지 않는다', () => {
+  const sameNameVehicles = [
+    { id: 'V1', plate: '차량 1', driver: '김배송' },
+    { id: 'V2', plate: '차량 2', driver: '김배송' },
+  ];
+  const summary = orderAssignmentSummary({ fleetVehicles: sameNameVehicles, fleetDeliveries: deliveries });
+  assert.equal(summary.vehicles, 2);
+  assert.equal(summary.destinations, 3);
+  assert.equal(summary.boxes, 40);
+  assert.deepEqual(summary.assignments.map(item => [item.vehicle.id, item.destinations, item.boxes]), [['V1', 2, 20], ['V2', 1, 20]]);
+});
+
+test('차량 목록은 고정 시나리오 출발, 마지막 도착 ETA, 최종 인도 완료 예측을 구분한다', () => {
+  const { element, nodes } = fixture();
+  mount({ element }).update({
+    ...data,
+    vehicle: { ...vehicles[0], departure: { time: '06:30', source: 'scenario-baseline' } },
+    fleetVehicles: [{ ...vehicles[0], departure: { time: '06:30', source: 'scenario-baseline' } }, vehicles[1]],
+    kpi: { finishEta: '09:20' },
+  }, 'S1');
+  assert.match(nodes.vehicle.innerHTML, /고정 출발 \(시나리오 기준\) <strong>06:30/);
+  assert.match(nodes.vehicle.innerHTML, /마지막 도착 ETA <strong>09:20/);
+  assert.match(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>미등록/);
+  assert.doesNotMatch(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>09:20/);
+  assert.equal(nodes['total-vehicles'].textContent, '2대');
+  assert.equal(nodes['total-destinations'].textContent, '3곳');
+  assert.match(nodes.assignments.innerHTML, /배정 배송지 2곳/);
+  assert.doesNotMatch(nodes.assignments.innerHTML, /가구/);
+
+  const completed = fixture();
+  const completedPlanning = mount(completed);
+  completedPlanning.update({ ...data, kpi: { finishEta: '09:20 완료' } }, 'S1');
+  assert.match(completed.nodes.vehicle.innerHTML, /마지막 도착 ETA <strong>ETA 미해당/);
+  assert.doesNotMatch(completed.nodes.vehicle.innerHTML, /마지막 도착 ETA <strong>09:20 완료/);
+  completedPlanning.destroy();
+});
+
+test('비율 입력은 원본 상태와 지도 주문 수량을 보존하고 복귀 버튼은 없다', () => {
   const original = structuredClone(data);
   const { element, nodes } = fixture();
   const planning = mount({ element });
@@ -195,7 +261,8 @@ test('비율 변경과 기준 복귀는 원본 상태와 지도 주문 수량을
   assert.equal(nodes.target.textContent, '48박스');
   assert.match(nodes.selection.innerHTML, /8박스/);
   assert.deepEqual(data, original);
-  nodes['volume-reset'].listeners.click();
+  assert.doesNotMatch(element.innerHTML, /data-order-volume-reset|100%로 돌아가기/);
+  input(nodes, 'volume-range', 100);
   assert.equal(nodes.target.textContent, '40박스');
   assert.equal(nodes['volume-number'].value, '100');
   nodes['scenario-open'].listeners.click();

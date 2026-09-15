@@ -28,7 +28,7 @@ export function routeSelectionId(element, target) {
   return row && element.contains(row) ? row.dataset.routeId : null;
 }
 
-export function mountRouteEditor({ element, onSend, onSelect }) {
+export function mountRouteEditor({ element, onSend, onSelect, onCancel = () => {} }) {
   let latest, selectedId, connected = false, draft = null, base = null, pending = false, drag = null;
   let message = '', error = false, rendered = '', renderedVehicleId = null;
   const order = () => latest?.deliveries.map(stop => stop.id) || [];
@@ -36,6 +36,22 @@ export function mountRouteEditor({ element, onSend, onSelect }) {
 
   function finish(text, isError = false) {
     draft = null; base = null; pending = false; message = text; error = isError;
+  }
+  function resetDraft() {
+    draft = order();
+    base = { order: order(), statuses: latest.deliveries.map(stop => stop.status), phase: latest.phase, signature: signature(latest) };
+  }
+  function beginEdit() {
+    if (!latest || !connected || draft || !routeEditability(latest).editable || latest.deliveries.filter(stop => stop.status === 'pending').length < 2) return;
+    resetDraft();
+    message = ''; error = false;
+    render();
+  }
+  function cancel() {
+    if (pending) return;
+    finish('변경을 취소했습니다. 기존 배송 순서를 유지합니다.');
+    render();
+    onCancel();
   }
   function render() {
     if (!latest || drag) return;
@@ -48,10 +64,10 @@ export function mountRouteEditor({ element, onSend, onSelect }) {
     const scrollTop = renderedVehicleId === latest.vehicle?.id ? element.querySelector('.route-list')?.scrollTop || 0 : 0;
     renderedVehicleId = latest.vehicle?.id;
     element.innerHTML = `
-      <div class="route-heading"><div><h2>차량 배송 순서</h2><p><span>${escapeHtml(latest.vehicle?.plate)}</span><span>${escapeHtml(latest.vehicle?.driver)}</span><span>${rows.length}곳</span>${access.editable ? '' : '<span>조회 전용</span>'}</p></div><div class="route-edit-actions">${draft
-        ? `<button class="button subtle" data-route-action="cancel" data-focus="cancel" ${pending ? 'disabled' : ''}>취소</button><button class="button primary" data-route-action="save" data-focus="save" ${!changed() || pending || !connected ? 'disabled' : ''}>${pending ? '저장 중…' : '변경 저장'}</button>`
+      <div class="route-heading"><div><h2>차량 배송 순서</h2><p><span>${escapeHtml(latest.vehicle?.plate)}</span><span>${escapeHtml(latest.vehicle?.driver)}</span><span>${rows.length}곳</span>${access.editable ? '' : '<span>조회 전용</span>'}</p></div><div class="route-edit-actions"><button class="button subtle" data-route-action="cancel" data-focus="cancel" ${pending ? 'disabled' : ''}>취소</button><button class="button subtle" data-route-action="reset" data-focus="reset" ${!changed() || pending || !connected ? 'disabled' : ''}>초기화</button>${draft
+        ? `<button class="button primary" data-route-action="save" data-focus="save" ${!changed() || pending || !connected ? 'disabled' : ''}>${pending ? '저장 중…' : '저장'}</button>`
         : `<button class="button" data-route-action="edit" data-focus="edit" ${!access.editable || !connected || rows.filter(stop => stop.status === 'pending').length < 2 ? 'disabled' : ''}>순서 편집</button>`}</div></div>
-      <p class="route-help">${access.reason || (draft ? '손잡이를 끌거나 위아래 버튼으로 순서를 바꾼 뒤 저장하세요. 배송 중, 완료, 보류 행은 고정됩니다.' : '배송지를 눌러 이력을 확인하세요. 순서를 바꾸려면 ‘순서 편집’을 누르세요.')}</p>
+      <p class="route-help">${access.reason || (draft ? '손잡이를 끌거나 위아래 버튼으로 순서를 바꾼 뒤 저장하세요. 배송 중, 완료, 보류 행은 고정됩니다.' : '배송지를 눌러 선택하세요. 순서를 바꾸려면 ‘순서 편집’을 누르세요.')}</p>
       <ol class="route-list" tabindex="0" aria-label="차량 배송 순서 목록">${rows.map((stop, index) => {
         const movable = draft && stop.status === 'pending';
         const eligible = rows.filter(row => row.status === 'pending');
@@ -84,11 +100,11 @@ export function mountRouteEditor({ element, onSend, onSelect }) {
     const selectionId = routeSelectionId(element, event.target);
     if (selectionId) onSelect(selectionId);
     const action = event.target.closest('[data-route-action]')?.dataset.routeAction;
-    if (action === 'edit' && connected && routeEditability(latest).editable) {
-      draft = order(); base = { order: order(), statuses: latest.deliveries.map(stop => stop.status), phase: latest.phase, signature: signature(latest) };
-      message = ''; error = false;
+    if (action === 'edit') beginEdit();
+    if (action === 'cancel') { cancel(); return; }
+    if (action === 'reset' && draft && !pending && connected) {
+      resetDraft(); message = '저장하지 않은 변경을 초기화했습니다.'; error = false;
     }
-    if (action === 'cancel' && !pending) finish('변경을 취소했습니다. 기존 배송 순서를 유지합니다.');
     if (action === 'save' && changed() && connected && !pending && routeEditability(latest).editable) {
       pending = true; message = '배송 순서를 저장하고 있습니다.';
       onSend('set_route_order', { order: draft, expectedOrder: base.order, expectedStatuses: base.statuses, expectedPhase: base.phase });
@@ -104,7 +120,7 @@ export function mountRouteEditor({ element, onSend, onSelect }) {
     if (handle && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
       event.preventDefault(); moveBy(handle.dataset.handle, event.key === 'ArrowUp' ? -1 : 1);
     }
-    if (event.key === 'Escape' && draft && !pending) { finish('변경을 취소했습니다.'); render(); }
+    if (event.key === 'Escape' && !pending) cancel();
   });
   element.addEventListener('pointerdown', event => {
     const handle = event.target.closest('[data-handle]');
@@ -135,9 +151,13 @@ export function mountRouteEditor({ element, onSend, onSelect }) {
   element.addEventListener('pointercancel', endDrag);
 
   return {
+    beginEdit,
     update(state, selected, isConnected) {
       latest = state; selectedId = selected; connected = isConnected;
-      if (pending && draft.every((id, index) => id === order()[index])) finish('배송 순서를 저장했습니다. ETA에 반영되었습니다.');
+      if (pending && draft.every((id, index) => id === order()[index])) {
+        pending = false; resetDraft();
+        message = '배송 순서를 저장했습니다. ETA에 반영되었습니다.'; error = false;
+      }
       else if (draft && (!connected || signature(state) !== base.signature)) finish('배송 진행이나 연결 상태가 바뀌어 편집을 종료했습니다. 최신 순서에서 다시 편집해 주세요.', true);
       render();
     },

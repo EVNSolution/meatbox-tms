@@ -127,7 +127,10 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   assert.match(shell, /data-viewer="customer"/);
   assert.match(combined, /data-page="orders"/);
   assert.doesNotMatch(combined, /data-page="manage"/);
-  assert.match(combined, /data-control-tab="management"/);
+  assert.match(combined, /id="vehicle-control"/);
+  const controlModule = await (await get('/combined/vehicle-control.mjs', cookie)).text();
+  assert.match(controlModule, /data-control-tab="management"/);
+  for (const asset of ['/combined/vehicle-control.css', '/combined/vehicle-operations-model.mjs', '/combined/resource-management.mjs', '/combined/resource-management.css']) assert.equal((await get(asset, cookie)).status, 200, asset);
   for (const asset of ['/combined/route-editor.mjs', '/combined/operations.css', '/combined/operations-model.mjs', '/combined/order-planning.css', '/combined/order-planning.mjs', '/combined/brand.css', '/combined/assets/meatbox-logo.svg', '/combined/assets/meatbox-app.webp', '/combined/driver.html']) assert.equal((await get(asset, cookie)).status, 200, asset);
   assert.doesNotMatch(combined, /href="\/ui-layout\/#\/design"/);
   assert.match(combined, /href="\.\/order-planning\.css"/);

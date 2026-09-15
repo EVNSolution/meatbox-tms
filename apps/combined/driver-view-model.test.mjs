@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  completionProofCanSubmit,
   completionProofIsCurrent,
+  completionProofShouldClose,
   driverMapDelivery,
   driverTipDelivery,
   driverViewModel,
@@ -11,13 +13,24 @@ import {
 const state = dwelling => ({
   phase: 'delivering',
   truck: { dwelling, remainingM: 1830 },
+  vehicle: { id: 'V1' },
   deliveries: [
-    { id: 'S1', name: '문정갈비', address: '서울 송파구', boxes: 10, status: 'current' },
-    { id: 'S2', name: '한우마을', address: '서울 강남구', boxes: 8, status: 'pending' },
-    { id: 'S3', name: '완료매장', address: '서울 서초구', boxes: 4, status: 'done' },
-    { id: 'S4', name: '보류매장', address: '서울 광진구', boxes: 6, status: 'skipped' },
+    { id: 'S1', vehicleId: 'V1', name: '문정갈비', address: '서울 송파구', boxes: 10, status: 'current' },
+    { id: 'S2', vehicleId: 'V1', name: '한우마을', address: '서울 강남구', boxes: 8, status: 'pending' },
+    { id: 'S3', vehicleId: 'V1', name: '완료매장', address: '서울 서초구', boxes: 4, status: 'done' },
+    { id: 'S4', vehicleId: 'V1', name: '보류매장', address: '서울 광진구', boxes: 6, status: 'skipped' },
   ],
   kpi: { finishEta: '09:20' },
+});
+
+test('차량 정보가 불완전한 외부 배송지는 V1 완료 문맥으로 열리지 않는다', () => {
+  const foreign = { id: 'V2-S1', vehicleId: 'V2', name: '외부 예시 배송지', boxes: 12, status: 'current' };
+  const fleetState = { ...state(true), fleetDeliveries: [...state(true).deliveries, foreign] };
+  const view = driverViewModel(fleetState, true, foreign.id);
+  assert.equal(view.vehicle.id, 'V2');
+  assert.equal(view.current, null);
+  assert.equal(view.canComplete, false);
+  assert.deepEqual(view.deliveries, [foreign]);
 });
 
 test('합성 배송지를 팁 대상으로 골라도 완료 대상은 실제 운행의 현재 배송지로 유지한다', () => {
@@ -42,15 +55,16 @@ test('배송원 완료 처리는 연결된 차량이 현재 배송지에 도착�
   assert.equal(arrived.canComplete, true);
   assert.equal(arrived.remainingBoxes, 18);
   assert.equal(arrived.progress, '1/4');
+  assert.deepEqual(arrived.todayCounts, { active: 2, done: 1, skipped: 1 });
   assert.equal(arrived.finishEta, '09:20');
   assert.equal(driverViewModel(state(false), true).distance, '1.8km');
 });
 
-test('배차 완료 경계에서만 그룹을 자동 전환한다', () => {
-  assert.deepEqual(reconcileDriverRoute(null, false, null), { changed: false, completed: false, group: 'active' });
-  assert.deepEqual(reconcileDriverRoute(false, false, 'completed'), { changed: false, completed: false, group: 'completed' });
-  assert.deepEqual(reconcileDriverRoute(false, true, 'active'), { changed: true, completed: true, group: 'completed' });
-  assert.deepEqual(reconcileDriverRoute(true, false, 'completed'), { changed: true, completed: false, group: 'active' });
+test('배차 완료 경계가 바뀌어도 금일 배차 선택을 근무 이력으로 바꾸지 않는다', () => {
+  assert.deepEqual(reconcileDriverRoute(null, false, null), { changed: false, completed: false, group: 'today' });
+  assert.deepEqual(reconcileDriverRoute(false, false, 'history'), { changed: false, completed: false, group: 'history' });
+  assert.deepEqual(reconcileDriverRoute(false, true, 'today'), { changed: true, completed: true, group: 'today' });
+  assert.deepEqual(reconcileDriverRoute(true, false, 'history'), { changed: true, completed: false, group: 'history' });
 });
 
 test('보류된 지도 선택은 현재 운행 중인 유효 배송지로 바꾼다', () => {
@@ -64,4 +78,17 @@ test('완료 시트는 같은 배송지의 도착 상태가 유지될 때만 유
   assert.equal(completionProofIsCurrent(state(true), 'S1'), true);
   assert.equal(completionProofIsCurrent(state(true), 'S2'), false);
   assert.equal(completionProofIsCurrent(state(false), 'S1'), false);
+});
+
+test('배송 완료 확인은 현재 도착 상태, 연결, 필수 사진이 모두 있어야 가능하다', () => {
+  assert.equal(completionProofCanSubmit(state(true), true, 'S1', true), true);
+  assert.equal(completionProofCanSubmit(state(true), true, 'S1', false), false);
+  assert.equal(completionProofCanSubmit(state(true), false, 'S1', true), false);
+  assert.equal(completionProofCanSubmit(state(true), true, 'S2', true), false);
+});
+
+test('도착 상태가 유지돼도 연결이 끊기면 증빙 시트를 닫고 새 사진을 요구한다', () => {
+  assert.equal(completionProofShouldClose(state(true), true, 'S1'), false);
+  assert.equal(completionProofShouldClose(state(true), false, 'S1'), true);
+  assert.equal(completionProofShouldClose(state(false), true, 'S1'), true);
 });
