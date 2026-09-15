@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#ffffff">
-  <title>고객 뷰어 · 미트박스 TMS 시연</title>
+  <title>미트박스 TMS</title>
   <link rel="icon" type="image/webp" href="./assets/meatbox-app.webp">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
+  <link rel="stylesheet" href="./assets/vendor/maplibre/maplibre-gl.css">
   <link rel="stylesheet" href="/scenario/shared.css">
   <link rel="stylesheet" href="./brand.css">
   <link rel="stylesheet" href="./mobile-customer.css">
   <link rel="stylesheet" href="./scenario-tools.css">
   <link rel="stylesheet" href="./demo-shell.css">
+  <link rel="stylesheet" href="./app-viewer.css">
   <script src="/auth-check.js" defer></script>
   <script type="module" src="./mobile-customer-links.mjs"></script>
 </head>
@@ -20,12 +21,15 @@
   <header class="demo-header" id="demo-header"></header>
   <div class="demo-layout">
     <aside class="demo-navigation" id="demo-navigation"></aside>
-    <main class="demo-main">
-      <p class="demo-connection" id="customer-connection" role="status">시연에 연결하고 있습니다.</p>
+    <main class="demo-main app-viewer-page">
+      <section class="app-viewer-intro">
+        <div><h1>고객 뷰어</h1><p>선택한 매장의 배송 현황과 고객 안내를 확인합니다.</p></div>
+      </section>
+      <p class="demo-connection" id="customer-connection" role="status">배송 정보를 불러오고 있습니다.</p>
 
   <section id="account-picker" aria-labelledby="picker-title">
     <div class="picker-content">
-      <p class="eyebrow">미트박스 · 고객 시나리오</p>
+      <p class="eyebrow">미트박스 배송 조회</p>
       <h1 id="picker-title">배송 조회</h1>
       <p class="picker-description">접수된 주문의 배송 현황을 조회할 매장을 선택해 주세요.</p>
       <div id="account-list"><p class="loading-copy" role="status">배송지 목록을 불러오고 있습니다.</p><a href="">다시 불러오기</a></div>
@@ -33,50 +37,53 @@
   </section>
 
   <div class="mobile-shell">
-    <div class="customer-grid">
-      <section class="mobile-viewer" aria-label="고객 모바일 뷰어">
-        <div class="viewer-speaker" aria-hidden="true"></div>
-<div class="push-banner" id="push" role="status" aria-live="polite" aria-atomic="true">
-      <div class="icon" aria-hidden="true"><img src="./assets/meatbox-app.webp" alt=""></div>
-      <div class="push-copy"><div class="title" id="push-title"></div><div class="body" id="push-body"></div></div>
-      <div class="when" id="push-when"></div>
-    </div>
-        <div class="viewer-screen screen" tabindex="0" role="region" aria-label="고객 모바일 화면, 스크롤해서 주문과 알림 확인">
+    <div class="customer-grid app-viewer-workspace">
+      <section class="mobile-viewer app-viewer-device" aria-label="고객 모바일 뷰어">
+        <div class="app-viewer-statusbar"><time id="customer-clock" aria-label="현재 시각">--:--</time></div>
+        <div class="app-viewer-speaker" aria-hidden="true"></div>
+        <div class="customer-push" id="customer-push" role="status" aria-live="polite" aria-atomic="true" inert>
+          <button class="customer-push-open" id="customer-push-open" type="button">
+            <img src="./assets/meatbox-app.webp" alt="" width="32" height="32">
+            <span class="customer-push-copy"><span class="customer-push-meta">미트박스 <time id="customer-push-time"></time></span><strong id="customer-push-title"></strong><span id="customer-push-body"></span></span>
+          </button>
+          <button class="icon-button customer-push-close" id="customer-push-close" type="button" aria-label="새 알림 닫기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+        </div>
+        <section class="customer-notifications" id="customer-notifications" aria-labelledby="customer-notifications-heading" hidden>
+          <div class="notification-heading"><h2 id="customer-notifications-heading">알림</h2><button class="icon-button" id="notifications-close" type="button" aria-label="알림 목록 닫기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+          <div class="notification-actions"><button type="button" id="notifications-read-all">모두 읽기</button><button type="button" id="notifications-clear">알림 지우기</button></div>
+          <div class="notification-scroll"><ul id="customer-notification-list"></ul><p id="notifications-empty" class="notifications-empty" hidden>도착한 알림이 없습니다.</p></div>
+        </section>
+        <div class="viewer-screen screen app-viewer-screen" tabindex="0" role="region" aria-label="고객 모바일 화면, 스크롤해서 주문과 알림 확인">
 <div class="customer-heading">
-      <p class="logo"><img src="./assets/meatbox-logo.svg" width="105" height="25" alt="미트박스"><small>새벽배송</small></p>
-      <h1>배송 조회</h1>
-      <div class="store-heading"><strong id="account-name">배송지 선택</strong><button type="button" class="btn ghost" id="switch-account">매장 변경</button></div>
+      <div class="customer-brand-row"><p class="logo"><img src="./assets/meatbox-logo.svg" width="105" height="25" alt="미트박스"></p>
+        <button class="icon-button notification-bell" id="notification-bell" type="button" aria-label="알림" aria-expanded="false" aria-controls="customer-notifications">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="notification-count" id="notification-count" hidden></span>
+        </button></div>
     </div>
           <div class="tracking-column">
-        <section class="card eta-hero" id="eta-card" aria-labelledby="eta-heading">
-          <div class="row"><h2 id="eta-heading" class="cap">배송 안내</h2><span class="pill gray" id="status-pill">조회 중</span></div>
-          <div class="big" id="eta-text">—</div>
-          <p class="sub" id="eta-sub"></p>
+        <section class="customer-section eta-hero" id="eta-card" aria-labelledby="eta-heading">
+          <h2 id="eta-heading" class="cap">배송 안내</h2>
+          <div class="eta-time-row"><div class="big" id="eta-text">—</div><span class="pill gray" id="status-pill">조회 중</span></div>
+          <dl class="eta-details" id="eta-sub"><div><dt>배송지</dt><dd id="eta-address"></dd></div><div><dt>수량</dt><dd id="eta-boxes"></dd></div></dl>
           <span class="eta-delta" id="eta-delta"></span>
           <p class="eta-note" id="eta-note"></p>
         </section>
 
-        <section class="card map-card" id="map-card" aria-labelledby="map-heading">
-          <div class="map-heading"><h2 id="map-heading">배송 위치</h2><span>🚚 배송 차량 &nbsp; 🏠 우리 매장</span></div>
-          <div id="map" class="map" aria-label="배송 차량과 선택한 매장의 위치 지도"></div>
-          <p class="map-empty" id="map-empty" hidden>이 예시 배송에는 지도 좌표가 없습니다.</p>
+        <section class="customer-section customer-map" id="map-card" aria-label="배송 위치">
+          <div id="map" class="map" aria-label="예시 차량 위치와 매장까지의 도로 경로 지도"></div>
+          <p class="map-empty" id="map-empty" hidden>이 배송에는 지도 좌표가 없습니다.</p>
         </section>
-        <section class="card order-card" aria-labelledby="order-heading">
-          <div class="order-head"><h2 id="order-heading">주문 상품</h2><span class="no" id="order-no"></span></div>
+        <section class="customer-section order-card" aria-labelledby="order-heading">
+          <div class="order-head"><h2 id="order-heading">주문 요약</h2><span class="order-count" id="order-boxes"></span></div>
+          <p class="order-number" id="order-no"></p>
           <div id="order-items"></div>
-          <div class="order-total" id="order-boxes"></div>
         </section>
 
-        <section class="card" id="talk-card" aria-labelledby="talk-heading">
-          <div class="talk">
-            <h2 class="ch" id="talk-heading"><span class="avatar" aria-hidden="true"><img src="./assets/meatbox-app.webp" alt=""></span>미트박스 알림톡 <span class="demo-label">시연</span></h2>
-            <div id="talk-list"><p class="empty">아직 도착한 알림이 없어요</p></div>
-          </div>
-        </section>
           </div>
         </div>
       </section>
-      <aside class="detail-column" aria-label="선택 고객 배송 타임라인">
+      <aside class="detail-column app-viewer-aside" aria-label="매장 선택과 배송 현황">
+        <div class="card store-heading"><strong id="account-name">배송지 선택</strong><button type="button" class="btn ghost" id="switch-account">매장 변경</button></div>
         <section class="card" id="timeline-card" aria-labelledby="timeline-heading">
           <h2 id="timeline-heading">배송 현황</h2>
           <ul class="timeline" id="timeline"></ul>
@@ -87,16 +94,8 @@
   </div>
     </main>
   </div>
-  <noscript><p class="no-script">배송 시나리오를 보려면 JavaScript를 활성화해 주세요. <a href="/combined/">시연 안내로</a></p></noscript>
+  <noscript><p class="no-script">배송 정보를 보려면 JavaScript를 활성화해 주세요.</p></noscript>
 
-  <dialog class="customer-notification-dialog" id="customer-notification-dialog" aria-labelledby="customer-notification-title" aria-describedby="customer-notification-body">
-    <div class="notification-dialog-heading"><img src="./assets/meatbox-app.webp" alt=""><span>미트박스 고객 안내</span></div>
-    <h2 id="customer-notification-title"></h2>
-    <p id="customer-notification-body"></p>
-    <time id="customer-notification-time"></time>
-    <button type="button" class="btn primary" id="customer-notification-close">확인</button>
-  </dialog>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
+  <script src="./assets/vendor/maplibre/maplibre-gl-csp.js"></script>
 </body>
 </html>

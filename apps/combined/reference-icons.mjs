@@ -11,7 +11,17 @@ const paths = {
   next: ['0 0 12 12', 'M4.147 2.147a.5.5 0 0 0 0 .707L7.293 6 4.147 9.147a.5.5 0 1 0 .707.707l3.5-3.5a.5.5 0 0 0 0-.707l-3.5-3.5a.5.5 0 0 0-.707 0'],
 };
 
+// Shared controls use fixed SVG geometry instead of font-dependent symbols.
+const controlPaths = {
+  up: 'M12 19V5m-6 6 6-6 6 6',
+  down: 'M12 5v14m-6-6 6 6 6-6',
+  handle: 'M8 6h.01M16 6h.01M8 12h.01M16 12h.01M8 18h.01M16 18h.01',
+  check: 'm5 12 4 4L19 6',
+  expand: 'm6 9 6 6 6-6',
+};
+
 export function referenceIcon(name) {
+  if (controlPaths[name]) return `<svg class="reference-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${controlPaths[name]}"/></svg>`;
   const [viewBox, path] = paths[name];
   return `<svg class="reference-icon" xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" fill="none" aria-hidden="true" focusable="false"><path fill="currentColor" d="${path}"/></svg>`;
 }

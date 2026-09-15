@@ -7,13 +7,14 @@ const { WebSocketServer } = require('ws');
 const { createAccess, AccessError } = require('./lib/access');
 const { arriveStop, completeStop } = require('./lib/scenario-controls');
 const { validRouteOrder, applyRouteOrder } = require('./lib/route-order');
-const { page, loginPage, registerPage, homePage } = require('./apps/portal/pages');
+const { page, loginPage, registerPage } = require('./apps/portal/pages');
 const { OperatingSimulation, validPlainText } = require('./lib/operating-simulation');
 const routeData = require('./workspaces/sanghyun-scenario/src/route-data');
 
 const COOKIE = 'meatbox_session';
 const ROOT = __dirname;
 const asyncRoute = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+const withProductTitle = html => html.replace(/<title\b[^>]*>[\s\S]*?<\/title>/i, '<title>미트박스 TMS</title>');
 function tokenFrom(req) {
   const matches = (req.headers.cookie || '').split(';').map(v => v.trim()).filter(v => v.startsWith(`${COOKIE}=`));
   return matches.length === 1 ? matches[0].slice(COOKIE.length + 1) : '';
@@ -29,7 +30,9 @@ function safeNext(value) {
 function validCommand(msg) {
   if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return false;
   if (msg.type === 'set_route_order') return validRouteOrder(msg);
-  if (['advance', 'place_order', 'reset'].includes(msg.type)) return true;
+  if (msg.type === 'reset') return true;
+  if (msg.type === 'set_scenario') return ['received', 'picking', 'ready', 'shipping', 'arrived', 'completed'].includes(msg.scenario)
+    && typeof msg.stopId === 'string' && /^S[1-8]$/.test(msg.stopId);
   if (['send_customer_notice', 'set_delivery_tip'].includes(msg.type)) {
     const max = msg.type === 'send_customer_notice' ? 300 : 500;
     return typeof msg.stopId === 'string' && /^(?:S[1-8]|V(?:[2-9]|[1-9]\d|1[0-2]\d|130)-S[1-3])$/.test(msg.stopId)
@@ -37,7 +40,6 @@ function validCommand(msg) {
   }
   if (msg.type === 'complete_stop') return msg.stopId === undefined || /^S[1-8]$/.test(msg.stopId);
   if (msg.type === 'arrive_stop') return /^S[1-8]$/.test(msg.stopId);
-  if (msg.type === 'speed') return [1, 5, 20].includes(msg.value);
   if (['reorder', 'toggle_skip'].includes(msg.type)) return /^S[1-8]$/.test(msg.stopId) && (msg.type !== 'reorder' || ['up', 'down'].includes(msg.dir));
   return false;
 }
@@ -54,7 +56,7 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
   app.use((req, res, next) => {
     // OSM tiles require a valid web Referer; cross-origin requests receive only our origin.
     res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin' });
-    res.set('Content-Security-Policy', `default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https://tile.openstreetmap.org https://cdnjs.cloudflare.com; connect-src 'self' ${origin.replace(/^http/, 'ws')}; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`);
+    res.set('Content-Security-Policy', `default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org https://tile.openstreetmap.org https://cdnjs.cloudflare.com; connect-src 'self' https://tiles.openfreemap.org ${origin.replace(/^http/, 'ws')}; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`);
     next();
   });
   app.use(express.urlencoded({ extended: false, limit: '4kb' }));
@@ -122,15 +124,17 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
   }));
   app.get('/api/session', (req, res) => res.json({ user: req.user }));
   for (const prefix of ['scenario', 'ui-layout', 'combined']) app.get(`/${prefix}`, (_req, res) => res.redirect(308, `/${prefix}/`));
-  app.get('/', (req, res) => res.send(homePage(req.user)));
+  app.get('/', (_req, res) => res.redirect(308, '/combined/'));
   app.get('/auth-check.js', (_req, res) => res.sendFile(path.join(ROOT, 'apps/portal/auth-check.js')));
   app.get('/scenario/api/route-data', (_req, res) => res.json(routeData));
   const scenarioDir = path.join(ROOT, 'workspaces/sanghyun-scenario/public');
-  for (const view of ['', 'customer', 'driver', 'control', 'present']) {
-    app.get(`/scenario/${view || 'index'}.html`, (req, res) => res.redirect(308, `/scenario/${view}${new URL(req.url, origin).search}`));
+  app.get(['/scenario/', '/scenario/index.html'], (req, res) => res.redirect(308, `/scenario/customer${new URL(req.url, origin).search}`));
+  for (const view of ['customer', 'driver', 'control', 'present']) {
+    app.get(`/scenario/${view}.html`, (req, res) => res.redirect(308, `/scenario/${view}${new URL(req.url, origin).search}`));
     app.get(`/scenario/${view}`, asyncRoute(async (_req, res) => {
-      const html = await fs.readFile(path.join(scenarioDir, `${view || 'index'}.html`), 'utf8');
-      res.type('html').send(html.replace(/(href|src)="\/(?!\/)/g, '$1="/scenario/')
+      const html = await fs.readFile(path.join(scenarioDir, `${view}.html`), 'utf8');
+      res.type('html').send(withProductTitle(html)
+        .replace(/(href|src)="\/(?!\/)/g, '$1="/scenario/')
         .replace('src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"', 'src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"')
         .replace('href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"', 'href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous"')
         .replace('</head>', '<style>#traffic,#dwell{display:none!important}</style></head>')
@@ -142,16 +146,27 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
     res.type('js').send(js.replace('${location.host}`', '${location.host}/ws/simulation`').replace("fetch('/api/route-data')", "fetch('/scenario/api/route-data')").replace('ws.onclose = () => setTimeout(open, 1500);', "ws.onclose = async () => { try { const res = await fetch('/api/session'); if (res.status === 401) { location.assign('/login?next=' + encodeURIComponent(location.pathname + location.search)); return; } } catch {} setTimeout(open, 1500); };"));
   }));
   app.use('/scenario', express.static(scenarioDir, { index: false, dotfiles: 'deny' }));
-  app.get('/ui-layout/', asyncRoute(async (_req, res) => {
+  app.get(['/ui-layout/', '/ui-layout/index.html'], asyncRoute(async (_req, res) => {
     const html = await fs.readFile(path.join(ROOT, 'workspaces/jiin-ui/index.html'), 'utf8');
-    res.type('html').send(html
+    res.type('html').send(withProductTitle(html)
       .replace('</head>', '<link rel="stylesheet" href="/combined/map-preview.css"></head>')
       .replace('</body>', '<script src="/auth-check.js" defer></script></body>'));
   }));
+  app.get('/ui-layout/app.mjs', asyncRoute(async (_req, res) => {
+    const js = await fs.readFile(path.join(ROOT, 'workspaces/jiin-ui/app.mjs'), 'utf8');
+    res.type('js').send(js.replace('document.title = `${page.title} · 미트박스 TMS`;', "document.title = '미트박스 TMS';"));
+  }));
   app.use('/ui-layout', express.static(path.join(ROOT, 'workspaces/jiin-ui'), { index: false, dotfiles: 'deny' }));
   app.use('/combined', express.static(path.join(ROOT, 'apps/combined'), { dotfiles: 'deny' }));
-  for (const view of ['customer', 'driver', 'control', 'present']) app.get(`/${view}`, (req, res) => res.redirect(308, `/scenario/${view}${new URL(req.url, origin).search}`));
-  app.use((_req, res) => res.status(404).send(page('페이지 없음', '<h1>페이지를 찾을 수 없습니다.</h1><a href="/">작업 선택으로</a>')));
+  for (const view of ['customer', 'driver', 'control', 'present']) app.get(`/${view}`, (req, res) => {
+    const search = new URL(req.url, origin).search;
+    const target = view === 'customer' ? `/combined/mobile-customer.html${search}`
+      : view === 'driver' ? `/combined/driver.html${search}`
+        : view === 'control' ? '/combined/#/control'
+          : '/combined/';
+    res.redirect(308, target);
+  });
+  app.use((_req, res) => res.status(404).send(page('페이지 없음', '<h1>페이지를 찾을 수 없습니다.</h1><a href="/combined/">운영 화면으로</a>')));
   app.use((error, _req, res, _next) => {
     console.error('Request failed:', error.name);
     res.status(error.status === 413 ? 413 : 500).send(page('요청 오류', '<h1>요청을 처리하지 못했습니다.</h1><a href="/">다시 시작하기</a>'));
@@ -198,10 +213,8 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
         const msg = JSON.parse(raw);
         if (!validCommand(msg)) return;
         switch (msg.type) {
-          case 'advance': sim.advance(); break;
-          case 'place_order': sim.placeOrder(); break;
           case 'reset': sim.reset(); break;
-          case 'speed': sim.setSpeed(msg.value); break;
+          case 'set_scenario': sim.setScenario(msg.scenario, msg.stopId); break;
           case 'reorder': sim.reorder(msg.stopId, msg.dir); break;
           case 'set_route_order':
             if (!applyRouteOrder(sim, msg)) ws.send(JSON.stringify({ type: 'error', error: 'ROUTE_CHANGED' }));

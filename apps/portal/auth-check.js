@@ -9,13 +9,14 @@
   window.addEventListener('pageshow', check);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
   setInterval(check, 30_000);
+  if (document.querySelector('.app-viewer-page')) return;
   const home = document.createElement('a');
-  home.href = '/'; home.textContent = '작업 선택';
+  home.href = '/combined/'; home.textContent = '운영 화면';
   const brand = document.querySelector('.app-header .brand, .logo');
   if (brand) {
     home.className = brand.className;
     home.innerHTML = brand.innerHTML;
-    home.setAttribute('aria-label', '작업 선택으로');
+    home.setAttribute('aria-label', '운영 화면으로');
     home.style.textDecoration = 'none';
     brand.replaceWith(home);
     return;

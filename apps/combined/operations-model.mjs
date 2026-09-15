@@ -13,6 +13,10 @@ export function filterFleetDeliveries(deliveries, { query = '', status = 'all', 
       .some(value => String(value ?? '').toLocaleLowerCase('ko-KR').includes(needle)));
 }
 
+export function normalizeVehicleFilter(vehicleId, vehicles = []) {
+  return vehicleId === 'all' || vehicles?.some(vehicle => vehicle.id === vehicleId) ? vehicleId : 'all';
+}
+
 export function resolveDeliverySelection(data, selectedId) {
   const deliveries = data?.fleetDeliveries || data?.deliveries || [];
   return deliveries.find(delivery => delivery.id === selectedId)

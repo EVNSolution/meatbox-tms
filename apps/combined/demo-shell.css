@@ -27,7 +27,6 @@
 .viewer-switch a:hover { color: var(--meatbox-ink, #212322); background: #f9fafb; }
 .viewer-switch a[aria-current="page"] { color: var(--meatbox-red, #e60028); font-weight: 600; }
 .viewer-switch a[aria-current="page"]::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; height: 3px; background: var(--meatbox-red, #e60028); }
-.demo-entry-link { margin-left: auto; color: #667085 !important; font-size: 12px; font-weight: 500; }
 .demo-header a:focus-visible,
 .operator-pages a:focus-visible { outline: 2px solid var(--meatbox-ink, #212322); outline-offset: -4px; }
 
@@ -48,7 +47,6 @@ body[data-viewer="operator"] .operator-pages a[aria-current="page"]::after { con
   .demo-brand img { width: 105px; height: 25px; }
   .viewer-switch { grid-row: 2; width: 100%; height: 44px; margin: 0; }
   .viewer-switch a { height: 44px; padding: 0 12px; font-size: 13px; }
-  .demo-entry-link { position: absolute; top: 14px; right: 12px; }
   .demo-layout { grid-template-columns: 72px minmax(0, 1fr); min-height: calc(100dvh - 89px); }
   .operator-pages { top: 89px; height: calc(100dvh - 89px); }
 }
@@ -57,5 +55,4 @@ body[data-viewer="operator"] .operator-pages a[aria-current="page"]::after { con
   .viewer-switch a { flex: 1; min-width: 0; padding: 0 6px; font-size: 12px; }
   .operator-axis { padding-inline: 2px; font-size: 9px; }
   .operator-pages a { padding-inline: 4px; font-size: 11px; white-space: normal; }
-  .demo-entry-link { display: none; }
 }

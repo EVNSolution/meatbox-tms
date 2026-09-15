@@ -5,6 +5,7 @@ const test = require('node:test');
 const { arriveStop, completeStop, MAX_ARRIVAL_TICKS } = require('../lib/scenario-controls');
 const { validCommand } = require('../server');
 const { Simulation } = require('../workspaces/sanghyun-scenario/src/simulation');
+const { OperatingSimulation } = require('../lib/operating-simulation');
 
 function simulation() {
   const states = [];
@@ -103,4 +104,34 @@ test('비정상적으로 끝나지 않는 이동은 상한에서 중단하고 �
   assert.equal(arriveStop(sim, 'S1'), false);
   assert.equal(ticks, MAX_ARRIVAL_TICKS);
   assert.equal(emits, 0);
+});
+
+test('운영 수동 도착은 원본 tick 반복 없이 한 번에 고정 상태로 전환한다', () => {
+  let latest;
+  const sim = new OperatingSimulation(state => { latest = state; });
+  assert.equal(sim.setScenario('shipping', 'S5'), true);
+  sim.tick = () => { throw new Error('운영 도착에서 tick을 호출하면 안 됩니다.'); };
+  assert.equal(arriveStop(sim, 'S5'), true);
+  assert.equal(latest.scenarioPreset, 'arrived');
+  assert.equal(latest.scenarioStopId, 'S5');
+  assert.equal(latest.truck.fromId, 'S5');
+  assert.equal(latest.truck.dwelling, true);
+});
+
+test('운영 상태 변경은 주문과 배송 사건으로 한 번만 기록한다', () => {
+  const sim = new OperatingSimulation(() => {});
+  assert.equal(sim.events.at(-1).message, '주문 접수 완료');
+  assert.equal(sim.events.at(-1).type, 'stage');
+  for (const [scenario, event] of [
+    ['picking', '피킹 시작'], ['ready', '출고 준비 완료'], ['shipping', '배송 출발'],
+    ['arrived', '도착'], ['completed', '배송 완료'], ['received', '주문 접수 완료'],
+  ]) {
+    const before = sim.events.length;
+    assert.equal(sim.setScenario(scenario, 'S1'), true);
+    assert.equal(sim.events.length, before + 1);
+    assert.equal(sim.events.at(-1).message, `문정갈비 ${event}`);
+    assert.equal(sim.events.at(-1).type, 'stage');
+    assert.equal(sim.setScenario(scenario, 'S1'), false);
+    assert.equal(sim.events.length, before + 1);
+  }
 });

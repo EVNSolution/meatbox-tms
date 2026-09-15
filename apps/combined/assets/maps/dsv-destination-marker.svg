@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="52" viewBox="0 0 40 52" fill="none">
+  <defs>
+    <filter id="pinShadow" x="0" y="0" width="40" height="52" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0066cc" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <path d="M20 50C20 50 4 31.5 4 18C4 9.16 11.16 2 20 2s16 7.16 16 16c0 13.5-16 32-16 32Z" fill="#0066cc" filter="url(#pinShadow)"/>
+  <path d="M20 50C20 50 4 31.5 4 18C4 9.16 11.16 2 20 2s16 7.16 16 16c0 13.5-16 32-16 32Z" stroke="#fff" stroke-width="3.2" stroke-linejoin="round"/>
+</svg>

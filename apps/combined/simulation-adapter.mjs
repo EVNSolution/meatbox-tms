@@ -1,5 +1,13 @@
 const escapeText = value => String(value ?? '');
 
+function noticeTitle(notice) {
+  const title = escapeText(notice.title);
+  // Preserve existing demo history and manual copy while removing retired automatic decorations.
+  if (['shipping', 'departure'].includes(notice.kind) && title === '배송이 출발했습니다 🚚') return '배송이 출발했습니다';
+  if (['completed', 'complete'].includes(notice.kind) && title === '배송이 완료되었습니다 ✅') return '배송이 완료되었습니다';
+  return title;
+}
+
 export const formatSimTime = value => {
   if (!Number.isFinite(value)) return null;
   const minutes = Math.round(value / 60000);
@@ -16,13 +24,34 @@ const statusTone = status => ({
 const customerTone = status => ({
   shipping: 'blue',
   nearby: 'blue',
+  arrived: 'blue',
   delivered: 'green',
   held: 'amber',
 })[status] ?? 'neutral';
 
+function adaptOperationEvent(event) {
+  let type = escapeText(event.type);
+  let message = escapeText(event.message);
+  // Keep the running local session's older records readable without resetting its state.
+  if (type === 'system') {
+    const selected = /^수동 상태 선택: (.+) · (주문 접수|피킹 중|출고 준비|배송 중|도착|배송 완료)$/.exec(message);
+    if (selected) {
+      const action = { '주문 접수': '주문 접수 완료', '피킹 중': '피킹 시작', '출고 준비': '출고 준비 완료', '배송 중': '배송 출발', '도착': '도착', '배송 완료': '배송 완료' }[selected[2]];
+      message = `${selected[1]} ${action}`;
+      type = 'stage';
+    } else if (message.startsWith('주문 접수 완료 — 출고 준비 시작')) {
+      message = '주문 접수 완료';
+      type = 'stage';
+    } else if (/^(시나리오|시뮬레이션|수동 상태 선택:)/.test(message)) {
+      return null;
+    }
+  }
+  return { time: event.time ? escapeText(event.time) : null, type, message };
+}
+
 export function adaptSimulation(snapshot) {
   if (!snapshot || !Array.isArray(snapshot.order)) {
-    throw new TypeError('시뮬레이션 상태에 order 배열이 필요합니다.');
+    throw new TypeError('배송 상태에 order 배열이 필요합니다.');
   }
 
   const liveVehicle = snapshot.vehicles?.find(vehicle => vehicle.live) ?? null;
@@ -43,7 +72,7 @@ export function adaptSimulation(snapshot) {
     const adapted = {
       id: notice.id,
       stopId: escapeText(notice.stopId),
-      title: escapeText(notice.title),
+      title: noticeTitle(notice),
       body: escapeText(notice.body),
       time: notice.time ? escapeText(notice.time) : null,
       clock: notice.clock ? escapeText(notice.clock) : (notice.time ? escapeText(notice.time) : null),
@@ -61,6 +90,9 @@ export function adaptSimulation(snapshot) {
     const customer = snapshot.customers?.[stop.id] ?? null;
     const officialEta = customer?.eta ?? null;
     const vehicle = vehicleById.get(stop.vehicleId) ?? liveVehicle;
+    const arrived = Boolean(stop.arrivedTime && ['current', 'done'].includes(stop.status));
+    const customerStatus = arrived && stop.status === 'current' ? { key: 'arrived', label: '배송지 도착' }
+      : customer?.status ?? { key: 'unknown', label: '미확인' };
 
     return {
       id: escapeText(stop.id),
@@ -71,8 +103,8 @@ export function adaptSimulation(snapshot) {
       sequence: index + 1,
       status: escapeText(stop.status || 'pending'),
       statusTone: statusTone(stop.status),
-      customerStatus: customer?.status ?? { key: 'unknown', label: '미확인' },
-      customerStatusTone: customerTone(customer?.status?.key),
+      customerStatus,
+      customerStatusTone: customerTone(customerStatus.key),
       ordered: customer?.ordered === true,
       officialEta: officialEta ? {
         time: escapeText(officialEta.preciseTimeText || officialEta.timeText),
@@ -85,7 +117,9 @@ export function adaptSimulation(snapshot) {
       arrivedAt: stop.arrivedTime ? escapeText(stop.arrivedTime) : null,
       completedAt: stop.deliveredTime ? escapeText(stop.deliveredTime) : null,
       timeline: Array.isArray(customer?.timeline)
-        ? customer.timeline.map(item => ({
+        ? customer.timeline.map(item => arrived && item.label === '인근 배송 중' ? {
+          label: '배송지 도착', time: escapeText(stop.arrivedTime), state: stop.status === 'done' ? 'done' : 'current',
+        } : ({
           label: escapeText(item.label),
           time: item.time ? escapeText(item.time) : null,
           state: escapeText(item.state),
@@ -142,6 +176,8 @@ export function adaptSimulation(snapshot) {
 
   return {
     phase: escapeText(snapshot.phase),
+    scenarioPreset: snapshot.scenarioPreset ? escapeText(snapshot.scenarioPreset) : null,
+    scenarioStopId: snapshot.scenarioStopId ? escapeText(snapshot.scenarioStopId) : null,
     simClock: escapeText(snapshot.simClock),
     speed: snapshot.speed,
     truck: snapshot.truck ? {
@@ -159,11 +195,7 @@ export function adaptSimulation(snapshot) {
     deliveries,
     fleetVehicles: vehicles.map(adaptVehicle),
     fleetDeliveries: [...deliveries, ...syntheticDeliveries],
-    events: Array.isArray(snapshot.events) ? snapshot.events.map(event => ({
-      time: event.time ? escapeText(event.time) : null,
-      type: escapeText(event.type),
-      message: escapeText(event.message),
-    })) : [],
+    events: Array.isArray(snapshot.events) ? snapshot.events.map(adaptOperationEvent).filter(Boolean) : [],
     incidents: Array.isArray(snapshot.incidents) ? snapshot.incidents.map(incident => ({
       at: Number.isFinite(incident.at) ? formatSimTime(incident.at) : null,
       label: escapeText(incident.label),
@@ -189,6 +221,7 @@ export function customerHeadline(delivery) {
     staged: '상차를 기다리고 있습니다.',
     shipping: '상품이 배송 중입니다.',
     nearby: '인근에서 배송 중입니다.',
+    arrived: '배송지에 도착했습니다.',
     delivered: '배송이 완료되었습니다.',
     held: '배송이 보류되었습니다.',
   })[delivery.customerStatus?.key] ?? `${delivery.customerStatus?.label || '배송'} 상태입니다.`;

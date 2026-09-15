@@ -5,55 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <meta name="referrer" content="no-referrer">
-  <title>배송원 뷰어 · 미트박스 TMS 시연</title>
+  <title>미트박스 TMS</title>
   <link rel="icon" type="image/webp" href="./assets/meatbox-app.webp">
   <link rel="stylesheet" href="./brand.css">
-  <link rel="stylesheet" href="./driver.css">
+  <link rel="stylesheet" href="./assets/vendor/maplibre/maplibre-gl.css">
   <link rel="stylesheet" href="./scenario-tools.css">
   <link rel="stylesheet" href="./demo-shell.css">
+  <link rel="stylesheet" href="./app-viewer.css">
+  <link rel="stylesheet" href="./driver.css">
   <script src="/auth-check.js" defer></script>
+  <script src="./assets/vendor/maplibre/maplibre-gl-csp.js" defer></script>
   <script type="module" src="./driver.mjs"></script>
 </head>
 <body>
   <header class="demo-header" id="demo-header"></header>
   <div class="demo-layout">
     <aside class="demo-navigation" id="demo-navigation"></aside>
-    <main class="demo-main driver-page">
-      <section class="driver-intro">
-        <div><h1>배송원 뷰어</h1><p>현재 목적지와 배송 순서를 확인하고, 현장 완료를 기록합니다.</p></div>
-        <span class="driver-clock" id="driver-clock">--:--</span>
+    <main class="demo-main driver-page app-viewer-page">
+      <section class="app-viewer-intro">
+        <div><h1>배송원 뷰어</h1><p>배차와 배송 순서를 확인하고, 현장에서 배송을 완료합니다.</p></div>
       </section>
-      <p class="demo-connection" id="driver-connection" role="status">시연에 연결하고 있습니다.</p>
-      <div class="driver-workspace" id="driver-workspace" hidden>
-        <section class="driver-device" aria-label="배송원 모바일 화면">
-          <div class="driver-device-screen">
-            <header class="driver-profile"><img src="./assets/meatbox-app.webp" alt=""><div><strong id="driver-name">배송원</strong><span id="driver-vehicle">차량 확인 중</span></div></header>
-            <section class="driver-card driver-current" aria-labelledby="driver-current-title">
-              <span class="driver-status" id="driver-status">대기</span>
-              <h2 id="driver-current-title">현재 목적지 확인 중</h2>
-              <p id="driver-address"></p>
-              <dl class="driver-stats"><div><dt>남은 거리</dt><dd id="driver-distance">—</dd></div><div><dt>하차 수량</dt><dd id="driver-boxes">—</dd></div><div><dt>진행</dt><dd id="driver-progress">—</dd></div></dl>
-              <button type="button" class="driver-complete" id="driver-complete" disabled>하차 완료 스캔</button>
-              <p class="driver-action-note" id="driver-action-note">차량 도착 후 완료할 수 있습니다.</p>
-            </section>
-            <section class="driver-card" aria-labelledby="driver-route-title"><div class="driver-card-heading"><h2 id="driver-route-title">오늘 배송 순서</h2><a id="driver-manage-link" href="/combined/#/control">배송 관제</a></div><ol class="driver-route" id="driver-route"></ol></section>
-            <section class="driver-totals" aria-label="배송 요약"><div><strong id="driver-done">0/0</strong><span>완료 배송</span></div><div><strong id="driver-left">0</strong><span>잔여 박스</span></div><div><strong id="driver-finish">—</strong><span>완료 예상</span></div></section>
+      <p class="demo-connection" id="driver-connection" role="status">배송 정보를 불러오고 있습니다.</p>
+      <div class="app-viewer-workspace" id="driver-workspace" hidden>
+        <section class="app-viewer-device" aria-label="배송원 모바일 뷰어">
+          <div class="app-viewer-statusbar"><time id="driver-clock" aria-label="현재 시각">--:--</time></div>
+          <div class="app-viewer-speaker" aria-hidden="true"></div>
+          <div class="driver-device-screen app-viewer-screen">
+            <div id="dv-app" class="dv-app">
+              <header class="dv-header">
+                <div><img src="./assets/meatbox-logo.svg" alt="미트박스" width="105" height="25"><p id="driver-name">배송원</p></div>
+                <div class="dv-inline"><button class="dv-icon" id="dv-settings" aria-label="환경설정"></button><button class="dv-icon" id="dv-logout" aria-label="로그아웃"></button></div>
+              </header>
+              <section class="dv-route-selector" id="dv-route-selector" aria-label="배차 선택">
+                <div class="dv-segments" role="group" aria-label="배차 구분"><button data-group="active" aria-pressed="true">진행 배차</button><button data-group="completed" aria-pressed="false">종료 배차</button></div>
+                <details id="dv-route-choice"><summary><span>배송일 <strong>오늘</strong></span><span id="dv-route-label">배차 확인 중</span></summary><button id="dv-select-today" class="dv-link-row"><span>오늘 배송</span><span id="dv-route-status"></span></button></details>
+              </section>
+              <p id="dv-feedback" class="dv-feedback" role="status" hidden></p>
+              <div class="dv-content" id="dv-content">
+                <section id="dv-delivery" class="dv-scroll" role="tabpanel" aria-labelledby="dv-tab-delivery" tabindex="0"></section>
+                <section id="dv-map-panel" class="dv-map-panel" role="tabpanel" aria-labelledby="dv-tab-map" hidden><div id="dv-map" class="dv-map" aria-label="배송 경로 지도"></div><div id="dv-map-detail" class="dv-map-detail"></div></section>
+                <section id="dv-orders" class="dv-scroll" aria-label="주문 목록" tabindex="0" hidden></section>
+                <section id="dv-editor" class="dv-editor" aria-label="배송지 순서 편집" hidden><header class="dv-subheader"><button class="dv-text-button" data-action="cancel-edit">취소</button><h2>배송지 순서 편집</h2><button class="dv-text-button" id="dv-save-order" data-action="save-edit">완료</button></header><p class="dv-edit-hint">같은 배송지의 주문을 함께 이동합니다.</p><button class="dv-map-toggle dv-text-button" id="dv-edit-map-toggle" aria-expanded="true">지도 접기</button><div id="dv-edit-map" class="dv-edit-map" aria-label="편집 중인 배송 경로 지도"></div><ol class="dv-edit-list" id="dv-edit-list" tabindex="0" aria-label="배송 순서 이동"></ol></section>
+              </div>
+              <nav class="dv-tabs" role="tablist" aria-label="배송원 앱"><button id="dv-tab-delivery" role="tab" aria-controls="dv-delivery" aria-selected="true" data-tab="delivery"></button><button id="dv-tab-map" role="tab" aria-controls="dv-map-panel" aria-selected="false" tabindex="-1" data-tab="map"></button></nav>
+            </div>
+            <div class="dv-sheet-layer" id="dv-sheet-layer" hidden><section class="dv-sheet" id="dv-sheet" role="dialog" aria-modal="true" aria-labelledby="dv-sheet-title" tabindex="-1"><header class="dv-sheet-header"><button class="dv-icon" id="dv-sheet-back" aria-label="뒤로" hidden></button><div><h2 id="dv-sheet-title"></h2><p class="dv-muted" id="dv-sheet-subtitle"></p></div><button class="dv-icon dv-sheet-close" id="dv-sheet-close" aria-label="닫기"></button></header><div class="dv-sheet-body" id="dv-sheet-body"></div></section></div>
           </div>
         </section>
-        <aside class="driver-note" aria-labelledby="driver-tip-heading">
-          <h2 id="driver-tip-heading">배송 팁</h2>
-          <p>배송지를 선택하고 현장에서 확인한 정보를 남겨 주세요.</p>
-          <label class="driver-tip-label" for="driver-tip-stop">배송지</label>
-          <select id="driver-tip-stop"></select>
-          <label class="driver-tip-label" for="driver-tip-body">배송 팁 내용</label>
-          <textarea id="driver-tip-body" maxlength="500" rows="6" placeholder="예: 후문 경비실에 연락 후 지하 하역장으로 진입"></textarea>
-          <div class="driver-tip-meta"><span id="driver-tip-author">작성 기록 없음</span><span id="driver-tip-count">0/500</span></div>
-          <button type="button" class="driver-tip-save" id="driver-tip-save" disabled>저장</button>
-          <p class="driver-tip-status" id="driver-tip-status" role="status"></p>
+        <aside class="driver-note app-viewer-aside" aria-labelledby="driver-context-title">
+          <h2 id="driver-context-title">배송원 선택</h2><label for="driver-vehicle-select" class="dv-field">차량과 배송원</label><select id="driver-vehicle-select"></select>
+          <dl class="driver-context"><div><dt>차량</dt><dd id="driver-vehicle">—</dd></div><div><dt>권역</dt><dd id="driver-region">—</dd></div><div><dt>완료 배송</dt><dd id="driver-done">—</dd></div><div><dt>잔여 박스</dt><dd id="driver-left">—</dd></div><div><dt>마지막 배송 ETA</dt><dd id="driver-finish">—</dd></div></dl>
+          <a id="driver-manage-link" class="dv-button" href="/combined/#/control/manage">배송 관제</a>
         </aside>
       </div>
     </main>
   </div>
-  <noscript><p class="driver-noscript">배송 시나리오를 보려면 JavaScript를 활성화해 주세요.</p></noscript>
+  <noscript><p class="driver-noscript">배송원 뷰어를 이용하려면 JavaScript를 활성화해 주세요.</p></noscript>
 </body>
 </html>

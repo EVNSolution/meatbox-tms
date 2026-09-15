@@ -9,9 +9,9 @@ const shell = mountDemoShell({ viewer: 'customer', onSend: (type, extra) => simu
 shell.update(null, false);
 const renderer = mountCustomerRenderer({ onSelect: id => shell.select(id) });
 const simulation = connectSimulation({
-  onState(raw) {
+  onState(raw, context) {
     adapted = adaptSimulation(raw);
-    renderer.update(adapted, raw);
+    renderer.update(adapted, raw, context);
     shell.update(adapted, true);
   },
   onStatus(value, message) {

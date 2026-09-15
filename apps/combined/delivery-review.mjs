@@ -23,13 +23,13 @@ export function deliveryContext(state, selected) {
   if (!selected) note = '조회 조건에 맞는 배송을 선택하면 고객 화면과 비교할 수 있습니다.';
   else if (selected.status === 'done') note = `보고 있는 배송은 ${selected.completedAt || '시각 미확인'}에 완료되었습니다. 차량은 남은 배송을 이어갑니다.`;
   else if (selected.status === 'skipped') note = '보고 있는 배송은 보류 상태이며, 남은 배송 순서에서 제외됩니다.';
-  else if (state.phase === 'unordered') note = `시연 주문은 ${ordering ? stopName(ordering) : '시연 고객'}에서 시작합니다. 차량은 ${first ? stopName(first) : '첫 목적지'}부터 배송합니다.`;
+  else if (state.phase === 'unordered') note = `주문은 ${ordering ? stopName(ordering) : '선택 고객'}에서 시작합니다. 차량은 ${first ? stopName(first) : '첫 목적지'}부터 배송합니다.`;
   else if (current?.id === selected.id) note = state.truck?.dwelling ? '차량이 이 매장에 도착했습니다. 하차 후 배송 완료를 기록합니다.' : '차량이 지금 보고 있는 매장으로 이동 중입니다.';
   else if (current) {
     const before = state.deliveries.slice(0, state.deliveries.indexOf(selected)).filter(stop => ['pending', 'current'].includes(stop.status)).length;
     note = `앞선 배송 ${before}곳이 남아 있습니다. 배송 완료는 매장별로 표시합니다.`;
   } else note = '출고 준비 중입니다. 출발하면 현재 목적지가 표시됩니다.';
-  if (state.phase === 'done' && selected?.status === 'done') note = `보고 있는 배송은 ${selected.completedAt || '시각 미확인'}에 완료되었고, 전체 배송 시연도 종료되었습니다.`;
+  if (state.phase === 'done' && selected?.status === 'done') note = `보고 있는 배송은 ${selected.completedAt || '시각 미확인'}에 완료되었고, 전체 배송도 종료되었습니다.`;
   return { vehicle, customer: selected ? `${stopName(selected)} · ${selected.customerStatus.label}` : '선택 없음', note };
 }
 
@@ -40,7 +40,7 @@ export function deliveryChanges(previous, next) {
     if (before !== after) rows.push({ label, before: before || '미기록', after: after || '미기록' });
   };
   const global = [];
-  compare(global, '시연 단계', scenarioGuide(previous).title, scenarioGuide(next).title);
+  compare(global, '배송 단계', scenarioGuide(previous).title, scenarioGuide(next).title);
   compare(global, '완료 배송', `${previous.deliveries.filter(stop => stop.status === 'done').length}곳`, `${next.deliveries.filter(stop => stop.status === 'done').length}곳`);
   if (next.incidents.length > previous.incidents.length) compare(global, '추가 상황', previous.incidents.at(-1)?.label || '없음', next.incidents.at(-1)?.label);
   const deliveries = {};

@@ -25,6 +25,22 @@ const base = {
   }],
 };
 
+test('기존 자동 알림의 이모지만 제거하고 수동 안내와 알림 식별자는 보존한다', () => {
+  const notices = [
+    { id: 1, kind: 'shipping', title: '배송이 출발했습니다 🚚' },
+    { id: 2, kind: 'completed', title: '배송이 완료되었습니다 ✅' },
+    { id: 3, kind: 'manual', title: '배송이 출발했습니다 🚚', body: '배송 안내 ✅' },
+    { id: 4, kind: 'shipping', title: '직접 입력한 제목 🚚' },
+  ].map(notice => ({ stopId: 'S5', ...notice }));
+  const adapted = adaptSimulation({ ...base, notifications: notices }).deliveries[0].notices;
+  assert.deepEqual(adapted.map(notice => [notice.id, notice.title]), [
+    [1, '배송이 출발했습니다'], [2, '배송이 완료되었습니다'],
+    [3, '배송이 출발했습니다 🚚'], [4, '직접 입력한 제목 🚚'],
+  ]);
+  assert.equal(adapted[2].body, '배송 안내 ✅');
+  assert.equal(notices[0].title, '배송이 출발했습니다 🚚');
+});
+
 test('고객 공식 ETA와 계산 ETA를 서로 다른 point 값으로 보존한다', () => {
   const result = adaptSimulation(base);
   assert.equal(officialEtaText(result.deliveries[0]), '08:35');
@@ -33,6 +49,8 @@ test('고객 공식 ETA와 계산 ETA를 서로 다른 point 값으로 보존한
   assert.equal(result.device, null);
   assert.equal(result.vehicle.id, 'V1');
   assert.equal(result.customerStopId, 'S5');
+  assert.equal(result.scenarioPreset, null);
+  assert.equal(result.scenarioStopId, null);
 });
 
 test('미주문, 완료, 건너뜀 상태와 공급된 시각만 그대로 옮긴다', () => {
@@ -66,8 +84,54 @@ test('배열 순서가 바뀌면 표시 순서만 원본 스냅샷대로 바뀐�
   assert.deepEqual(result.deliveries.map(item => [item.id, item.sequence]), [['S3', 1], ['S1', 2]]);
 });
 
+test('실제 도착 기록을 고객 상태와 타임라인에 표시하고 완료 뒤에도 보존한다', () => {
+  for (const status of ['current', 'done']) {
+    const input = structuredClone(base);
+    input.order[0] = { ...input.order[0], status, arrivedTime: '07:42', deliveredTime: status === 'done' ? '07:46' : null };
+    input.customers.S5.status = status === 'done' ? { key: 'delivered', label: '배송 완료' } : { key: 'nearby', label: '인근 배송 중' };
+    input.customers.S5.timeline = [
+      { label: '배송 중', time: '06:30', state: 'done' },
+      { label: '인근 배송 중', time: null, state: status === 'done' ? 'done' : 'current' },
+      { label: '배송 완료', time: status === 'done' ? '07:46' : null, state: status === 'done' ? 'current' : 'pending' },
+    ];
+    const before = structuredClone(input);
+    const delivery = adaptSimulation(input).deliveries[0];
+    assert.deepEqual(delivery.customerStatus, status === 'done' ? { key: 'delivered', label: '배송 완료' } : { key: 'arrived', label: '배송지 도착' });
+    assert.deepEqual(delivery.timeline[1], { label: '배송지 도착', time: '07:42', state: status === 'done' ? 'done' : 'current' });
+    assert.deepEqual(input, before);
+  }
+  const input = structuredClone(base);
+  input.customers.S5.status = { key: 'nearby', label: '인근 배송 중' };
+  assert.deepEqual(adaptSimulation(input).deliveries[0].customerStatus, input.customers.S5.status);
+});
+
 test('잘못된 상태는 조용히 가짜 배송을 만들지 않는다', () => {
   assert.throws(() => adaptSimulation({ phase: 'idle' }), /order 배열/);
+});
+
+test('기존 수동 조작 기록은 발생한 일로 표시하고 내부 시나리오 기록은 제외한다', () => {
+  const events = [
+    { time: '06:35', type: 'system', message: '수동 상태 선택: 송파·강남 식당 · 배송 완료' },
+    { time: '06:34', type: 'system', message: '수동 상태 선택: 송파·강남 식당 · 도착' },
+    { time: '06:30', type: 'system', message: '수동 상태 선택: 송파·강남 식당 · 배송 중' },
+    { time: '06:20', type: 'system', message: '수동 상태 선택: 송파·강남 식당 · 출고 준비' },
+    { time: '05:50', type: 'system', message: '수동 상태 선택: 송파·강남 식당 · 피킹 중' },
+    { time: '05:45', type: 'system', message: '수동 상태 선택: 송파·강남 식당 · 주문 접수' },
+    { time: '05:45', type: 'system', message: '주문 접수 완료 — 출고 준비 시작 · V1 60박스 / 8개 배송지' },
+    { time: '05:45', type: 'system', message: '시나리오 대기 — 가락 MFC 상차 완료 70박스 / 8개 착지' },
+    { time: '05:45', type: 'system', message: '시뮬레이션 배속 변경: 5x' },
+  ];
+  const result = adaptSimulation({ ...base, events });
+  assert.deepEqual(result.events.map(event => event.message), [
+    '송파·강남 식당 배송 완료', '송파·강남 식당 도착', '송파·강남 식당 배송 출발',
+    '송파·강남 식당 출고 준비 완료', '송파·강남 식당 피킹 시작', '송파·강남 식당 주문 접수 완료',
+    '주문 접수 완료',
+  ]);
+  assert.ok(result.events.every(event => event.type === 'stage'));
+  assert.equal(result.events[0].time, '06:35');
+  assert.equal(events[0].message, '수동 상태 선택: 송파·강남 식당 · 배송 완료');
+  const actual = { time: '06:36', type: 'driver', message: '배송 팁 수정: 송파·강남 식당' };
+  assert.deepEqual(adaptSimulation({ ...base, events: [actual] }).events, [actual]);
 });
 
 test('fleet 계약은 live 배송과 synthetic 배송을 한 목록으로 제공한다', () => {
@@ -90,9 +154,13 @@ test('fleet 계약은 live 배송과 synthetic 배송을 한 목록으로 제공
     ],
     deliveries: [{ id: 'V2-S1', vehicleId: 'V2', sequence: 1, name: '예시 배송지 002-1', address: '위치 데이터 대기', boxes: 20, eta: null, status: 'pending', ordered: true, items: [], tip: null }],
   };
+  input.scenarioPreset = 'shipping';
+  input.scenarioStopId = 'S5';
 
   const result = adaptSimulation(input);
   assert.equal(result.fleetVehicles.length, 2);
+  assert.equal(result.scenarioPreset, 'shipping');
+  assert.equal(result.scenarioStopId, 'S5');
   assert.deepEqual(result.fleetDeliveries.map(stop => stop.id), ['S5', 'V2-S1']);
   assert.equal(result.deliveries[0].vehicle.live, true);
   assert.equal(result.deliveries[0].preciseTimeText, '08:31');
