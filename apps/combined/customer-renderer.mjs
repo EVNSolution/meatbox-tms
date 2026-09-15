@@ -2,7 +2,6 @@ import { referenceIcon } from './reference-icons.mjs';
 import { inboxState, noticeKey, visibleNotices, updateInbox } from './customer-inbox.mjs';
 import { customerDemoRoad } from './customer-demo-route.mjs';
 import { customerPickerPage, updateCustomerPickerState } from './customer-picker-model.mjs';
-import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
@@ -327,7 +326,6 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     routeData = data;
     if (!map) {
       map = initMap(byId('map')).map;
-      installModifierWheelZoom(map);
       map.once('load', render);
     }
     render();
