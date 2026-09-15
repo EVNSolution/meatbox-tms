@@ -113,6 +113,10 @@ export function adaptSimulation(snapshot) {
       name: escapeText(stop.name),
       address: escapeText(stop.address),
       boxes: Number.isFinite(stop.boxes) ? stop.boxes : null,
+      customerRequests: stop.customerRequests && Array.isArray(stop.customerRequests.items) ? {
+        source: escapeText(stop.customerRequests.source),
+        items: stop.customerRequests.items.map(item => ({ id: escapeText(item.id), kind: escapeText(item.kind), label: escapeText(item.label), required: item.required === true })),
+      } : null,
       items: Array.isArray(stop.items) ? stop.items : [],
       sequence: index + 1,
       status: escapeText(stop.status || 'pending'),
@@ -166,6 +170,7 @@ export function adaptSimulation(snapshot) {
       status: escapeText(stop.status || 'pending'),
       statusTone: statusTone(stop.status),
       customerStatus: { key: 'paid', label: '결제 완료' },
+      customerRequests: null,
       customerStatusTone: 'neutral',
       ordered: stop.ordered === true,
       officialEta: null,

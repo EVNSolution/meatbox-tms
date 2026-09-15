@@ -7,9 +7,9 @@ const vehicles = [
   { id: 'V2', plate: '서울 2', driver: '김기사', region: '', status: '' },
 ];
 const deliveries = [
-  { id: 'S1', vehicleId: 'V1', name: '가락점', address: '송파구', boxes: 8 },
-  { id: 'S2', vehicleId: 'V1', name: '문정점', address: '송파구', boxes: 0 },
-  { id: 'S3', vehicleId: 'V2', name: '역삼점', address: '강남구', boxes: null },
+  { id: 'S1', vehicleId: 'V1', name: '가락점', address: '송파구', boxes: 8, status: 'done' },
+  { id: 'S2', vehicleId: 'V1', name: '문정점', address: '송파구', boxes: 0, status: 'skipped' },
+  { id: 'S3', vehicleId: 'V2', name: '역삼점', address: '강남구', boxes: null, status: 'pending' },
 ];
 
 test('배송원 이름이 같아도 차량 ID별 자원으로 유지하고 실제 배정만 집계한다', () => {
@@ -19,14 +19,46 @@ test('배송원 이름이 같아도 차량 ID별 자원으로 유지하고 실�
   assert.deepEqual(model.resources[0].summary, { destinationCount: 2, boxCount: 8 });
   assert.deepEqual(model.resources[1].summary, { destinationCount: 1, boxCount: null });
   assert.deepEqual(model.summary, { destinationCount: 3, boxCount: null });
+  assert.deepEqual(model.resources[0].progress, {
+    completed: { destinationCount: 1, boxCount: 8 },
+    remaining: { destinationCount: 1, boxCount: 0 },
+    held: { destinationCount: 1, boxCount: 0 },
+  });
+  assert.deepEqual(model.resources[1].progress, {
+    completed: { destinationCount: 0, boxCount: 0 },
+    remaining: { destinationCount: 1, boxCount: null },
+    held: { destinationCount: 0, boxCount: 0 },
+  });
 });
 
 test('확인된 빈 배정은 0이고 배송지 또는 박스 데이터 누락은 미등록으로 남긴다', () => {
   const empty = resourceManagementModel({ fleetVehicles: vehicles, fleetDeliveries: [] });
   assert.deepEqual(empty.resources[0].summary, { destinationCount: 0, boxCount: 0 });
+  assert.deepEqual(empty.resources[0].progress.remaining, { destinationCount: 0, boxCount: 0 });
   const missing = resourceManagementModel({ fleetVehicles: vehicles });
   assert.deepEqual(missing.resources[0].summary, { destinationCount: null, boxCount: null });
+  assert.deepEqual(missing.resources[0].progress.completed, { destinationCount: null, boxCount: null });
+  assert.deepEqual(missing.resources[0].progress.remaining, { destinationCount: null, boxCount: null });
+  assert.deepEqual(missing.resources[0].progress.held, { destinationCount: null, boxCount: null });
   assert.deepEqual(missing.summary, { destinationCount: null, boxCount: null });
+});
+
+test('보류는 잔여에 포함하고 범주 안 박스 하나라도 없으면 부분 합계를 표시하지 않는다', () => {
+  const model = resourceManagementModel({
+    fleetVehicles: vehicles,
+    fleetDeliveries: [
+      { id: 'done', vehicleId: 'V1', status: 'done', boxes: 3 },
+      { id: 'current', vehicleId: 'V1', status: 'current', boxes: 5 },
+      { id: 'held', vehicleId: 'V1', status: 'skipped', boxes: null },
+      { id: 'same-name-foreign', vehicleId: 'V2', status: 'done', boxes: 100 },
+    ],
+  });
+  assert.deepEqual(model.resources[0].progress, {
+    completed: { destinationCount: 1, boxCount: 3 },
+    remaining: { destinationCount: 2, boxCount: null },
+    held: { destinationCount: 1, boxCount: null },
+  });
+  assert.deepEqual(model.resources[1].progress.completed, { destinationCount: 1, boxCount: 100 });
 });
 
 test('차량·배송원·배정 배송지의 실제 값으로 검색한다', () => {
@@ -111,6 +143,10 @@ test('탭 전환과 실제 차량·배송지 ID 콜백을 기존 배송지 영�
   assert.match(nodes['[data-resource-list="drivers"]'].innerHTML, /김기사/);
   assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /성향<\/dt><dd>미등록/);
   assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /메인 권역<\/dt><dd>미등록/);
+  assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /당일 배송 지표/);
+  assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /완료<\/dt><dd><strong>1곳<\/strong><span>8박스/);
+  assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /잔여<\/dt><dd><strong>1곳<\/strong><span>0박스/);
+  assert.match(nodes['[data-resource-detail="drivers"]'].innerHTML, /보류<\/dt><dd><strong>1곳<\/strong><span>0박스/);
 
   element.listeners.click({ target: clickTarget('data-resource-select', 'V2') });
   assert.deepEqual(selectedVehicles, ['V2']);

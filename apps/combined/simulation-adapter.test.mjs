@@ -1,6 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { customerHeadline, publishedEtaText } from './simulation-adapter.mjs';
+import { adaptSimulation, customerHeadline, publishedEtaText } from './simulation-adapter.mjs';
+import { createRequire } from 'node:module';
+const { OperatingSimulation } = createRequire(import.meta.url)('../../lib/operating-simulation');
+
+test('customer requests retain exact stop identity and distinguish missing synthetic data', () => {
+  const snapshot = new OperatingSimulation(() => {}).snapshot();
+  const data = adaptSimulation(snapshot);
+  const s4 = data.deliveries.find(stop => stop.id === 'S4');
+  assert.deepEqual(s4.customerRequests, snapshot.order.find(stop => stop.id === 'S4').customerRequests);
+  assert.deepEqual(s4.customerRequests.items.map(item => item.id), ['S4-refrigerator', 'S4-handoff']);
+  assert.deepEqual(data.deliveries.find(stop => stop.id === 'S5').customerRequests.items, []);
+  assert.equal(data.fleetDeliveries.find(stop => stop.vehicleId === 'V2').customerRequests, null);
+  s4.customerRequests.items[0].label = 'changed';
+  assert.notEqual(snapshot.order.find(stop => stop.id === 'S4').customerRequests.items[0].label, 'changed');
+});
 
 test('미주문 배송은 사전 계산된 고객 ETA를 공개 값으로 표시하지 않는다', () => {
   const delivery = { ordered: false, officialEta: { time: '07:10' }, customerStatus: { key: 'unordered', label: '주문 전' } };

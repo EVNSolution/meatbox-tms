@@ -40,7 +40,10 @@ function validCommand(msg) {
     return typeof msg.stopId === 'string' && /^(?:S[1-8]|V(?:[2-9]|[1-9]\d|1[0-2]\d|130)-S(?:[1-9]|[12]\d|3[0-5]))$/.test(msg.stopId)
       && validPlainText(msg.body, max);
   }
-  if (msg.type === 'complete_stop') return msg.stopId === undefined || /^S[1-8]$/.test(msg.stopId);
+  if (msg.type === 'complete_stop') return (msg.stopId === undefined || /^S[1-8]$/.test(msg.stopId))
+    && (msg.confirmedRequestIds === undefined || (Array.isArray(msg.confirmedRequestIds)
+      && msg.confirmedRequestIds.length <= 8
+      && msg.confirmedRequestIds.every(id => typeof id === 'string' && /^S[1-8]-(?:doorstep|refrigerator|handoff)$/.test(id))));
   if (msg.type === 'arrive_stop') return /^S[1-8]$/.test(msg.stopId);
   if (['reorder', 'toggle_skip'].includes(msg.type)) return /^S[1-8]$/.test(msg.stopId) && (msg.type !== 'reorder' || ['up', 'down'].includes(msg.dir));
   return false;
@@ -147,6 +150,14 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
     const js = await fs.readFile(path.join(scenarioDir, 'common.js'), 'utf8');
     res.type('js').send(js.replace('${location.host}`', '${location.host}/ws/simulation`').replace("fetch('/api/route-data')", "fetch('/scenario/api/route-data')").replace('ws.onclose = () => setTimeout(open, 1500);', "ws.onclose = async () => { try { const res = await fetch('/api/session'); if (res.status === 401) { location.assign('/login?next=' + encodeURIComponent(location.pathname + location.search)); return; } } catch {} setTimeout(open, 1500); };"));
   }));
+  app.get('/scenario/driver.js', asyncRoute(async (_req, res) => {
+    const js = await fs.readFile(path.join(scenarioDir, 'driver.js'), 'utf8');
+    // Keep the reference source intact while routing completion through required proof.
+    res.type('js').send(js
+      .replace("const $ = (id) => document.getElementById(id);", "const $ = (id) => document.getElementById(id); let currentStopId = null;")
+      .replace("MB.send('complete_stop')", "location.assign('/combined/driver.html?id=' + encodeURIComponent(currentStopId || 'S1'))")
+      .replace("const current = s.order.find((o) => o.status === 'current');", "const current = s.order.find((o) => o.status === 'current'); currentStopId = current?.id; $('scan').textContent = '사진 확인 후 배송 완료';"));
+  }));
   app.use('/scenario', express.static(scenarioDir, { index: false, dotfiles: 'deny' }));
   app.get(['/ui-layout/', '/ui-layout/index.html'], asyncRoute(async (_req, res) => {
     const html = await fs.readFile(path.join(ROOT, 'workspaces/jiin-ui/index.html'), 'utf8');
@@ -215,7 +226,9 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
             break;
           case 'toggle_skip': sim.toggleSkip(msg.stopId); break;
           case 'arrive_stop': arriveStop(sim, msg.stopId); break;
-          case 'complete_stop': completeStop(sim, msg.stopId); break;
+          case 'complete_stop':
+            if (!completeStop(sim, msg.stopId, msg.confirmedRequestIds)) ws.send(JSON.stringify({ type: 'error', error: 'COMPLETION_NOT_READY' }));
+            break;
           case 'send_customer_notice': sim.sendCustomerNotice(msg.stopId, msg.body, user.displayName); break;
           case 'set_delivery_tip': sim.setDeliveryTip(msg.stopId, msg.body); break;
         }

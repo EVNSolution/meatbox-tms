@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { vehicleOperations, sortVehicleOperations, resolveControlVehicle, resolveControlDelivery, vehicleEvents, deliveryFacts, noticesForDelivery, deliveryRecords, controlPosition } from './vehicle-operations-model.mjs';
+import { vehicleOperations, sortVehicleOperations, resolveControlVehicle, resolveControlDelivery, vehicleEvents, deliveryFacts, noticesForDelivery, deliveryRecords, controlPosition, summarizeFleetTiming } from './vehicle-operations-model.mjs';
 import { OperatingSimulation } from '../../lib/operating-simulation.js';
 import { adaptSimulation } from './simulation-adapter.mjs';
 
@@ -17,12 +17,45 @@ test('vehicle workload uses assigned IDs, includes held work and distinguishes m
   assert.equal(rows[1].heldStops, 1);
   assert.equal(rows[1].remainingStops, 2);
   assert.equal(rows[1].lastArrivalEta, '09:30');
-  assert.equal(rows[1].completionEta, null);
+  assert.equal(rows[1].completionEtaMs, null);
   assert.deepEqual(sortVehicleOperations(rows).map(row => row.vehicle.id), ['V2', 'V1', 'V3']);
   assert.deepEqual(sortVehicleOperations(rows, 'boxes').map(row => row.vehicle.id), ['V1', 'V3', 'V2']);
   assert.deepEqual(sortVehicleOperations(rows, 'duration'), rows);
   assert.deepEqual(data, before);
   assert.equal(vehicleOperations({ ...data, kpi: { finishEta: '09:30 완료' } })[1].lastArrivalEta, null);
+});
+
+test('fleet timing summarizes only complete non-held timing coverage', () => {
+  const rows = [
+    { timing: { departureMs: 1000, completionMs: 5000, heldStops: 0 } },
+    { timing: { departureMs: 2000, completionMs: 9000, heldStops: 1 } },
+    { timing: { departureMs: 3000, completionMs: null, heldStops: 0 } },
+  ];
+  assert.deepEqual(summarizeFleetTiming(rows), {
+    knownVehicles: 1, totalVehicles: 3, departureMs: 1000, completionMs: 5000, durationMinutes: 0,
+  });
+  assert.deepEqual(summarizeFleetTiming([{ timing: null }]), {
+    knownVehicles: 0, totalVehicles: 1, departureMs: null, completionMs: null, durationMinutes: null,
+  });
+});
+
+test('simulation timing belongs only to its one declared live vehicle and keeps absolute milliseconds', () => {
+  const timing = { source: 'simulation', vehicleId: 'V1', departureMs: 23_400_000, completionMs: 90_000_000,
+    remainingSeconds: 60, durationSeconds: 66_600, heldStops: 0 };
+  const rows = vehicleOperations({
+    fleetVehicles: [{ id: 'V1', live: true }, { id: 'V2', live: true }],
+    fleetDeliveries: [], kpi: { vehicleTiming: timing, finishEta: '09:30' },
+  });
+  assert.equal(rows[0].completionEtaMs, 90_000_000);
+  assert.equal(rows[1].completionEtaMs, null);
+  assert.equal(rows[1].timing, null);
+  assert.equal(rows[0].lastArrivalEta, '09:30');
+  assert.equal(rows[1].lastArrivalEta, null);
+  const ambiguous = vehicleOperations({
+    fleetVehicles: [{ id: 'V1', live: true }, { id: 'V2', live: true }], fleetDeliveries: [],
+    kpi: { vehicleTiming: { ...timing, vehicleId: null } },
+  });
+  assert.ok(ambiguous.every(row => row.timing === null));
 });
 
 test('historical destination inspection cannot replace the selected vehicle or its current workload', () => {

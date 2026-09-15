@@ -1,3 +1,5 @@
+import { requestsConfirmed } from './customer-requests.mjs';
+
 const phaseLabels = { unordered: '배차 대기', idle: '배차 대기', preparing: '상차 중', delivering: '배송 중', done: '배송 완료' };
 const distanceText = metres => Number.isFinite(metres) ? metres >= 1000 ? `${(metres / 1000).toFixed(1)}km` : `${Math.round(metres)}m` : '이동 중';
 
@@ -60,8 +62,9 @@ export function completionProofIsCurrent(state, stopId) {
   return Boolean(state?.truck?.dwelling && state?.deliveries?.some(stop => stop.id === stopId && stop.status === 'current'));
 }
 
-export function completionProofCanSubmit(state, connected, stopId, hasPhoto) {
-  return Boolean(connected && hasPhoto && completionProofIsCurrent(state, stopId));
+export function completionProofCanSubmit(state, connected, stopId, hasPhoto, confirmedRequestIds = []) {
+  const stop = state?.deliveries?.find(item => item.id === stopId);
+  return Boolean(connected && hasPhoto && completionProofIsCurrent(state, stopId) && requestsConfirmed(stop, confirmedRequestIds));
 }
 
 export function completionProofShouldClose(state, connected, stopId) {

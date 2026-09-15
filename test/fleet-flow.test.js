@@ -113,7 +113,7 @@ test('출발 안내는 고객 시간대를 쓰고 도착과 완료 알림은 유
   assert.doesNotMatch(departure.body, /도착 예정 \d{2}:\d{2}(?! ~)/);
   sim.setScenario('arrived', 'S1');
   assert.equal(sim.notifications.some(item => item.stopId === 'S1' && item.kind === 'arrived'), true);
-  sim.completeCurrentStop();
+  sim.completeCurrentStop(['S1-refrigerator']);
   assert.equal(sim.notifications.some(item => item.stopId === 'S1' && item.kind === 'completed'), true);
 });
 

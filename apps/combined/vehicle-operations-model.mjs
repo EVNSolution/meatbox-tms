@@ -12,8 +12,18 @@ export function vehicleOperations(data) {
     if (!groups.has(id)) groups.set(id, []);
     groups.get(id).push(stop);
   }
-  return (data?.fleetVehicles ?? (data?.vehicle ? [data.vehicle] : [])).map(vehicle => {
+  const vehicles = data?.fleetVehicles ?? (data?.vehicle ? [data.vehicle] : []);
+  const liveVehicleIds = vehicles.filter(vehicle => vehicle.live).map(vehicle => vehicle.id);
+  return vehicles.map(vehicle => {
     const deliveries = groups.get(vehicle.id) || [];
+    const liveTiming = data?.kpi?.vehicleTiming;
+    const timingOwnerMatches = liveTiming?.vehicleId
+      ? liveTiming.vehicleId === vehicle.id
+      : liveVehicleIds.length === 1 && liveVehicleIds[0] === vehicle.id;
+    const timing = vehicle.live && liveTiming?.source === 'simulation' && timingOwnerMatches
+      ? liveTiming : null;
+    const liveOwnerMatches = liveTiming?.source === 'simulation'
+      ? timingOwnerMatches : liveVehicleIds.length === 1 && liveVehicleIds[0] === vehicle.id;
     // Held assignments remain unfinished work; never hide them from the workload.
     const remaining = deliveries.filter(stop => stop.status !== 'done');
     const completed = deliveries.filter(stop => stop.status === 'done');
@@ -24,12 +34,30 @@ export function vehicleOperations(data) {
       remainingBoxes: sumBoxes(remaining),
       totalBoxes: sumBoxes(deliveries),
       heldStops: remaining.filter(stop => stop.status === 'skipped').length,
-      // There is no final-handoff forecast or duration contract in the current snapshot.
-      remainingMinutes: null,
-      completionEta: null,
-      lastArrivalEta: vehicle.live && /^\d{2}:\d{2}$/.test(data?.kpi?.finishEta || '') ? data.kpi.finishEta : null,
+      timing,
+      remainingMinutes: Number.isFinite(timing?.remainingSeconds) ? Math.round(timing.remainingSeconds / 60) : null,
+      durationMinutes: Number.isFinite(timing?.durationSeconds) ? Math.round(timing.durationSeconds / 60) : null,
+      completionEtaMs: Number.isFinite(timing?.completionMs) ? timing.completionMs : null,
+      lastArrivalEta: vehicle.live && liveOwnerMatches && /^\d{2}:\d{2}$/.test(data?.kpi?.finishEta || '')
+        ? data.kpi.finishEta : null,
     };
   });
+}
+
+export function summarizeFleetTiming(rows) {
+  const totalVehicles = rows.length;
+  const known = rows.map(row => row.timing).filter(timing => timing && timing.heldStops === 0
+    && Number.isFinite(timing.departureMs) && Number.isFinite(timing.completionMs));
+  const departureMs = known.length ? Math.min(...known.map(timing => timing.departureMs)) : null;
+  const completionMs = known.length ? Math.max(...known.map(timing => timing.completionMs)) : null;
+  return {
+    knownVehicles: known.length,
+    totalVehicles,
+    departureMs,
+    completionMs,
+    durationMinutes: departureMs != null && completionMs != null
+      ? Math.round((completionMs - departureMs) / 60000) : null,
+  };
 }
 
 export function sortVehicleOperations(rows, sort = 'received') {

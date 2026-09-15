@@ -1,7 +1,7 @@
 # Design
 
 ## Source of truth
-- Status: Active for the local vehicle-operations redesign. The 130-vehicle sample is not a fixed product contract. Deployment of this redesign is outside the current scope.
+- Status: Vehicle-operations redesign deployed as 0187757 on 2026-09-15. Follow-up work is local until separately released. The 130-vehicle sample is not a fixed product contract.
 - Last refreshed: 2026-09-15.
 - Primary surfaces: combined operator, customer and driver viewers.
 - Evidence: `../design.md`, `../previews/terminal-view/` approved reference and official assets, the current combined viewer, `/Users/jiin/Downloads/미트박스 TMS 역할 요약.docx`, and the user's fleet-operation corrections.
@@ -29,15 +29,15 @@
 - Header: official brand → 운영 뷰어 / 고객 뷰어 / 배송원 뷰어. 인증 후 루트는 운영 뷰어로 바로 연결한다.
 - Operator left menu: 배차 관리 / 배송 관제 / 자원 관리. Preserve legacy orders/deliveries/control route IDs. Viewer switching preserves selected delivery, filters and last operator page; customer/driver viewers do not select an operator item.
 - 배차 관리: left vehicle list plus ALL coordinate-bearing order markers. Emphasize selected-vehicle orders with draw order and non-color cues, without hiding markers or changing coordinates. No vehicle markers on this map. Show location-unregistered counts.
-- 주문 시나리오: received-box total 80–120% local preview, total vehicles/destinations/boxes and individual driver assignments. Use delivery-ID destination counts and boxes; do not infer unique households. Aggregate duration awaits a contract. Never mutate source quantities, assignment or ETA.
-- Distinguish fixed scenario departure, last arrival ETA and final handoff-completion forecast. Only show supplied values with their meaning; missing forecasts remain unknown.
+- 주문 시나리오: received-box total 80–120% local preview, total vehicles/destinations/boxes and individual driver assignments. Use delivery-ID destination counts and boxes; do not infer unique households. Aggregate duration spans earliest fixed departure to latest handoff completion, with known vehicle coverage shown. Never mutate source quantities, assignment or ETA.
+- Distinguish fixed scenario departure, last arrival ETA and final handoff-completion forecast. Use the existing simulation movement and unloading inputs for clearly labeled forecasts; missing inputs remain unknown.
 - 권역: explanatory example text only. No polygons, inside counts, pin dispatch actions, region editing or allocation algorithm until real region data exists.
 - 배송 관제: vehicle remaining workload comparison, explicit vehicle selection, map and a right vehicle card with expandable destinations. Keep current vehicle summary stable during historical stop inspection. Received order is the initial UI order, not a business priority; selectable sorts place unknown values last.
 - Control map: selected vehicle remaining registered stops and supplied position with provenance. Simulation position is labeled and never used as actual GPS for support dispatch. Missing route geometry has no straight-line substitute.
 - Right detail: expandable destinations show status, address, boxes, ETA, customer requests and driver tips. An 이력·알림 보기 action opens 배송 관리 for that destination without changing current vehicle operation context. Keep customer handoff requests, driver tips and product storage separate.
 - 배송 관리 defaults to the selected destination and chronological records, with 전체 / 처리 이력 / 고객 알림 filters and notice composition. Keep the target visible above the bounded record list. Planned stages are not history; targetless events remain in a separate vehicle section.
 - 지원배차: reasoned waiting entry point until stability levels, actual positions and call/accept/reassignment contracts exist. No invented score or successful instruction.
-- 자원 관리: 배송원 / 차량 / 배송지 tabs; keep search, pagination, selection and tips. Names alone are not identity keys. Unknown tendencies, metrics and main areas stay unregistered.
+- 자원 관리: 배송원 / 차량 / 배송지 tabs; keep search, pagination, selection and tips. Names alone are not identity keys. Show current-assignment destination/box counts for assigned, completed, remaining and held work from supplied statuses. Held deliveries remain in remaining workload. Missing input stays unknown; zero is a real value. Unknown tendencies, evaluations and main areas stay unregistered. Only unassigned candidates are documented in docs/driver-profile-candidates.md until a later data-backed profile is supplied.
 - 배송 순서 관리 opens the existing route editor directly in edit mode within 배송 관리, without an additional edit-button step. Re-entry preserves any existing draft, preserving draft/save/cancel/protected-stop/stale-save behavior. Cancel discards unsaved edits and returns to records. Reset discards only unsaved edits while staying in the editor. Save stays in edit mode after acknowledgment and rebases the draft on the saved order. No separate back-to-records button. Synthetic resources never open live V1 execution commands.
 - Customer and driver: shared header with viewer switching, no left operator menu. Use the full available page width while preserving the phone frame, right detail and responsive mobile body.
 - Driver: same authenticated simulation, selected live destination and ordered stops. Keep current/selected delivery distinct and disable scenario changes for synthetic vehicles.
@@ -173,3 +173,12 @@
 - The completion camera uses the user-supplied photograph when Photo or Retake is clicked. This is a demo capture action; do not add a separate example-photo button or badge. Retain required-photo and stale/disconnected-proof protections.
 
 - Driver settings uses a centered eight-tooth circular gear, with the existing 22px icon / 40px button and 1.7px stroke. Avoid translated or vertically stretched gear outlines.
+
+## Follow-up decisions in progress (2026-09-15)
+- F1 current-assignment resource counts are approved to implement from existing data. They are not historical driver evaluations.
+- F2: completion forecasts include the final unloading time using existing simulation inputs. Aggregate duration spans earliest fixed departure to latest completion; show incomplete vehicle coverage explicitly. F3: approved example customer requests have labeled icons and required per-request confirmation before final completion. F4: create unassigned profile candidates in documentation only; live tendencies/main areas remain unknown.
+
+## Follow-up verification (2026-09-15)
+- F1 current assignment metrics, F2 existing-input timing and known coverage, F3 example requests with mandatory confirmation, and F4 unassigned profile candidates are implemented and locally verified. See section 13 of docs/vehicle-operations-redesign-plan.md for evidence and external-data limitations.
+- Compact customer-request badges also show example provenance. Driver confirmation requires every required request ID plus a local photo; the gateway rechecks the current destination and exact request set. The reference driver completion button routes to the combined driver flow without editing owner snapshots.
+- Final local evidence: 196 tests, JavaScript syntax, diff check, existing capacity/stream checks and native browser checks at desktop/390/320px. Follow-up changes are not deployed.
