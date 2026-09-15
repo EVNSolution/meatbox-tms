@@ -8,7 +8,6 @@ import {
   completionProofShouldClose,
   driverCanArrive,
   driverCanStart,
-  driverConfirmedVehicles,
   driverHasConfirmedDispatch,
   driverMapDelivery,
   driverTipDelivery,
@@ -18,7 +17,8 @@ import {
 import { movePendingOrder } from './route-editor.mjs';
 import { mountDriverMap } from './driver-map.mjs';
 import { openDriverSettings } from './driver-settings.mjs';
-import { driverHistoryForDate, exampleHistoryDates, sourceDriverHistoryForDate } from './driver-history.mjs';
+import { driverHistoryForDate, exampleHistoryDates, selectedHistoryVehicle, sourceDriverHistoryForDate } from './driver-history.mjs';
+import { renderDriverHistoryCalendar, shiftHistoryMonth } from './driver-history-calendar.mjs';
 import { referenceIcon } from './reference-icons.mjs';
 import { renderCustomerRequests } from './customer-requests.mjs';
 
@@ -42,12 +42,13 @@ let tab = 'delivery', screen = 'main', group = null, routeCompleted = null, orde
 let draft = null, base = null, editMapOpen = true, drag = null, pending = null, pendingTimer;
 let sheet = null, returnFocus = null, proofUrl = null, detailTab = 'order';
 let proofCheckedIds = new Set();
-let historyDate = new Date().toLocaleDateString('sv-SE');
-let historySourceDate = null, historyRequest = 0;
+let historyDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+let historySourceDate = null, historySelectionKey = null;
+let viewerVehicleId = new URLSearchParams(location.search).get('vehicle');
 const historyCache = new Map();
 const tipDrafts = new Map();
 const shell = mountDemoShell({ viewer: 'driver', onSelect: selectScenarioDelivery,
-  onSend: (type, extra) => dispatchPending() || dispatchReadOnly() ? false : simulation.send(type, extra) });
+  onSend: (type, extra) => dispatchPending() || dispatchReadOnly() || !hasSelectedRoute() ? false : simulation.send(type, extra) });
 shell.update(null, false);
 const simulation = connectSimulation({
   onState(raw) {
@@ -74,6 +75,7 @@ const simulation = connectSimulation({
 const map = mountDriverMap(byId('dv-map'), id => { mapSelection = id; renderMapDetail(); });
 const editMap = mountDriverMap(byId('dv-edit-map'), () => {});
 const view = () => driverViewModel(latest, connected, selectedId);
+const hasSelectedRoute = () => Boolean(view().vehicle && (viewerVehicleId === null || view().vehicle.id === viewerVehicleId));
 const signature = () => JSON.stringify([latest.phase, view().deliveries.map(stop => [stop.id, stop.status])]);
 const activeRoute = () => group === 'today';
 const disabled = condition => condition ? 'disabled' : '';
@@ -91,7 +93,7 @@ const compactRequest = stop => {
 function feedback(message) { byId('dv-feedback').textContent = message; byId('dv-feedback').hidden = !message; }
 function failCommand(message) { clearTimeout(pendingTimer); pending = null; feedback(message); if (latest) render(); }
 function sendCommand(type, payload, accept, done) {
-  if (!connected || pending || dispatchPending() || dispatchReadOnly()) return;
+  if (!connected || pending || dispatchPending() || dispatchReadOnly() || !hasSelectedRoute()) return;
   pending = { accept, done };
   feedback('저장 중입니다.');
   pendingTimer = setTimeout(() => failCommand('서버 응답을 확인하지 못했습니다. 상태를 확인한 뒤 다시 시도해 주세요.'), 5000);
@@ -110,27 +112,37 @@ function patch(id, html) {
 function selectScenarioDelivery(id) {
   if (dispatchPending() || dispatchReadOnly()) return;
   selectedId = id;
+  viewerVehicleId = null;
   latest = sourceVehicleContext(fullLatest, selectedId);
   mapSelection = id;
-  const url = new URL(location.href); url.searchParams.set('id', id); history.replaceState(null, '', url);
+  const url = new URL(location.href); url.searchParams.set('id', id); url.searchParams.delete('vehicle'); history.replaceState(null, '', url);
   shell.select(id);
   render();
 }
 function selectVehicle(id) {
   if (pending) return;
-  selectedId = id; mapSelection = null; draft = null; screen = 'main'; group = null; routeCompleted = null;
+  selectedId = id; mapSelection = null; draft = null; screen = 'main'; group = group === 'history' ? 'history' : null; routeCompleted = null;
   latest = sourceVehicleContext(fullLatest, selectedId);
-  const url = new URL(location.href); url.searchParams.set('id', id); history.replaceState(null, '', url);
+  const url = new URL(location.href);
+  if (id) url.searchParams.set('id', id); else url.searchParams.delete('id');
+  history.replaceState(null, '', url);
   shell.select(id); closeSheet(); feedback(''); render();
 }
 function render() {
   if (!latest) return;
+  if (viewerVehicleId !== null) {
+    const stops = fullLatest.fleetDeliveries?.length ? fullLatest.fleetDeliveries : fullLatest.deliveries || [];
+    const ownStops = stops.filter(stop => (stop.vehicle?.id || stop.vehicleId) === viewerVehicleId);
+    selectedId = ownStops.find(stop => stop.id === selectedId)?.id || ownStops[0]?.id || null;
+  }
   latest = sourceVehicleContext(fullLatest, selectedId);
-  if (!selectedId) selectedId = latest.customerStopId || latest.deliveries[0]?.id;
+  if (!selectedId && viewerVehicleId === null) selectedId = latest.customerStopId || latest.deliveries[0]?.id;
   const model = view();
   const waitingForDispatch = dispatchPending();
+  const viewerVehicle = selectedHistoryVehicle(latest.fleetVehicles || [], viewerVehicleId, model.vehicle);
+  const routeAvailable = hasSelectedRoute();
   const resolvedId = model.selected?.id || selectedId;
-  if (resolvedId && resolvedId !== selectedId) {
+  if (routeAvailable && resolvedId && resolvedId !== selectedId) {
     selectedId = resolvedId;
     latest = sourceVehicleContext(fullLatest, selectedId);
     const url = new URL(location.href); url.searchParams.set('id', selectedId); history.replaceState(null, '', url);
@@ -138,7 +150,6 @@ function render() {
   if (latest.sourceData?.date !== historySourceDate) {
     historySourceDate = latest.sourceData?.date || null;
     if (historySourceDate) historyDate = historySourceDate;
-    historyRequest += 1;
   }
   const route = reconcileDriverRoute(routeCompleted, latest.phase === 'done' && model.vehicle?.live !== false, group);
   routeCompleted = route.completed; group = route.group;
@@ -150,24 +161,24 @@ function render() {
   }
   byId('driver-workspace').hidden = false;
   shell.update(latest, connected); shell.select(selectedId);
+  byId('scenario-tools').hidden = !routeAvailable;
   byId('driver-clock').textContent = latest.simClock || '--:--';
-  byId('driver-name').textContent = waitingForDispatch ? '배송원' : `${model.vehicle?.driver || '배송원 미확인'}${model.vehicle?.driver ? ' 배송원' : ''}`;
-  const vehicleLabel = waitingForDispatch ? '확정 배차 없음' : vehicleDisplay(model.vehicle);
+  byId('driver-name').textContent = viewerVehicle?.driver ? `${viewerVehicle.driver} 배송원` : '배송원 미선택';
+  const vehicleLabel = vehicleDisplay(viewerVehicle);
   byId('driver-vehicle').textContent = vehicleLabel;
-  byId('driver-region').textContent = waitingForDispatch ? '배차 전송 대기' : model.vehicle?.region || '미등록';
-  byId('driver-done').textContent = model.progress;
-  byId('driver-left').textContent = `${model.remainingBoxes}박스`;
-  byId('driver-finish').textContent = waitingForDispatch ? '배차 전송 대기' : latest.sourceData && model.finishEta === '—' ? '시간 정보 미제공' : model.finishEta;
+  byId('driver-region').textContent = viewerVehicle?.region || '미등록';
+  byId('driver-done').textContent = routeAvailable ? model.progress : '—';
+  byId('driver-left').textContent = routeAvailable ? `${model.remainingBoxes}박스` : '—';
+  byId('driver-finish').textContent = waitingForDispatch ? '배차 전송 대기' : !routeAvailable ? '—' : latest.sourceData && model.finishEta === '—' ? '시간 정보 미제공' : model.finishEta;
   const sourceDateQuery = latest.sourceData?.date ? `&date=${encodeURIComponent(latest.sourceData.date)}` : '';
   byId('driver-manage-link').href = `/combined/?${selectedId ? `id=${encodeURIComponent(selectedId)}&` : ''}${sourceDateQuery.replace(/^&/, '')}#/control/manage`;
-  const vehicles = waitingForDispatch ? [] : driverConfirmedVehicles(latest);
+  const vehicles = latest.fleetVehicles?.length ? latest.fleetVehicles : [model.vehicle].filter(Boolean);
   const select = byId('driver-vehicle-select');
-  const options = vehicles.map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.plate)} / ${escapeHtml(vehicle.driver)}</option>`).join('')
-    || (waitingForDispatch ? '<option value="">확정 배차 없음</option>' : '');
+  const options = '<option value="">배송원을 선택해 주세요</option>' + vehicles.map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.plate)} / ${escapeHtml(vehicle.driver)}</option>`).join('');
   if (select._html !== options) { select.innerHTML = options; select._html = options; }
-  select.value = waitingForDispatch ? '' : model.vehicle?.id || ''; select.disabled = Boolean(pending) || waitingForDispatch;
+  select.value = viewerVehicle?.id || ''; select.disabled = Boolean(pending) || !vehicles.length;
   byId('dv-route-label').textContent = vehicleLabel;
-  byId('dv-route-status').textContent = model.status;
+  byId('dv-route-status').textContent = routeAvailable ? model.status : '배차 없음';
   const routeDate = byId('dv-route-choice').querySelector('summary strong');
   if (routeDate) routeDate.textContent = latest.sourceData?.date || '오늘';
   const routeChoice = byId('dv-select-today').querySelector('span');
@@ -175,7 +186,7 @@ function render() {
   byId('dv-select-today').disabled = !activeRoute();
   document.querySelectorAll('[data-group]').forEach(button => { button.setAttribute('aria-pressed', String(button.dataset.group === group)); button.disabled = Boolean(pending); });
   document.querySelectorAll('[data-tab]').forEach(button => {
-    button.setAttribute('aria-selected', String(button.dataset.tab === tab)); button.tabIndex = button.dataset.tab === tab ? 0 : -1; button.disabled = Boolean(pending) || group === 'history' || waitingForDispatch;
+    button.setAttribute('aria-selected', String(button.dataset.tab === tab)); button.tabIndex = button.dataset.tab === tab ? 0 : -1; button.disabled = Boolean(pending) || group === 'history' || waitingForDispatch || !routeAvailable;
   });
   byId('dv-settings').disabled = byId('dv-logout').disabled = Boolean(pending);
   if (draft && !pending && signature() !== base.signature) {
@@ -183,18 +194,19 @@ function render() {
   }
   byId('dv-route-selector').hidden = screen === 'edit';
   byId('dv-route-choice').hidden = group === 'history';
+  byId('dv-tabs').hidden = group === 'history';
   byId('dv-delivery').hidden = screen !== 'main' || tab !== 'delivery' || group === 'history';
   byId('dv-map-panel').hidden = screen !== 'main' || tab !== 'map' || group === 'history';
   byId('dv-history').hidden = screen !== 'main' || group !== 'history';
   byId('dv-orders').hidden = screen !== 'orders';
   byId('dv-editor').hidden = screen !== 'edit';
-  if (waitingForDispatch && group !== 'history') {
+  if ((waitingForDispatch || !routeAvailable) && group !== 'history') {
     screen = 'main'; tab = 'delivery'; draft = null; mapSelection = null;
     byId('dv-delivery').hidden = false;
     byId('dv-map-panel').hidden = true;
     byId('dv-orders').hidden = true;
     byId('dv-editor').hidden = true;
-    patch('dv-delivery', '<div class="dv-empty"><strong>확정된 배차가 없습니다</strong><span class="dv-muted">배차 전송 후 배송 목록을 확인할 수 있습니다.</span></div>');
+    patch('dv-delivery', viewerVehicle ? '<div class="dv-empty"><strong>확정된 배차가 없습니다</strong><span class="dv-muted">배차 전송 후 배송 목록을 확인할 수 있습니다.</span></div>' : '<div class="dv-empty">화면 밖의 배송원 선택에서 배송원을 선택해 주세요.</div>');
     map.update([], false, false, { sourceData: latest.sourceData, vehicle: null });
   }
   else if (screen === 'edit') renderEditor();
@@ -251,27 +263,37 @@ function renderDelivery() {
   patch('dv-delivery', `<header class="dv-delivery-heading"><div><h2>${escapeHtml(title)}</h2><p>${summary(model.deliveries)}</p></div><div class="dv-heading-actions"><button class="dv-button dv-soft" data-action="orders">주문 목록</button><button class="dv-button dv-primary" data-action="edit" ${disabled(dispatchReadOnly() || model.vehicle?.live === false || !connected || pending || model.deliveries.filter(stop => stop.status === 'pending').length < 2)}>순서 편집</button></div></header><section class="dv-today-status" aria-label="배차 진행 및 완료 현황"><div><span>진행·대기</span><strong>${model.todayCounts.active}곳</strong></div><div><span>완료</span><strong>${model.todayCounts.done}곳</strong></div><div><span>보류</span><strong>${model.todayCounts.skipped}곳</strong></div></section><section class="dv-eta" aria-label="배송 예상 시간"><div><span>${departureLabel}</span><strong>${escapeHtml(departure)}</strong></div>${icon('arrow')}<div><span>${finishLabel}</span><strong>${escapeHtml(finish)}</strong></div></section><section class="dv-execution"><p class="dv-eyebrow">${latest.phase === 'done' ? '완료된 배차' : '지금 가는 배송지'}</p>${compactRequest(model.current)}<h3>${escapeHtml(model.destination)}</h3><p class="dv-muted">${escapeHtml(model.address)}</p>${executionButtons()}</section><ol class="dv-route">${model.deliveries.map(stop => `<li>${stopCard(stop)}</li>`).join('')}</ol>`);
 }
 function renderHistory() {
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+  const calendar = renderDriverHistoryCalendar(historyDate, latest.sourceData?.dates || exampleHistoryDates, today, Boolean(latest.sourceData));
+  const heading = `<header class="dv-delivery-heading"><div><h2>근무 이력</h2><p>달력에서 날짜를 선택해 주세요.</p></div></header>`;
+  const selectedHeading = `<h3 class="dv-history-selected">${escapeHtml(historyDate.replaceAll('-', '.'))} 이력</h3>`;
   if (latest.sourceData) {
     const model = view();
-    const identity = { driver: model.vehicle?.driver, plate: vehicleDisplay(model.vehicle), originalGroupId: model.deliveries[0]?.originalGroupId };
+    const vehicle = selectedHistoryVehicle(latest.fleetVehicles || [], viewerVehicleId, model.vehicle);
+    const identity = { driver: vehicle?.driver, plate: vehicleDisplay(vehicle), originalGroupId: vehicle?.id };
     const cacheKey = `${historyDate}|${identity.driver}|${identity.originalGroupId || ''}`;
-    const heading = `<header class="dv-delivery-heading"><div><h2>근무 이력</h2><p>선택 날짜의 배차 내역입니다.</p></div></header><div class="dv-history-picker"><label class="dv-field" for="dv-history-date">조회 날짜</label><input id="dv-history-date" type="date" value="${escapeHtml(historyDate)}"></div>`;
-    const draw = records => patch('dv-history', heading + (records.map(item => `<article class="dv-history-card"><header><div><h3>${escapeHtml(item.label)}</h3></div><strong>${escapeHtml(item.vehicle)}</strong></header><dl class="dv-key-values"><div><dt>배차일</dt><dd>${escapeHtml(item.date)}</dd></div><div><dt>배송 규모</dt><dd>${item.destinations}곳 / ${item.boxes}박스</dd></div></dl></article>`).join('') || '<div class="dv-empty">선택한 날짜에 이 배송원의 배차가 없습니다.</div>'));
-    if (historyCache.has(cacheKey)) { draw(historyCache.get(cacheKey)); return; }
-    patch('dv-history', `${heading}<div class="dv-empty">배차 내역을 불러오고 있습니다.</div>`);
-    const request = ++historyRequest;
-    sourceDriverHistoryForDate(historyDate, identity).then(records => {
-      if (request !== historyRequest || group !== 'history') return;
-      historyCache.set(cacheKey, records); draw(records);
-    }).catch(() => {
-      if (request === historyRequest && group === 'history') patch('dv-history', `${heading}<div class="dv-empty">배차 내역을 불러오지 못했습니다.</div>`);
-    });
+    historySelectionKey = cacheKey;
+    const layout = heading + calendar + selectedHeading;
+    if (!identity.driver) { patch('dv-history', `${layout}<p class="dv-empty">화면 밖의 배송원 선택에서 배송원을 선택해 주세요.</p>`); return; }
+    let cached = historyCache.get(cacheKey);
+    if (!cached) {
+      cached = { status: 'loading', records: [] };
+      historyCache.set(cacheKey, cached);
+      sourceDriverHistoryForDate(historyDate, identity).then(records => {
+        cached.status = 'ready'; cached.records = records;
+      }).catch(error => { cached.status = 'error'; cached.message = error.message; }).finally(() => {
+        if (group === 'history' && historySelectionKey === cacheKey) renderHistory();
+      });
+    }
+    if (cached.status === 'loading') { patch('dv-history', `${layout}<div class="dv-empty" role="status">배차 내역을 불러오고 있습니다.</div>`); return; }
+    if (cached.status === 'error') { patch('dv-history', `${layout}<div class="dv-empty" role="status">${escapeHtml(cached.message === '배송원을 구분할 수 없어 이력을 표시하지 않습니다.' ? cached.message : '배차 내역을 불러오지 못했습니다.')}<button type="button" class="dv-button" data-action="retry-history">다시 불러오기</button></div>`); return; }
+    const records = cached.records.map(item => `<article class="dv-history-card"><header><div><h3>${escapeHtml(item.label)}</h3></div></header><dl class="dv-key-values"><div><dt>배송 규모</dt><dd>${item.destinations}곳 / ${item.boxes}박스</dd></div></dl><p class="dv-muted">원본 배차 내역 · 실제 근무 시간 미제공</p></article>`).join('');
+    patch('dv-history', layout + (records || '<div class="dv-empty">선택한 날짜에 이 배송원의 배차가 없습니다.</div>'));
     return;
   }
   const history = driverHistoryForDate(historyDate);
-  const dates = exampleHistoryDates.map(date => `<button class="dv-history-date" data-history-date="${date}">${date.slice(5).replace('-', '.')}</button>`).join('');
   const records = history.map(item => `<article class="dv-history-card"><header><div><span class="dv-demo-badge">예시</span><h3>${escapeHtml(item.label)}</h3></div><strong>${escapeHtml(item.vehicle)}</strong></header><dl class="dv-key-values"><div><dt>근무 시간</dt><dd>${item.startedAt}–${item.endedAt}</dd></div><div><dt>배송 규모</dt><dd>${item.destinations}곳 / ${item.boxes}박스</dd></div></dl></article>`).join('');
-  patch('dv-history', `<header class="dv-delivery-heading"><div><h2>근무 이력</h2><p>운영 이력 서비스와 분리된 화면 확인용 더미입니다.</p></div></header><div class="dv-history-picker"><label class="dv-field" for="dv-history-date">조회 날짜</label><input id="dv-history-date" type="date" value="${historyDate}"><div class="dv-history-dates"><span>예시 제공 날짜</span>${dates}</div></div>${records || '<div class="dv-empty">선택한 날짜의 예시 기록이 없습니다.<span class="dv-muted">현재 완료 목록을 과거 이력으로 사용하지 않습니다.</span></div>'}`);
+  patch('dv-history', heading + calendar + selectedHeading + (records || '<div class="dv-empty">선택한 날짜의 예시 기록이 없습니다.</div>'));
 }
 function renderMapDetail() {
   if (!latest) return;
@@ -461,8 +483,12 @@ byId('dv-sheet-layer').addEventListener('click', event => { if (event.target ===
 byId('dv-sheet-body').addEventListener('click', event => { if (!pending) sheet?.onClick?.(event); });
 byId('dv-sheet-body').addEventListener('input', event => sheet?.onInput?.(event));
 byId('driver-vehicle-select').addEventListener('change', event => {
-  const stop = latest.fleetDeliveries.find(stop => stop.vehicle?.id === event.target.value);
-  if (stop) selectVehicle(stop.id);
+  viewerVehicleId = event.target.value;
+  const url = new URL(location.href);
+  url.searchParams.set('vehicle', viewerVehicleId);
+  history.replaceState(null, '', url);
+  const stop = latest.fleetDeliveries.find(stop => (stop.vehicle?.id || stop.vehicleId) === viewerVehicleId);
+  selectVehicle(stop?.id || null);
 });
 byId('dv-select-today').addEventListener('click', () => { byId('dv-route-choice').open = false; screen = 'main'; render(); });
 byId('dv-app').addEventListener('click', event => {
@@ -471,12 +497,14 @@ byId('dv-app').addEventListener('click', event => {
   if (target.dataset.tab) switchTab(target.dataset.tab);
   if (target.dataset.group) { group = target.dataset.group; tab = 'delivery'; screen = 'main'; draft = null; render(); }
   if (target.dataset.historyDate) { historyDate = target.dataset.historyDate; renderHistory(); }
+  if (target.dataset.historyMonth) { historyDate = shiftHistoryMonth(historyDate, Number(target.dataset.historyMonth)); renderHistory(); }
   if (target.dataset.orders) { orderGroup = target.dataset.orders; renderOrders(); }
   if (target.dataset.stop) openDetail(target.dataset.stop);
   if (target.dataset.requestInfo) openRequest(target.dataset.requestInfo);
   if (target.dataset.move) moveBy(target.dataset.move, Number(target.dataset.direction));
   if (target.dataset.assignment) showSheet({ title: target.dataset.assignment === 'return' ? '배송 반납' : '배송 전달', body: '<p class="dv-muted">배차 변경 기능이 연결되면 이용할 수 있습니다.</p><button class="dv-button dv-primary" disabled>배차 변경 대기</button>' });
   switch (target.dataset.action) {
+    case 'retry-history': historyCache.delete(historySelectionKey); renderHistory(); break;
     case 'orders': screen = 'orders'; render(); break;
     case 'back': screen = 'main'; render(); break;
     case 'edit': beginEdit(); break;
@@ -505,9 +533,6 @@ byId('dv-app').addEventListener('click', event => {
       break;
     }
   }
-});
-byId('dv-app').addEventListener('input', event => {
-  if (event.target.id === 'dv-history-date') { historyDate = event.target.value; renderHistory(); }
 });
 byId('dv-edit-map-toggle').addEventListener('click', () => { editMapOpen = !editMapOpen; renderEditor(); if (editMapOpen) requestAnimationFrame(() => editMap.resize()); });
 byId('dv-edit-list').addEventListener('keydown', event => {

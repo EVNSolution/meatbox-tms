@@ -13,7 +13,7 @@ export function customerEtaText(delivery) {
   if (delivery?.status === 'skipped') return '배송이 보류되었습니다';
   if (delivery?.status === 'current' && delivery.arrivedAt) return `${delivery.arrivedAt} 도착`;
   return delivery?.customerWindowText
-    ? `${delivery.customerWindowText}${delivery.etaSource === 'operating-plan' ? ' 도착 예정' : ''}`
+    ? `${delivery.customerWindowText}${['operating-plan', 'customer-demo'].includes(delivery.etaSource) ? ' 도착 예정' : ''}`
     : '시간 정보 미제공';
 }
 
@@ -21,6 +21,7 @@ const validCoordinate = value => Array.isArray(value) && value.length === 2
   && value.every(Number.isFinite) && Math.abs(value[0]) <= 180 && Math.abs(value[1]) <= 90;
 
 export function customerViewerDeliveries(state) {
+  if (state?.customerDemo) return state.fleetDeliveries || [];
   if (!state?.sourceData) return state?.fleetDeliveries?.length ? state.fleetDeliveries : state?.deliveries || [];
   if (!state.dispatch || ['published', 'amending'].includes(state.dispatch.phase)) return Array.isArray(state.fleetDeliveries) ? state.fleetDeliveries : [];
   return (Array.isArray(state.dispatchOrders) ? state.dispatchOrders : []).map(order => {
@@ -43,6 +44,7 @@ export function customerViewerDeliveries(state) {
 export function customerMapView(delivery, state, routeData) {
   if (state?.sourceData) {
     const home = validCoordinate(delivery?.coordinates) ? [...delivery.coordinates] : null;
+    if (state.customerDemo) return { home, road: [], truck: home && validCoordinate(delivery?.customerDemo?.truck) ? [...delivery.customerDemo.truck] : null };
     if (state.dispatch && !['published', 'amending'].includes(state.dispatch.phase)) return { home, road: [], truck: null };
     const vehicle = delivery?.vehicle || state.fleetVehicles?.find(item => item.id === delivery?.vehicleId) || state.vehicle;
     const operationPosition = state.vehicleStates?.[vehicle?.id]?.truck || state.truck;
@@ -223,7 +225,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     const view = customerMapView(delivery, latest, routeData);
     const canMap = Boolean(map && view.home);
     const road = canMap ? view.road : [];
-    byId('map').setAttribute('aria-label', latest.sourceData
+    byId('map').setAttribute('aria-label', latest.customerDemo ? '매장과 예시 차량 위치 지도' : latest.sourceData
       ? delivery.dispatchPending ? '배송지 위치 지도' : '배송지와 차량 위치 지도'
       : '예시 차량 위치와 매장까지의 도로 경로 지도');
     renderRoad(road);
@@ -243,8 +245,9 @@ export function mountCustomerRenderer({ mb, onSelect }) {
       return;
     }
     const truck = view.truck;
-    if (!truckMarker) truckMarker = createMarker('vehicle', truck, Boolean(latest.sourceData));
+    if (!truckMarker) truckMarker = createMarker('vehicle', truck, Boolean(latest.sourceData && !latest.customerDemo));
     else truckMarker.setLngLat(truck);
+    truckMarker.getElement().setAttribute('aria-label', latest.customerDemo || !latest.sourceData ? '예시 차량 위치' : '차량 위치');
     if (viewChanged) {
       const bounds = new maplibregl.LngLatBounds(home, home);
       road.forEach(coordinate => bounds.extend(coordinate));
@@ -257,6 +260,14 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     if (!latest) return;
     const delivery = currentDelivery();
     if (!delivery) return showPicker();
+    byId('customer-viewer-summary').textContent = latest.customerDemo?.active
+      ? '고객 시연 중 · 배송 상태, 시각과 차량 위치는 예시입니다.'
+      : '선택한 매장의 배송 현황과 고객 안내를 확인합니다.';
+    const demoLabel = byId('customer-demo-label');
+    demoLabel.hidden = !latest.customerDemo;
+    demoLabel.textContent = latest.customerDemo?.active
+      ? '고객 시연 · 배송 상태와 시각은 예시입니다.'
+      : '예시 차량 위치 · 시나리오에서 배송 과정을 시연할 수 있습니다.';
     byId('account-name').textContent = delivery.name || '배송지';
     const pill = byId('status-pill');
     pill.textContent = delivery.customerStatus?.label || '배송 조회';
@@ -414,6 +425,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
       latest = state;
       if (!state.sourceData) loadLegacyRoute();
       byId('customer-clock').textContent = state.simClock || '--:--';
+      byId('customer-clock').setAttribute('aria-label', state.customerDemo?.active ? '시연 시각' : '현재 시각');
       const requested = queryId() || (() => { try { return localStorage.getItem('mb-account'); } catch { return null; } })();
       const available = currentDeliveries();
       const fallback = state.sourceData?.defaultStopId;
