@@ -46,7 +46,16 @@ function adaptOperationEvent(event) {
       return null;
     }
   }
-  return { time: event.time ? escapeText(event.time) : null, type, message };
+  return {
+    ...(Object.hasOwn(event, 'id') ? { id: event.id } : {}),
+    ...(Object.hasOwn(event, 'ts') ? { ts: event.ts } : {}),
+    ...(Object.hasOwn(event, 'vehicleId') ? { vehicleId: escapeText(event.vehicleId) } : {}),
+    ...(Object.hasOwn(event, 'stopId') ? { stopId: escapeText(event.stopId) } : {}),
+    ...(Object.hasOwn(event, 'action') ? { action: escapeText(event.action) } : {}),
+    time: event.time ? escapeText(event.time) : null,
+    type,
+    message,
+  };
 }
 
 export function adaptSimulation(snapshot) {
@@ -66,11 +75,16 @@ export function adaptSimulation(snapshot) {
     status: escapeText(vehicle.status),
     planned: vehicle.planned ?? null,
     capacityBoxes: Number.isFinite(vehicle.capacityBoxes) ? vehicle.capacityBoxes : null,
+    departure: vehicle.departure ? {
+      time: escapeText(vehicle.departure.time),
+      source: escapeText(vehicle.departure.source),
+    } : null,
   } : null;
   const noticesByStop = new Map();
   for (const notice of Array.isArray(snapshot.notifications) ? snapshot.notifications : []) {
     const adapted = {
       id: notice.id,
+      ...(Object.hasOwn(notice, 'ts') ? { ts: notice.ts } : {}),
       stopId: escapeText(notice.stopId),
       title: noticeTitle(notice),
       body: escapeText(notice.body),
@@ -178,9 +192,13 @@ export function adaptSimulation(snapshot) {
     phase: escapeText(snapshot.phase),
     scenarioPreset: snapshot.scenarioPreset ? escapeText(snapshot.scenarioPreset) : null,
     scenarioStopId: snapshot.scenarioStopId ? escapeText(snapshot.scenarioStopId) : null,
+    simTime: Number.isFinite(snapshot.simTime) ? snapshot.simTime : null,
     simClock: escapeText(snapshot.simClock),
     speed: snapshot.speed,
     truck: snapshot.truck ? {
+      lat: Number.isFinite(snapshot.truck.lat) ? snapshot.truck.lat : null,
+      lng: Number.isFinite(snapshot.truck.lng) ? snapshot.truck.lng : null,
+      locationSource: Number.isFinite(snapshot.truck.lat) && Number.isFinite(snapshot.truck.lng) ? 'simulation' : null,
       dwelling: snapshot.truck.dwelling === true,
       dwellRemaining: Number.isFinite(snapshot.truck.dwellRemaining) ? snapshot.truck.dwellRemaining : 0,
     } : null,
@@ -190,6 +208,10 @@ export function adaptSimulation(snapshot) {
       plate: escapeText(liveVehicle.plate),
       driver: escapeText(liveVehicle.driver),
       region: escapeText(liveVehicle.region),
+      departure: liveVehicle.departure ? {
+        time: escapeText(liveVehicle.departure.time),
+        source: escapeText(liveVehicle.departure.source),
+      } : null,
     } : null,
     device: null,
     deliveries,

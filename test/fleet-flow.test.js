@@ -34,6 +34,8 @@ test('운영 초기 상태는 live 배송과 차량당 35개 예시 배송지를
   assert.equal(state.kpi.boxesTotal, 60);
   assert.equal(state.fleet.vehicles.length, 130);
   assert.equal(state.fleet.vehicles[0].status, '출고 준비');
+  assert.deepEqual(state.fleet.vehicles[0].departure, { time: '06:30', source: 'scenario-baseline' });
+  assert.equal(state.fleet.vehicles[1].departure, undefined);
   assert.equal(state.fleet.deliveries.length, 4_515);
   assert.equal(state.order.length + state.fleet.deliveries.length, 4_523);
   assert.equal(state.fleet.vehicles.reduce((sum, vehicle) => sum + vehicle.planned.boxes, 0), 9_090);
@@ -136,8 +138,28 @@ test('여섯 수동 preset은 선택한 S5를 고정 시각의 일관된 상태�
     assert.equal(state.simClock, clock);
     assert.equal(selected.status, status);
     assert.equal(state.truck.toId, nextId);
+    assert.deepEqual(state.fleet.vehicles[0].departure, { time: '06:30', source: 'scenario-baseline' });
+    assert.deepEqual(
+      { stopId: state.events[0].stopId, vehicleId: state.events[0].vehicleId, action: state.events[0].action },
+      { stopId: 'S5', vehicleId: 'V1', action: scenario },
+    );
     assert.equal(state.order.slice(0, 4).every(stop => ['shipping', 'arrived', 'completed'].includes(scenario) ? stop.status === 'done' : stop.status === 'pending'), true);
   }
+});
+
+test('합성 배송지의 알림과 배송팁 사건은 해당 차량과 배송지를 명시한다', () => {
+  const { sim } = simulation();
+  assert.equal(sim.sendCustomerNotice('V2-S1', '도착 전 확인해 주세요.', '운영자'), true);
+  assert.deepEqual(
+    { type: sim.events.at(-1).type, stopId: sim.events.at(-1).stopId, vehicleId: sim.events.at(-1).vehicleId },
+    { type: 'notify', stopId: 'V2-S1', vehicleId: 'V2' },
+  );
+
+  assert.equal(sim.setDeliveryTip('V2-S2', '문 앞에 놓아 주세요.'), true);
+  assert.deepEqual(
+    { type: sim.events.at(-1).type, stopId: sim.events.at(-1).stopId, vehicleId: sim.events.at(-1).vehicleId },
+    { type: 'driver', stopId: 'V2-S2', vehicleId: 'V2' },
+  );
 });
 
 test('도착과 완료 preset도 shipping에서 안내한 고객 시간대를 유지한다', () => {

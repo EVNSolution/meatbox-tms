@@ -3,13 +3,15 @@ const distanceText = metres => Number.isFinite(metres) ? metres >= 1000 ? `${(me
 
 export function driverViewModel(state, connected = true, selectedId = null) {
   const selected = driverTipDelivery(state, selectedId);
-  const liveContext = !selected?.vehicle || selected.vehicle.live === true || selected.vehicle.id === state.vehicle?.id;
-  const vehicle = liveContext ? (selected?.vehicle || state.vehicle) : selected.vehicle;
+  const selectedVehicleId = selected?.vehicle?.id ?? selected?.vehicleId ?? null;
+  const liveContext = Boolean(selected && (selected.vehicle?.live === true || (state.vehicle?.id && selectedVehicleId === state.vehicle.id)));
+  const vehicle = liveContext ? (selected.vehicle || state.vehicle) : (selected?.vehicle || (selectedVehicleId ? { id: selectedVehicleId } : null));
   const deliveries = liveContext
     ? state.deliveries
-    : state.fleetDeliveries.filter(stop => stop.vehicle?.id === vehicle.id);
+    : vehicle?.id ? state.fleetDeliveries.filter(stop => (stop.vehicle?.id ?? stop.vehicleId) === vehicle.id) : [];
   const current = liveContext ? deliveries.find(stop => stop.status === 'current') ?? null : null;
   const done = deliveries.filter(stop => stop.status === 'done').length;
+  const active = deliveries.filter(stop => ['current', 'pending'].includes(stop.status)).length;
   const remainingBoxes = deliveries.filter(stop => !['done', 'skipped'].includes(stop.status)).reduce((sum, stop) => sum + (stop.boxes || 0), 0);
   const canComplete = liveContext && connected && Boolean(current && state.truck?.dwelling);
   return {
@@ -21,6 +23,7 @@ export function driverViewModel(state, connected = true, selectedId = null) {
     distance: current ? state.truck?.dwelling ? '도착' : distanceText(state.truck?.remainingM) : '—',
     boxes: current?.boxes ? `${current.boxes}박스` : `${remainingBoxes}박스`,
     progress: `${done}/${deliveries.length}`,
+    todayCounts: { active, done, skipped: deliveries.filter(stop => stop.status === 'skipped').length },
     remainingBoxes,
     finishEta: liveContext ? state.kpi?.finishEta || '—' : '—',
     canComplete,
@@ -41,7 +44,7 @@ export function reconcileDriverRoute(previousCompleted, completed, group) {
   return {
     changed,
     completed,
-    group: group === null || changed ? (completed ? 'completed' : 'active') : group,
+    group: group === null ? 'today' : group,
   };
 }
 
@@ -55,4 +58,12 @@ export function driverMapDelivery(deliveries, selectedId) {
 
 export function completionProofIsCurrent(state, stopId) {
   return Boolean(state?.truck?.dwelling && state?.deliveries?.some(stop => stop.id === stopId && stop.status === 'current'));
+}
+
+export function completionProofCanSubmit(state, connected, stopId, hasPhoto) {
+  return Boolean(connected && hasPhoto && completionProofIsCurrent(state, stopId));
+}
+
+export function completionProofShouldClose(state, connected, stopId) {
+  return !connected || !completionProofIsCurrent(state, stopId);
 }

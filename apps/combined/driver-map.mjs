@@ -52,7 +52,7 @@ export function mountDriverMap(element, onSelect) {
     if (model.points.length && depot && Number.isFinite(depot.lng) && Number.isFinite(depot.lat) && Math.abs(depot.lng) <= 180 && Math.abs(depot.lat) <= 90) {
       const pin = document.createElement('img');
       pin.src = new URL('./assets/maps/driver-depot-pin.svg', import.meta.url).href;
-      pin.alt = '출발 물류센터'; pin.setAttribute('aria-label', '출발 물류센터'); pin.width = 40; pin.height = 52;
+      pin.alt = '출발 물류센터'; pin.setAttribute('aria-label', '출발 물류센터'); pin.width = 20; pin.height = 26;
       markers.push(new maplibregl.Marker({ element: pin, anchor: 'bottom' }).setLngLat([depot.lng, depot.lat]).addTo(map));
     }
     if (model.vehicle) {

@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="./scenario-tools.css">
   <link rel="stylesheet" href="./demo-shell.css">
   <link rel="stylesheet" href="./operations.css">
+  <link rel="stylesheet" href="./vehicle-control.css">
+  <link rel="stylesheet" href="./resource-management.css">
   <link rel="stylesheet" href="./assets/vendor/maplibre/maplibre-gl.css">
   <link rel="stylesheet" href="./order-planning.css">
   <script type="module" src="./app.mjs"></script>
@@ -23,17 +25,18 @@
     <aside class="demo-navigation" id="demo-navigation"></aside>
     <main class="page-body demo-main">
       <section class="page-intro" aria-labelledby="page-heading">
-        <div><h1 id="page-heading" tabindex="-1">배송 목록</h1><p class="intro-copy" id="page-description">130대 차량의 전체 배송지 현황</p></div>
+        <div><h1 id="page-heading" tabindex="-1">배차 관리</h1><p class="intro-copy" id="page-description">차량별 배정과 전체 주문 위치</p></div>
         <div class="page-actions"><div class="summary-counts" id="summary-counts" aria-label="현재 배송 요약"></div></div>
       </section>
       <section class="connection-panel view-content" id="connection-panel" aria-live="polite">
         <div class="panel loading-state"><span class="loading-dot" aria-hidden="true"></span><div><strong id="connection-title">배송 정보를 불러오고 있습니다.</strong><p id="connection-detail">잠시만 기다려 주세요.</p></div><button type="button" class="button" id="retry-connection" hidden>다시 연결</button></div>
       </section>
       <div id="live-pages" hidden>
-        <section id="page-deliveries" class="page-view view-content" data-page="deliveries" aria-label="배송 목록">
-          <div class="deliveries-layout">
+        <section id="page-deliveries" class="page-view view-content" data-page="deliveries" aria-label="자원 관리">
+          <div id="resource-management"></div>
+          <div class="deliveries-layout" id="resource-destinations">
             <section class="panel delivery-list-panel" aria-labelledby="delivery-list-heading">
-              <div class="panel-heading"><h2 id="delivery-list-heading">배송 목록</h2><span id="delivery-count" class="muted"></span></div>
+              <div class="panel-heading"><h2 id="delivery-list-heading">배송지</h2><span id="delivery-count" class="muted"></span></div>
               <div class="list-toolbar">
                 <label class="field"><span>배송 검색</span><span class="search-control"><span data-field-icon="search"></span><input type="search" id="delivery-search" placeholder="정차지·주소 검색" autocomplete="off"></span></label>
                 <label class="field"><span>차량</span><select id="delivery-vehicle"><option value="all">전체 차량</option></select></label>
@@ -50,38 +53,11 @@
             <aside class="panel delivery-selection" id="delivery-selection" aria-label="선택 배송 요약"></aside>
           </div>
         </section>
-        <section id="page-orders" class="page-view view-content" data-page="orders" aria-label="주문 관리" hidden>
+        <section id="page-orders" class="page-view view-content" data-page="orders" aria-label="배차 관리" hidden>
           <div id="order-planning"></div>
         </section>
         <section id="page-control" class="page-view view-content" data-page="control" aria-label="배송 관제" hidden>
-          <div class="monitor-layout">
-            <div class="monitor-workspace">
-              <div class="monitor-detail" id="monitor-detail">
-                <section class="panel" id="eta-panel" aria-labelledby="eta-heading" tabindex="-1"></section>
-                <section class="panel detail-panel" id="monitor-timeline" aria-labelledby="monitor-timeline-heading"><div class="panel-heading"><h2 id="monitor-timeline-heading">배송 타임라인</h2></div><div class="tab-panel"><ol class="timeline" id="delivery-timeline" tabindex="0" aria-label="배송 타임라인 기록"></ol></div></section>
-              </div>
-              <section class="panel detail-panel" aria-label="선택 배송 이력">
-                <div class="panel-heading"><h2>운영 기록</h2></div>
-                <div class="detail-tabs" role="tablist" aria-label="배송 이력">
-                  <button type="button" role="tab" id="tab-events" aria-selected="false" aria-controls="panel-events" tabindex="-1" data-tab="events">사건 이력</button>
-                  <button type="button" role="tab" id="tab-notifications" aria-selected="true" aria-controls="panel-notifications" data-tab="notifications">고객 알림</button>
-                </div>
-                <div class="tab-panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events" hidden><p class="notification-description">선택 차량의 최근 사건</p><ol class="timeline" id="event-list" tabindex="0" aria-label="선택 차량 사건 기록"></ol></div>
-                <div class="tab-panel" role="tabpanel" id="panel-notifications" aria-labelledby="tab-notifications"><div class="notification-actions"><p class="notification-description">최근 발송한 고객 알림</p><button type="button" class="button primary" id="open-notice-dialog">고객 안내 작성</button></div><p id="notice-send-status" class="route-message" role="status" hidden></p><div id="notification-list"></div></div>
-              </section>
-            </div>
-            <aside class="monitor-sidebar panel" aria-label="배송 관제 관리 영역">
-              <div class="detail-tabs control-tabs" role="tablist" aria-label="관제 관리">
-                <button type="button" role="tab" id="tab-monitor" aria-selected="true" aria-controls="monitor-list-panel" data-control-tab="monitor">배송지 목록</button>
-                <button type="button" role="tab" id="tab-management" aria-selected="false" aria-controls="route-editor" tabindex="-1" data-control-tab="management">배송 관리</button>
-              </div>
-              <section id="monitor-list-panel" role="tabpanel" aria-labelledby="tab-monitor">
-                <div class="panel-heading monitor-toolbar"><h2 id="monitor-list-heading">배송지 <span id="monitor-count" class="muted"></span></h2><button type="button" class="button subtle" id="monitor-current" data-monitor-current hidden>현재 배송지 보기</button></div>
-                <ol class="monitor-deliveries" id="monitor-deliveries" tabindex="0" aria-label="선택 차량 배송지 목록"></ol>
-              </section>
-              <section id="route-editor" role="tabpanel" aria-labelledby="tab-management" hidden></section>
-            </aside>
-          </div>
+          <div id="vehicle-control"></div>
         </section>
       </div>
       <p class="sr-only" id="screen-status" role="status" aria-live="polite" aria-atomic="true"></p>
