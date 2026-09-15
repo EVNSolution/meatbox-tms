@@ -2,7 +2,7 @@ import { sourceViewerPlan } from './source-viewer-plan.mjs';
 
 // Source state contains every vehicle; each viewer operates on its selected route.
 export function sourceVehicleContext(data, selectedId) {
-  if (!data?.sourceData) return data;
+  if (!data?.sourceData || data.customerDemo) return data;
   const selected = data.fleetDeliveries.find(stop => stop.id === selectedId)
     ?? data.fleetDeliveries.find(stop => stop.id === data.sourceData.defaultStopId)
     ?? data.fleetDeliveries[0];

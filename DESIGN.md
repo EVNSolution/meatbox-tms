@@ -1,5 +1,12 @@
 # Design
 
+## Customer viewer scenario extension (2026-09-16, local)
+
+- Source-backed customer viewers may rehearse all six stages before or after dispatch publication. These page-local previews never send an operational command or change source orders, assignments, or completion records. Historical operating dates remain read-only.
+- Show one example vehicle near the selected store. Keep its random position stable across polling and store switching; `차량 위치 바꾸기` draws a new nearby position. Arrival places it at the store, and completion removes it. Missing coordinates remain unavailable.
+- A preset updates the selected store's customer status, example clock, ETA window, timeline, and in-app notice together. Identify it as `고객 시연`; completion can be replayed without bypassing the driver photo-completion flow.
+- `시연 초기화` restores the latest server-supplied delivery display, clears that store's preview notices, and draws a fresh example position. Date changes and page reloads discard previews. Original reference viewers and operational scenario commands retain their existing behavior.
+
 ## Source of truth
 - Status: Vehicle-operations redesign deployed as 0187757 on 2026-09-15. Follow-up work is local until separately released. The 130-vehicle sample is not a fixed product contract.
 - Last refreshed: 2026-09-16.

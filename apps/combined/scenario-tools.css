@@ -78,6 +78,9 @@
 .scenario-next:hover:not(:disabled) { border-color: #98a2b3; background: #f9fafb; }
 .scenario-next:disabled { color: #98a2b3; background: #f9fafb; border-color: #e4e7ec; cursor: default; }
 .scenario-groups { display: grid; gap: 10px; }
+.scenario-demo-actions { display: flex; gap: 8px; margin-top: 12px; }
+.scenario-demo-actions[hidden] { display: none; }
+.scenario-demo-actions .scenario-next { margin: 0; }
 .scenario-group { min-width: 0; margin: 0; padding: 10px; border: 1px solid #d0d5dd; border-radius: 3px; }
 .scenario-group legend { padding: 0 5px; color: #413f3d; font-size: 12px; font-weight: 600; }
 .scenario-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
