@@ -43,7 +43,7 @@ function validCommand(msg) {
   if (msg.type === 'complete_stop') return (msg.stopId === undefined || /^S[1-8]$/.test(msg.stopId))
     && (msg.confirmedRequestIds === undefined || (Array.isArray(msg.confirmedRequestIds)
       && msg.confirmedRequestIds.length <= 8
-      && msg.confirmedRequestIds.every(id => typeof id === 'string' && /^S[1-8]-(?:doorstep|refrigerator|handoff)$/.test(id))));
+      && msg.confirmedRequestIds.every(id => typeof id === 'string' && /^S[1-8]-(?:doorstep|refrigerator|indoor|handoff)$/.test(id))));
   if (msg.type === 'arrive_stop') return /^S[1-8]$/.test(msg.stopId);
   if (['reorder', 'toggle_skip'].includes(msg.type)) return /^S[1-8]$/.test(msg.stopId) && (msg.type !== 'reorder' || ['up', 'down'].includes(msg.dir));
   return false;

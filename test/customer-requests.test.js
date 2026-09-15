@@ -55,6 +55,19 @@ test('명시적으로 요청이 없는 S5는 빈 확인 목록으로 완료된�
   assert.deepEqual(newEvents.map(event => event.stopId), ['S5']);
 });
 
+test('S6 실내 보관 완료는 현재 배송지의 새 요청 ID만 허용한다', () => {
+  const sim = new OperatingSimulation(() => {});
+  arrive(sim, 'S6');
+
+  for (const ids of [[], ['S6-handoff'], ['S5-indoor']]) {
+    assert.equal(sim.completeCurrentStop(ids), false);
+    assert.equal(sim.snapshot().order.find(stop => stop.id === 'S6').status, 'current');
+  }
+
+  assert.equal(sim.completeCurrentStop(['S6-indoor']), true);
+  assert.equal(sim.snapshot().order.find(stop => stop.id === 'S6').status, 'done');
+});
+
 test('예시 요청은 미등록과 빈 요청을 구분하고 매 호출마다 새 객체를 반환한다', () => {
   assert.equal(exampleRequestsFor('unknown'), null);
   assert.deepEqual(exampleRequestsFor('S5'), { source: 'example', items: [] });
@@ -71,6 +84,12 @@ test('예시 요청은 미등록과 빈 요청을 구분하고 매 호출마다 
     items: [
       { id: 'S4-refrigerator', kind: 'refrigerator', label: '매장 냉장고 안에 보관', required: true },
       { id: 'S4-handoff', kind: 'handoff', label: '매장 담당자에게 직접 전달', required: true },
+    ],
+  });
+  assert.deepEqual(exampleRequestsFor('S6'), {
+    source: 'example',
+    items: [
+      { id: 'S6-indoor', kind: 'indoor', label: '매장 안에 두기', required: true },
     ],
   });
 });

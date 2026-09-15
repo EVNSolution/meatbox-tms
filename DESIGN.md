@@ -181,10 +181,15 @@
 
 ## Follow-up verification (2026-09-15)
 - F1 current assignment metrics, F2 existing-input timing and known coverage, F3 example requests with mandatory confirmation, and F4 unassigned profile candidates are implemented and locally verified. See section 13 of docs/vehicle-operations-redesign-plan.md for evidence and external-data limitations.
-- Compact customer-request badges also show example provenance. Driver confirmation requires every required request ID plus a local photo; the gateway rechecks the current destination and exact request set. The reference driver completion button routes to the combined driver flow without editing owner snapshots.
+- Driver compact requests show only category icons; control and metadata retain example provenance. Driver confirmation requires every required request ID plus a local photo; the gateway rechecks the current destination and exact request set. The reference driver completion button routes to the combined driver flow without editing owner snapshots.
 - Final local evidence: 196 tests, JavaScript syntax, diff check, existing capacity/stream checks and native browser checks at desktop/390/320px. Follow-up changes are not deployed.
 
 ## Scenario remote destination navigation
 - Add a ‘다음 배송지’ button beneath the selected destination. It selects the next entry in the current live V1 route in the initiating viewer; the existing six buttons then select that destination's scene.
 - At the final destination, show disabled ‘마지막 배송지’. Disable navigation while disconnected, awaiting a scenario response, without a target or for synthetic vehicles. Preserve edited route order; do not increment destination IDs.
 - Selection alone sends no scenario command and changes no delivery, notification, evidence or route draft. Other viewers retain their own delivery selection. No automatic playback or timer.
+
+## Driver request symbols
+- The current destination shows separate refrigerator, doorstep, indoor and handoff SVG symbols, with request labels as accessible names and tooltips. Remove the visible ‘예시 요청’ wording and generic request count from the driver viewer.
+- Driver detail and photo-confirmation views retain readable request labels and required checkboxes under ‘고객 요청’, without the source badge. Control retains the source badge, and source metadata stays `example`.
+- Use 32px centered icon badges with 20px SVGs and the existing request colors. S6 demonstrates indoor placement; keep S4's two required requests and S5's explicit empty state.
