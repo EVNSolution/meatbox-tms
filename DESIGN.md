@@ -2,7 +2,7 @@
 
 ## Source of truth
 - Status: Vehicle-operations redesign deployed as 0187757 on 2026-09-15. Follow-up work is local until separately released. The 130-vehicle sample is not a fixed product contract.
-- Last refreshed: 2026-09-15.
+- Last refreshed: 2026-09-16.
 - Primary surfaces: combined operator, customer and driver viewers.
 - Evidence: `../design.md`, `../previews/terminal-view/` approved reference and official assets, the current combined viewer, `/Users/jiin/Downloads/미트박스 TMS 역할 요약.docx`, and the user's fleet-operation corrections.
 - This contract governs the combined demo. Owner snapshots remain unchanged.
@@ -13,10 +13,13 @@
 - Avoid decorative dashboards, fabricated device data, and developer command names in normal workflows.
 
 ## Product goals
+- Dispatch lifecycle correction (2026-09-16): current/future CSV driver links are candidate metadata, not confirmed assignments. Start with unassigned orders and available-driver selection, calculate a draft, review it, then confirm through 전체 배차 전송. Driver execution sees confirmed assignments only. Remove the former per-vehicle bulk-transfer meaning of 배차하기. Past dates are read-only in both UI and API against the configured operating date 2026-09-16. This latest decision supersedes earlier initial-source-assignment and immediate-reassignment wording below. Calculation policy and post-transmission pin-change publication remain pending user decisions.
+- Latest identity decision (2026-09-16): equal destination name and address represent one destination with multiple child orders; route ordering assigns one sequence per destination bundle. This supersedes buyer/coordinate-based destination identity below. Detailed-address scope and cross-vehicle assignment rules are awaiting confirmation; do not rewrite assignments before they are resolved. Preserve order IDs, quantities and recorded facts.
+- Customer/driver time displays may use explicit operating-plan estimates under the user's delegated decision: baseline06:30, first leg20min, coordinate distance factor1.3 at30km/h, handoff4min. Keep actual timestamps and supplied estimates higher priority. These estimates create no history, road geometry or GPS claims. Default transport guidance is 보냉 운송 / 포장 상태 확인; do not invent product contents or temperatures.
 - Make operational jobs distinct while keeping one shared scenario, selected vehicle and separate destination detail across the received fleet.
 - Let operators scan received orders on a map, compare many deliveries in a thin list, and monitor selected vehicles and inspect destination facts.
 - Make presentation stages, time, changes and next action explainable in the guide.
-- Non-goals: real order coordinates, region boundaries, route-allocation algorithms, production integrations and external customer-message delivery.
+- Non-goals: route-allocation algorithms, production integrations and external customer-message delivery. The provided CSV/SHP now supplies coordinates and existing boundaries for dispatch-only viewing and local manual reassignment.
 - Success: operators can use the order map, data-sized delivery list, vehicle-first monitoring, customer notices and delivery tips without mistaking synthetic values or volume previews for live data.
 
 ## Personas and jobs
@@ -31,13 +34,13 @@
 - 배차 관리: left vehicle list plus ALL coordinate-bearing order markers. Emphasize selected-vehicle orders with draw order and non-color cues, without hiding markers or changing coordinates. No vehicle markers on this map. Show location-unregistered counts.
 - 주문 시나리오: received-box total 80–120% local preview, total vehicles/destinations/boxes and individual driver assignments. Use delivery-ID destination counts and boxes; do not infer unique households. Aggregate duration spans earliest fixed departure to latest handoff completion, with known vehicle coverage shown. Never mutate source quantities, assignment or ETA.
 - Distinguish fixed scenario departure, last arrival ETA and final handoff-completion forecast. Use the existing simulation movement and unloading inputs for clearly labeled forecasts; missing inputs remain unknown.
-- 권역: explanatory example text only. No polygons, inside counts, pin dispatch actions, region editing or allocation algorithm until real region data exists.
+- 권역: show verified boundaries from the provided SHP on the dispatch page. Verify CSV/SHP coordinate systems independently and preserve the source geometry. Connect only supplied region attributes; do not infer driver-exclusive boundaries. Manual group dispatch and single-order pin dispatch update local assignments only. Region editing and automatic allocation remain out of scope.
 - 배송 관제: vehicle remaining workload comparison, explicit vehicle selection, map and a right vehicle card with expandable destinations. Keep current vehicle summary stable during historical stop inspection. Received order is the initial UI order, not a business priority; selectable sorts place unknown values last.
 - Control map: selected vehicle remaining registered stops and supplied position with provenance. Simulation position is labeled and never used as actual GPS for support dispatch. Missing route geometry has no straight-line substitute.
 - Right detail: expandable destinations show status, address, boxes, ETA, customer requests and driver tips. An 이력·알림 보기 action opens 배송 관리 for that destination without changing current vehicle operation context. Keep customer handoff requests, driver tips and product storage separate.
 - 배송 관리 defaults to the selected destination and chronological records, with 전체 / 처리 이력 / 고객 알림 filters and notice composition. Keep the target visible above the bounded record list. Planned stages are not history; targetless events remain in a separate vehicle section.
 - 지원배차: reasoned waiting entry point until stability levels, actual positions and call/accept/reassignment contracts exist. No invented score or successful instruction.
-- 자원 관리: 배송원 / 차량 / 배송지 tabs; keep search, pagination, selection and tips. Names alone are not identity keys. Show current-assignment destination/box counts for assigned, completed, remaining and held work from supplied statuses. Held deliveries remain in remaining workload. Missing input stays unknown; zero is a real value. Unknown tendencies, evaluations and main areas stay unregistered. Only unassigned candidates are documented in docs/driver-profile-candidates.md until a later data-backed profile is supplied.
+- 자원 관리: 배송원 / 차량 / 배송지 tabs. 배송지 is a cumulative destination directory through the selected operating date, independent of that day's route and vehicle assignment. Search names/addresses/regions, paginate alphabetically and show cumulative orders/boxes, order dates and registered tips. Do not show route sequence, live delivery status or ETA in this directory. Use the supplied buyer/address/detail/coordinate identity across dates without exposing member numbers or internal IDs. Missing cumulative data has its own empty/error state, never a daily-order substitute. Driver and vehicle tabs retain dated assignment/progress metrics and name/address/box lists linking to delivery management. Held deliveries remain in remaining workload. Unknown tendencies, evaluations, main areas and tips stay unregistered; profile candidates remain in docs/driver-profile-candidates.md.
 - 배송 순서 관리 opens the existing route editor directly in edit mode within 배송 관리, without an additional edit-button step. Re-entry preserves any existing draft, preserving draft/save/cancel/protected-stop/stale-save behavior. Cancel discards unsaved edits and returns to records. Reset discards only unsaved edits while staying in the editor. Save stays in edit mode after acknowledgment and rebases the draft on the saved order. No separate back-to-records button. Synthetic resources never open live V1 execution commands.
 - Customer and driver: shared header with viewer switching, no left operator menu. Use the full available page width while preserving the phone frame, right detail and responsive mobile body.
 - Driver: same authenticated simulation, selected live destination and ordered stops. Keep current/selected delivery distinct and disable scenario changes for synthetic vehicles.
@@ -60,6 +63,7 @@
 - Desktop header56px; at <=860px brand row44px + viewer row44px + border1px. Operator-only left rail92px/72px narrow. Content title begins24px below desktop header,20px narrow; no redundant operator eyebrow. Delivery metadata uses stacked rows, label64px + gap12px + flexible value, baseline aligned and padding12px 0.
 - Operator cards use compact 14–20px headers and 40–44px actions. The vehicle workload summary groups remaining destinations, boxes and supplied duration; running facts use label/value rows. Keep current-stop facts distinct from the expanded historical destination. Do not force equal widths that wrap labels.
 - Customer and driver phone maps zoom with the ordinary wheel without a modifier-key instruction screen. Driver route editing still locks map zoom.
+- Dispatch source map exposes a `생략 보기 / 전체 핀 보기` switch, defaulting to 생략 보기. 생략 보기 preserves stable low-zoom thinning and shows every individual pin at zoom14. 전체 핀 보기 bypasses zoom/density hiding and its hit-test exclusions. Both modes preserve selected-vehicle foreground pins, other-vehicle50% opacity, original coordinates and current camera. Keep the chosen mode across date/vehicle updates within the mounted screen; never create number clusters.
 - Dispatch and control reuse the DSV/OFM map, collapsed attribution and Command/Control-wheel guidance. Dispatch shows all registered orders; control shows selected-vehicle remaining stops with truthful position provenance.
 - Delivery rows are 44px single lines on desktop. Arrival and completion share one outer border and one internal divider; responsive stacking must not double or break that border.
 - Delivery tables give vehicle number and driver separate fixed-width columns of 140px and 90px; the address absorbs extra width. Page descriptions use natural sentences without decorative middle-dot separators. Preserve dots within geographic names such as 송파·강남.
@@ -193,3 +197,46 @@
 - The current destination shows separate refrigerator, doorstep, indoor and handoff SVG symbols, with request labels as accessible names and tooltips. Remove the visible ‘예시 요청’ wording and generic request count from the driver viewer.
 - Driver detail and photo-confirmation views retain readable request labels and required checkboxes under ‘고객 요청’, without the source badge. Control retains the source badge, and source metadata stays `example`.
 - Use 44px centered icon buttons with 20px SVGs and the existing request colors. Clicking opens the existing driver sheet with only that request and the destination name; read-only display never marks the requirement fulfilled. S6 demonstrates indoor placement; keep S4's two required requests and S5's explicit empty state.
+
+## Dated source data on dispatch (2026-09-16)
+- The operating baseline is fixed at 2026-09-16. Map Wednesday 2025-09-17 source data to that day and shift all dates by the same 364 days, preserving weekdays and original sourceDate metadata internally. A small date catalog and one daily payload keep the year-sized source out of the browser.
+- Preserve the left assignment list and full map. Source driver labels define provisional groups when vehicle identifiers are absent; state the missing vehicle/time data. Every valid order coordinate remains represented, including overlaps, and selected-group markers draw above the rest.
+- Use the existing MapLibre WebGL sources/layers and DSV pin asset for dense points. At overview zooms, show a stable, spaced subset of individual pins; at zoom 14 and above show every individual order. No clusters, sampling, synthetic order coordinates or straight route substitutes. Supply keyboard-accessible order search/list alongside the map, and expose coincident orders individually on map click.
+- Show the actual SHP boundaries with restrained fill and clear selected boundary. A boundary is not an editable dispatch assignment. Loading, unavailable dates, conversion failures and unmapped region codes have explicit states.
+- Source imports now supply all combined viewers under the confirmed all-viewer scope below. Raw data and generated personal data stay in the ignored local data directory behind authentication. Legacy V1 simulation remains separate.
+- Implementation scope and evidence: `docs/vehicle-operations-redesign-plan.md` section 17.
+
+## Manual dispatch over original data (2026-09-16)
+- Keep original driver labels and order quantities. Missing vehicle plates and capital-area locations use deterministic scenario values; preserve provenance internally while presenting the operating scenario without source/demo badges. These are not live GPS or actual fleet records. No vehicle pins are added to the dispatch map.
+- Original driver groups provide candidate metadata only. Select available drivers, calculate a draft, and publish the entire draft through 전체 배차 전송. 핀배차 moves the selected destination and its same-name/address orders together among selected drivers. Drafts stay out of driver execution. Past dates are read-only. Missing calculation policy and post-publication assignment changes remain blocked until decided.
+- Share date-scoped assignment overrides and local operational state in the server process. Original CSV, coordinates, quantities and legacy V1 commands remain unchanged. Cancellation does not assign. No external dispatch success, capacity check or ETA calculation is fabricated.
+- Details and verification are recorded in plan sections 17–18 and docs/dated-dispatch-data.md.
+
+## All viewers use actual source orders (2026-09-16)
+- Dispatch, control, resources, driver and customer viewers share the selected operating date and real order/driver identities. Local progress/completion controls are explicitly approved; their events are current local actions, not imported historic timing.
+- Use a representative readable real route as the default phone context. Preserve valid order selections and date in viewer links. Maps use real order coordinates without invented road routes.
+- Source lacks product lines, customer requests, GPS and ETA inputs. Show unavailable values. Generated plates/vehicle positions retain internal provenance and cannot drive support rankings. No fake historical start/end times.
+- Driver history shows original dated assignments for the same original driver. Local source operational state lasts for the server process and is not a persistent operation system. Plan section 19 defines implementation and verification.
+
+## Operating calendar and wording (2026-09-16)
+- Operating and dispatch date controls use the shared styled calendar popup instead of the browser date picker. Keep date and weekday together in the trigger (`2026.09.17 목`); remove the total-date-count/date-range line and standalone weekday. Show month navigation, selected day and unavailable dates; support keyboard navigation, Escape, outside dismissal and focus return. Month browsing alone never changes the operating day. Preserve previous/next available dispatch-day actions and date-linked state. The handset work-history calendar is outside this toolbar change.
+- Latest user decision takes precedence over source badges: the product assumes operation on **2026.09.16** and uses “운영일”, “배차”, “배송 현황”, and “근무 이력”. Remove source/local/demo explanations from source-connected product views.
+- Preserve the real input dates in generated metadata; shifted dates address day APIs, links, control and driver history consistently. The underlying order identities, quantities, assignments, coordinates and weekday patterns remain unchanged.
+- Unknown GPS/ETA, product detail and customer requests remain unavailable. This presentation change does not connect external instructions, photo storage, or permanent history.
+- Driver map numbers use an explicit 10px grid centered in the pin head, line-height 1 and tabular numerals. Keep the 22×26px half-size pin and exact coordinates.
+
+## Dispatch map density by zoom (2026-09-16)
+- Use fixed geographic cells to choose stable visible pins per zoom level. Panning and base-map labels must not change the chosen pins. Use fully opaque pins at each visibility level, with every pin visible at zoom 14. Do not vary opacity with fractional zoom. While a vehicle is selected, show other pins at 50% opacity and selected vehicle/order pins at 100%; restore full opacity when selection clears, without fade effects. Do not create count circles, clusters, or aggregate click actions. Retain every order and its exact position in the source.
+- Selected vehicle/order pins use their existing slightly larger size and foreground order, with no white circle halos. All selected-vehicle pins bypass zoom visibility limits. Preserve exact coordinates, total counts and the complete order list. Keep existing Cmd/Control wheel guidance and real boundaries.
+
+
+## Fixed regions and flexible subregion assignments (2026-09-16)
+- The new SHP explicitly provides 72 parent regions (`PARENT_ID`) and 209 subregions (`SUB_ID`). Keep fixed boundary definitions separate from dated vehicle assignments. Region counts are not vehicle counts.
+- Product direction: retain fixed regions and use their subregions as units to add to or remove from a vehicle's assigned area as workload changes. This does not authorize automatic boundary generation or deletion.
+- The 75-box reference is a planning assumption, not a hard capacity. The user confirmed approximately 86 vehicles includes additional and reserve vehicles, distinct from the roughly 82 vehicles implied by box volume alone. Calculate dated workload from actual order quantities; the new SHP's BOX_MEAN matches row counts per day.
+- This step documents the hierarchy and validates source geometry/order membership. Live UI and region assignment commands remain unchanged. See plan section 23 for evidence and remaining command rules.
+
+- Clicking a different vehicle only selects it and preserves the camera. Clicking the already selected vehicle fits all its mapped deliveries; the same two-step interaction applies to all vehicles. No double-click timing requirement. Routine data refreshes preserve the camera. Keep max zoom15 and existing map padding.
+
+## Compact dispatch vehicle list (2026-09-16)
+- Source-backed vehicle rows use two lines: driver/plate, then region with order/box counts. Target a 52px row and 44px single-line section heading while retaining existing row text sizes. Keep complete values accessible and show full truncated labels in tooltips. Preserve sorting, scrolling, first-click selection and selected-vehicle-click zoom.

@@ -16,11 +16,11 @@ export function vehicleOperations(data) {
   const liveVehicleIds = vehicles.filter(vehicle => vehicle.live).map(vehicle => vehicle.id);
   return vehicles.map(vehicle => {
     const deliveries = groups.get(vehicle.id) || [];
-    const liveTiming = data?.kpi?.vehicleTiming;
+    const liveTiming = data?.vehicleStates?.[vehicle.id]?.timing ?? data?.kpi?.vehicleTiming;
     const timingOwnerMatches = liveTiming?.vehicleId
       ? liveTiming.vehicleId === vehicle.id
       : liveVehicleIds.length === 1 && liveVehicleIds[0] === vehicle.id;
-    const timing = vehicle.live && liveTiming?.source === 'simulation' && timingOwnerMatches
+    const timing = !data?.sourceData && vehicle.live && liveTiming?.source === 'simulation' && timingOwnerMatches
       ? liveTiming : null;
     const liveOwnerMatches = liveTiming?.source === 'simulation'
       ? timingOwnerMatches : liveVehicleIds.length === 1 && liveVehicleIds[0] === vehicle.id;
@@ -38,7 +38,7 @@ export function vehicleOperations(data) {
       remainingMinutes: Number.isFinite(timing?.remainingSeconds) ? Math.round(timing.remainingSeconds / 60) : null,
       durationMinutes: Number.isFinite(timing?.durationSeconds) ? Math.round(timing.durationSeconds / 60) : null,
       completionEtaMs: Number.isFinite(timing?.completionMs) ? timing.completionMs : null,
-      lastArrivalEta: vehicle.live && liveOwnerMatches && /^\d{2}:\d{2}$/.test(data?.kpi?.finishEta || '')
+      lastArrivalEta: !data?.sourceData && vehicle.live && liveOwnerMatches && /^\d{2}:\d{2}$/.test(data?.kpi?.finishEta || '')
         ? data.kpi.finishEta : null,
     };
   });
@@ -75,6 +75,10 @@ export function resolveControlVehicle(rows, vehicleId, selectedId) {
   return rows.find(row => row.vehicle.id === vehicleId)
     ?? rows.find(row => row.deliveries.some(stop => stop.id === selectedId))
     ?? rows[0] ?? null;
+}
+
+export function resolveDefaultControlVehicle(data, rows, vehicleId, selectedId) {
+  return resolveControlVehicle(rows, vehicleId ?? data?.sourceData?.defaultVehicleId, selectedId);
 }
 
 export function resolveControlDelivery(row, selectedId) {
@@ -145,6 +149,20 @@ export function deliveryRecords(data, stop, filter = 'all') {
 }
 
 export function controlPosition(data, row) {
+  if (data?.sourceData && row?.vehicle?.id) {
+    const stateTruck = data.vehicleStates?.[row.vehicle.id]?.truck;
+    const location = row.vehicle.location;
+    const coordinates = Number.isFinite(stateTruck?.lng) && Number.isFinite(stateTruck?.lat)
+      ? [stateTruck.lng, stateTruck.lat] : location?.coordinates;
+    if (!Array.isArray(coordinates) || coordinates.length !== 2 || !coordinates.every(Number.isFinite)
+      || Math.abs(coordinates[0]) > 180 || Math.abs(coordinates[1]) > 90) return null;
+    const label = String(location?.label ?? '').replace(/\s*예시\s*/g, ' ').replace(/\s+/g, ' ').trim();
+    return {
+      coordinates: [...coordinates],
+      source: 'demo',
+      label: label || '차량 기준 위치',
+    };
+  }
   const truck = data?.truck;
   if (!row?.vehicle.live || row.vehicle.id !== data?.vehicle?.id ||
       !Number.isFinite(truck?.lng) || !Number.isFinite(truck?.lat) ||

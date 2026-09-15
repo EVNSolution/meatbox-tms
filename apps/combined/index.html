@@ -35,24 +35,7 @@
       <div id="live-pages" hidden>
         <section id="page-deliveries" class="page-view view-content" data-page="deliveries" aria-label="자원 관리">
           <div id="resource-management"></div>
-          <div class="deliveries-layout" id="resource-destinations">
-            <section class="panel delivery-list-panel" aria-labelledby="delivery-list-heading">
-              <div class="panel-heading"><h2 id="delivery-list-heading">배송지</h2><span id="delivery-count" class="muted"></span></div>
-              <div class="list-toolbar">
-                <label class="field"><span>배송 검색</span><span class="search-control"><span data-field-icon="search"></span><input type="search" id="delivery-search" placeholder="정차지·주소 검색" autocomplete="off"></span></label>
-                <label class="field"><span>차량</span><select id="delivery-vehicle"><option value="all">전체 차량</option></select></label>
-                <label class="field"><span>배송 상태</span><select id="delivery-status"><option value="all">전체 상태</option><option value="pending">대기</option><option value="current">배송 중</option><option value="done">완료</option><option value="skipped">보류</option></select></label>
-                <button type="button" class="button subtle" id="clear-filters">초기화</button>
-              </div>
-              <div class="table-scroll fleet-table-scroll" role="region" aria-label="배송 목록 표" tabindex="0"><table class="delivery-table fleet-delivery-table"><caption class="sr-only">차량별 전체 배송 목록</caption><thead><tr><th scope="col">차량번호</th><th scope="col">배송원</th><th scope="col">순서</th><th scope="col">배송지</th><th scope="col">주소</th><th scope="col">박스</th><th scope="col">상태</th><th scope="col">운영 ETA</th><th scope="col">고객 안내</th><th scope="col">도착</th><th scope="col">완료</th></tr></thead><tbody id="delivery-rows"></tbody></table></div>
-              <div class="empty-state" id="delivery-empty" hidden><strong>조회 결과가 없습니다.</strong><p>검색어나 상태 조건을 바꿔 주세요.</p></div>
-              <nav class="delivery-pagination" aria-label="배송 목록 페이지">
-                <p id="delivery-range" class="muted" aria-live="polite"></p>
-                <div><button type="button" class="button subtle" id="delivery-previous">이전</button><span id="delivery-page" aria-live="polite"></span><button type="button" class="button subtle" id="delivery-next">다음</button></div>
-              </nav>
-            </section>
-            <aside class="panel delivery-selection" id="delivery-selection" aria-label="선택 배송 요약"></aside>
-          </div>
+          <div id="resource-destinations"></div>
         </section>
         <section id="page-orders" class="page-view view-content" data-page="orders" aria-label="배차 관리" hidden>
           <div id="order-planning"></div>

@@ -43,15 +43,21 @@ export function resourceManagementModel(data, query = '') {
     if (deliveriesByVehicle.has(delivery.vehicleId)) deliveriesByVehicle.get(delivery.vehicleId).push(delivery);
   }
   const needle = String(query).trim().toLocaleLowerCase('ko-KR');
+  const sourceDate = data?.sourceData?.date ?? null;
   const resources = vehicles.map(vehicle => {
     const assigned = deliveries === null ? null : deliveriesByVehicle.get(vehicle.id);
+    const originRegions = [...new Set((assigned || []).map(delivery => delivery.regionName).filter(Boolean))];
+    if (!originRegions.length && String(vehicle.region ?? '').trim()) originRegions.push(String(vehicle.region).trim());
     return {
       id: vehicle.id,
       vehicle,
       deliveries: assigned,
       summary: assignedSummary(assigned),
       progress: progressSummary(assigned),
-      searchText: [vehicle.id, vehicle.plate, vehicle.driver, vehicle.region, ...(assigned || []).flatMap(delivery => [delivery.id, delivery.name, delivery.address])]
+      sourceDate,
+      sourceMode: Boolean(data?.sourceData),
+      originRegions,
+      searchText: [vehicle.id, vehicle.plate, vehicle.driver, vehicle.region, ...originRegions, ...(assigned || []).flatMap(delivery => [delivery.id, delivery.name, delivery.address, delivery.orderNumber])]
         .map(value => String(value ?? '').toLocaleLowerCase('ko-KR')).join(' '),
     };
   });
@@ -87,8 +93,8 @@ function assignmentList(resource) {
   if (resource.deliveries === null) return '<p class="resource-empty">배정 배송지 데이터가 연결되지 않았습니다.</p>';
   if (!resource.deliveries.length) return '<p class="resource-empty">배정된 배송지가 없습니다.</p>';
   return `<ul class="resource-assignment-list">${resource.deliveries.map(delivery => `
-    <li><button type="button" data-resource-delivery="${escapeHtml(delivery.id)}">
-      <span><strong>${escapeHtml(displayText(delivery.name))}</strong><small>ID ${escapeHtml(delivery.id)}, ${escapeHtml(displayText(delivery.address))}</small></span>
+    <li><button type="button" data-resource-delivery="${escapeHtml(delivery.id)}" aria-label="${escapeHtml(displayText(delivery.name))} 배송 관리">
+      <span><strong title="${escapeHtml(displayText(delivery.name))}">${escapeHtml(displayText(delivery.name))}</strong><small title="${escapeHtml(displayText(delivery.address))}">${escapeHtml(displayText(delivery.address))}</small></span>
       <span>${escapeHtml(Number.isFinite(delivery.boxes) && delivery.boxes >= 0 ? `${delivery.boxes}박스` : '박스 미등록')}</span>
       ${referenceIcon('next')}
     </button></li>`).join('')}</ul>`;
@@ -99,21 +105,27 @@ function resourceDetail(resource, kind) {
   const vehicle = resource.vehicle;
   const title = kind === 'drivers' ? displayText(vehicle.driver) : displayText(vehicle.plate);
   const eyebrow = kind === 'drivers' ? '차량별 배정 배송원' : '차량';
+  const sourceRegions = resource.originRegions.length ? resource.originRegions.join(', ') : '미등록';
+  const locationText = String(vehicle.location?.label ?? '').trim();
+  const operationLocationText = locationText.replace(/\s*예시\s*/g, ' ').replace(/\s+/g, ' ').trim() || '미등록';
   const unknownFields = kind === 'drivers' ? `
     <div><dt>성향</dt><dd>미등록</dd></div>
-    <div><dt>메인 권역</dt><dd>미등록</dd></div>` : `
-    <div><dt>배정 권역</dt><dd>${escapeHtml(displayText(vehicle.region))}</dd></div>
-    <div><dt>운영 상태</dt><dd>${escapeHtml(displayText(vehicle.status))}</dd></div>`;
+    <div><dt>메인 권역</dt><dd>미등록</dd></div>
+    <div><dt>배송 권역</dt><dd>${escapeHtml(sourceRegions)}</dd></div>` : `
+    <div><dt>배송 권역</dt><dd>${escapeHtml(sourceRegions)}</dd></div>
+    <div><dt>운영 상태</dt><dd>${resource.sourceMode ? resource.summary.destinationCount ? '배차 운영' : '배정 대기' : escapeHtml(displayText(vehicle.status))}</dd></div>
+    <div><dt>차량 위치</dt><dd>${resource.sourceMode ? escapeHtml(operationLocationText) : '미등록'}</dd></div>`;
+  const metricTitle = resource.sourceDate ? `${resource.sourceDate} 배송 지표` : '당일 배송 지표';
   return `<div class="resource-detail-body">
     <p class="eyebrow">${eyebrow}</p>
-    <div class="resource-detail-heading"><div><h3>${escapeHtml(title)}</h3><p>${kind === 'drivers' ? `${escapeHtml(displayText(vehicle.plate))} 차량 배정. 배송원 고유 ID 미등록` : `차량 ID ${escapeHtml(vehicle.id)}`}</p></div><span class="resource-detail-icon">${referenceIcon(kind === 'drivers' ? 'user' : 'truck')}</span></div>
+    <div class="resource-detail-heading"><div><h3>${escapeHtml(title)}</h3><p>${kind === 'drivers' ? `${escapeHtml(displayText(vehicle.plate))} 차량 배정` : `배송원 ${escapeHtml(displayText(vehicle.driver))}`}</p></div><span class="resource-detail-icon">${referenceIcon(kind === 'drivers' ? 'user' : 'truck')}</span></div>
     <dl class="resource-facts">
       <div><dt>배정 배송지</dt><dd>${escapeHtml(formatCount(resource.summary.destinationCount, '곳'))}</dd></div>
       <div><dt>배정 박스</dt><dd>${escapeHtml(formatCount(resource.summary.boxCount, '박스'))}</dd></div>
       ${unknownFields}
     </dl>
-    <section class="resource-progress" aria-label="당일 배송 지표">
-      <h4>당일 배송 지표</h4>
+    <section class="resource-progress" aria-label="${escapeHtml(metricTitle)}">
+      <h4>${escapeHtml(metricTitle)}</h4>
       <dl>
         <div><dt>완료</dt><dd><strong>${escapeHtml(formatCount(resource.progress.completed.destinationCount, '곳'))}</strong><span>${escapeHtml(formatCount(resource.progress.completed.boxCount, '박스'))}</span></dd></div>
         <div><dt>잔여</dt><dd><strong>${escapeHtml(formatCount(resource.progress.remaining.destinationCount, '곳'))}</strong><span>${escapeHtml(formatCount(resource.progress.remaining.boxCount, '박스'))}</span></dd></div>
@@ -121,8 +133,7 @@ function resourceDetail(resource, kind) {
       </dl>
       <p>보류 배송은 잔여에 포함됩니다.</p>
     </section>
-    <button type="button" class="button primary resource-view-assignments" data-resource-assignments="${escapeHtml(vehicle.id)}">배정 배송지 조회</button>
-    <section class="resource-assignments" aria-label="${escapeHtml(title)} 배정 배송지"><h4>연결된 배송지</h4>${assignmentList(resource)}</section>
+    <section class="resource-assignments" aria-label="${escapeHtml(title)} 배정 배송지"><h4>당일 배정 주문</h4><p class="resource-assignment-hint">주문을 선택하면 배송 관제로 이동합니다.</p>${assignmentList(resource)}</section>
   </div>`;
 }
 
@@ -137,12 +148,12 @@ export function mountResourceManagement({ element, destinationElement, onSelectD
       <button type="button" role="tab" id="resource-tab-destinations" aria-selected="true" aria-controls="${escapeHtml(destinationId)}" data-resource-tab="destinations">${referenceIcon('location')}<span>배송지</span></button>
     </div>
     <section class="resource-panel" id="resource-panel-drivers" role="tabpanel" aria-labelledby="resource-tab-drivers" hidden>
-      <div class="resource-panel-heading"><div><h2>배송원</h2><p>같은 이름도 배정 차량별로 구분합니다.</p></div><span data-resource-driver-count></span></div>
+      <div class="resource-panel-heading"><div><h2>배송원</h2><p>배송원별 차량과 당일 배정 내역을 확인합니다.</p></div><span data-resource-driver-count></span></div>
       <label class="resource-search"><span class="sr-only">배송원 검색</span>${referenceIcon('search')}<input type="search" data-resource-search="drivers" placeholder="배송원, 차량, 배송지 검색" autocomplete="off"></label>
       <div class="resource-split"><ul class="resource-list" data-resource-list="drivers"></ul><aside class="resource-detail" data-resource-detail="drivers"></aside></div>
     </section>
     <section class="resource-panel" id="resource-panel-vehicles" role="tabpanel" aria-labelledby="resource-tab-vehicles" hidden>
-      <div class="resource-panel-heading"><div><h2>차량</h2><p>차량 ID 기준 배정 배송지와 박스를 조회합니다.</p></div><span data-resource-vehicle-count></span></div>
+      <div class="resource-panel-heading"><div><h2>차량</h2><p>차량별 배정 물량과 운행 정보를 확인합니다.</p></div><span data-resource-vehicle-count></span></div>
       <label class="resource-search"><span class="sr-only">차량 검색</span>${referenceIcon('search')}<input type="search" data-resource-search="vehicles" placeholder="차량, 배송원, 배송지 검색" autocomplete="off"></label>
       <div class="resource-split"><ul class="resource-list" data-resource-list="vehicles"></ul><aside class="resource-detail" data-resource-detail="vehicles"></aside></div>
     </section>
@@ -189,7 +200,10 @@ export function mountResourceManagement({ element, destinationElement, onSelectD
 
   function renderResources(kind) {
     const model = resourceManagementModel(data, queries[kind]);
-    if (!model.resources.some(resource => resource.id === selectedVehicleId)) selectedVehicleId = model.resources[0]?.id || null;
+    if (!model.resources.some(resource => resource.id === selectedVehicleId)) {
+      selectedVehicleId = model.resources.find(resource => resource.id === data?.sourceData?.defaultVehicleId)?.id
+        ?? model.resources[0]?.id ?? null;
+    }
     const selected = model.resources.find(resource => resource.id === selectedVehicleId) || null;
     const listMarkup = resourceList(model.visible, selectedVehicleId, kind);
     const detailMarkup = resourceDetail(selected, kind);
@@ -209,16 +223,9 @@ export function mountResourceManagement({ element, destinationElement, onSelectD
       renderResources(activeTab);
       return;
     }
-    const assignments = event.target.closest?.('[data-resource-assignments]');
-    if (assignments) {
-      onSelectVehicle(assignments.dataset.resourceAssignments);
-      selectTab('destinations', true);
-      return;
-    }
     const delivery = event.target.closest?.('[data-resource-delivery]');
     if (delivery) {
       onSelectDelivery(delivery.dataset.resourceDelivery);
-      selectTab('destinations', true);
     }
   }
 

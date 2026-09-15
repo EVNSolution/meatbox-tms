@@ -27,6 +27,12 @@ class FakeNode {
 globalThis.document = { activeElement: null, createElement: () => new FakeNode() };
 globalThis.CSS = { escape: value => String(value) };
 globalThis.ResizeObserver = class { observe() {} disconnect() {} };
+globalThis.maplibregl = { Marker: class {
+  constructor({ element }) { this.element = element; }
+  setLngLat(coordinates) { this.coordinates = coordinates; return this; }
+  addTo() { return this; }
+  remove() {}
+} };
 
 function fixture() {
   const nodes = new Map();
@@ -103,6 +109,50 @@ test('정상 위치 수신 뒤에만 미등록 수를 확정하고 잘못된 좌
   await flush();
   assert.deepEqual(marked, [['V2-S1', [127.1, 37.5]]]);
   assert.match(node('[data-control-map-note]').textContent, /남은 배송지 1곳 표시, 위치 미등록 2곳/);
+  control.destroy();
+});
+
+test('운영 주문 좌표를 직접 쓰고 기본 차량을 선택하며 GPS 미수신을 구분한다', () => {
+  const { element, node } = fixture();
+  let routeLoads = 0;
+  const marked = [];
+  const source = {
+    sourceData: { date: '2026-09-16', defaultVehicleId: 'real-b', defaultStopId: 'real-b-1' },
+    fleetVehicles: [
+      { id: 'real-a', plate: '11가 1111', driver: '실제기사A', live: true, location: { coordinates: [127, 37.5], label: '서울 예시 위치', source: 'demo' } },
+      { id: 'real-b', plate: '22나 2222', driver: '실제기사B', live: true, location: { coordinates: [127.1, 37.6], label: '경기 예시 위치', source: 'demo' } },
+    ],
+    fleetDeliveries: [
+      { id: 'real-a-1', vehicleId: 'real-a', name: '실제 주문 A', boxes: 3, status: 'done', coordinates: [126.9, 37.4] },
+      { id: 'real-b-1', vehicleId: 'real-b', name: '실제 주문 B', boxes: 7, status: 'current', coordinates: [127.2, 37.7] },
+      { id: 'real-b-2', vehicleId: 'real-b', name: '좌표 없음', boxes: 2, status: 'pending', coordinates: null },
+    ],
+    events: [],
+  };
+  const control = mountVehicleControl({
+    element, mapFactory,
+    loadRouteData() { routeLoads += 1; return Promise.reject(new Error('must not load')); },
+    markerFactory: (_map, delivery, coordinates) => {
+      marked.push([delivery.id, coordinates]);
+      return { element: new FakeNode(), remove() {} };
+    },
+    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+  });
+  const selected = control.update(source, null, null);
+  assert.equal(selected.vehicle.id, 'real-b');
+  assert.equal(routeLoads, 0);
+  assert.deepEqual(marked, [['real-b-1', [127.2, 37.7]]]);
+  assert.match(node('[data-control-summary]').innerHTML, /실제기사B/);
+  assert.match(node('[data-control-summary]').innerHTML, /운영 현황/);
+  assert.match(node('[data-control-summary]').innerHTML, /2026-09-16 운영 기준/);
+  assert.doesNotMatch(node('[data-control-summary]').innerHTML, /원본|로컬|시연|데모|예시/);
+  assert.match(node('[data-control-map-note]').textContent, /남은 배송지 1곳 표시, 위치 미등록 1곳/);
+  assert.match(node('[data-control-map-note]').textContent, /차량 기준 위치 표시.*실시간 GPS 미수신/);
+  assert.doesNotMatch(node('[data-control-map-note]').textContent, /원본|로컬|시연|데모|예시/);
+  node('[data-control-support]').listeners.click();
+  assert.match(node('[data-support-data]').innerHTML, /차량 운영 현황/);
+  assert.match(node('[data-support-data]').innerHTML, /완료 시각·GPS·ETA가 미수신/);
+  assert.doesNotMatch(node('[data-support-data]').innerHTML, /원본|로컬|시연|데모|예시/);
   control.destroy();
 });
 

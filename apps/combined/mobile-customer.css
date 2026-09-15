@@ -40,7 +40,8 @@ h1 { margin: 8px 0 18px; font-size: 28px; line-height: 1.3; letter-spacing: -1px
 .eta-hero .big { min-width: 0; font-size: clamp(16px, 8.5cqi, 28px); font-weight: 700; line-height: 1.35; letter-spacing: -.06em; margin: 0; overflow-wrap: anywhere; }
 .eta-time-row .pill { white-space: nowrap; font-size: 10px; padding: 4px 6px; }
 .eta-details { display: grid; gap: 4px; margin: 0; font-size: 12px; line-height: 1.5; }
-.eta-details > div { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 8px; }
+.eta-details > div { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; }
+.eta-details > div[hidden] { display: none; }
 .eta-details dt { color: var(--ink-3); }
 .eta-details dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
 .eta-delta { display: none; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 4px 8px; margin-top: 12px; }

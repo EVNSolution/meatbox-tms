@@ -44,7 +44,7 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   for (const route of ['/', '/scenario/', '/scenario/present', '/scenario/common.js', '/ui-layout/styles.css', '/combined/app.mjs', '/combined/', '/combined/mobile-customer.html?id=S5', '/combined/mobile-customer.css', '/combined/map-preview.css', '/combined/demo-shell.mjs', '/combined/simulation-client.mjs', '/combined/driver.html', '/combined/driver.mjs', '/combined/assets/meatbox-logo.svg']) {
     const res = await get(route); assert.equal(res.status, 302, route); assert.match(res.headers.get('location'), /^\/login\?next=/);
   }
-  for (const route of ['/api/session', '/scenario/api/route-data']) assert.equal((await get(route)).status, 401, route);
+  for (const route of ['/api/session', '/scenario/api/route-data', '/api/dispatch-data/manifest', '/api/dispatch-data/destinations?date=2026-09-17', '/api/dispatch-data/regions', '/api/dispatch-data/days/2025-09-12']) assert.equal((await get(route)).status, 401, route);
   assert.equal((await get('/login')).status, 200);
   assert.equal((await get('/dev/register')).status, 200);
   const validator = await get('/portal-validation.js');

@@ -174,13 +174,11 @@ try {
   await page.locator('[data-resource-search="drivers"]').fill('예시 배송원 002');
   await page.locator('[data-resource-list="drivers"] [data-resource-select="V2"]').click();
   await matches('[data-resource-detail="drivers"]', /메인 권역[\s\S]*미등록/);
-  await page.locator('[data-resource-detail="drivers"] [data-resource-assignments]').click();
-  await matches('#delivery-count', /35 \/ 4523건/);
-  check('Driver assignment links target the exact vehicle');
+  check('Driver assignment details omit internal IDs', !/\bID\b|V2-S1/.test(await page.locator('[data-resource-detail="drivers"]').innerText()));
   demo.sim.setDeliveryTip('V2-S1', '자원 연결 검증 팁');
-  await page.locator('[data-select="V2-S1"]').click();
-  await matches('#delivery-selection', /자원 연결 검증 팁/);
-  check('Resource destination tips match their ID');
+  await page.locator('[data-resource-delivery="V2-S1"]').click();
+  await page.waitForURL('**#/control/manage');
+  check('Resource assignment links open delivery management', await page.locator('#page-control').isVisible());
 
   demo.sim.setScenario('arrived', 'S1');
   const driver = await makePage();

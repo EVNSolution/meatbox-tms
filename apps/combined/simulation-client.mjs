@@ -1,4 +1,5 @@
 import { createStateReceiver } from './state-frames.mjs';
+import { connectSourceOperations } from './source-client.mjs';
 
 // Both viewers use one connection per page, including the original customer renderer.
 export function connectSimulation({ onState, onStatus, onError }) {
@@ -7,6 +8,8 @@ export function connectSimulation({ onState, onStatus, onError }) {
   let boot;
   let reconnectAttempt = 0;
   let stopped = false;
+  let source = null;
+  let sourceChecked = false;
   const login = () => location.replace('/login?next=' + encodeURIComponent(location.pathname + location.search + location.hash));
 
   function reconnect() {
@@ -22,6 +25,17 @@ export function connectSimulation({ onState, onStatus, onError }) {
       if (stopped) return;
       if (response.status === 401) return login();
       if (!response.ok) throw new Error('세션 확인 실패');
+      if (!sourceChecked) {
+        const available = await fetch('/api/dispatch-data/manifest', { headers: { accept: 'application/json' } });
+        if (stopped) return;
+        if (available.status === 401) return login();
+        if (available.ok) {
+          source = connectSourceOperations({ manifest: await available.json(), onState, onStatus, onError, login });
+          return;
+        }
+        if (available.status !== 404) throw new Error('원본 주문 자료 확인 실패');
+        sourceChecked = true;
+      }
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const receiver = createStateReceiver();
       socket = new WebSocket(`${protocol}//${location.host}/ws/simulation`, 'meatbox-state-v2');
@@ -56,9 +70,11 @@ export function connectSimulation({ onState, onStatus, onError }) {
   connect();
   return {
     send(type, extra = {}) {
+      if (source) return source.send(type, extra);
       if (socket?.readyState !== WebSocket.OPEN) { onError('연결이 복구된 뒤 진행해 주세요.'); return; }
       socket.send(JSON.stringify({ type, ...extra }));
     },
-    close() { stopped = true; clearTimeout(timer); socket?.close(); },
+    selectDate(date) { return source ? source.selectDate(date) : Promise.resolve(null); },
+    close() { stopped = true; clearTimeout(timer); socket?.close(); source?.close(); },
   };
 }

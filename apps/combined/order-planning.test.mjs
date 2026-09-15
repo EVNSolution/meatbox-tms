@@ -11,11 +11,26 @@ class FakeNode {
   showModal() { this.open = true; }
   close() { this.open = false; this.listeners.close?.(); }
   focus() { this.focused = true; }
+  matches() { return false; }
 }
 
 function fixture() {
-  const names = ['vehicle', 'map-canvas', 'map-layer', 'map-status', 'map-status-text', 'map-retry', 'map-count', 'selection', 'map-summary', 'scenario-dialog', 'scenario-open', 'scenario-close', 'volume-range', 'volume-number', 'volume-display', 'baseline', 'target', 'total-vehicles', 'total-destinations', 'total-duration', 'timing-note', 'assignments', 'volume-note'];
+  const names = [
+    'vehicle', 'map-canvas', 'map-layer', 'map-status', 'map-status-text', 'map-retry', 'map-count', 'selection', 'map-summary',
+    'scenario-dialog', 'scenario-open', 'scenario-close', 'volume-range', 'volume-number', 'volume-display', 'baseline', 'target',
+    'total-vehicles', 'total-destinations', 'total-duration', 'timing-note', 'assignments', 'volume-note', 'dispatch-actions',
+    'dispatch-all', 'dispatch-pin', 'dispatch-context', 'dispatch-result', 'region-note', 'group-heading', 'group-note', 'map-description',
+    'groups-label', 'orders-label', 'assignment-note', 'region-control', 'list-panel', 'show-regions', 'reassign-dialog', 'reassign-title',
+    'reassign-close', 'reassign-from', 'reassign-target', 'reassign-preview', 'reassign-error', 'reassign-cancel', 'reassign-confirm',
+    'search', 'list', 'list-total', 'page', 'previous', 'next', 'pin-control', 'show-all-pins',
+  ];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
+  nodes['dispatch-actions'].hidden = true;
+  nodes['dispatch-result'].hidden = true;
+  nodes['reassign-error'].hidden = true;
+  nodes['list-panel'].hidden = true;
+  nodes['region-control'].hidden = true;
+  nodes['show-regions'].checked = true;
   const element = new FakeNode();
   element.querySelector = selector => nodes[selector.match(/data-order-([^\]]+)/)?.[1]];
   return { element, nodes };
@@ -38,6 +53,23 @@ const deliveries = [
 const data = { vehicle: vehicles[0], fleetVehicles: vehicles, fleetDeliveries: deliveries };
 const input = (nodes, name, value, type = 'input') => nodes[name].listeners[type]({ target: { value: String(value) } });
 const selectVehicle = (nodes, id) => nodes.vehicle.listeners.click({ target: { closest: () => ({ dataset: { orderVehicleId: id } }) } });
+function importedPlanningData(date = '2025-09-15') {
+  const sourceGroups = [{ id: 'G1', label: '기사 1' }, { id: 'G2', label: '기사 2' }];
+  const sourceOrders = [
+    { id: 'O1', groupId: 'G1', orderNumber: '1001', name: '주문 1', address: '서울 1', regionName: '서울', boxes: 3, coordinates: [127.1, 37.5], zoneIds: ['Z1'] },
+    { id: 'O2', groupId: 'G1', orderNumber: '1002', name: '주문 2', address: '서울 2', regionName: '서울', boxes: 7, coordinates: [127.2, 37.6], zoneIds: ['Z1'] },
+    { id: 'O3', groupId: 'G2', orderNumber: '1003', name: '주문 3', address: '서울 3', regionName: '서울', boxes: 11, coordinates: [127.3, 37.7], zoneIds: ['Z1'] },
+  ];
+  return {
+    dispatchSource: { schemaVersion: 1, date, summary: { orders: 3, boxes: 21 }, groups: sourceGroups, orders: sourceOrders },
+    dispatchRegions: { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { zoneId: 'Z1', label: '서울 권역', quality: 'OK', baseDate: '20250630' } }] },
+    fleetVehicles: [
+      { id: 'G1', driver: '기사 1', plate: '11가 1001', region: '서울', source: 'demo-vehicle', location: { label: '서울 강서 예시 위치', coordinates: [126.85, 37.55], source: 'demo' } },
+      { id: 'G2', driver: '기사 2', plate: '22나 2002', region: '서울', source: 'demo-vehicle', location: { label: '서울 송파 예시 위치', coordinates: [127.1, 37.51], source: 'demo' } },
+    ],
+    fleetDeliveries: sourceOrders.map(item => ({ ...item, originalGroupId: item.groupId, currentGroupId: item.groupId, vehicleId: item.groupId, driver: sourceGroups.find(group => group.id === item.groupId).label })),
+  };
+}
 
 test('입력 물량을 100%로 삼고 80~120%의 합계만 미리 계산한다', () => {
   for (const [percent, targetBoxes] of [[80, 32], [100, 40], [120, 48]]) {
@@ -342,5 +374,235 @@ test('데이터가 바뀌면 새 총량으로 계산하고 비율과 필터를 �
   planning.update({ ...changed, fleetDeliveries: [], deliveries }, 'S1');
   assert.equal(nodes.baseline.textContent, '0박스');
   assert.equal(nodes['volume-range'].disabled, false);
+  planning.destroy();
+});
+
+test('날짜 자료는 모든 주문을 GPU 레이어에 유지하고 선택이 V1 명령으로 전달되지 않는다', () => {
+  const { element, nodes } = fixture();
+  const orders = Array.from({ length: 5000 }, (_, index) => ({ id: `import-${index}`, orderNumber: String(index), name: `주문 ${index}`, vehicleId: index % 2 ? 'group-a' : 'group-b', boxes: 1, coordinates: [127 + (index % 50) / 1000, 37.5], zoneIds: ['zone-a'] }));
+  let routeCalls = 0, legacySelects = 0, picks;
+  const updates = [];
+  const planning = mount({ element }, {
+    loadRouteData: () => { routeCalls++; return { points: [] }; },
+    onSelect: () => { legacySelects++; },
+    layerFactory: (_map, callbacks) => { picks = callbacks.onPick; return { update: value => updates.push(value), destroy() {} }; },
+  });
+  const input = {
+    dispatchSource: { date: '2025-09-12', summary: { orders: 5000, boxes: 5000 } },
+    dispatchRegions: { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { zoneId: 'zone-a', label: '검증 구역', quality: 'REVIEW', baseDate: '20250630' } }] },
+    fleetVehicles: [{ id: 'group-a', driver: '기사 A' }, { id: 'group-b', driver: '기사 B' }], fleetDeliveries: orders,
+  };
+  const before = structuredClone(input);
+  planning.update(input, null);
+  assert.equal(routeCalls, 0);
+  const points = updates.at(-1).points;
+  assert.equal(points.features.length, 5000);
+  assert.equal(updates.at(-1).selectedGroupId, null);
+  selectVehicle(nodes, 'group-a');
+  assert.equal(updates.at(-1).points, points);
+  assert.equal(updates.at(-1).selectedGroupId, 'group-a');
+  assert.equal(nodes['map-canvas'].dataset.orderPointCount, '5000');
+  picks(['import-2', 'import-52']);
+  assert.match(nodes.selection.innerHTML, /이 지점의 주문 2건/);
+  assert.match(nodes.selection.innerHTML, /data-order-overlap/);
+  assert.equal(legacySelects, 1, '차량 선택은 뷰어 연결용으로 전달하되 V1 명령은 만들지 않는다');
+  picks([], { zoneId: 'zone-a' });
+  assert.match(nodes.selection.innerHTML, /내부 주문 5,000건/);
+  assert.match(nodes.selection.innerHTML, /5,000박스/);
+  assert.deepEqual(input, before);
+  planning.destroy();
+});
+
+test('핀배차는 같은 배송지 주문 전체를 초안에서만 이동하고 취소는 유지한다', async () => {
+  const { element, nodes } = fixture();
+  let current = importedPlanningData();
+  current.dispatch = { phase: 'draft', readOnly: false, candidateIds: ['G1', 'G2'] };
+  current.fleetDeliveries = current.fleetDeliveries.map(item => ({ ...item, assignmentUnitId: item.id === 'O3' ? 'D2' : 'D1' }));
+  const original = structuredClone(current);
+  const assignments = [];
+  let picks, legacySelects = 0, planning;
+  const onAssign = ({ orderIds, targetGroupId }) => {
+    assignments.push({ orderIds: [...orderIds], targetGroupId });
+    const moved = new Set(orderIds);
+    const changed = current.fleetDeliveries.filter(item => moved.has(item.id) && item.vehicleId !== targetGroupId);
+    current = {
+      ...current,
+      fleetDeliveries: current.fleetDeliveries.map(item => moved.has(item.id)
+        ? { ...item, currentGroupId: targetGroupId, vehicleId: targetGroupId, driver: current.fleetVehicles.find(vehicle => vehicle.id === targetGroupId).driver }
+        : item),
+    };
+    planning.update(current, null);
+    return { changedCount: changed.length, changedBoxes: changed.reduce((sum, item) => sum + item.boxes, 0), persisted: true };
+  };
+  planning = mount({ element }, {
+    onAssign,
+    onSelect: () => { legacySelects += 1; },
+    layerFactory: (_map, callbacks) => { picks = callbacks.onPick; return { update() {}, destroy() {} }; },
+  });
+  planning.update(current, null);
+  assert.equal(nodes['dispatch-actions'].hidden, false);
+  assert.doesNotMatch(element.innerHTML, /data-order-dispatch-all/);
+  assert.equal(nodes['dispatch-pin'].disabled, true);
+
+  selectVehicle(nodes, 'G1');
+  picks(['O1']);
+  nodes['dispatch-pin'].listeners.click();
+  assert.equal(nodes['reassign-dialog'].open, true);
+  assert.match(nodes['reassign-from'].textContent, /2건.*10박스/);
+  nodes['reassign-target'].value = 'G2'; nodes['reassign-target'].listeners.change();
+  assert.match(nodes['reassign-preview'].textContent, /현재 1건 \/ 11박스 → 배차 후 3건 \/ 21박스/);
+  nodes['reassign-cancel'].listeners.click();
+  assert.equal(nodes['reassign-dialog'].open, false);
+  assert.deepEqual(assignments, []);
+  assert.deepEqual(current, original);
+
+  nodes['dispatch-pin'].listeners.click();
+  nodes['reassign-target'].value = 'G2'; nodes['reassign-target'].listeners.change();
+  await nodes['reassign-confirm'].listeners.click();
+  assert.deepEqual(assignments[0], { orderIds: ['O1', 'O2'], targetGroupId: 'G2' });
+  assert.match(nodes['dispatch-result'].textContent, /2건 \/ 10박스/);
+  assert.deepEqual(current.fleetDeliveries.map(item => [item.id, item.vehicleId]), [['O1', 'G2'], ['O2', 'G2'], ['O3', 'G2']]);
+
+  picks(['O3']);
+  assert.equal(nodes['dispatch-pin'].disabled, false);
+  nodes['dispatch-pin'].listeners.click();
+  assert.match(nodes['reassign-from'].textContent, /1건.*11박스/);
+  nodes['reassign-target'].value = 'G1'; nodes['reassign-target'].listeners.change();
+  assert.match(nodes['reassign-preview'].textContent, /현재 0건 \/ 0박스 → 배차 후 1건 \/ 11박스/);
+  await nodes['reassign-confirm'].listeners.click();
+  assert.deepEqual(assignments[1], { orderIds: ['O3'], targetGroupId: 'G1' });
+  assert.equal(current.fleetDeliveries.find(item => item.id === 'O3').vehicleId, 'G1');
+  assert.equal(legacySelects, 2, '지도 선택만 전달하며 차량 선택은 운행 명령을 만들지 않는다');
+  current.dispatch = { ...current.dispatch, phase: 'published' };
+  planning.update(current, null);
+  assert.equal(nodes['dispatch-pin'].disabled, true);
+  nodes['dispatch-pin'].listeners.click();
+  assert.equal(nodes['reassign-dialog'].open, false);
+  current.dispatch = { ...current.dispatch, phase: 'draft', readOnly: true };
+  planning.update(current, null);
+  assert.equal(nodes['dispatch-pin'].disabled, true);
+  assert.deepEqual(current.dispatchSource, original.dispatchSource);
+  assert.equal(current.fleetVehicles.some(vehicle => vehicle.id === 'V1'), false);
+  planning.destroy();
+});
+
+test('GPU 레이어 오류는 그대로 보이고 재시도와 날짜 변경에서 새 레이어로 복구한다', () => {
+  const { element, nodes } = fixture();
+  const layers = [];
+  let failNext = true;
+  const planning = mount({ element }, {
+    onAssign: () => ({ changedCount: 0, changedBoxes: 0, persisted: false }),
+    layerFactory: (_map, callbacks) => {
+      const layer = {
+        callbacks,
+        destroyed: false,
+        updates: 0,
+        update() {
+          this.updates += 1;
+          if (failNext) { failNext = false; callbacks.onError(new Error('레이어 검증 실패')); }
+        },
+        destroy() { this.destroyed = true; },
+      };
+      layers.push(layer);
+      return layer;
+    },
+  });
+  const first = importedPlanningData('2025-09-15');
+  planning.update(first, null);
+  assert.equal(layers.length, 1);
+  assert.equal(nodes['map-status-text'].textContent, '레이어 검증 실패');
+  assert.equal(nodes['map-retry'].hidden, false);
+  assert.equal(nodes['map-count'].textContent, '지도 사용 불가');
+
+  planning.update({ ...first }, null);
+  assert.equal(layers.length, 1);
+  assert.equal(nodes['map-status-text'].textContent, '레이어 검증 실패');
+  nodes['map-retry'].listeners.click();
+  assert.equal(layers[0].destroyed, true);
+  assert.equal(layers.length, 2);
+  assert.equal(layers[1].updates > 0, true);
+  assert.equal(nodes['map-status'].hidden, true);
+
+  layers[1].callbacks.onError(new Error('두 번째 실패'));
+  assert.equal(nodes['map-status-text'].textContent, '두 번째 실패');
+  planning.update(importedPlanningData('2025-09-16'), null);
+  assert.equal(layers[1].destroyed, true);
+  assert.equal(layers.length, 3);
+  assert.equal(layers[2].updates > 0, true);
+  assert.equal(nodes['map-status'].hidden, true);
+  assert.equal(nodes['map-canvas'].dataset.orderDate, '2025-09-16');
+  planning.destroy();
+});
+
+test('첫 클릭은 선택만 하고 선택 차량 재클릭에만 줌을 맞추며 일반 갱신은 카메라를 유지한다', () => {
+  const { element, nodes } = fixture();
+  const cameras = [];
+  const planning = mount({ element }, {
+    mapFactory: () => ({ resize() {}, remove() {}, fitBounds: (...args) => cameras.push(['bounds', ...args]), jumpTo: value => cameras.push(['point', value]) }),
+    layerFactory: () => ({ update() {}, destroy() {} }),
+  });
+  const input = importedPlanningData();
+  input.fleetVehicles.push({ id: 'G3', driver: '위치 없는 기사' });
+  const before = structuredClone(input);
+  planning.update(input, null);
+  cameras.length = 0;
+  selectVehicle(nodes, 'G1');
+  assert.equal(cameras.length, 0);
+  planning.update(input, null);
+  assert.equal(cameras.length, 0);
+  selectVehicle(nodes, 'G1');
+  assert.deepEqual(cameras[0], ['bounds', [[127.1, 37.5], [127.2, 37.6]], { padding: { top: 72, bottom: 92, left: 48, right: 48 }, maxZoom: 15, duration: 0 }]);
+  planning.update(input, null);
+  assert.equal(cameras.length, 1);
+  selectVehicle(nodes, 'G1');
+  assert.equal(cameras.length, 2);
+  assert.deepEqual(cameras[1], cameras[0]);
+  selectVehicle(nodes, 'G2');
+  assert.equal(cameras.length, 2);
+  selectVehicle(nodes, 'G2');
+  assert.deepEqual(cameras.at(-1), ['point', { center: [127.3, 37.7], zoom: 15 }]);
+  selectVehicle(nodes, 'G3');
+  selectVehicle(nodes, 'G3');
+  assert.equal(cameras.length, 3);
+  selectVehicle(nodes, 'all');
+  assert.equal(cameras.length, 3);
+  selectVehicle(nodes, 'all');
+  assert.deepEqual(cameras.at(-1)[1], [[127.1, 37.5], [127.3, 37.7]]);
+  assert.deepEqual(input, before);
+  assert.equal(nodes['map-canvas'].dataset.orderPointCount, '3');
+  planning.destroy();
+});
+
+test('전체 핀 스위치는 지도와 주문을 유지하고 날짜/차량 변경 뒤에도 선택 모드를 보존한다', () => {
+  const { element, nodes } = fixture();
+  const updates = [], cameras = [];
+  const planning = mount({ element }, {
+    mapFactory: () => ({ resize() {}, remove() {}, fitBounds: (...args) => cameras.push(args), jumpTo: value => cameras.push(value) }),
+    layerFactory: () => ({ update: value => updates.push(value), destroy() {} }),
+  });
+  const input = importedPlanningData();
+  const before = structuredClone(input);
+  planning.update(input, null);
+  const points = updates.at(-1).points;
+  assert.equal(updates.at(-1).showAllPins, false);
+  assert.equal(nodes['pin-control'].hidden, false);
+  cameras.length = 0;
+  nodes['show-all-pins'].listeners.change({ target: { checked: true } });
+  assert.equal(updates.at(-1).showAllPins, true);
+  assert.equal(updates.at(-1).points, points);
+  assert.equal(cameras.length, 0);
+  assert.equal(nodes['map-description'].textContent, '모든 주문 위치를 표시합니다.');
+  selectVehicle(nodes, 'G1');
+  assert.equal(updates.at(-1).showAllPins, true);
+  assert.equal(updates.at(-1).selectedGroupId, 'G1');
+  assert.equal(cameras.length, 0);
+  planning.update(importedPlanningData('2025-09-16'), null);
+  assert.equal(updates.at(-1).showAllPins, true);
+  cameras.length = 0;
+  nodes['show-all-pins'].listeners.change({ target: { checked: false } });
+  assert.equal(updates.at(-1).showAllPins, false);
+  assert.equal(cameras.length, 0);
+  assert.match(nodes['map-description'].textContent, /확대하면/);
+  assert.deepEqual(input, before);
   planning.destroy();
 });

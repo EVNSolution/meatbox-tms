@@ -3,8 +3,11 @@ import { scenarioGuide } from './scenario-guide.mjs';
 
 const stopName = stop => `${stop.sequence}번 ${stop.name}`;
 
-export function deliveryLinks(id) {
-  const query = /^(?:S[1-8]|V(?:[2-9]|[1-9][0-9]|1[0-2][0-9]|130)-S[1-3])$/.test(id || '') ? `?id=${id}` : '';
+export function deliveryLinks(id, date) {
+  const params = new URLSearchParams();
+  if (/^(?:S[1-8]|V(?:[2-9]|[1-9][0-9]|1[0-2][0-9]|130)-S[1-3]|ord_[a-f0-9]{8,64})$/.test(id || '')) params.set('id', id);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date || '')) params.set('date', date);
+  const query = params.size ? `?${params}` : '';
   return {
     mobile: `/combined/mobile-customer.html${query}`,
     customer: `/combined/mobile-customer.html${query}`,

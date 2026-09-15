@@ -1,3 +1,5 @@
+@import url('./date-picker.css');
+
 .demo-header,
 .demo-header *,
 .demo-navigation,
@@ -56,3 +58,10 @@ body[data-viewer="operator"] .operator-pages a[aria-current="page"]::after { con
   .operator-axis { padding-inline: 2px; font-size: 9px; }
   .operator-pages a { padding-inline: 4px; font-size: 11px; white-space: normal; }
 }
+/* The source date is outside the handset, leaving the shared phone frame intact. */
+.viewer-source-context { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:8px 24px; color:#53616b; background:#f5f7f6; border-bottom:1px solid #e3e8e5; font-size:12px; }
+.viewer-source-context[hidden] { display:none; }
+.viewer-source-context details { position:relative; margin-left:auto; }
+.viewer-source-context summary { cursor:pointer; }
+.viewer-source-context details p { position:absolute; z-index:50; right:0; width:min(280px, calc(100vw - 48px)); padding:12px; background:white; border:1px solid #d8dfda; border-radius:8px; box-shadow:0 6px 20px #182b231a; line-height:1.6; }
+@media(max-width:480px) { .viewer-source-context { padding:8px 12px; gap:8px; } }

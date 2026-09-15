@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { vehicleOperations, sortVehicleOperations, resolveControlVehicle, resolveControlDelivery, vehicleEvents, deliveryFacts, noticesForDelivery, deliveryRecords, controlPosition, summarizeFleetTiming } from './vehicle-operations-model.mjs';
+import { vehicleOperations, sortVehicleOperations, resolveControlVehicle, resolveDefaultControlVehicle, resolveControlDelivery, vehicleEvents, deliveryFacts, noticesForDelivery, deliveryRecords, controlPosition, summarizeFleetTiming } from './vehicle-operations-model.mjs';
 import { OperatingSimulation } from '../../lib/operating-simulation.js';
 import { adaptSimulation } from './simulation-adapter.mjs';
 
@@ -67,6 +67,24 @@ test('historical destination inspection cannot replace the selected vehicle or i
   assert.equal(resolveControlVehicle(rows, 'V1', 'done').current.id, 'current');
   assert.equal(resolveControlVehicle(rows, 'V1', 'foreign').remainingBoxes, 7);
   assert.equal(resolveControlVehicle(rows, null, 'foreign').vehicle.id, 'V2');
+});
+
+test('source operations use the requested source default and keep ETA unknown', () => {
+  const data = {
+    sourceData: { date: '2026-09-16', defaultVehicleId: 'real-b' },
+    fleetVehicles: [{ id: 'real-a', live: true }, { id: 'real-b', live: true }],
+    fleetDeliveries: [
+      { id: 'order-a', vehicleId: 'real-a', status: 'done', boxes: 4 },
+      { id: 'order-b', vehicleId: 'real-b', status: 'current', boxes: 7 },
+    ],
+    kpi: { finishEta: '09:30', vehicleTiming: { source: 'simulation', vehicleId: 'real-b', remainingSeconds: 60 } },
+  };
+  const rows = vehicleOperations(data);
+  assert.equal(resolveDefaultControlVehicle(data, rows, null, null).vehicle.id, 'real-b');
+  assert.equal(rows[1].remainingStops, 1);
+  assert.equal(rows[1].remainingBoxes, 7);
+  assert.equal(rows[1].timing, null);
+  assert.equal(rows[1].lastArrivalEta, null);
 });
 
 test('vanished control selection falls back within the chosen vehicle', () => {
@@ -169,6 +187,16 @@ test('live completion updates only that vehicle remaining workload and simulatio
   assert.equal(rows[0].remainingBoxes, before - completedBoxes);
   assert.equal(rows[1].remainingStops, 35);
   assert.equal(rows[1].lastArrivalEta, null);
+});
+
+test('source vehicle locations keep internal demo provenance without exposing it in the label', () => {
+  const vehicle = { id: 'real-a', live: true, location: { coordinates: [127.1, 37.5], label: '경기 성남 예시 위치', source: 'demo' } };
+  const row = { vehicle, remaining: [] };
+  const data = { sourceData: { date: '2026-09-16' }, vehicleStates: { 'real-a': { truck: { lng: 127.2, lat: 37.6 } } } };
+  assert.deepEqual(controlPosition(data, row), {
+    coordinates: [127.2, 37.6], source: 'demo', label: '경기 성남 위치',
+  });
+  assert.equal(controlPosition({ ...data, vehicleStates: { 'real-a': { truck: { lng: 999, lat: 37.6 } } } }, row), null);
 });
 
 test('producer scopes and equal-clock occurrence order keep synthetic activity out of the live vehicle', () => {

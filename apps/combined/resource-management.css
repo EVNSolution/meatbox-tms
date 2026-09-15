@@ -45,7 +45,7 @@
 .resource-progress dd strong { font-size: 15px; }
 .resource-progress dd span, .resource-progress > p { color: var(--muted); font-size: 11px; }
 .resource-progress > p { margin: 7px 0 0; }
-.resource-view-assignments { min-height: 44px; }
+.resource-assignment-hint { margin: -2px 0 10px; color: var(--muted); font-size: 11px; }
 .resource-assignments { margin-top: 20px; }
 .resource-assignments h4 { margin: 0 0 8px; font-size: 13px; }
 .resource-assignment-list { max-height: 280px; margin: 0; padding: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--border); border-radius: 6px; list-style: none; scrollbar-gutter: stable; }
@@ -72,6 +72,7 @@
 }
 
 @media (max-width: 420px) {
+  .resource-tabs [role="tab"] { min-width: 0; flex: 1 1 0; gap: 4px; padding-inline: 6px; font-size: 12px; }
   .resource-panel-heading { display: grid; }
   .resource-facts { grid-template-columns: 1fr; }
   .resource-progress > dl { grid-template-columns: 1fr; }
@@ -82,3 +83,51 @@
 }
 
 .resource-facts > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+.destination-summary { display: flex; flex-wrap: wrap; gap: 10px 32px; margin: 0; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+.destination-summary:empty { display: none; }
+.destination-summary > div { display: flex; align-items: baseline; gap: 8px; }
+.destination-summary dt { color: var(--muted); font-size: 12px; }
+.destination-summary dd { margin: 0; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.destination-message { display: flex; align-items: center; gap: 16px; padding: 20px; color: var(--muted); font-size: 13px; }
+.destination-message:empty { display: none; }
+.destination-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 32%); }
+.destination-list-panel { min-width: 0; border-right: 1px solid var(--border); }
+.destination-columns, .destination-row { display: grid; grid-template-columns: minmax(0, 1fr) 66px 66px 86px; align-items: center; gap: 8px; padding: 8px 16px; }
+.destination-columns { padding-block: 10px; color: var(--muted); background: #f8fafc; font-size: 11px; }
+.destination-columns > span:not(:first-child), .destination-row > span:not(:first-child) { text-align: right; }
+.destination-list { max-height: 480px; margin: 0; padding: 0; overflow: auto; list-style: none; overscroll-behavior: contain; }
+.destination-list li + li { border-top: 1px solid var(--border); }
+.destination-row { width: 100%; min-height: 54px; border: 0; color: var(--text); background: #fff; text-align: left; font: inherit; font-size: 12px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.destination-row:hover { background: #f8fafc; }
+.destination-row[aria-pressed="true"] { background: var(--selected); }
+.destination-copy { display: grid; min-width: 0; gap: 2px; }
+.destination-copy strong, .destination-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.destination-copy strong { font-size: 13px; font-weight: 600; }
+.destination-copy small { color: var(--muted); font-size: 11px; }
+.destination-mobile-label { display: none; }
+.destination-detail { min-width: 0; max-height: 570px; overflow: auto; overscroll-behavior: contain; }
+.destination-detail h3 { min-width: 0; overflow-wrap: anywhere; font-size: 18px; }
+.destination-address { margin: 8px 0 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.destination-detail .delivery-tip h4 { margin: 0; font-size: 13px; }
+.destination-directory .delivery-pagination { gap: 8px; flex-wrap: wrap; padding: 12px 16px; font-size: 11px; }
+.destination-directory .delivery-pagination > div { gap: 8px; }
+.destination-directory .delivery-pagination .button { padding-inline: 10px; }
+
+@media (max-width: 1100px) {
+  .destination-split { grid-template-columns: 1fr; }
+  .destination-list-panel { border-right: 0; }
+  .destination-detail { border-top: 1px solid var(--border); }
+}
+@media (max-width: 600px) {
+  .destination-summary { gap: 8px 16px; padding: 12px; }
+  .destination-summary > div { gap: 5px; }
+  .destination-summary dd { font-size: 14px; }
+  .destination-columns { display: none; }
+  .destination-row { grid-template-columns: auto 1fr auto; gap: 4px 12px; padding: 10px 12px; }
+  .destination-copy { grid-column: 1 / -1; }
+  .destination-row > span:not(:first-child) { text-align: left; font-size: 11px; }
+  .destination-row .destination-last-date { text-align: right; }
+  .destination-mobile-label { display: inline; color: var(--muted); }
+  .destination-detail .resource-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

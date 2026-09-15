@@ -6,7 +6,7 @@ test('뷰어 연결은 상태와 명령을 전달하고 세션 종료와 서버 
   const original = { fetch: globalThis.fetch, WebSocket: globalThis.WebSocket, location: globalThis.location };
   const sockets = [], states = [], errors = [], redirects = [];
   let reloads = 0;
-  globalThis.fetch = async () => ({ ok: true, status: 200 });
+  globalThis.fetch = async url => url.endsWith('/manifest') ? ({ ok: false, status: 404 }) : ({ ok: true, status: 200 });
   globalThis.location = { protocol: 'https:', host: 'demo.test', pathname: '/combined/', search: '?id=S5', hash: '#/control', replace: url => redirects.push(url), reload: () => reloads++ };
   globalThis.WebSocket = class {
     static OPEN = 1;
@@ -44,7 +44,7 @@ test('뷰어 연결은 상태와 명령을 전달하고 세션 종료와 서버 
 test('화면이 변경분을 거절하면 재연결하여 최신 전체 상태로 복구하고 재시도를 분산한다', async t => {
   const original = { fetch: globalThis.fetch, WebSocket: globalThis.WebSocket, location: globalThis.location, setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout };
   const sockets = [], states = [], retries = [];
-  globalThis.fetch = async () => ({ ok: true, status: 200 });
+  globalThis.fetch = async url => url.endsWith('/manifest') ? ({ ok: false, status: 404 }) : ({ ok: true, status: 200 });
   globalThis.location = { protocol: 'http:', host: 'local.test', pathname: '/', search: '', hash: '', replace() {}, reload() {} };
   globalThis.setTimeout = (callback, delay) => { const timer = { callback, delay }; retries.push(timer); return timer; };
   globalThis.clearTimeout = timer => { if (timer) timer.cancelled = true; };

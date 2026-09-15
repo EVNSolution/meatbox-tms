@@ -59,6 +59,10 @@ function adaptOperationEvent(event) {
 }
 
 export function adaptSimulation(snapshot) {
+  if (snapshot?.sourceData) {
+    if (!Array.isArray(snapshot.fleetDeliveries) || !Array.isArray(snapshot.fleetVehicles) || !snapshot.vehicleStates) throw new TypeError('배송 자료를 확인해 주세요.');
+    return snapshot;
+  }
   if (!snapshot || !Array.isArray(snapshot.order)) {
     throw new TypeError('배송 상태에 order 배열이 필요합니다.');
   }
