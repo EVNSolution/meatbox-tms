@@ -273,6 +273,14 @@ function closeSheet(force = false) {
   if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
   else byId(`dv-tab-${tab}`).focus({ preventScroll: true });
 }
+function openRequest(id) {
+  const stop = view().current;
+  const request = stop?.customerRequests?.items?.find(item => item.id === id);
+  if (!request) return;
+  showSheet({ kind: 'request', stopId: stop.id, title: '고객 요청', subtitle: stop.name,
+    body: renderCustomerRequests({ ...stop, customerRequests: { ...stop.customerRequests, items: [request] } }, { showSource: false }),
+  });
+}
 function openDetail(id, nextTab = 'order') {
   const stop = driverTipDelivery(latest, id);
   if (!stop) return;
@@ -387,6 +395,7 @@ byId('dv-app').addEventListener('click', event => {
   if (target.dataset.historyDate) { historyDate = target.dataset.historyDate; renderHistory(); }
   if (target.dataset.orders) { orderGroup = target.dataset.orders; renderOrders(); }
   if (target.dataset.stop) openDetail(target.dataset.stop);
+  if (target.dataset.requestInfo) openRequest(target.dataset.requestInfo);
   if (target.dataset.move) moveBy(target.dataset.move, Number(target.dataset.direction));
   if (target.dataset.assignment) showSheet({ title: target.dataset.assignment === 'return' ? '배송 반납' : '배송 전달', body: '<p class="dv-muted">배차 변경 기능이 연결되면 이용할 수 있습니다.</p><button class="dv-button dv-primary" disabled>배차 변경 대기</button>' });
   switch (target.dataset.action) {

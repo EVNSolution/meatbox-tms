@@ -192,4 +192,4 @@
 ## Driver request symbols
 - The current destination shows separate refrigerator, doorstep, indoor and handoff SVG symbols, with request labels as accessible names and tooltips. Remove the visible ‘예시 요청’ wording and generic request count from the driver viewer.
 - Driver detail and photo-confirmation views retain readable request labels and required checkboxes under ‘고객 요청’, without the source badge. Control retains the source badge, and source metadata stays `example`.
-- Use 32px centered icon badges with 20px SVGs and the existing request colors. S6 demonstrates indoor placement; keep S4's two required requests and S5's explicit empty state.
+- Use 44px centered icon buttons with 20px SVGs and the existing request colors. Clicking opens the existing driver sheet with only that request and the destination name; read-only display never marks the requirement fulfilled. S6 demonstrates indoor placement; keep S4's two required requests and S5's explicit empty state.

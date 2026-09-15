@@ -25,9 +25,11 @@ test('요청 렌더링은 예시, 필수 체크, 미수신과 요청 없음을 �
   assert.match(renderCustomerRequests(stop([])), /요청 없음/);
   const compact = renderCustomerRequests(stop(required), { compact: true });
   assert.doesNotMatch(compact, /예시 요청|>2</);
-  assert.match(compact, /aria-label="매장 냉장고 안에 보관"/);
-  assert.match(compact, /aria-label="직접 전달"/);
-  assert.equal((compact.match(/role="img"/g) || []).length, 2);
+  assert.match(compact, /aria-label="매장 냉장고 안에 보관 요청 내용 보기"/);
+  assert.match(compact, /aria-label="직접 전달 요청 내용 보기"/);
+  assert.equal((compact.match(/aria-haspopup="dialog"/g) || []).length, 2);
+  assert.match(compact, /data-request-info="S1-refrigerator"/);
+  assert.match(compact, /data-request-info="S1-handoff"/);
 });
 
 test('배송원 상세와 완료 확인은 출처 배지만 빼고 요청과 필수 체크를 유지한다', () => {
