@@ -16,7 +16,7 @@ export function canSetScenario(delivery) {
 }
 
 export function scenarioSelectionState(state, target, connected) {
-  const controllable = !state?.dispatch?.readOnly && (!state?.dispatch || state.dispatch.phase === 'published') && canSetScenario(target);
+  const controllable = !state?.dispatch?.readOnly && (!state?.dispatch || ['published', 'amending'].includes(state.dispatch.phase)) && canSetScenario(target);
   const current = scenarioGuide(state);
   const hasPresetMetadata = Boolean(state && Object.hasOwn(state, 'scenarioPreset'));
   const activeScenario = current && (!hasPresetMetadata || state.scenarioStopId === target?.id) ? current.scenario : null;
@@ -28,7 +28,7 @@ export function scenarioSelectionState(state, target, connected) {
 
 export function nextScenarioTarget(state, selectedId) {
   const target = selectedScenarioTarget(state, selectedId);
-  if (state?.dispatch?.readOnly || (state?.dispatch && state.dispatch.phase !== 'published') || !canSetScenario(target)) return null;
+  if (state?.dispatch?.readOnly || (state?.dispatch && !['published', 'amending'].includes(state.dispatch.phase)) || !canSetScenario(target)) return null;
   const route = state?.deliveries || [];
   const index = route.findIndex(delivery => delivery.id === target.id);
   const next = index >= 0 ? route[index + 1] : null;

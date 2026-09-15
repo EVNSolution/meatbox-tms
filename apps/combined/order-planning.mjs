@@ -92,8 +92,8 @@ export function createOrderMarker(map, delivery, coordinates) {
   element.type = 'button';
   element.className = 'order-map-marker';
   element.dataset.orderMarker = delivery.id;
-  element.dataset.orderLabel = Number.isFinite(delivery.sequence) ? String(delivery.sequence) : (delivery.name || delivery.id);
-  element.setAttribute('aria-label', `${delivery.name || delivery.id} ${boxesText(delivery.boxes)} 선택`);
+  element.dataset.orderLabel = Number.isFinite(delivery.sequence) ? String(delivery.sequence) : (delivery.name || '배송지 미등록');
+  element.setAttribute('aria-label', `${delivery.name || '배송지 미등록'} ${boxesText(delivery.boxes)} 선택`);
   const marker = new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat(coordinates).addTo(map);
   return { element, remove: () => marker.remove() };
 }
@@ -203,13 +203,13 @@ export function mountOrderPlanning({
   let sourceModel = null;
   let sourceData = null;
   let overlapIds = [];
-  let selectedZoneId = null;
   let listQuery = '';
   let listPage = 1;
   let pendingAssignment = null;
   const reassignDialog = query('[data-order-reassign-dialog]');
   const imported = () => Boolean(data?.dispatchSource);
-  const canPin = () => Boolean(onAssign && imported() && (!data.dispatch || (!data.dispatch.readOnly && data.dispatch.phase === 'draft')));
+  const canPin = () => Boolean(onAssign && imported() && (!data.dispatch || (!data.dispatch.readOnly && ['draft', 'amending'].includes(data.dispatch.phase))));
+  const selectedAssignmentProtected = () => Boolean(visibleDeliveries.find(item => item.id === selectedDeliveryId)?.assignmentProtected);
   const pinVehicles = () => vehiclesFor(data).filter(vehicle => !data?.dispatch || data.dispatch.candidateIds.includes(vehicle.id));
   const setText = (selector, text) => { const node = query(selector); if (node) node.textContent = text; };
   function syncSourceLabels() {
@@ -224,14 +224,14 @@ export function mountOrderPlanning({
     setText('[data-order-map-description]', isSource ? showAllPins ? '모든 주문 위치를 표시합니다.' : '확대하면 모든 주문 위치를 표시합니다.' : '전체 등록 주문과 선택 차량 배정');
     setText('[data-order-groups-label]', isSource ? data?.dispatch?.phase === 'unplanned' ? '후보 차량' : '배정 차량' : '총 차량');
     setText('[data-order-orders-label]', isSource ? '주문 위치' : '총 배송지');
-    setText('[data-order-assignment-note]', isSource ? data?.dispatch?.phase === 'unplanned' ? '배송원을 선택하고 배차 계산을 진행해 주세요.' : data?.dispatch?.phase === 'draft' ? '아직 전송하지 않은 배차 계산안입니다.' : '확정된 배차의 주문과 박스 수입니다.' : '동일 차량 ID 단위이며 수신 순서로 표시합니다. 배송지를 가구 수로 환산하지 않습니다.');
+    setText('[data-order-assignment-note]', isSource ? data?.dispatch?.phase === 'unplanned' ? '배송원을 선택하고 배차 계산을 진행해 주세요.' : data?.dispatch?.phase === 'draft' ? '아직 전송하지 않은 배차 계산안입니다.' : data?.dispatch?.phase === 'amending' ? '확정 배차는 유지하고, 이 수정안을 다시 전송하기 전에 검토합니다.' : '확정된 배차의 주문과 박스 수입니다.' : '동일 차량 ID 단위이며 수신 순서로 표시합니다. 배송지를 가구 수로 환산하지 않습니다.');
     const regionControl = query('[data-order-region-control]');
     if (regionControl) regionControl.hidden = !isSource;
     const listPanel = query('[data-order-list-panel]');
     if (listPanel) listPanel.hidden = !isSource;
     const regionNote = query('[data-order-region-note]');
     if (regionNote) regionNote.innerHTML = isSource
-      ? '<strong>배송 권역</strong>경계를 클릭하면 권역 내 주문을 확인할 수 있습니다.'
+      ? '<strong>배송 권역</strong>제공된 배송 권역 경계를 표시합니다.'
       : '<strong>권역 기능 준비 중</strong> 실제 권역 데이터가 연결되면 경계와 권역 내 배송지 정보를 제공합니다.';
   }
   function syncControls() {
@@ -264,11 +264,13 @@ export function mountOrderPlanning({
   function syncDispatchActions() {
     const pinButton = query('[data-order-dispatch-pin]');
     if (!pinButton) return;
-    pinButton.disabled = !canPin() || !selectedDeliveryId;
+    pinButton.disabled = !canPin() || !selectedDeliveryId || selectedAssignmentProtected();
     setText('[data-order-dispatch-context]', data?.dispatch?.readOnly ? '과거 배차는 조회만 가능합니다.'
       : data?.dispatch?.phase === 'unplanned' ? '배송원을 선택한 뒤 배차 계산을 진행해 주세요.'
-        : data?.dispatch?.phase === 'published' ? '확정된 배차입니다.'
-          : '지도에서 배송지를 선택해 계산안의 배정을 수정합니다.');
+        : data?.dispatch?.phase === 'published' ? '확정된 배차입니다. 배차 수정을 시작한 뒤 변경할 수 있습니다.'
+          : selectedAssignmentProtected() ? '현재 진행 중이거나 완료된 배송지 묶음은 배차를 변경할 수 없습니다.'
+          : data?.dispatch?.phase === 'amending' ? '지도에서 배송지를 선택해 수정하고 변경 배차를 다시 전송해 주세요.'
+            : '지도에서 배송지를 선택해 계산안의 배정을 수정합니다.');
   }
 
   function updateAssignmentPreview() {
@@ -286,7 +288,7 @@ export function mountOrderPlanning({
   }
 
   function openAssignment() {
-    if (!canPin()) return;
+    if (!canPin() || selectedAssignmentProtected()) return;
     const chosen = visibleDeliveries.find(item => item.id === selectedDeliveryId);
     if (!chosen) return;
     const selected = chosen.assignmentUnitId ? visibleDeliveries.filter(item => item.assignmentUnitId === chosen.assignmentUnitId) : [chosen];
@@ -318,7 +320,7 @@ export function mountOrderPlanning({
       updateVehicles(); renderScene();
       reassignDialog.close();
       const status = query('[data-order-dispatch-result]');
-      status.textContent = `배차 변경: ${result.changedCount}건 / ${boxesText(result.changedBoxes)}. 배차 계산안에 반영했습니다. 전체 배차 전송 시 확정됩니다.`;
+      status.textContent = `배차 변경: ${result.changedCount}건 / ${boxesText(result.changedBoxes)}. ${data?.dispatch?.phase === 'amending' ? '수정안에 반영했습니다. 변경 배차를 다시 전송하면 확정됩니다.' : '배차 계산안에 반영했습니다. 전체 배차 전송 시 확정됩니다.'}`;
       status.hidden = false;
     } catch (error) {
       const status = query('[data-order-reassign-error]');
@@ -328,22 +330,16 @@ export function mountOrderPlanning({
 
   function updateSelection() {
     syncDispatchActions();
-    if (imported() && selectedZoneId) {
-      const region = data.dispatchRegions?.features.find(feature => feature.properties.zoneId === selectedZoneId);
-      const inside = visibleDeliveries.filter(item => item.zoneIds.includes(selectedZoneId));
-      selection.innerHTML = `<span>배송 권역</span><strong>${escapeHtml(region?.properties.label || selectedZoneId)}</strong><p><span>${escapeHtml(selectedZoneId)}</span><span>내부 주문 ${inside.length.toLocaleString('ko-KR')}건</span><span>${boxesText(volumeScenario(inside).baselineBoxes)}</span></p><p>품질 ${escapeHtml(region?.properties.quality || '미확인')} / 기준 ${escapeHtml(region?.properties.baseDate || '미확인')}</p>`;
-      return;
-    }
     const delivery = visibleDeliveries.find(item => item.id === selectedDeliveryId);
     if (!delivery) { selection.innerHTML = '<span>선택 주문</span><strong>지도에서 주문을 선택해 주세요.</strong>'; return; }
     const fallbackVehicleId = visibleDeliveries === data?.deliveries ? data?.vehicle?.id : null;
     const deliveryVehicleId = vehicleIdFor(delivery, fallbackVehicleId);
     const vehicle = vehiclesFor(data).find(item => item.id === deliveryVehicleId) ?? delivery.vehicle ?? null;
-    selection.innerHTML = `<span>선택 주문</span><strong>${escapeHtml(delivery.name || delivery.id)}</strong><p><span>${boxesText(delivery.boxes)}</span><span>${escapeHtml(vehicle?.plate || vehicle?.id || deliveryVehicleId || '차량 미확인')}</span></p>`;
+    selection.innerHTML = `<span>선택 주문</span><strong>${escapeHtml(delivery.name || '배송지 미등록')}</strong><p><span>${boxesText(delivery.boxes)}</span><span>${escapeHtml(vehicle?.plate || '차량 미확인')}</span></p>`;
     if (imported()) {
-      selection.innerHTML = `<span>선택 주문 ${escapeHtml(delivery.orderNumber)}</span><strong>${escapeHtml(delivery.name)}</strong><p>${escapeHtml(delivery.address)}</p><p><span>${boxesText(delivery.boxes)}</span><span>${escapeHtml(vehicle?.driver || '배차 대기')}</span><span>권역 ${escapeHtml(delivery.regionName)}</span></p><p>배송 구역 ${delivery.zoneIds.length ? delivery.zoneIds.map(escapeHtml).join(', ') : '없음'}</p>`;
-      if (overlapIds.length > 1) selection.innerHTML += `<label class="order-overlap-picker">이 지점의 주문 ${overlapIds.length}건<select data-order-overlap aria-label="겹친 주문 선택">${overlapIds.map(id => visibleDeliveries.find(item => item.id === id)).filter(Boolean).map(item => `<option value="${escapeHtml(item.id)}" ${item.id === selectedDeliveryId ? 'selected' : ''}>${escapeHtml(item.orderNumber)} / ${escapeHtml(item.name)} / ${boxesText(item.boxes)}</option>`).join('')}</select></label>`;
-      selection.innerHTML += `<button type="button" class="button subtle order-pin-action" data-order-pin-selected ${canPin() ? '' : 'disabled'}>핀배차</button>`;
+      selection.innerHTML = `<span>선택 주문</span><strong>${escapeHtml(delivery.name)}</strong><p>${escapeHtml(delivery.address)}</p><p><span>${boxesText(delivery.boxes)}</span><span>${escapeHtml(vehicle?.driver || '배차 대기')}</span><span>권역 ${escapeHtml(delivery.regionName)}</span></p>`;
+      if (overlapIds.length > 1) selection.innerHTML += `<label class="order-overlap-picker">이 지점의 주문 ${overlapIds.length}건<select data-order-overlap aria-label="겹친 주문 선택">${overlapIds.map(id => visibleDeliveries.find(item => item.id === id)).filter(Boolean).map(item => `<option value="${escapeHtml(item.id)}" ${item.id === selectedDeliveryId ? 'selected' : ''}>${escapeHtml(item.name)} / ${boxesText(item.boxes)}</option>`).join('')}</select></label>`;
+      selection.innerHTML += `<button type="button" class="button subtle order-pin-action" data-order-pin-selected ${canPin() && !delivery.assignmentProtected ? '' : 'disabled'}>핀배차</button>`;
     }
   }
 
@@ -365,7 +361,6 @@ export function mountOrderPlanning({
 
   function pickSourceOrder(id) {
     selectedDeliveryId = id;
-    selectedZoneId = null;
     renderScene();
     renderOrderList();
     onSelect(id);
@@ -391,9 +386,9 @@ export function mountOrderPlanning({
     const nextMarkerSignature = model.mapped.map(({ delivery, coordinates }) => `${delivery.id}:${delivery.name}:${delivery.boxes}:${delivery.sequence}:${vehicleIdFor(delivery, fallbackVehicleId)}:${coordinates}`).join('|');
     const nextGeometrySignature = model.mapped.map(({ delivery, coordinates }) => `${delivery.id}:${coordinates}`).join('|');
     if (map && imported()) {
-      const zones = selectedZoneId ? [selectedZoneId] : selectedDeliveryId
+      const zones = selectedDeliveryId
         ? source.find(item => item.id === selectedDeliveryId)?.zoneIds || []
-        : [...new Set(vehicleDeliveries.flatMap(item => item.zoneIds || []))];
+        : selectedVehicleId === 'all' ? [] : [...new Set(vehicleDeliveries.flatMap(item => item.zoneIds || []))];
       pointLayer.update({ points: sourcePoints, regions: data.dispatchRegions, selectedGroupId: selectedVehicleId === 'all' ? null : selectedVehicleId, selectedOrderId: selectedDeliveryId, selectedZoneIds: zones, showRegions: query('[data-order-show-regions]')?.checked !== false, showAllPins });
       if (mapFailure) return;
     } else if (map && nextMarkerSignature !== markerSignature) {
@@ -445,7 +440,7 @@ export function mountOrderPlanning({
     }
     map.resize?.();
     if (imported()) {
-      if (!pointLayer) pointLayer = layerFactory(map, { onPick(ids, region) { overlapIds = ids; selectedZoneId = region?.zoneId || null; selectedDeliveryId = ids[0] || null; renderScene(); renderOrderList(); if (selectedDeliveryId) onSelect(selectedDeliveryId); }, onError(error) { mapFailure = error?.message || '주문 지도 레이어를 불러오지 못했습니다.'; renderScene(); } });
+      if (!pointLayer) pointLayer = layerFactory(map, { onPick(ids) { overlapIds = ids; selectedDeliveryId = ids[0] || null; if (!selectedDeliveryId) { selectedVehicleId = 'all'; fitVehicleRequested = false; updateVehicles(); } renderScene(); renderOrderList(); if (selectedDeliveryId) onSelect(selectedDeliveryId); }, onError(error) { mapFailure = error?.message || '주문 지도 레이어를 불러오지 못했습니다.'; renderScene(); } });
       if (sourceData !== data) {
         sourceData = data;
         mapMarkers.splice(0).forEach(marker => marker.remove());
@@ -537,7 +532,6 @@ export function mountOrderPlanning({
     fitVehicleRequested = vehicle.dataset.orderVehicleId === selectedVehicleId;
     selectedVehicleId = vehicle.dataset.orderVehicleId;
     selectedDeliveryId = null;
-    selectedZoneId = null;
     overlapIds = [];
     updateVehicles();
     renderScene();
@@ -583,7 +577,7 @@ export function mountOrderPlanning({
         const result = query('[data-order-dispatch-result]');
         if (result) result.hidden = true;
         if (mapFailure) { pointLayer?.destroy(); pointLayer = null; }
-        selectedVehicleId = imported() ? 'all' : 'V1'; selectedDeliveryId = null; selectedZoneId = null; overlapIds = []; listPage = 1;
+        selectedVehicleId = imported() ? 'all' : 'V1'; selectedDeliveryId = null; overlapIds = []; listPage = 1;
         geometrySignature = ''; markerSignature = ''; vehicleSignature = ''; mapFailure = ''; fitVehicleRequested = false;
       }
       if (!canPin() && reassignDialog?.open) reassignDialog.close();

@@ -14,7 +14,7 @@ class FakeNode {
 }
 
 function fixture() {
-  const names = ['phase', 'open', 'publish', 'summary', 'dialog', 'close', 'search', 'selected', 'all', 'clear', 'candidates', 'preview', 'error', 'help', 'calculate'];
+  const names = ['phase', 'open', 'discard', 'publish', 'summary', 'notice', 'dialog', 'close', 'search', 'selected', 'all', 'clear', 'candidates', 'preview', 'error', 'help', 'calculate'];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode(name)]));
   const selectors = Object.fromEntries(names.map(name => [`[data-dispatch-${name}]`, name]));
   const element = new FakeNode('root');
@@ -25,7 +25,7 @@ function fixture() {
 function data(overrides = {}) {
   return {
     sourceData: { date: '2026-09-16' },
-    dispatch: { phase: 'unplanned', today: '2026-09-16', readOnly: false, candidateIds: ['V1'], draftVersion: null, confirmedVersion: null, summary: { orders: 10, destinations: 9, boxes: 20 }, canCalculate: true },
+    dispatch: { phase: 'unplanned', today: '2026-09-16', readOnly: false, candidateIds: ['V1'], draftVersion: null, confirmedVersion: null, summary: { orders: 10, destinations: 9, boxes: 20 }, canCalculate: true, canAmend: false, canPublish: false, hasChanges: false },
     dispatchCandidates: [
       { id: 'V1', driver: '김기사', plate: '11가 1111', region: '서울', locked: true },
       { id: 'V2', driver: '이기사', plate: '22나 2222', region: '인천' },
@@ -41,13 +41,13 @@ function checkbox(id, checked, disabled = false) {
 
 test('단계와 계산안, 전체 전송 가능 조건을 실제 상태에서만 만든다', () => {
   const draft = dispatchWorkflowModel(data({
-    dispatch: { ...data().dispatch, phase: 'draft', draftVersion: 4 },
+    dispatch: { ...data().dispatch, phase: 'draft', draftVersion: 4, canPublish: true, hasChanges: true },
     dispatchPreview: [{ vehicleId: 'V1', orders: 6, destinations: 5, boxes: 12 }],
   }));
   assert.equal(draft.phaseLabel, '계산안');
   assert.equal(draft.canPublish, true);
   assert.equal(draft.preview[0].label, '김기사');
-  assert.equal(dispatchWorkflowModel(data({ dispatch: { ...data().dispatch, phase: 'draft', draftVersion: null } })).canPublish, false);
+  assert.equal(dispatchWorkflowModel(data({ dispatch: { ...data().dispatch, phase: 'draft', draftVersion: null, canPublish: true } })).canPublish, false);
   assert.equal(dispatchWorkflowModel(data({ dispatch: { ...data().dispatch, phase: 'published', draftVersion: 4 } })).canPublish, false);
   assert.equal(dispatchWorkflowModel(data({ dispatch: { ...data().dispatch, readOnly: true } })).phaseLabel, '과거 배차 기록');
 });
@@ -118,6 +118,92 @@ test('확정 배차는 과거 기록과 구분하고 후보 변경과 재계산�
   workflow.destroy();
 });
 
+test('확정 배차는 수정안을 열고 변경을 다시 전송하거나 취소한다', async () => {
+  const { element, nodes } = fixture();
+  const commands = [];
+  const workflow = mountDispatchWorkflow({ element, onCommand: (...args) => { commands.push(args); } });
+  workflow.update(data({
+    dispatch: { ...data().dispatch, phase: 'published', confirmedVersion: 8, canAmend: true },
+    dispatchPreview: [{ vehicleId: 'V1', orders: 10, destinations: 9, boxes: 20 }],
+  }));
+  assert.equal(nodes.open.textContent, '배차 수정');
+  assert.equal(nodes.open.disabled, false);
+  nodes.open.listeners.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(commands, [['begin_dispatch_revision', {}]]);
+
+  workflow.update(data({
+    dispatch: { ...data().dispatch, phase: 'amending', draftVersion: 9, confirmedVersion: 8, candidateIds: ['V1'], canPublish: false, hasChanges: false },
+    dispatchPreview: [{ vehicleId: 'V1', orders: 10, destinations: 9, boxes: 20 }],
+  }));
+  assert.equal(nodes.phase.textContent, '배차 수정안');
+  assert.equal(nodes.discard.hidden, false);
+  assert.equal(nodes.publish.textContent, '변경 배차 다시 전송');
+  assert.equal(nodes.publish.disabled, true);
+  assert.match(nodes.candidates.innerHTML, /data-dispatch-candidate="V1" checked disabled/);
+
+  workflow.update(data({
+    dispatch: { ...data().dispatch, phase: 'amending', draftVersion: 10, confirmedVersion: 8, candidateIds: ['V1'], canPublish: true, hasChanges: true },
+    dispatchPreview: [{ vehicleId: 'V1', orders: 10, destinations: 9, boxes: 20 }],
+  }));
+  nodes.publish.listeners.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(commands.at(-1), ['publish_dispatch', { draftVersion: 10 }]);
+  assert.match(nodes.notice.innerHTML, /변경 배차를 다시 전송했습니다/);
+  assert.match(nodes.notice.innerHTML, /driver\.html\?date=2026-09-16/);
+
+  nodes.discard.listeners.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(commands.at(-1), ['discard_dispatch_revision', {}]);
+  workflow.destroy();
+});
+
+test('전송 중 후보가 잠겨도 요청을 취소하지 않고 성공 안내를 보여준다', async () => {
+  const { element, nodes } = fixture();
+  let finishPublish;
+  const workflow = mountDispatchWorkflow({ element, onCommand: () => new Promise(resolve => { finishPublish = resolve; }) });
+  const draftCandidates = [
+    { id: 'V1', driver: '김기사', plate: '11가 1111', region: '서울', locked: false },
+    { id: 'V2', driver: '이기사', plate: '22나 2222', region: '인천', locked: false },
+  ];
+  workflow.update(data({
+    dispatch: { ...data().dispatch, phase: 'draft', candidateIds: ['V1'], draftVersion: 4, canPublish: true, hasChanges: true },
+    dispatchCandidates: draftCandidates,
+  }));
+  nodes.publish.listeners.click();
+  workflow.update(data({
+    dispatch: { ...data().dispatch, phase: 'published', candidateIds: ['V1'], confirmedVersion: 4, canAmend: true },
+    dispatchCandidates: draftCandidates.map(candidate => ({ ...candidate, locked: candidate.id === 'V1' })),
+    dispatchPreview: [{ vehicleId: 'V1', orders: 10, destinations: 9, boxes: 20 }],
+  }));
+  assert.match(nodes.candidates.innerHTML, /data-dispatch-candidate="V1" checked disabled/);
+  finishPublish();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(nodes.notice.innerHTML, /전체 배차를 전송했습니다/);
+  assert.equal(nodes.notice.hidden, false);
+  workflow.destroy();
+});
+
+test('계산 완료 후 결과 보기로 창을 닫고 서버 오류 문구를 바로 표시한다', async () => {
+  const { element, nodes } = fixture();
+  let failure = false;
+  const workflow = mountDispatchWorkflow({ element, onCommand: () => failure ? Promise.reject(new Error('선택한 배송지는 이미 운행 중입니다.')) : Promise.resolve() });
+  workflow.update(data());
+  nodes.open.listeners.click();
+  nodes.calculate.listeners.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(nodes.calculate.textContent, '계산 결과 보기');
+  nodes.calculate.listeners.click();
+  assert.equal(nodes.dialog.open, false);
+
+  failure = true;
+  workflow.update(data({ dispatch: { ...data().dispatch, phase: 'published', canAmend: true } }));
+  nodes.open.listeners.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(nodes.notice.textContent, '선택한 배송지는 이미 운행 중입니다.');
+  workflow.destroy();
+});
+
 test('기준이 없으면 계산을 정직하게 비활성화하고 draftVersion으로만 전체 전송한다', async () => {
   const { element, nodes } = fixture();
   const commands = [];
@@ -126,7 +212,7 @@ test('기준이 없으면 계산을 정직하게 비활성화하고 draftVersion
   assert.equal(nodes.calculate.disabled, true);
   assert.equal(nodes.help.textContent, '배차 계산 기준 확인 중');
 
-  workflow.update(data({ dispatch: { ...data().dispatch, phase: 'draft', draftVersion: 7 } }));
+  workflow.update(data({ dispatch: { ...data().dispatch, phase: 'draft', draftVersion: 7, canPublish: true, hasChanges: true } }));
   nodes.publish.listeners.click();
   assert.equal(nodes.publish.textContent, '전체 배차 전송 중…');
   await new Promise(resolve => setImmediate(resolve));

@@ -229,3 +229,93 @@ test('중복 주문 ID와 배송지 식별 필드가 없는 원본은 상태 생
   delete missingAddress.orders[0].address;
   assert.throws(() => createDispatchOperations(missingAddress, { operatingDate: '2026-09-16' }), error => error.status === 400 && error.code === 'INVALID_DAY');
 });
+
+function publishedOperations() {
+  const operations = createDispatchOperations(day(), { sourceId: 'csv-a', operatingDate: '2026-09-16', calculator });
+  command(operations, { type: 'calculate_dispatch', vehicleIds: ['G1', 'G2'] });
+  command(operations, { type: 'publish_dispatch', draftVersion: 1 });
+  return operations;
+}
+
+test('수정안은 기존 운행과 분리되며 다시 전송할 때만 배정이 바뀌고 기록을 보존한다', () => {
+  const operations = publishedOperations();
+  command(operations, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1', scenario: 'arrived' });
+  command(operations, { type: 'complete_stop', vehicleId: 'G1', stopId: 'O1', hasPhoto: true });
+  command(operations, { type: 'set_delivery_tip', vehicleId: 'G2', stopId: 'O4', body: '출입문 옆' });
+  const confirmed = operations.snapshot();
+  const started = command(operations, { type: 'begin_dispatch_revision' });
+  assert.equal(started.state.dispatch.phase, 'amending');
+  assert.equal(started.state.dispatch.canPublish, false);
+  assert.throws(() => command(operations, { type: 'publish_dispatch', draftVersion: 2 }), error => error.code === 'NO_ASSIGNMENT_CHANGE');
+  assert.throws(() => command(operations, { type: 'calculate_dispatch', vehicleIds: ['G1'] }), error => error.code === 'DISPATCH_ALREADY_PUBLISHED');
+  command(operations, { type: 'reassign', orderIds: ['O4'], targetVehicleId: 'G1' });
+  const draft = operations.snapshot();
+  assert.equal(draft.dispatch.hasChanges, true);
+  assert.equal(draft.dispatchOrders.find(order => order.id === 'O4').vehicleId, 'G1');
+  assert.deepEqual(draft.fleetDeliveries, confirmed.fleetDeliveries);
+  assert.deepEqual(draft.events, confirmed.events);
+  assert.deepEqual(draft.notifications, confirmed.notifications);
+  const published = command(operations, { type: 'publish_dispatch', draftVersion: draft.dispatch.draftVersion });
+  assert.equal(published.result.amended, true);
+  assert.equal(published.state.fleetDeliveries.find(order => order.id === 'O4').vehicleId, 'G1');
+  assert.deepEqual(published.state.fleetDeliveries.find(order => order.id === 'O4').tip, confirmed.fleetDeliveries.find(order => order.id === 'O4').tip);
+  for (const id of ['O1', 'O2']) assert.deepEqual(published.state.fleetDeliveries.find(order => order.id === id), confirmed.fleetDeliveries.find(order => order.id === id));
+  assert.deepEqual(published.state.events.filter(event => confirmed.events.some(previous => previous.id === event.id)), confirmed.events);
+  assert.deepEqual(published.state.notifications, confirmed.notifications);
+});
+
+test('현재와 완료 주문이 있는 배송지 묶음은 나머지 주문까지 보호한다', () => {
+  const operations = publishedOperations();
+  command(operations, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1', scenario: 'shipping' });
+  command(operations, { type: 'begin_dispatch_revision' });
+  assert.equal(operations.snapshot().dispatchOrders.find(order => order.id === 'O2').assignmentProtected, true);
+  const before = operations.exportCheckpoint();
+  assert.throws(() => command(operations, { type: 'reassign', orderIds: ['O2'], targetVehicleId: 'G2' }), error => error.code === 'PROTECTED_DESTINATION');
+  assert.deepEqual(operations.exportCheckpoint(), before);
+});
+
+test('수정 중 출발한 배송지를 다시 전송하면 원자적으로 거부하며 취소는 최신 운행을 보존한다', () => {
+  const operations = publishedOperations();
+  command(operations, { type: 'begin_dispatch_revision' });
+  command(operations, { type: 'reassign', orderIds: ['O4'], targetVehicleId: 'G1' });
+  command(operations, { type: 'set_scenario', vehicleId: 'G2', stopId: 'O4', scenario: 'shipping' });
+  const before = operations.exportCheckpoint();
+  assert.throws(() => command(operations, { type: 'publish_dispatch', draftVersion: before.draftVersion }), error => error.code === 'PROTECTED_DESTINATION');
+  assert.deepEqual(operations.exportCheckpoint(), before);
+  const restored = createDispatchOperations(day(), { sourceId: 'csv-a', operatingDate: '2026-09-16', calculator, checkpoint: before });
+  assert.deepEqual(restored.snapshot(), operations.snapshot());
+  const confirmed = restored.snapshot().fleetDeliveries;
+  const canceled = command(restored, { type: 'discard_dispatch_revision' });
+  assert.equal(canceled.state.dispatch.phase, 'published');
+  assert.deepEqual(canceled.state.fleetDeliveries, confirmed);
+  assert.equal(canceled.state.dispatchOrders.find(order => order.id === 'O4').vehicleId, 'G2');
+  assert.equal(canceled.state.dispatchOrders.find(order => order.id === 'O4').status, 'current');
+});
+
+test('운행을 마친 차량에 다시 전송한 잔여 주문은 출발 가능한 대기 상태가 된다', () => {
+  const operations = publishedOperations();
+  command(operations, { type: 'set_scenario', vehicleId: 'G2', stopId: 'O4', scenario: 'arrived' });
+  command(operations, { type: 'complete_stop', vehicleId: 'G2', stopId: 'O4', hasPhoto: true });
+  assert.equal(operations.snapshot().vehicleStates.G2.phase, 'done');
+  command(operations, { type: 'begin_dispatch_revision' });
+  command(operations, { type: 'reassign', orderIds: ['O3'], targetVehicleId: 'G2' });
+  const saved = operations.exportCheckpoint();
+  const restored = createDispatchOperations(day(), { sourceId: 'csv-a', operatingDate: '2026-09-16', calculator, checkpoint: saved });
+  const published = command(restored, { type: 'publish_dispatch', draftVersion: saved.draftVersion }).state;
+  assert.equal(published.vehicleStates.G2.phase, 'idle');
+  assert.equal(published.fleetDeliveries.find(order => order.id === 'O4').status, 'done');
+  assert.equal(published.fleetDeliveries.find(order => order.id === 'O3').status, 'pending');
+  const started = command(restored, { type: 'set_scenario', vehicleId: 'G2', stopId: 'O3', scenario: 'shipping' });
+  assert.equal(started.state.fleetDeliveries.find(order => order.id === 'O3').status, 'current');
+});
+
+test('기존 분리 배차 기록은 변경하지 않고 수정 불가 사유를 노출한다', () => {
+  const legacy = createSourceOperations(day(), { sourceId: 'csv-a' });
+  legacy.command({ type: 'set_delivery_tip', expectedRevision: 0, vehicleId: 'G1', stopId: 'O3', body: '주차장 이용' });
+  const operations = createDispatchOperations(day(), { sourceId: 'csv-a', operatingDate: '2026-09-16', calculator, checkpoint: legacy.exportCheckpoint() });
+  assert.equal(operations.snapshot().dispatch.canAmend, false);
+  assert.match(operations.snapshot().dispatch.amendmentBlockedReason, /배정 충돌/);
+  const before = operations.exportCheckpoint();
+  assert.throws(() => command(operations, { type: 'begin_dispatch_revision' }), error => error.code === 'DESTINATION_SPLIT');
+  assert.deepEqual(operations.exportCheckpoint(), before);
+});

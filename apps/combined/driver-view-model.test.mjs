@@ -4,6 +4,10 @@ import {
   completionProofCanSubmit,
   completionProofIsCurrent,
   completionProofShouldClose,
+  driverCanArrive,
+  driverCanStart,
+  driverConfirmedVehicles,
+  driverHasConfirmedDispatch,
   driverMapDelivery,
   driverTipDelivery,
   driverViewModel,
@@ -105,4 +109,51 @@ test('도착 상태가 유지돼도 연결이 끊기면 증빙 시트를 닫고 
   assert.equal(completionProofShouldClose(state(true), true, 'S1'), false);
   assert.equal(completionProofShouldClose(state(true), false, 'S1'), true);
   assert.equal(completionProofShouldClose(state(false), true, 'S1'), true);
+});
+
+test('확정 배차와 수정 중 확정본은 배송원이 운행할 수 있고 후보 차량은 선택 목록에서 제외한다', () => {
+  const source = {
+    ...state(false),
+    sourceData: { date: '2026-09-16' },
+    dispatch: { phase: 'published' },
+    phase: 'idle',
+    vehicle: { id: 'V1', live: true },
+    fleetVehicles: [{ id: 'V1', live: true }, { id: 'V2', live: true }, { id: 'V3', live: true }],
+    fleetDeliveries: [
+      ...state(false).deliveries,
+      { id: 'V2-S1', vehicleId: 'V2', status: 'pending' },
+    ],
+  };
+  assert.equal(driverHasConfirmedDispatch(source), true);
+  assert.equal(driverCanStart(source), true);
+  assert.deepEqual(driverConfirmedVehicles(source).map(vehicle => vehicle.id), ['V1', 'V2']);
+  assert.equal(driverHasConfirmedDispatch({ ...source, dispatch: { phase: 'amending' } }), true);
+  assert.equal(driverCanStart({ ...source, dispatch: { phase: 'amending' } }), true);
+  assert.equal(driverHasConfirmedDispatch({ ...source, dispatch: { phase: 'draft' } }), false);
+  assert.equal(driverCanStart({ ...source, dispatch: { phase: 'draft' } }), false);
+});
+
+test('원본 자료 확정 직후 idle에서는 시작할 수 있지만 기존 시뮬레이션은 preparing 규칙을 유지한다', () => {
+  const source = {
+    ...state(false), sourceData: { date: '2026-09-16' }, dispatch: { phase: 'published' }, phase: 'idle',
+    vehicle: { id: 'V1', live: true }, fleetDeliveries: state(false).deliveries,
+  };
+  assert.equal(driverCanStart(source), true);
+  assert.equal(driverCanStart({ ...source, phase: 'preparing' }), true);
+  assert.equal(driverCanStart({ ...source, phase: 'delivering' }), false);
+  assert.equal(driverCanStart({ ...source, vehicle: { id: 'V1', live: false } }), false);
+  assert.equal(driverCanStart({ ...state(false), phase: 'idle' }), false);
+  assert.equal(driverCanStart({ ...state(false), phase: 'preparing' }), true);
+});
+
+test('원본 자료의 현재 배송지는 이동 중일 때만 도착 처리할 수 있다', () => {
+  const traveling = {
+    ...state(false), sourceData: { date: '2026-09-16' }, dispatch: { phase: 'published' },
+    fleetDeliveries: state(false).deliveries, truck: { ...state(false).truck, toId: 'S1', dwelling: false },
+  };
+  assert.equal(driverCanArrive(traveling), true);
+  assert.equal(driverCanArrive({ ...traveling, truck: { ...traveling.truck, dwelling: true } }), false);
+  assert.equal(driverCanArrive({ ...traveling, truck: { ...traveling.truck, toId: 'S2' } }), false);
+  assert.equal(driverCanArrive(traveling, false), false);
+  assert.equal(driverCanArrive({ ...traveling, sourceData: null }), false);
 });

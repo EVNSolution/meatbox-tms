@@ -22,7 +22,7 @@ const validCoordinate = value => Array.isArray(value) && value.length === 2
 
 export function customerViewerDeliveries(state) {
   if (!state?.sourceData) return state?.fleetDeliveries?.length ? state.fleetDeliveries : state?.deliveries || [];
-  if (!state.dispatch || state.dispatch.phase === 'published') return Array.isArray(state.fleetDeliveries) ? state.fleetDeliveries : [];
+  if (!state.dispatch || ['published', 'amending'].includes(state.dispatch.phase)) return Array.isArray(state.fleetDeliveries) ? state.fleetDeliveries : [];
   return (Array.isArray(state.dispatchOrders) ? state.dispatchOrders : []).map(order => {
     const safe = { ...order };
     for (const key of ['vehicle', 'vehicleId', 'driver', 'plate', 'currentGroupId', 'officialEta', 'calculatedEta', 'preciseTimeText',
@@ -43,7 +43,7 @@ export function customerViewerDeliveries(state) {
 export function customerMapView(delivery, state, routeData) {
   if (state?.sourceData) {
     const home = validCoordinate(delivery?.coordinates) ? [...delivery.coordinates] : null;
-    if (state.dispatch && state.dispatch.phase !== 'published') return { home, road: [], truck: null };
+    if (state.dispatch && !['published', 'amending'].includes(state.dispatch.phase)) return { home, road: [], truck: null };
     const vehicle = delivery?.vehicle || state.fleetVehicles?.find(item => item.id === delivery?.vehicleId) || state.vehicle;
     const operationPosition = state.vehicleStates?.[vehicle?.id]?.truck || state.truck;
     const operationCoordinates = operationPosition && [operationPosition.lng, operationPosition.lat];

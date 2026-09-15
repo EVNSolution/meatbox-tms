@@ -103,10 +103,7 @@ function addLayers(map, markerImage, ownedLayers, ownedSources) {
     layout: {
       'icon-image': ids.marker, 'icon-size': 0.76, 'icon-anchor': 'bottom',
       'icon-allow-overlap': true, 'icon-ignore-placement': true,
-      'text-field': ['get', 'label'], 'text-size': 12, 'text-offset': [0, 1.15],
-      'text-anchor': 'top', 'text-allow-overlap': true, 'text-ignore-placement': true,
     },
-    paint: { 'text-color': '#102f26', 'text-halo-color': '#ffffff', 'text-halo-width': 2.5 },
   });
 }
 
@@ -183,7 +180,6 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
   };
 
   const pointLayers = [ids.orderPoint, ids.groupPoints, ids.allPoints];
-  const regionLayers = [ids.selectedRegion, ids.regionFill];
   const click = event => {
     if (!ready || destroyed) return;
     const point = event?.point || { x: 0, y: 0 };
@@ -198,12 +194,7 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
           : features.some(feature => feature?.properties?.orderId === id && feature?.properties?.groupId === latest.selectedGroupId) ? 1 : 2;
         return rank(left) - rank(right);
       });
-    if (orderIds.length) { onPick(orderIds); return; }
-    if (!latest.showRegions) return;
-    const zones = map.queryRenderedFeatures(box, { layers: regionLayers });
-    const zoneId = zones.map(feature => feature?.properties?.zoneId)
-      .find(value => typeof value === 'string' && value);
-    if (zoneId) onPick([], { zoneId });
+    onPick(orderIds);
   };
 
   map.on('style.load', start);

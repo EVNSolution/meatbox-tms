@@ -60,3 +60,10 @@ test('과거와 미확정 날짜는 시나리오 변경과 다음 배송지 진�
     assert.equal(nextScenarioTarget(value, 'O1'), null);
   }
 });
+
+test('수정안 작성 중에도 확정 차량의 시나리오와 다음 배송지를 사용할 수 있다', () => {
+  const route = [stop('O1'), stop('O2')];
+  const state = { dispatch: { phase: 'amending' }, fleetDeliveries: route, deliveries: route };
+  assert.equal(scenarioSelectionState(state, route[0], true).controllable, true);
+  assert.equal(nextScenarioTarget(state, 'O1'), route[1]);
+});

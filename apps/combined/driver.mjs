@@ -6,6 +6,10 @@ import { connectSimulation } from './simulation-client.mjs';
 import {
   completionProofCanSubmit,
   completionProofShouldClose,
+  driverCanArrive,
+  driverCanStart,
+  driverConfirmedVehicles,
+  driverHasConfirmedDispatch,
   driverMapDelivery,
   driverTipDelivery,
   driverViewModel,
@@ -73,7 +77,7 @@ const view = () => driverViewModel(latest, connected, selectedId);
 const signature = () => JSON.stringify([latest.phase, view().deliveries.map(stop => [stop.id, stop.status])]);
 const activeRoute = () => group === 'today';
 const disabled = condition => condition ? 'disabled' : '';
-const dispatchPending = () => Boolean(latest?.sourceData && latest.dispatch && latest.dispatch.phase !== 'published');
+const dispatchPending = () => Boolean(latest?.sourceData && !driverHasConfirmedDispatch(latest));
 const dispatchReadOnly = () => Boolean(latest?.sourceData && latest.dispatch?.readOnly);
 const eta = stop => stop?.completedAt || stop?.arrivedAt || stop?.preciseTimeText || stop?.officialEta?.time || '—';
 const vehicleDisplay = vehicle => vehicle?.plate || '미확인';
@@ -156,7 +160,7 @@ function render() {
   byId('driver-finish').textContent = waitingForDispatch ? '배차 전송 대기' : latest.sourceData && model.finishEta === '—' ? '시간 정보 미제공' : model.finishEta;
   const sourceDateQuery = latest.sourceData?.date ? `&date=${encodeURIComponent(latest.sourceData.date)}` : '';
   byId('driver-manage-link').href = `/combined/?${selectedId ? `id=${encodeURIComponent(selectedId)}&` : ''}${sourceDateQuery.replace(/^&/, '')}#/control/manage`;
-  const vehicles = waitingForDispatch ? [] : latest.fleetVehicles?.length ? latest.fleetVehicles : [model.vehicle].filter(Boolean);
+  const vehicles = waitingForDispatch ? [] : driverConfirmedVehicles(latest);
   const select = byId('driver-vehicle-select');
   const options = vehicles.map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.plate)} / ${escapeHtml(vehicle.driver)}</option>`).join('')
     || (waitingForDispatch ? '<option value="">확정 배차 없음</option>' : '');
@@ -219,7 +223,7 @@ function render() {
     const time = byId('dv-proof-time');
     if (time) time.value = latest.simClock;
   }
-  if (sheet?.kind === 'start') byId('dv-sheet-body').querySelector('[data-confirm-start]').disabled = Boolean(pending) || !connected || signature() !== sheet.startSignature;
+  if (sheet?.kind === 'start') byId('dv-sheet-body').querySelector('[data-confirm-start]').disabled = Boolean(pending) || !driverCanStart(latest, connected, model.vehicle) || signature() !== sheet.startSignature;
   if (sheet) byId('dv-sheet-close').disabled = Boolean(pending);
 }
 function stopCard(stop, attributes = '') {
@@ -230,7 +234,8 @@ function executionButtons() {
   if (dispatchReadOnly()) return '<p class="dv-muted">과거 배차는 조회만 할 수 있습니다.</p>';
   if (model.vehicle?.live === false) return '<p class="dv-muted">조회 전용 배차입니다.</p>';
   if (latest.phase === 'done') return '<p class="dv-muted">모든 배송을 완료했습니다.</p>';
-  if (latest.phase !== 'delivering') return `<button class="dv-button dv-primary dv-start" aria-label="배송 시작" data-action="start" ${disabled(!connected || latest.phase !== 'preparing' || pending)}><span>배송 시작</span><small>픽업 완료</small></button>`;
+  if (latest.phase !== 'delivering') return `<button class="dv-button dv-primary dv-start" aria-label="배송 시작" data-action="start" ${disabled(!driverCanStart(latest, connected, model.vehicle) || pending)}><span>배송 시작</span><small>픽업 완료</small></button>`;
+  if (latest.sourceData && model.current && !latest.truck?.dwelling) return `<div class="dv-inline"><button class="dv-button dv-soft" data-action="open-map">지도 열기</button><button class="dv-button dv-primary" data-action="arrive" ${disabled(!driverCanArrive(latest, connected) || pending)}>배송지 도착</button></div><p class="dv-action-hint">배송지에 도착하면 도착 버튼을 눌러주세요.</p>`;
   return `<div class="dv-inline"><button class="dv-button dv-soft" data-action="open-map">지도 열기</button><button class="dv-button dv-primary" data-action="complete" ${disabled(!model.canComplete || pending)}>배송 완료</button></div>${model.canComplete ? '' : '<p class="dv-action-hint">배송지에 도착하면 완료할 수 있습니다.</p>'}`;
 }
 function renderDelivery() {
@@ -483,13 +488,19 @@ byId('dv-app').addEventListener('click', event => {
       break;
     }
     case 'open-map': switchTab('map'); break;
+    case 'arrive': {
+      const stop = view().current;
+      if (!stop || !driverCanArrive(latest, connected)) break;
+      sendCommand('arrive_stop', { stopId: stop.id }, state => state.truck?.dwelling && state.deliveries.some(item => item.id === stop.id && item.status === 'current'), () => feedback(`${stop.name} 도착을 기록했습니다.`));
+      break;
+    }
     case 'complete': openProof(); break;
     case 'start': {
       const stop = view().deliveries.find(stop => stop.status === 'pending');
-      if (dispatchReadOnly() || latest.phase !== 'preparing' || view().vehicle?.live === false || !stop) break;
+      if (dispatchReadOnly() || !driverCanStart(latest, connected, view().vehicle) || !stop) break;
       const startSignature = signature();
       showSheet({ kind: 'start', startSignature, title: '배송 시작', body: '<p class="dv-muted">픽업을 마쳤나요? 첫 배송지로 출발합니다.</p><button class="dv-button dv-primary" data-confirm-start>배송 시작</button>', onClick(event) {
-        if (event.target.closest('[data-confirm-start]') && signature() === startSignature) sendCommand('set_scenario', { scenario: 'shipping', stopId: stop.id }, state => state.phase === 'delivering', () => { closeSheet(); feedback('배송을 시작했습니다.'); });
+        if (event.target.closest('[data-confirm-start]') && driverCanStart(latest, connected, view().vehicle) && signature() === startSignature) sendCommand('set_scenario', { scenario: 'shipping', stopId: stop.id }, state => state.phase === 'delivering', () => { closeSheet(); feedback('배송을 시작했습니다.'); });
       } });
       break;
     }

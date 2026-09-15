@@ -42,7 +42,7 @@ async function fixture(t, { dispatchCalculator = assignInOrder, operatingDate = 
   }));
   await fs.writeFile(path.join(dispatchDataDir, 'days', `${date}.json`), JSON.stringify(day));
   await fs.writeFile(path.join(dispatchDataDir, 'regions.geojson'), JSON.stringify({ type: 'FeatureCollection', features: [] }));
-  const demo = createDemo({ accessFile: path.join(root, 'access.json'), dispatchDataDir, origin, dispatchCalculator });
+  const demo = createDemo({ accessFile: path.join(root, 'access.json'), dispatchDataDir, origin, ...(dispatchCalculator === 'default' ? {} : { dispatchCalculator }) });
   await new Promise(resolve => demo.server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${demo.server.address().port}`;
   const invite = await demo.access.issueInvite();
@@ -410,4 +410,34 @@ test('command rate limits are isolated by authenticated user', async t => {
     body: JSON.stringify({ type: 'reset', expectedBoot: 'old-process', expectedRevision: 0 }),
   });
   assert.equal(otherUser.status, 409);
+});
+
+test('default server calculator supports review, publish, amendment, and republish over authenticated API', async t => {
+  const api = await fixture(t, { dispatchCalculator: 'default' });
+  let state = (await publish(api)).state;
+  assert.equal(state.dispatch.phase, 'published');
+  assert.equal(state.fleetDeliveries.length, orders.length);
+  assert.equal(state.fleetDeliveries.reduce((sum, order) => sum + order.boxes, 0), 21);
+  async function send(body) {
+    const response = await command(api, date, { expectedBoot: state.boot, expectedRevision: state.revision, ...body });
+    const value = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(value));
+    state = value.state;
+  }
+  const confirmed = structuredClone(state.fleetDeliveries);
+  const first = confirmed[0];
+  const targetVehicleId = first.vehicleId === 'G1' ? 'G2' : 'G1';
+  await send({ type: 'begin_dispatch_revision' });
+  await send({ type: 'reassign', orderIds: [first.id], targetVehicleId });
+  assert.deepEqual(state.fleetDeliveries, confirmed);
+  await send({ type: 'publish_dispatch', draftVersion: state.dispatch.draftVersion });
+  assert.equal(state.fleetDeliveries.find(order => order.id === first.id).vehicleId, targetVehicleId);
+  await send({ type: 'set_scenario', vehicleId: targetVehicleId, stopId: first.id, scenario: 'shipping' });
+  await send({ type: 'arrive_stop', vehicleId: targetVehicleId, stopId: first.id });
+  await send({ type: 'complete_stop', vehicleId: targetVehicleId, stopId: first.id, hasPhoto: true });
+  assert.equal(state.fleetDeliveries.find(order => order.id === first.id).status, 'done');
+  assert.equal(state.notifications.some(notice => notice.stopId === first.id && notice.kind === 'completed'), true);
+  await send({ type: 'begin_dispatch_revision' });
+  await send({ type: 'discard_dispatch_revision' });
+  assert.equal(state.fleetDeliveries.find(order => order.id === first.id).status, 'done');
 });
