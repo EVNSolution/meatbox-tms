@@ -22,7 +22,7 @@ function lastOperatorLink(base) {
   return operatorLink(base, lastOperatorPage());
 }
 
-export function mountDemoShell({ viewer, onSend }) {
+export function mountDemoShell({ viewer, onSend, onSelect }) {
   let currentLinks = deliveryLinks(new URLSearchParams(location.search).get('id'));
   document.body.dataset.viewer = viewer;
   document.getElementById('demo-header').innerHTML = `<a class="demo-brand" href="/combined/"><img src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a><nav class="viewer-switch" aria-label="뷰어 선택"><a data-viewer="operator" href="${lastOperatorLink(currentLinks.operator)}">운영 뷰어</a><a data-viewer="customer" href="${currentLinks.customer}">고객 뷰어</a><a data-viewer="driver" href="${currentLinks.driver}">배송원 뷰어</a></nav>`;
@@ -43,7 +43,7 @@ export function mountDemoShell({ viewer, onSend }) {
     document.querySelectorAll('#demo-header [data-viewer="customer"], #demo-header [data-viewer="driver"]').forEach(link => link.addEventListener('click', syncOperatorHash));
     syncOperatorHash();
   }
-  const guide = mountScenarioTools({ onSend });
+  const guide = mountScenarioTools({ onSend, onSelect });
   let lastId;
   return {
     update(state, connected) { guide.update(state, connected); },

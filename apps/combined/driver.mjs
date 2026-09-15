@@ -38,7 +38,7 @@ let sheet = null, returnFocus = null, proofUrl = null, detailTab = 'order';
 let proofCheckedIds = new Set();
 let historyDate = new Date().toLocaleDateString('sv-SE');
 const tipDrafts = new Map();
-const shell = mountDemoShell({ viewer: 'driver', onSend: (type, extra) => simulation.send(type, extra) });
+const shell = mountDemoShell({ viewer: 'driver', onSelect: selectScenarioDelivery, onSend: (type, extra) => simulation.send(type, extra) });
 shell.update(null, false);
 const simulation = connectSimulation({
   onState(raw) {
@@ -93,6 +93,13 @@ function patch(id, html) {
   const scroll = element.scrollTop;
   element.innerHTML = html; element._html = html; element.scrollTop = scroll;
   if (key) [...element.querySelectorAll('[data-focus]')].find(item => item.dataset.focus === key)?.focus({ preventScroll: true });
+}
+function selectScenarioDelivery(id) {
+  selectedId = id;
+  mapSelection = id;
+  const url = new URL(location.href); url.searchParams.set('id', id); history.replaceState(null, '', url);
+  shell.select(id);
+  render();
 }
 function selectVehicle(id) {
   if (pending) return;

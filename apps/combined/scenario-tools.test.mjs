@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canSetScenario, scenarioSelectionState, selectedScenarioTarget } from './scenario-tools.mjs';
+import { canSetScenario, nextScenarioTarget, scenarioSelectionState, selectedScenarioTarget } from './scenario-tools.mjs';
 
 const live = { id: 'S1', vehicleId: 'V1', vehicle: { live: true } };
 const synthetic = { id: 'V2-S1', vehicleId: 'V2', vehicle: { live: false } };
@@ -27,4 +27,26 @@ test('선택 배송과 preset 대상이 다르면 헤더와 버튼 활성 상태
   assert.deepEqual(scenarioSelectionState(current, s5, true), { activeScenario: 'shipping', controllable: true, status: '배송 중' });
   assert.deepEqual(scenarioSelectionState(current, s6, true), { activeScenario: null, controllable: true, status: '상태 선택' });
   assert.deepEqual(scenarioSelectionState(current, synthetic, true), { activeScenario: null, controllable: false, status: '조회 전용' });
+});
+
+const stop = id => ({ id, vehicleId: 'V1', vehicle: { live: true } });
+
+test('다음 배송지는 ID 순서 대신 현재 배차 순서로 선택하고 상태를 바꾸지 않는다', () => {
+  const route = [stop('S1'), { ...stop('S3'), status: 'skipped' }, stop('S2')];
+  const current = { customerStopId: 'S1', deliveries: route, fleetDeliveries: [...route, synthetic] };
+  const before = structuredClone(current);
+  assert.equal(nextScenarioTarget(current, undefined), route[1]);
+  assert.equal(nextScenarioTarget(current, 'S3'), route[2]);
+  assert.equal(nextScenarioTarget(current, 'S2'), null);
+  assert.equal(nextScenarioTarget(current, 'missing'), null);
+  assert.equal(nextScenarioTarget(current, synthetic.id), null);
+  assert.deepEqual(current, before);
+});
+
+test('순서가 없거나 다음 항목이 다른 차량이면 다음 배송지로 넘기지 않는다', () => {
+  assert.equal(nextScenarioTarget(null, 'S1'), null);
+  assert.equal(nextScenarioTarget(state, 'S1'), null);
+  const route = [live, synthetic];
+  assert.equal(nextScenarioTarget({ deliveries: route }, 'S1'), null);
+  assert.equal(nextScenarioTarget({ deliveries: [live, { ...stop('S2'), vehicleId: 'V2' }] }, 'S1'), null);
 });
