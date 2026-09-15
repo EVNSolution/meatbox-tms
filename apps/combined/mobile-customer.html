@@ -32,7 +32,15 @@
       <p class="eyebrow">미트박스 배송 조회</p>
       <h1 id="picker-title">배송 조회</h1>
       <p class="picker-description">접수된 주문의 배송 현황을 조회할 매장을 선택해 주세요.</p>
-      <div id="account-list"><p class="loading-copy" role="status">배송지 목록을 불러오고 있습니다.</p><a href="">다시 불러오기</a></div>
+      <div class="account-search-tools">
+        <label for="account-search">매장 검색</label>
+        <div class="account-search-row"><input id="account-search" type="search" autocomplete="off" placeholder="매장명, 주소 검색"><button id="account-search-reset" type="button">초기화</button></div>
+        <p id="account-result-count" role="status" aria-live="polite">배송지 목록을 불러오고 있습니다.</p>
+      </div>
+      <div id="account-list" aria-label="매장 검색 결과"><p class="loading-copy">배송지 목록을 불러오고 있습니다.</p><a href="">다시 불러오기</a></div>
+      <nav class="account-pagination" aria-label="매장 검색 결과 페이지">
+        <button id="account-previous" type="button">이전</button><span id="account-page" aria-live="polite"></span><button id="account-next" type="button">다음</button>
+      </nav>
     </div>
   </section>
 

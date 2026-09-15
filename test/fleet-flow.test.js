@@ -23,7 +23,7 @@ function shiftedEtas(sim, baseline, minutes) {
   sim.stopEtas = () => Object.fromEntries(sim.order.map(id => [id, baseline[id] + minutes * MIN]));
 }
 
-test('운영 초기 상태는 주문 접수 완료 60박스와 130대 임시 fleet을 제공한다', () => {
+test('운영 초기 상태는 live 배송과 차량당 35개 예시 배송지를 제공한다', () => {
   const { sim, latest } = simulation();
   const state = latest();
   assert.equal(state.phase, 'idle');
@@ -34,10 +34,14 @@ test('운영 초기 상태는 주문 접수 완료 60박스와 130대 임시 fle
   assert.equal(state.kpi.boxesTotal, 60);
   assert.equal(state.fleet.vehicles.length, 130);
   assert.equal(state.fleet.vehicles[0].status, '출고 준비');
-  assert.equal(state.fleet.deliveries.length, 387);
-  assert.equal(state.fleet.vehicles.reduce((sum, vehicle) => sum + vehicle.capacityBoxes, 0), 7_800);
+  assert.equal(state.fleet.deliveries.length, 4_515);
+  assert.equal(state.order.length + state.fleet.deliveries.length, 4_523);
+  assert.equal(state.fleet.vehicles.reduce((sum, vehicle) => sum + vehicle.planned.boxes, 0), 9_090);
+  assert.equal(state.fleet.vehicles.slice(1).every(vehicle => vehicle.planned.stops === 35 && vehicle.planned.boxes === 70), true);
+  assert.equal(state.fleet.vehicles.slice(1).every(vehicle => vehicle.capacityBoxes === null), true);
+  assert.equal(state.fleet.deliveries.every(stop => stop.boxes === 2), true);
   assert.deepEqual(state.fleet.deliveries.slice(0, 3).map(stop => stop.id), ['V2-S1', 'V2-S2', 'V2-S3']);
-  assert.equal(state.fleet.deliveries.at(-1).id, 'V130-S3');
+  assert.equal(state.fleet.deliveries.at(-1).id, 'V130-S35');
   assert.equal(state.fleet.deliveries.every(stop => stop.address === '위치 데이터 대기' && stop.eta === null), true);
   assert.equal(state.order.every(stop => stop.tip === null), true);
   assert.equal(state.fleet.deliveries.every(stop => stop.tip === null), true);
@@ -223,10 +227,11 @@ test('운영 알림과 배송팁 명령은 알려진 정차지의 인쇄 가능�
   assert.equal(validCommand({ type: 'set_scenario', scenario: 'shipping', stopId: 'V2-S1' }), false);
   assert.equal(validCommand({ type: 'set_scenario', scenario: 'shipping', stopId: ['S1'] }), false);
   assert.equal(validCommand({ type: 'send_customer_notice', stopId: 'S1', body: '도착 전 확인해 주세요.' }), true);
-  assert.equal(validCommand({ type: 'set_delivery_tip', stopId: 'V130-S3', body: '예시 팁' }), true);
+  assert.equal(validCommand({ type: 'set_delivery_tip', stopId: 'V130-S35', body: '예시 팁' }), true);
   for (const command of [
     { type: 'send_customer_notice', stopId: 'S9', body: '안내' },
     { type: 'send_customer_notice', stopId: 'V131-S1', body: '안내' },
+    { type: 'send_customer_notice', stopId: 'V130-S36', body: '안내' },
     { type: 'send_customer_notice', stopId: 'S1', body: '' },
     { type: 'send_customer_notice', stopId: 'S1', body: '가'.repeat(301) },
     { type: 'send_customer_notice', stopId: 'S1', body: '<img src=x onerror=alert(1)>' },
@@ -298,13 +303,13 @@ test('인증된 두 WebSocket은 synthetic 알림과 팁을 함께 받고 reset�
     ws.on('message', receive);
   });
 
-  const noticeCommand = { type: 'send_customer_notice', stopId: 'V2-S1', body: '상차가 끝나면 다시 안내드리겠습니다.' };
+  const noticeCommand = { type: 'send_customer_notice', stopId: 'V130-S35', body: '상차가 끝나면 다시 안내드리겠습니다.' };
   const noticeStates = [nextState(first, state => state.notifications.some(item => item.body === noticeCommand.body)), nextState(second, state => state.notifications.some(item => item.body === noticeCommand.body))];
   first.send(JSON.stringify(noticeCommand));
   const [firstNotice, secondNotice] = await Promise.all(noticeStates);
   for (const state of [firstNotice, secondNotice]) {
     const notice = state.notifications.find(item => item.body === noticeCommand.body);
-    assert.equal(notice.stopId, 'V2-S1');
+    assert.equal(notice.stopId, 'V130-S35');
     assert.equal(notice.author, '운영자 하나');
     assert.equal(notice.channel, '고객 팝업');
     assert.equal(notice.status, '시연 발송');
@@ -314,12 +319,12 @@ test('인증된 두 WebSocket은 synthetic 알림과 팁을 함께 받고 reset�
   const firstNoticeId = firstNotice.notifications.at(-1).id;
 
   const changedTip = '후문에서 예시 배송을 인계합니다.';
-  const tipStates = [nextState(first, state => state.fleet.deliveries.find(stop => stop.id === 'V2-S1').tip?.body === changedTip), nextState(second, state => state.fleet.deliveries.find(stop => stop.id === 'V2-S1').tip?.body === changedTip)];
-  second.send(JSON.stringify({ type: 'set_delivery_tip', stopId: 'V2-S1', body: changedTip }));
+  const tipStates = [nextState(first, state => state.fleet.deliveries.find(stop => stop.id === 'V130-S35').tip?.body === changedTip), nextState(second, state => state.fleet.deliveries.find(stop => stop.id === 'V130-S35').tip?.body === changedTip)];
+  second.send(JSON.stringify({ type: 'set_delivery_tip', stopId: 'V130-S35', body: changedTip }));
   const [, secondTip] = await Promise.all(tipStates);
-  assert.equal(secondTip.fleet.deliveries.find(stop => stop.id === 'V2-S1').tip.author, '예시 배송원 002');
+  assert.equal(secondTip.fleet.deliveries.find(stop => stop.id === 'V130-S35').tip.author, '예시 배송원 130');
 
-  const resets = [nextState(first, state => state.notifications.length === 0 && state.fleet.deliveries.find(stop => stop.id === 'V2-S1').tip === null), nextState(second, state => state.notifications.length === 0)];
+  const resets = [nextState(first, state => state.notifications.length === 0 && state.fleet.deliveries.find(stop => stop.id === 'V130-S35').tip === null), nextState(second, state => state.notifications.length === 0)];
   first.send(JSON.stringify({ type: 'reset' }));
   await Promise.all(resets);
   const afterReset = nextState(first, state => state.notifications.some(item => item.body === '리셋 이후 안내'));

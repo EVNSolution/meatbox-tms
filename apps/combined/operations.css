@@ -21,6 +21,11 @@
 .fleet-delivery-table tr[data-delivery-row] { cursor: pointer; }
 .fleet-delivery-table .delivery-select { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fleet-address { max-width: 0; }
+.delivery-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 20px; border-top: 1px solid var(--border); }
+.delivery-pagination p { margin: 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+.delivery-pagination > div { display: flex; align-items: center; gap: 10px; }
+.delivery-pagination .button { min-height: 32px; padding: 5px 10px; font-size: 12px; }
+.delivery-pagination span { min-width: 52px; color: var(--muted); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
 .delivery-tip { margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: #f8f9fb; }
 .delivery-tip p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .delivery-tip small { display: block; margin-top: 6px; color: var(--muted); }
@@ -173,6 +178,8 @@
   .list-toolbar .field input,
   .list-toolbar .field select,
   .list-toolbar > .button { height: 44px; min-height: 44px; }
+  .delivery-pagination { padding-inline: 12px; }
+  .delivery-pagination .button { min-height: 44px; }
   .monitor-deliveries { max-height: 360px; }
   .monitor-stop { grid-template-columns: 20px minmax(0, 1fr) 54px; column-gap: 6px; row-gap: 0; min-height: 44px; padding: 5px 10px; }
   .monitor-stop-number,

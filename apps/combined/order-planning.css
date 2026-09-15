@@ -3,14 +3,15 @@
 .order-map-heading h2 { margin: 0; font-size: 18px; font-weight: 600; }
 .order-map-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
 .order-map-count { color: var(--brand); font-weight: 700; }
-.order-map-canvas { position: relative; min-height: min(700px, calc(100vh - 236px)); overflow: hidden; background-color: #f5f6f7; background-image: linear-gradient(rgba(33,35,34,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(33,35,34,.035) 1px, transparent 1px); background-size: 64px 64px; }
-.order-map-layer, .order-marker-layer { position: absolute; inset: 0; }
+.order-map-canvas { position: relative; min-height: min(700px, calc(100vh - 236px)); overflow: hidden; background: #f5f6f7; }
+.order-map-layer { position: absolute; inset: 0; }
+.order-map-status { position: absolute; z-index: 2; top: 50%; left: 50%; margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fffffff0; color: var(--muted); font-size: 12px; transform: translate(-50%, -50%); }
 .order-map-toolbar, .order-scenario-trigger, .order-map-selection, .order-map-summary { position: absolute; z-index: 3; border: 1px solid var(--border); background: #fff; }
 .order-map-toolbar { top: 12px; left: 12px; display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 6px 8px; border-radius: 6px; }
 .order-map-toolbar label { color: var(--muted); font-size: 11px; font-weight: 600; }
 .order-map-toolbar select { min-width: 156px; max-width: 240px; height: 30px; padding: 0 26px 0 8px; }
 .order-scenario-trigger { top: 12px; right: 12px; min-height: 42px; padding: 0 14px; border-radius: 6px; color: #fff; background: var(--brand); border-color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
-.order-map-marker { position: absolute; z-index: 2; top: var(--marker-top); left: var(--marker-left); display: flex; width: 44px; height: 44px; padding: 0; align-items: flex-end; justify-content: center; transform: translate(-50%, -100%); border: 0; background: transparent; cursor: pointer; }
+.order-map-marker { z-index: 2; display: flex; width: 44px; height: 44px; padding: 0; align-items: flex-end; justify-content: center; border: 0; background: transparent; cursor: pointer; }
 .order-map-marker::before { width: 24.8px; height: 32.24px; background: url('./assets/maps/dsv-destination-marker.svg') center / contain no-repeat; content: ''; }
 .order-map-marker[aria-pressed="true"]::before { filter: brightness(.8); }
 .order-map-marker:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; border-radius: 4px; }

@@ -1,6 +1,7 @@
 import { referenceIcon } from './reference-icons.mjs';
 import { inboxState, noticeKey, visibleNotices, updateInbox } from './customer-inbox.mjs';
 import { customerDemoRoad } from './customer-demo-route.mjs';
+import { customerPickerPage, updateCustomerPickerState } from './customer-picker-model.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
@@ -45,6 +46,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
   let boot;
   let inbox = {};
   let inboxStorageKey;
+  let pickerState = { query: '', page: 1 };
   const notificationPanel = byId('customer-notifications');
 
   const queryId = () => new URLSearchParams(location.search).get('id');
@@ -57,12 +59,26 @@ export function mountCustomerRenderer({ mb, onSelect }) {
   const currentDeliveries = () => latest?.fleetDeliveries?.length ? latest.fleetDeliveries : latest?.deliveries || [];
   const currentDelivery = () => currentDeliveries().find(delivery => delivery.id === selectedId) ?? null;
 
+  function renderPicker() {
+    const result = customerPickerPage(currentDeliveries(), pickerState);
+    pickerState.page = result.page;
+    const search = byId('account-search');
+    if (search.value !== pickerState.query) search.value = pickerState.query;
+    byId('account-search-reset').disabled = !pickerState.query;
+    byId('account-result-count').textContent = result.total ? `검색 결과 ${result.total}개 중 ${result.start}-${result.end}개` : '검색 결과가 없습니다.';
+    byId('account-list').innerHTML = result.items.map(delivery => `<button class="acct" data-acct="${escapeHtml(delivery.id)}"${delivery.id === selectedId ? ' aria-current="true"' : ''}><span><b>${escapeHtml(delivery.name)}</b><span class="sub">${escapeHtml(delivery.address || '배송지 정보 없음')}</span></span><span class="bx">${escapeHtml(delivery.boxes ?? '—')}박스</span></button>`).join('') || '<p class="loading-copy">조건에 맞는 매장이 없습니다.</p>';
+    byId('account-page').textContent = `${result.page} / ${result.pageCount}`;
+    byId('account-previous').disabled = result.page <= 1;
+    byId('account-next').disabled = result.page >= result.pageCount;
+  }
+
   function showPicker() {
     hidePopup();
     setNotificationsOpen(false);
-    const deliveries = currentDeliveries();
-    byId('account-list').innerHTML = deliveries.map(delivery => `<button class="acct" data-acct="${escapeHtml(delivery.id)}"><span><b>${escapeHtml(delivery.name)}</b><br><span class="sub">${escapeHtml(delivery.address || '배송지 정보 없음')}</span></span><span class="bx">${escapeHtml(delivery.boxes ?? '—')}박스</span></button>`).join('') || '<p class="loading-copy">조회할 배송이 없습니다.</p>';
+    const wasHidden = byId('account-picker').hidden;
+    renderPicker();
     byId('account-picker').hidden = false;
+    if (wasHidden) requestAnimationFrame(() => byId('account-search').focus());
   }
 
   function select(id) {
@@ -204,6 +220,22 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     const button = event.target.closest('[data-acct]');
     if (button) select(button.dataset.acct);
   });
+  byId('account-search').addEventListener('input', event => {
+    pickerState = updateCustomerPickerState(pickerState, { query: event.currentTarget.value });
+    renderPicker();
+  });
+  byId('account-search-reset').addEventListener('click', () => {
+    pickerState = updateCustomerPickerState(pickerState, { query: '' });
+    renderPicker();
+    byId('account-search').focus();
+  });
+  for (const [id, direction] of [['account-previous', -1], ['account-next', 1]]) {
+    byId(id).addEventListener('click', () => {
+      pickerState = updateCustomerPickerState(pickerState, { page: pickerState.page + direction });
+      renderPicker();
+      byId('account-list').querySelector('button')?.focus();
+    });
+  }
   byId('switch-account').addEventListener('click', showPicker);
   byId('notification-bell').addEventListener('click', () => {
     const open = notificationPanel.hidden;
@@ -312,6 +344,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
       if (!selectedId) { popupBaseline = new Set(); showPicker(); return; }
       if (!currentDelivery()) { selectedId = null; showPicker(); return; }
       render();
+      if (!byId('account-picker').hidden) renderPicker();
     },
   };
 }

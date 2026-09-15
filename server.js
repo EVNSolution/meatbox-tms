@@ -3,6 +3,8 @@ const http = require('node:http');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const { randomUUID } = require('node:crypto');
+const { createStateFrames } = require('./lib/state-frames');
+const { createStateSender } = require('./lib/state-broadcast');
 const { WebSocketServer } = require('ws');
 const { createAccess, AccessError } = require('./lib/access');
 const { arriveStop, completeStop } = require('./lib/scenario-controls');
@@ -35,7 +37,7 @@ function validCommand(msg) {
     && typeof msg.stopId === 'string' && /^S[1-8]$/.test(msg.stopId);
   if (['send_customer_notice', 'set_delivery_tip'].includes(msg.type)) {
     const max = msg.type === 'send_customer_notice' ? 300 : 500;
-    return typeof msg.stopId === 'string' && /^(?:S[1-8]|V(?:[2-9]|[1-9]\d|1[0-2]\d|130)-S[1-3])$/.test(msg.stopId)
+    return typeof msg.stopId === 'string' && /^(?:S[1-8]|V(?:[2-9]|[1-9]\d|1[0-2]\d|130)-S(?:[1-9]|[12]\d|3[0-5]))$/.test(msg.stopId)
       && validPlainText(msg.body, max);
   }
   if (msg.type === 'complete_stop') return msg.stopId === undefined || /^S[1-8]$/.test(msg.stopId);
@@ -176,20 +178,12 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
   const wss = new WebSocketServer({ noServer: true, maxPayload: 4096 });
   const commandWindows = new Map();
   const boot = randomUUID();
-  let latest;
+  const frames = createStateFrames(boot);
+  const sendState = createStateSender({ latest: () => frames.latest, session: token => access.session(token) });
   const sim = new OperatingSimulation(state => {
-    latest = JSON.stringify({ type: 'state', state, boot });
+    frames.publish(state);
     for (const ws of wss.clients) sendState(ws);
   });
-  async function sendState(ws) {
-    if (ws.readyState !== 1 || ws.checkingSession) return;
-    ws.checkingSession = true;
-    try {
-      if (!await access.session(ws.token)) { ws.close(4401, 'Session ended'); return; }
-      if (ws.readyState === 1) ws.send(latest);
-    } catch { ws.close(1011, 'Session unavailable'); }
-    finally { ws.checkingSession = false; }
-  }
   server.on('upgrade', async (req, socket, head) => {
     try {
       if (req.url !== '/ws/simulation' || req.headers.origin !== origin || !await access.session(tokenFrom(req))) {
@@ -237,10 +231,8 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
       else commandWindows.delete(username);
     }
     for (const ws of wss.clients) {
-      ws.checkingSession = true;
       try { if (!await access.session(ws.token)) ws.close(4401, 'Session ended'); }
       catch { ws.close(1011, 'Session unavailable'); }
-      finally { ws.checkingSession = false; }
     }
   }, 30_000);
   sweep.unref();
