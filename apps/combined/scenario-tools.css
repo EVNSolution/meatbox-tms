@@ -56,6 +56,27 @@
 .scenario-body[hidden] { display: none; }
 .scenario-target { margin: 0 0 12px; color: #667085; font-size: 12px; }
 .scenario-target strong { color: #212322; font-weight: 600; }
+.scenario-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  color: #413f3d;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 3px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.scenario-next svg { width: 18px; height: 18px; flex: none; }
+.scenario-next:hover:not(:disabled) { border-color: #98a2b3; background: #f9fafb; }
+.scenario-next:disabled { color: #98a2b3; background: #f9fafb; border-color: #e4e7ec; cursor: default; }
 .scenario-groups { display: grid; gap: 10px; }
 .scenario-group { min-width: 0; margin: 0; padding: 10px; border: 1px solid #d0d5dd; border-radius: 3px; }
 .scenario-group legend { padding: 0 5px; color: #413f3d; font-size: 12px; font-weight: 600; }

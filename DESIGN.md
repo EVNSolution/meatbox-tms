@@ -183,3 +183,8 @@
 - F1 current assignment metrics, F2 existing-input timing and known coverage, F3 example requests with mandatory confirmation, and F4 unassigned profile candidates are implemented and locally verified. See section 13 of docs/vehicle-operations-redesign-plan.md for evidence and external-data limitations.
 - Compact customer-request badges also show example provenance. Driver confirmation requires every required request ID plus a local photo; the gateway rechecks the current destination and exact request set. The reference driver completion button routes to the combined driver flow without editing owner snapshots.
 - Final local evidence: 196 tests, JavaScript syntax, diff check, existing capacity/stream checks and native browser checks at desktop/390/320px. Follow-up changes are not deployed.
+
+## Scenario remote destination navigation
+- Add a ‘다음 배송지’ button beneath the selected destination. It selects the next entry in the current live V1 route in the initiating viewer; the existing six buttons then select that destination's scene.
+- At the final destination, show disabled ‘마지막 배송지’. Disable navigation while disconnected, awaiting a scenario response, without a target or for synthetic vehicles. Preserve edited route order; do not increment destination IDs.
+- Selection alone sends no scenario command and changes no delivery, notification, evidence or route draft. Other viewers retain their own delivery selection. No automatic playback or timer.

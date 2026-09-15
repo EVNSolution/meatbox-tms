@@ -336,6 +336,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
   });
 
   return {
+    select,
     update(state, _raw, context = {}) {
       boot = context.boot;
       latest = state;

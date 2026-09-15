@@ -40,7 +40,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
 const badge = (text, color = 'neutral') => `<span class="badge ${color}">${escapeHtml(text)}</span>`;
 const keyValue = (label, value) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value ?? '미확인')}</dd></div>`;
 
-const scenarioTools = mountDemoShell({ viewer: 'operator', onSend: (type, extra) => simulation.send(type, extra) });
+const scenarioTools = mountDemoShell({ viewer: 'operator', onSelect: selectDelivery, onSend: (type, extra) => simulation.send(type, extra) });
 const vehicleControl = mountVehicleControl({ element: byId('vehicle-control'),
   onSelectVehicle: id => {
     const row = vehicleOperations(state.data).find(item => item.vehicle.id === id);

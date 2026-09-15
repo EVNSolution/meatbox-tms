@@ -5,7 +5,7 @@ import { mountCustomerRenderer } from './customer-renderer.mjs';
 
 let adapted;
 let connected = false;
-const shell = mountDemoShell({ viewer: 'customer', onSend: (type, extra) => simulation.send(type, extra) });
+const shell = mountDemoShell({ viewer: 'customer', onSelect: id => renderer.select(id), onSend: (type, extra) => simulation.send(type, extra) });
 shell.update(null, false);
 const renderer = mountCustomerRenderer({ onSelect: id => shell.select(id) });
 const simulation = connectSimulation({

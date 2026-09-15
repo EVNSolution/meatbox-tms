@@ -26,7 +26,16 @@ export function scenarioSelectionState(state, target, connected) {
   return { activeScenario, controllable, status };
 }
 
-export function mountScenarioTools({ onSend }) {
+export function nextScenarioTarget(state, selectedId) {
+  const target = selectedScenarioTarget(state, selectedId);
+  if (!canSetScenario(target)) return null;
+  const route = state?.deliveries || [];
+  const index = route.findIndex(delivery => delivery.id === target.id);
+  const next = index >= 0 ? route[index + 1] : null;
+  return canSetScenario(next) && next.vehicleId === target.vehicleId ? next : null;
+}
+
+export function mountScenarioTools({ onSend, onSelect }) {
   const panel = document.createElement('aside');
   panel.id = 'scenario-tools';
   panel.className = 'scenario-palette';
@@ -38,6 +47,7 @@ export function mountScenarioTools({ onSend }) {
     </div>
     <div class="scenario-body" id="scenario-body" hidden>
       <p class="scenario-target" id="scenario-target"></p>
+      <button type="button" class="scenario-next" id="scenario-next" disabled>다음 배송지<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
       <div class="scenario-groups">
         ${scenarioGroups.map(group => `<fieldset class="scenario-group"><legend>${group.label}</legend><div class="scenario-buttons">${group.scenarios.map(scenario => `<button type="button" data-scenario="${scenario.id}" aria-pressed="false">${scenario.label}</button>`).join('')}</div></fieldset>`).join('')}
       </div>
@@ -50,6 +60,7 @@ export function mountScenarioTools({ onSend }) {
   const body = panel.querySelector('.scenario-body');
   const status = panel.querySelector('#current-scenario');
   const note = panel.querySelector('#scenario-note');
+  const nextButton = panel.querySelector('#scenario-next');
   const error = panel.querySelector('#scenario-error');
   const buttons = [...panel.querySelectorAll('[data-scenario]')];
   let selectedId;
@@ -74,6 +85,11 @@ export function mountScenarioTools({ onSend }) {
     const { activeScenario, controllable, status: statusText } = selection;
     status.textContent = statusText;
     const unavailable = !connected || !controllable;
+    const next = nextScenarioTarget(latest, selectedId);
+    nextButton.disabled = unavailable || pending || !next;
+    const last = controllable && !next && latest?.deliveries?.at(-1)?.id === target.id;
+    nextButton.firstChild.textContent = last ? '마지막 배송지' : '다음 배송지';
+    nextButton.title = next ? next.name || next.id : '';
     panel.querySelector('#scenario-target').innerHTML = target
       ? `선택 배송 <strong>${escapeHtml(target.name || target.id)}</strong>`
       : '배송지를 선택해 주세요.';
@@ -86,6 +102,12 @@ export function mountScenarioTools({ onSend }) {
       button.setAttribute('aria-pressed', String(button.dataset.scenario === activeScenario));
     });
   }
+
+  nextButton.addEventListener('click', () => {
+    if (nextButton.disabled) return;
+    const next = nextScenarioTarget(latest, selectedId);
+    if (next) onSelect(next.id);
+  });
 
   toggle.addEventListener('click', () => {
     expand(body.hidden);
