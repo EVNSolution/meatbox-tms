@@ -30,9 +30,11 @@ function assignInOrder({ orders: sourceOrders, vehicleIds }) {
   return Object.fromEntries(sourceOrders.map((order, index) => [order.id, vehicleIds[index % vehicleIds.length]]));
 }
 
-async function fixture(t, { dispatchCalculator = assignInOrder, operatingDate = date } = {}) {
+async function fixture(t, { dispatchCalculator = assignInOrder, operatingDate = date, persistent = false, dispatchStateIO } = {}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'meatbox-source-api-'));
   const dispatchDataDir = path.join(root, '.runtime', 'dispatch-data');
+  const dispatchStateDir = persistent ? path.join(root, '.runtime', 'dispatch-state') : null;
+  const accessFile = path.join(root, 'access.json');
   await fs.mkdir(path.join(dispatchDataDir, 'days'), { recursive: true });
   await fs.writeFile(path.join(dispatchDataDir, 'manifest.json'), JSON.stringify({
     schemaVersion: 1,
@@ -42,7 +44,7 @@ async function fixture(t, { dispatchCalculator = assignInOrder, operatingDate = 
   }));
   await fs.writeFile(path.join(dispatchDataDir, 'days', `${date}.json`), JSON.stringify(day));
   await fs.writeFile(path.join(dispatchDataDir, 'regions.geojson'), JSON.stringify({ type: 'FeatureCollection', features: [] }));
-  const demo = createDemo({ accessFile: path.join(root, 'access.json'), dispatchDataDir, origin, ...(dispatchCalculator === 'default' ? {} : { dispatchCalculator }) });
+  const demo = createDemo({ accessFile, dispatchDataDir, dispatchStateDir, dispatchStateIO, origin, ...(dispatchCalculator === 'default' ? {} : { dispatchCalculator }) });
   await new Promise(resolve => demo.server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${demo.server.address().port}`;
   const invite = await demo.access.issueInvite();
@@ -56,7 +58,36 @@ async function fixture(t, { dispatchCalculator = assignInOrder, operatingDate = 
     ...options,
     headers: { cookie, 'accept-encoding': 'identity', ...options.headers },
   });
-  return { base, cookie, request, dispatchDataDir, access: demo.access };
+  return { base, cookie, request, dispatchDataDir, dispatchStateDir, dispatchStateIO, accessFile, credentials, access: demo.access, demo, root, dispatchCalculator };
+}
+
+async function restartFixture(t, api) {
+  await api.demo.close();
+  const demo = createDemo({
+    accessFile: api.accessFile,
+    dispatchDataDir: api.dispatchDataDir,
+    dispatchStateDir: api.dispatchStateDir,
+    dispatchStateIO: api.dispatchStateIO,
+    origin,
+    ...(api.dispatchCalculator === 'default' ? {} : { dispatchCalculator: api.dispatchCalculator }),
+  });
+  await new Promise(resolve => demo.server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${demo.server.address().port}`;
+  const session = await demo.access.login(api.credentials);
+  const cookie = `meatbox_session=${session.token}`;
+  t.after(() => demo.close());
+  return {
+    ...api,
+    base,
+    cookie,
+    demo,
+    access: demo.access,
+    request: (route, options = {}) => fetch(base + route, {
+      redirect: 'manual',
+      ...options,
+      headers: { cookie, 'accept-encoding': 'identity', ...options.headers },
+    }),
+  };
 }
 
 async function command(api, itemDate, body, requestOrigin = origin, encoding = 'identity') {
@@ -378,6 +409,146 @@ test('more than eight modified dates round-trip through checkpoints with CAS con
   assert.equal(restoredAgain.revision, 2);
   assert.equal(restoredAgain.dispatch.phase, 'draft');
   assert.equal(restoredAgain.dispatchPreview.find(vehicle => vehicle.vehicleId === 'G2').orders, 2);
+});
+
+test('durable dispatch state restores draft, publication, and delivery progress after restart', async t => {
+  let api = await fixture(t, { persistent: true });
+  const sourceBefore = await fs.readFile(path.join(api.dispatchDataDir, 'days', `${date}.json`), 'utf8');
+  const calculated = await calculate(api);
+  assert.equal(calculated.state.dispatch.phase, 'draft');
+  const firstBoot = calculated.state.boot;
+  const storedDraft = JSON.parse(await fs.readFile(path.join(api.dispatchStateDir, `${date}.json`), 'utf8'));
+  assert.equal(storedDraft.schemaVersion, 2);
+  assert.equal(storedDraft.date, date);
+  assert.equal(storedDraft.sourceId, 'csv-test-source');
+  assert.equal(storedDraft.phase, 'draft');
+  assert.equal(Object.hasOwn(storedDraft, 'checkpoint'), false);
+
+  api = await restartFixture(t, api);
+  let state = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  assert.notEqual(state.boot, firstBoot);
+  assert.equal(state.revision, calculated.state.revision);
+  assert.equal(state.dispatch.phase, 'draft');
+  let response = await command(api, date, {
+    type: 'publish_dispatch', expectedBoot: state.boot, expectedRevision: state.revision,
+    draftVersion: state.dispatch.draftVersion,
+  });
+  assert.equal(response.status, 200);
+  state = (await response.json()).state;
+  const first = state.fleetDeliveries[0];
+  for (const item of [
+    { type: 'set_scenario', vehicleId: first.vehicleId, stopId: first.id, scenario: 'shipping' },
+    { type: 'arrive_stop', vehicleId: first.vehicleId, stopId: first.id },
+    { type: 'complete_stop', vehicleId: first.vehicleId, stopId: first.id, hasPhoto: true },
+  ]) {
+    response = await command(api, date, { ...item, expectedBoot: state.boot, expectedRevision: state.revision });
+    assert.equal(response.status, 200, JSON.stringify(await response.clone().json()));
+    state = (await response.json()).state;
+  }
+
+  api = await restartFixture(t, api);
+  const restored = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  assert.equal(restored.revision, state.revision);
+  assert.equal(restored.dispatch.phase, 'published');
+  assert.equal(restored.fleetDeliveries.find(order => order.id === first.id).status, 'done');
+  assert.equal(restored.notifications.some(notice => notice.stopId === first.id && notice.kind === 'completed'), true);
+  assert.equal(await fs.readFile(path.join(api.dispatchDataDir, 'days', `${date}.json`), 'utf8'), sourceBefore);
+  assert.equal((await fs.stat(api.dispatchStateDir)).mode & 0o777, 0o700);
+  assert.equal((await fs.stat(path.join(api.dispatchStateDir, `${date}.json`))).mode & 0o777, 0o600);
+});
+
+test('durable same-date commands serialize CAS and persist only one stale-racing change', async t => {
+  let api = await fixture(t, { persistent: true });
+  const initial = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  const body = { type: 'calculate_dispatch', expectedBoot: initial.boot, expectedRevision: initial.revision, vehicleIds: ['G1', 'G2'] };
+  const responses = await Promise.all([command(api, date, body), command(api, date, body)]);
+  assert.deepEqual(responses.map(response => response.status).sort(), [200, 409]);
+  api = await restartFixture(t, api);
+  const restored = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  assert.equal(restored.revision, 1);
+  assert.equal(restored.dispatch.phase, 'draft');
+});
+
+test('LRU does not evict a date while its durable command is awaiting rename', async t => {
+  let releaseRename;
+  let reachedRename;
+  const renameGate = new Promise(resolve => { releaseRename = resolve; });
+  const renameReached = new Promise(resolve => { reachedRename = resolve; });
+  let delayFirstRename = true;
+  const dispatchStateIO = {
+    ...fs,
+    async rename(from, to) {
+      if (delayFirstRename && to.endsWith(`${path.sep}${date}.json`)) {
+        delayFirstRename = false;
+        reachedRename();
+        await renameGate;
+      }
+      return fs.rename(from, to);
+    },
+  };
+  const api = await fixture(t, { persistent: true, dispatchStateIO });
+  const dates = Array.from({ length: 9 }, (_, index) => `2025-09-${String(15 + index).padStart(2, '0')}`);
+  for (const itemDate of dates.slice(1)) {
+    await fs.writeFile(path.join(api.dispatchDataDir, 'days', `${itemDate}.json`), JSON.stringify({ ...day, date: itemDate }));
+  }
+  await fs.writeFile(path.join(api.dispatchDataDir, 'manifest.json'), JSON.stringify({
+    schemaVersion: 1,
+    defaultDate: date,
+    dates: dates.map(itemDate => ({ date: itemDate, weekday: '월요일', summary: day.summary })),
+    source: { csvSha256: 'csv-test-source', dateShift: { operatingDate: date } },
+  }));
+
+  const initial = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  const pendingCommand = command(api, date, {
+    type: 'calculate_dispatch', expectedBoot: initial.boot, expectedRevision: initial.revision, vehicleIds: ['G1', 'G2'],
+  });
+  await renameReached;
+  try {
+    for (const itemDate of dates.slice(1)) {
+      assert.equal((await api.request(`/api/dispatch-data/days/${itemDate}/state`)).status, 200, itemDate);
+    }
+  } finally { releaseRename(); }
+  const committed = await pendingCommand;
+  assert.equal(committed.status, 200);
+  assert.equal((await committed.json()).state.revision, 1);
+
+  assert.equal((await api.request(`/api/dispatch-data/days/${dates[1]}/state`)).status, 200);
+  const reloaded = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  assert.equal(reloaded.revision, 1);
+  assert.equal(reloaded.dispatch.phase, 'draft');
+});
+
+test('durable write failure rolls back the candidate command and revision', async t => {
+  const api = await fixture(t, { persistent: true });
+  const initial = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  await fs.mkdir(path.dirname(api.dispatchStateDir), { recursive: true });
+  await fs.writeFile(api.dispatchStateDir, 'blocks-directory-creation');
+  const response = await command(api, date, {
+    type: 'calculate_dispatch', expectedBoot: initial.boot, expectedRevision: initial.revision, vehicleIds: ['G1', 'G2'],
+  });
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), { error: 'DISPATCH_STATE_WRITE_FAILED' });
+  const unchanged = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  assert.equal(unchanged.revision, initial.revision);
+  assert.equal(unchanged.dispatch.phase, 'unplanned');
+});
+
+test('corrupt or source-mismatched durable checkpoints fail closed', async t => {
+  const corrupt = await fixture(t, { persistent: true });
+  await fs.mkdir(corrupt.dispatchStateDir, { recursive: true });
+  await fs.writeFile(path.join(corrupt.dispatchStateDir, `${date}.json`), '{broken');
+  let response = await corrupt.request(`/api/dispatch-data/days/${date}/state`);
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), { error: 'DISPATCH_STATE_INVALID' });
+
+  const mismatch = await fixture(t, { persistent: true });
+  await fs.mkdir(mismatch.dispatchStateDir, { recursive: true });
+  await fs.writeFile(path.join(mismatch.dispatchStateDir, `${date}.json`), JSON.stringify({
+    schemaVersion: 2, date, sourceId: 'different-source', revision: 1,
+  }));
+  response = await mismatch.request(`/api/dispatch-data/days/${date}/state`);
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), { error: 'DISPATCH_STATE_SOURCE_MISMATCH' });
 });
 
 test('command rate limits are isolated by authenticated user', async t => {

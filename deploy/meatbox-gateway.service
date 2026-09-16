@@ -12,6 +12,7 @@ Environment=NODE_ENV=production
 Environment=PUBLIC_ORIGIN=https://3.36.96.156
 Environment=PORT=3001
 Environment=ACCESS_FILE=/var/lib/meatbox-demo/access.json
+Environment=DISPATCH_STATE_DIR=/var/lib/meatbox-demo/dispatch-state
 StateDirectory=meatbox-demo
 StateDirectoryMode=0700
 UMask=0077
