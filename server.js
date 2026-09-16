@@ -52,7 +52,7 @@ function validCommand(msg) {
   return false;
 }
 
-function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env.PUBLIC_ORIGIN, access = createAccess({ file: accessFile }), dispatchDataDir = process.env.DISPATCH_DATA_DIR || path.join(ROOT, '.runtime/dispatch-data'), dispatchCalculator = calculateDispatch } = {}) {
+function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env.PUBLIC_ORIGIN, access = createAccess({ file: accessFile }), dispatchDataDir = process.env.DISPATCH_DATA_DIR || path.join(ROOT, '.runtime/dispatch-data'), dispatchStateDir = process.env.DISPATCH_STATE_DIR || null, dispatchStateIO, dispatchCalculator = calculateDispatch } = {}) {
   if (!origin || new URL(origin).origin !== origin) throw new Error('PUBLIC_ORIGIN must be an exact origin');
   const secure = new URL(origin).protocol === 'https:';
   if (!secure && !['127.0.0.1', 'localhost', '[::1]'].includes(new URL(origin).hostname)) throw new Error('Public access requires HTTPS');
@@ -131,7 +131,7 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
     res.redirect(`/login?next=${encodeURIComponent(safeNext(req.originalUrl))}`);
   }));
   app.get('/api/session', (req, res) => res.json({ user: req.user }));
-  app.use('/api/dispatch-data', createSourceOperationsRouter({ directory: dispatchDataDir, origin, calculator: dispatchCalculator }));
+  app.use('/api/dispatch-data', createSourceOperationsRouter({ directory: dispatchDataDir, stateDirectory: dispatchStateDir, stateIO: dispatchStateIO, origin, calculator: dispatchCalculator }));
   app.use('/api/dispatch-data', createDispatchDataRouter({ directory: dispatchDataDir }));
   for (const prefix of ['scenario', 'ui-layout', 'combined']) app.get(`/${prefix}`, (_req, res) => res.redirect(308, `/${prefix}/`));
   app.get('/', (_req, res) => res.redirect(308, '/combined/'));

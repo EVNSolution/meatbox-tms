@@ -15,14 +15,16 @@ const validDate = value => {
 const validCoordinates = value => Array.isArray(value) && value.length === 2
   && value.every(Number.isFinite) && Math.abs(value[0]) <= 180 && Math.abs(value[1]) <= 90;
 
-function formatMinute(value) {
+function formatMinute(value, round = Math.round) {
   if (!Number.isFinite(value)) return null;
-  const rounded = Math.round(value);
+  const rounded = round(value);
   const day = Math.floor(rounded / DAY_MINUTES);
   const minute = ((rounded % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES;
   const prefix = day === 1 ? '다음날 ' : day > 1 ? `+${day}일 ` : '';
   return `${prefix}${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
 }
+
+const formatActualMinute = value => formatMinute(value, Math.floor);
 
 function clockMinute(value, dayStart, cursor = 0) {
   if (Number.isFinite(value)) {
@@ -52,8 +54,9 @@ function clockMinute(value, dayStart, cursor = 0) {
 }
 
 function eventMinute(events, action, stopId, vehicleId, dayStart, cursor) {
+  const stopIds = Array.isArray(stopId) ? new Set(stopId) : null;
   const matches = events.filter(event => event?.action === action
-    && (!stopId || event.stopId === stopId)
+    && (!stopId || (stopIds ? stopIds.has(event.stopId) : event.stopId === stopId))
     && (!vehicleId || !event.vehicleId || event.vehicleId === vehicleId));
   for (let index = matches.length - 1; index >= 0; index -= 1) {
     const minute = clockMinute(matches[index].ts ?? matches[index].time, dayStart, cursor);
@@ -65,7 +68,7 @@ function eventMinute(events, action, stopId, vehicleId, dayStart, cursor) {
 function actualMinute(stop, action, events, vehicleId, dayStart, cursor) {
   const field = action === 'completed' ? stop.completedAt : stop.arrivedAt;
   return clockMinute(field, dayStart, cursor)
-    ?? eventMinute(events, action, stop.id, vehicleId, dayStart, cursor);
+    ?? eventMinute(events, action, stop.orderIds ?? stop.id, vehicleId, dayStart, cursor);
 }
 
 function distanceKm(left, right) {
@@ -93,7 +96,10 @@ function withoutGeneratedEstimate(stop) {
   const copy = { ...stop };
   if (copy.etaSource !== 'operating-plan') return copy;
   const generated = Array.isArray(copy.operatingPlanFields)
-    ? copy.operatingPlanFields : ['calculatedEta', 'preciseTimeText', 'etaSource'];
+    ? copy.operatingPlanFields : [
+        'calculatedEta', 'preciseTimeText', 'customerWindowStart', 'customerWindowEnd',
+        'customerWindowText', 'etaSource',
+      ];
   for (const key of generated) delete copy[key];
   delete copy.operatingPlanFields;
   return copy;
@@ -118,11 +124,15 @@ export function sourceViewerPlan({ date, deliveries, events = [], vehicleId } = 
   const input = vehicleId ? deliveries.filter(stop => stop?.vehicleId === vehicleId) : deliveries;
   const allowed = new Set(input.map(stop => stop?.id));
   const sourceEvents = Array.isArray(events) ? events : [];
-  let cursor = DEPARTURE_MINUTES;
+  const actualDeparture = eventMinute(sourceEvents, 'shipping', null, vehicleId, dayStart, DEPARTURE_MINUTES);
+  let cursor = Math.max(DEPARTURE_MINUTES, actualDeparture ?? DEPARTURE_MINUTES);
+  let referenceMinute = cursor;
   let previousCoordinates = null;
   let first = true;
   let unknownStops = 0;
   let expectedCompletion = DEPARTURE_MINUTES;
+  let expectedLastArrival = null;
+  let expectedLastArrivalActual = false;
   const actualCompletions = [];
 
   const planned = deliveries.map(original => {
@@ -156,9 +166,23 @@ export function sourceViewerPlan({ date, deliveries, events = [], vehicleId } = 
       if (generated.length) stop.operatingPlanFields = generated;
     }
 
-    if (completed != null) { cursor = completed; actualCompletions.push(completed); }
-    else if (arrived != null) cursor = arrived + SERVICE_MINUTES;
-    else cursor = arrival == null ? null : arrival + SERVICE_MINUTES;
+    if (completed != null) {
+      cursor = Math.max(cursor ?? completed, completed);
+      referenceMinute = Math.max(referenceMinute, completed);
+      expectedLastArrival = completed;
+      expectedLastArrivalActual = true;
+      actualCompletions.push(completed);
+    } else if (arrived != null) {
+      cursor = Math.max(cursor ?? arrived, arrived) + SERVICE_MINUTES;
+      referenceMinute = Math.max(referenceMinute, arrived);
+      expectedLastArrival = arrived;
+      expectedLastArrivalActual = true;
+    } else {
+      const effectiveArrival = arrival == null || cursor == null ? null : Math.max(arrival, cursor);
+      expectedLastArrival = effectiveArrival;
+      expectedLastArrivalActual = false;
+      cursor = effectiveArrival == null ? null : effectiveArrival + SERVICE_MINUTES;
+    }
     if (cursor == null) unknownStops += 1;
     else expectedCompletion = cursor;
     previousCoordinates = validCoordinates(stop.coordinates) ? stop.coordinates : null;
@@ -171,9 +195,8 @@ export function sourceViewerPlan({ date, deliveries, events = [], vehicleId } = 
   const actualCompletion = actualCompletions.length === input.length ? Math.max(...actualCompletions) : null;
   const completionMinute = !input.length ? null : allDone ? actualCompletion : heldStops || unknownStops ? null : expectedCompletion;
   const finishText = !input.length ? '배차 없음' : heldStops ? '보류 배송 확인'
-    : allDone ? (actualCompletion == null ? '완료 시각 미수신' : formatMinute(actualCompletion))
+    : allDone ? (actualCompletion == null ? '완료 시각 미수신' : formatActualMinute(actualCompletion))
       : completionMinute == null ? '완료 예상 미확인' : formatMinute(completionMinute);
-  const actualDeparture = eventMinute(sourceEvents, 'shipping', null, vehicleId, dayStart, DEPARTURE_MINUTES);
   return {
     deliveries: planned,
     departureText: formatMinute(DEPARTURE_MINUTES),
@@ -183,9 +206,16 @@ export function sourceViewerPlan({ date, deliveries, events = [], vehicleId } = 
       departureMs: dayStart + DEPARTURE_MINUTES * 60000,
       completionMs: completionMinute == null ? null : dayStart + completionMinute * 60000,
       durationMinutes: completionMinute == null ? null : Math.round(completionMinute - DEPARTURE_MINUTES),
+      remainingMinutes: completionMinute == null ? null : Math.max(0, Math.round(completionMinute - referenceMinute)),
+      lastArrivalMs: expectedLastArrival == null ? null : dayStart + expectedLastArrival * 60000,
+      lastArrivalText: expectedLastArrivalActual
+        ? formatActualMinute(expectedLastArrival) : formatMinute(expectedLastArrival),
       heldStops,
       unknownStops,
-      actualDepartureText: actualDeparture == null ? null : formatMinute(actualDeparture),
+      actualDepartureMs: actualDeparture == null ? null : dayStart + actualDeparture * 60000,
+      actualCompletedStops: actualCompletions.length,
+      latestActualCompletionMs: actualCompletions.length ? dayStart + Math.max(...actualCompletions) * 60000 : null,
+      actualDepartureText: actualDeparture == null ? null : formatActualMinute(actualDeparture),
     },
   };
 }

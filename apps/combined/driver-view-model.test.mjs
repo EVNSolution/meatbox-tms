@@ -7,12 +7,49 @@ import {
   driverCanArrive,
   driverCanStart,
   driverConfirmedVehicles,
+  driverDeliveryMatchesId,
   driverHasConfirmedDispatch,
+  driverLocationPresentation,
   driverMapDelivery,
+  driverOrderDetails,
+  driverRouteSnapshot,
+  driverTipAttribution,
   driverTipDelivery,
   driverViewModel,
   reconcileDriverRoute,
 } from './driver-view-model.mjs';
+
+test('묶음 배송지는 하위 주문 ID를 같은 정차점으로 해석하고 주문 원본을 보존한다', () => {
+  const bundle = {
+    id: 'O1', orderIds: ['O1', 'O2'], status: 'current', boxes: 7,
+    orders: [
+      { id: 'O1', orderNumber: 'PAY-101', boxes: 3, items: [] },
+      { id: 'O2', orderNumber: 'PAY-102', boxes: 4, items: [{ name: '확인 상품', qty: 2 }] },
+    ],
+  };
+  assert.equal(driverDeliveryMatchesId(bundle, 'O2'), true);
+  assert.equal(driverTipDelivery({ fleetDeliveries: [bundle] }, 'O2'), bundle);
+  assert.equal(driverMapDelivery([bundle], 'O2'), bundle);
+  assert.deepEqual(driverOrderDetails(bundle), [
+    { orderNumber: 'PAY-101', boxes: 3, items: [] },
+    { orderNumber: 'PAY-102', boxes: 4, items: [{ name: '확인 상품', qty: 2 }] },
+  ]);
+  assert.equal(driverOrderDetails({ id: 'missing', boxes: null })[0].boxes, null);
+  assert.deepEqual(driverRouteSnapshot([bundle]), [
+    { id: 'O1', status: 'current' }, { id: 'O2', status: 'current' },
+  ]);
+});
+
+test('일반명 배송지는 주소를 한 번만 제목으로 쓰고 팁 시각이 없으면 괄호를 만들지 않는다', () => {
+  assert.deepEqual(driverLocationPresentation({ name: '1층', address: '서울 중구 을지로 1' }), {
+    heading: '서울 중구 을지로 1', address: null,
+  });
+  assert.deepEqual(driverLocationPresentation({ name: '정육점', address: '서울 중구 을지로 1' }), {
+    heading: '정육점', address: '서울 중구 을지로 1',
+  });
+  assert.equal(driverTipAttribution({ author: '김기사', updatedAt: null }), '김기사');
+  assert.equal(driverTipAttribution({ author: '김기사', updatedAt: '08:10' }), '김기사 (08:10)');
+});
 
 const state = dwelling => ({
   phase: 'delivering',
@@ -90,6 +127,14 @@ test('배송 완료 확인은 현재 도착 상태, 연결, 사진과 필수 고
   assert.equal(completionProofCanSubmit(state(true), true, 'S1', false), false);
   assert.equal(completionProofCanSubmit(state(true), false, 'S1', true), false);
   assert.equal(completionProofCanSubmit(state(true), true, 'S2', true), false);
+});
+
+test('묶음의 하위 주문 링크도 현재 정차점 사진과 필수 요청 확인 규칙을 그대로 적용한다', () => {
+  const bundled = state(true);
+  bundled.deliveries[0] = { ...bundled.deliveries[0], orderIds: ['S1', 'CHILD-2'], orders: [{ id: 'S1' }, { id: 'CHILD-2' }] };
+  assert.equal(completionProofIsCurrent(bundled, 'CHILD-2'), true);
+  assert.equal(completionProofCanSubmit(bundled, true, 'CHILD-2', true, ['S1-refrigerator']), true);
+  assert.equal(driverCanArrive({ ...bundled, sourceData: { date: '2026-09-16' }, dispatch: { phase: 'published' }, phase: 'delivering', truck: { toId: 'CHILD-2', dwelling: false }, fleetDeliveries: bundled.deliveries }), true);
 });
 
 test('요청이 없으면 사진만으로 완료 가능하고 현재 요청 ID가 바뀌면 이전 확인은 무효다', () => {

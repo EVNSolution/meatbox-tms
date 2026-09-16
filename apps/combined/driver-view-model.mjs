@@ -2,6 +2,42 @@ import { requestsConfirmed } from './customer-requests.mjs';
 
 const phaseLabels = { unordered: '배차 대기', idle: '배차 대기', preparing: '상차 중', delivering: '배송 중', done: '배송 완료' };
 const distanceText = metres => Number.isFinite(metres) ? metres >= 1000 ? `${(metres / 1000).toFixed(1)}km` : `${Math.round(metres)}m` : '이동 중';
+const childOrders = stop => Array.isArray(stop?.orders) && stop.orders.length ? stop.orders : [stop].filter(Boolean);
+
+export function driverDeliveryMatchesId(stop, id) {
+  if (!stop || id == null) return false;
+  return stop.id === id || stop.orderIds?.includes(id) || childOrders(stop).some(order => order.id === id);
+}
+
+export function driverOrderDetails(stop) {
+  return childOrders(stop).map(order => ({
+    orderNumber: order.orderNumber || order.orderNo || null,
+    boxes: order.boxes != null && Number.isFinite(Number(order.boxes)) ? Number(order.boxes) : null,
+    items: Array.isArray(order.items) ? order.items : [],
+  }));
+}
+
+export function driverLocationPresentation(stop) {
+  const name = String(stop?.name ?? '').trim();
+  const address = String(stop?.address ?? '').trim();
+  const generic = /^(?:\d+|\d+층|지층)$/.test(name);
+  return {
+    heading: generic ? address || '배송지' : name || address || '배송지',
+    address: generic && address ? null : address || null,
+  };
+}
+
+export function driverTipAttribution(tip) {
+  if (!tip) return '작성 기록 없음';
+  return `${tip.author || '배송원'}${tip.updatedAt ? ` (${tip.updatedAt})` : ''}`;
+}
+
+export function driverRouteSnapshot(deliveries = []) {
+  return deliveries.flatMap(stop => childOrders(stop).map(order => ({
+    id: order.id,
+    status: order.status ?? stop.status,
+  })));
+}
 
 export function driverHasConfirmedDispatch(state) {
   if (!state?.sourceData) return true;
@@ -23,7 +59,7 @@ export function driverCanStart(state, connected = true, vehicle = state?.vehicle
 export function driverCanArrive(state, connected = true) {
   const current = state?.deliveries?.find(stop => stop.status === 'current');
   return Boolean(state?.sourceData && connected && driverHasConfirmedDispatch(state) && state.phase === 'delivering'
-    && current && !state.truck?.dwelling && state.truck?.toId === current.id);
+    && current && !state.truck?.dwelling && driverDeliveryMatchesId(current, state.truck?.toId));
 }
 
 export function driverViewModel(state, connected = true, selectedId = null) {
@@ -37,7 +73,9 @@ export function driverViewModel(state, connected = true, selectedId = null) {
   const current = liveContext ? deliveries.find(stop => stop.status === 'current') ?? null : null;
   const done = deliveries.filter(stop => stop.status === 'done').length;
   const active = deliveries.filter(stop => ['current', 'pending'].includes(stop.status)).length;
-  const remainingBoxes = deliveries.filter(stop => !['done', 'skipped'].includes(stop.status)).reduce((sum, stop) => sum + (stop.boxes || 0), 0);
+  const remaining = deliveries.filter(stop => !['done', 'skipped'].includes(stop.status));
+  const remainingBoxes = remaining.every(stop => Number.isFinite(stop.boxes))
+    ? remaining.reduce((sum, stop) => sum + stop.boxes, 0) : null;
   const canComplete = liveContext && connected && Boolean(current && state.truck?.dwelling);
   return {
     selected, vehicle, deliveries, current,
@@ -46,7 +84,7 @@ export function driverViewModel(state, connected = true, selectedId = null) {
     destination: liveContext ? state.phase === 'done' ? '금일 배송 완료' : current?.name || '물류센터 출발 대기' : selected?.name || '배송지',
     address: liveContext ? state.phase === 'done' ? '모든 배송을 완료했습니다.' : current?.address || '배송 출발 전입니다.' : selected?.address || '배송지 정보 없음',
     distance: current ? state.truck?.dwelling ? '도착' : distanceText(state.truck?.remainingM) : '—',
-    boxes: current?.boxes ? `${current.boxes}박스` : `${remainingBoxes}박스`,
+    boxes: current?.boxes != null ? `${current.boxes}박스` : remainingBoxes == null ? '박스 수량 미확인' : `${remainingBoxes}박스`,
     progress: `${done}/${deliveries.length}`,
     todayCounts: { active, done, skipped: deliveries.filter(stop => stop.status === 'skipped').length },
     remainingBoxes,
@@ -58,8 +96,8 @@ export function driverViewModel(state, connected = true, selectedId = null) {
 
 export function driverTipDelivery(state, selectedId) {
   const fleet = state?.fleetDeliveries?.length ? state.fleetDeliveries : state?.deliveries || [];
-  return fleet.find(delivery => delivery.id === selectedId)
-    ?? fleet.find(delivery => delivery.id === state?.customerStopId)
+  return fleet.find(delivery => driverDeliveryMatchesId(delivery, selectedId))
+    ?? fleet.find(delivery => driverDeliveryMatchesId(delivery, state?.customerStopId))
     ?? fleet[0]
     ?? null;
 }
@@ -74,7 +112,7 @@ export function reconcileDriverRoute(previousCompleted, completed, group) {
 }
 
 export function driverMapDelivery(deliveries, selectedId) {
-  return deliveries.find(stop => stop.id === selectedId && stop.status !== 'skipped')
+  return deliveries.find(stop => driverDeliveryMatchesId(stop, selectedId) && stop.status !== 'skipped')
     ?? deliveries.find(stop => stop.status === 'current')
     ?? deliveries.find(stop => stop.status === 'pending')
     ?? deliveries.find(stop => stop.status !== 'skipped')
@@ -82,11 +120,11 @@ export function driverMapDelivery(deliveries, selectedId) {
 }
 
 export function completionProofIsCurrent(state, stopId) {
-  return Boolean(state?.truck?.dwelling && state?.deliveries?.some(stop => stop.id === stopId && stop.status === 'current'));
+  return Boolean(state?.truck?.dwelling && state?.deliveries?.some(stop => driverDeliveryMatchesId(stop, stopId) && stop.status === 'current'));
 }
 
 export function completionProofCanSubmit(state, connected, stopId, hasPhoto, confirmedRequestIds = []) {
-  const stop = state?.deliveries?.find(item => item.id === stopId);
+  const stop = state?.deliveries?.find(item => driverDeliveryMatchesId(item, stopId));
   return Boolean(connected && hasPhoto && completionProofIsCurrent(state, stopId) && requestsConfirmed(stop, confirmedRequestIds));
 }
 

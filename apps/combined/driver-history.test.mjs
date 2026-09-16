@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { driverHistoryForDate, exampleHistoryDates, selectedHistoryVehicle, sourceDriverHistoryForDate } from './driver-history.mjs';
+import { driverHistoryForDate, driverOperatingDate, exampleHistoryDates, latestPastHistoryDate, selectedHistoryVehicle, sourceDriverHistoryForDate } from './driver-history.mjs';
+
+test('근무 이력 운영일은 명시값을 우선하고 첫 진입 날짜는 운영일 이전 최신 기록을 고른다', () => {
+  const dates = [{ date: '2026-09-14' }, { date: '2026-09-15' }, { date: '2026-09-16' }, { date: '2026-09-17' }];
+  assert.equal(driverOperatingDate({ operatingDate: '2026-09-16', dates }, '2026-09-18'), '2026-09-16');
+  assert.equal(driverOperatingDate({ dates }, '2026-09-18'), '2026-09-16');
+  assert.equal(driverOperatingDate({ dates: [{ date: '2025-09-12' }] }, '2026-09-18'), '2026-09-18');
+  assert.equal(latestPastHistoryDate(dates, '2026-09-16', '2026-09-16'), '2026-09-15');
+});
 
 test('근무 이력은 외부에서 고른 배송원을 사용하고 해제하거나 찾을 수 없으면 다른 배송원으로 대체하지 않는다', () => {
   const vehicles = [{ id: 'G1', driver: '김기사' }, { id: 'G2', driver: '박기사' }];
@@ -28,15 +36,16 @@ test('실데이터 근무 이력은 선택 날짜의 원본 기사 배차를 다
     return { ok: true, status: 200, json: async () => ({
       groups: [{ id: 'new-group', label: '홍길동' }, { id: 'old-group', label: '김기사' }, { id: 'other', label: '박기사' }],
       orders: [
-        { groupId: 'new-group', boxes: 3, sourceRows: 2 },
-        { groupId: 'new-group', boxes: 7, sourceRows: 5 },
+        { groupId: 'new-group', name: '같은 곳', address: '서울 1', coordinates: [127, 37.5], boxes: 3, sourceRows: 2 },
+        { groupId: 'new-group', name: '같은 곳', address: '서울 1', coordinates: [127, 37.5], boxes: 7, sourceRows: 5 },
         { groupId: 'old-group', boxes: 99, sourceRows: 99 },
       ],
     }) };
   });
   assert.deepEqual(requested, ['/api/dispatch-data/days/2025-09-12']);
   assert.deepEqual(result, [{
-    date: '2025-09-12', id: 'SOURCE-2025-09-12-old-group', label: '홍길동 배차', vehicle: '76서 2108', destinations: 2, boxes: 10, sourceRows: 7,
+    date: '2025-09-12', id: 'SOURCE-2025-09-12-old-group', label: '홍길동 배차', vehicle: '76서 2108', destinations: 1, boxes: 10, sourceRows: 7,
+    plannedStartAt: '06:30', plannedEndAt: '06:54',
   }]);
 });
 
@@ -48,6 +57,21 @@ test('실데이터 근무 이력은 없는 날짜를 빈 기록으로 처리하�
   assert.equal(calls, 1);
 });
 
+test('운영일과 미래 원자료는 근무 이력으로 조회하지 않는다', async () => {
+  const identity = { driver: '김기사', operatingDate: '2026-09-16' };
+  const fetcher = () => assert.fail('운영일 이후 원자료를 요청하지 않아야 함');
+  assert.deepEqual(await sourceDriverHistoryForDate('2026-09-16', identity, fetcher), []);
+  assert.deepEqual(await sourceDriverHistoryForDate('2026-09-17', identity, fetcher), []);
+});
+
+test('과거 배차의 박스 수량이 없으면 0으로 꾸미지 않는다', async () => {
+  const [record] = await sourceDriverHistoryForDate('2026-09-15', { driver: '김기사', originalGroupId: 'G1' }, async () => ({ ok: true, json: async () => ({
+    groups: [{ id: 'G1', label: '김기사' }], orders: [{ id: 'O1', groupId: 'G1', name: '매장', address: '서울', boxes: null }],
+  }) }));
+  assert.equal(record.destinations, 1);
+  assert.equal(record.boxes, null);
+});
+
 test('동명이인 배송원의 배차는 선택한 원본 그룹이 있으면 합치지 않는다', async () => {
   const fetcher = async () => ({ ok: true, json: async () => ({
     groups: [{ id: 'G1', label: '김기사' }, { id: 'G2', label: '김기사' }],
@@ -57,6 +81,8 @@ test('동명이인 배송원의 배차는 선택한 원본 그룹이 있으면 �
     const [record] = await sourceDriverHistoryForDate('2026-09-16', { driver: '김기사', originalGroupId }, fetcher);
     assert.equal(record.destinations, 1);
     assert.equal(record.boxes, boxes);
+    assert.equal(record.plannedStartAt, null);
+    assert.equal(record.plannedEndAt, null);
   }
 });
 

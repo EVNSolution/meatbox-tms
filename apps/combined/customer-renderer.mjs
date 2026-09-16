@@ -7,6 +7,27 @@ import { transportConditionText } from './source-viewer-plan.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
+export function customerLocationName(delivery) {
+  return /^(?:\d+|\d+층|지층)$/.test(String(delivery?.name ?? '').trim())
+    ? delivery.address || '배송지' : delivery?.name || delivery?.address || '배송지';
+}
+
+export function customerOrderSummary(delivery) {
+  const orders = Array.isArray(delivery?.orders) && delivery.orders.length ? delivery.orders : [delivery].filter(Boolean);
+  const numbers = orders.map(order => order.orderNumber || order.orderNo).filter(Boolean);
+  const items = orders.flatMap(order => Array.isArray(order.items) ? order.items : []);
+  return {
+    orderText: numbers.length ? numbers.join(', ') : '주문 번호 미제공',
+    items,
+    emptyText: `상품 상세 미제공 · 주문 ${orders.length}건 / 총 ${delivery?.boxes ?? '—'}박스`,
+  };
+}
+
+export function customerDeliveryForId(deliveries, id) {
+  return deliveries.find(delivery => delivery.id === id || delivery.orderIds?.includes(id)
+    || delivery.orders?.some(order => order.id === id)) ?? null;
+}
+
 export function customerEtaText(delivery) {
   if (delivery?.dispatchPending) return '배차 확정 대기';
   if (delivery?.status === 'done') return delivery.completedAt ? `${delivery.completedAt} 배송 완료` : '배송 완료';
@@ -112,7 +133,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     history.replaceState(null, '', url);
   };
   const currentDeliveries = () => customerViewerDeliveries(latest);
-  const currentDelivery = () => currentDeliveries().find(delivery => delivery.id === selectedId) ?? null;
+  const currentDelivery = () => customerDeliveryForId(currentDeliveries(), selectedId);
 
   function renderPicker() {
     const result = customerPickerPage(currentDeliveries(), pickerState);
@@ -121,7 +142,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     if (search.value !== pickerState.query) search.value = pickerState.query;
     byId('account-search-reset').disabled = !pickerState.query;
     byId('account-result-count').textContent = result.total ? `검색 결과 ${result.total}개 중 ${result.start}-${result.end}개` : '검색 결과가 없습니다.';
-    byId('account-list').innerHTML = result.items.map(delivery => `<button class="acct" data-acct="${escapeHtml(delivery.id)}"${delivery.id === selectedId ? ' aria-current="true"' : ''}><span><b>${escapeHtml(delivery.name)}</b><span class="sub">${escapeHtml(delivery.address || '배송지 정보 없음')}</span></span><span class="bx">${escapeHtml(delivery.boxes ?? '—')}박스</span></button>`).join('') || '<p class="loading-copy">조건에 맞는 매장이 없습니다.</p>';
+    byId('account-list').innerHTML = result.items.map(delivery => `<button class="acct" data-acct="${escapeHtml(delivery.id)}"${customerDeliveryForId([delivery], selectedId) ? ' aria-current="true"' : ''}><span><b>${escapeHtml(customerLocationName(delivery))}</b><span class="sub">${escapeHtml(delivery.address || '배송지 정보 없음')}</span></span><span class="bx">${escapeHtml(delivery.boxes ?? '—')}박스</span></button>`).join('') || '<p class="loading-copy">조건에 맞는 매장이 없습니다.</p>';
     byId('account-page').textContent = `${result.page} / ${result.pageCount}`;
     byId('account-previous').disabled = result.page <= 1;
     byId('account-next').disabled = result.page >= result.pageCount;
@@ -268,7 +289,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     demoLabel.textContent = latest.customerDemo?.active
       ? '고객 시연 · 배송 상태와 시각은 예시입니다.'
       : '예시 차량 위치 · 시나리오에서 배송 과정을 시연할 수 있습니다.';
-    byId('account-name').textContent = delivery.name || '배송지';
+    byId('account-name').textContent = customerLocationName(delivery);
     const pill = byId('status-pill');
     pill.textContent = delivery.customerStatus?.label || '배송 조회';
     pill.className = `pill ${delivery.status === 'done' ? 'green' : ['shipping', 'nearby', 'arrived'].includes(delivery.customerStatus?.key) ? 'red' : delivery.status === 'skipped' ? 'amber' : 'gray'}`;
@@ -282,8 +303,9 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     }
     byId('eta-delta').className = 'eta-delta';
     byId('eta-note').classList.remove('show');
-    byId('order-no').textContent = delivery.orderNumber || delivery.orderNo || '주문 번호 미제공';
-    byId('order-items').innerHTML = (delivery.items || []).map(item => `<div class="item-row prod"><div><div class="nm">${escapeHtml(item.name)}</div><div class="op">${escapeHtml(item.opt)}</div></div><div class="qty">×${escapeHtml(item.qty)}</div></div>`).join('') || '<p class="empty">상품 상세 정보가 없습니다.</p>';
+    const orderSummary = customerOrderSummary(delivery);
+    byId('order-no').textContent = orderSummary.orderText;
+    byId('order-items').innerHTML = orderSummary.items.map(item => `<div class="item-row prod"><div><div class="nm">${escapeHtml(item.name)}</div><div class="op">${escapeHtml(item.opt)}</div></div><div class="qty">×${escapeHtml(item.qty)}</div></div>`).join('') || `<p class="empty">${escapeHtml(orderSummary.emptyText)}</p>`;
     byId('order-boxes').textContent = delivery.boxes != null ? `총 ${delivery.boxes}박스` : '박스 수량 미확인';
     byId('timeline').innerHTML = (delivery.timeline || []).map(item => `<li class="${escapeHtml(item.state)}">${escapeHtml(item.label)}${item.time ? `<span class="t">${escapeHtml(item.time)}</span>` : ''}</li>`).join('')
       || `<li>${delivery.dispatchPending ? '배차 확정 대기' : '배송 이력 준비 중'}</li>`;
@@ -429,10 +451,10 @@ export function mountCustomerRenderer({ mb, onSelect }) {
       const requested = queryId() || (() => { try { return localStorage.getItem('mb-account'); } catch { return null; } })();
       const available = currentDeliveries();
       const fallback = state.sourceData?.defaultStopId;
-      const candidate = available.some(delivery => delivery.id === requested) ? requested
-        : available.some(delivery => delivery.id === fallback) ? fallback : null;
-      if ((!selectedId || !available.some(delivery => delivery.id === selectedId)) && candidate) {
-        selectedId = candidate;
+      const candidate = customerDeliveryForId(available, requested) ?? customerDeliveryForId(available, fallback);
+      const resolved = customerDeliveryForId(available, selectedId) ?? candidate;
+      if (resolved && resolved.id !== selectedId) {
+        selectedId = resolved.id;
         latest = sourceVehicleContext(fullLatest, selectedId);
         rememberSelection(selectedId);
         popupBaseline = new Set(currentDelivery()?.notices?.map(notice => notice.id).filter(Boolean) || []);

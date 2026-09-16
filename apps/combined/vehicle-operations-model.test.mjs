@@ -69,7 +69,7 @@ test('historical destination inspection cannot replace the selected vehicle or i
   assert.equal(resolveControlVehicle(rows, null, 'foreign').vehicle.id, 'V2');
 });
 
-test('source operations use the requested source default and keep ETA unknown', () => {
+test('source operations use the requested source default and keep unverifiable ETA unknown', () => {
   const data = {
     sourceData: { date: '2026-09-16', defaultVehicleId: 'real-b' },
     fleetVehicles: [{ id: 'real-a', live: true }, { id: 'real-b', live: true }],
@@ -83,8 +83,43 @@ test('source operations use the requested source default and keep ETA unknown', 
   assert.equal(resolveDefaultControlVehicle(data, rows, null, null).vehicle.id, 'real-b');
   assert.equal(rows[1].remainingStops, 1);
   assert.equal(rows[1].remainingBoxes, 7);
-  assert.equal(rows[1].timing, null);
+  assert.equal(rows[1].timing.source, 'operating-plan');
+  assert.equal(rows[1].timing.completionMs, null);
   assert.equal(rows[1].lastArrivalEta, null);
+});
+
+test('source operations bundle sibling orders and share late-start timing without crossing vehicles', () => {
+  const data = {
+    sourceData: { date: '2026-09-16' },
+    fleetVehicles: [{ id: 'V1' }, { id: 'V2' }],
+    fleetDeliveries: [
+      { id: 'O1', vehicleId: 'V1', name: '한우점', address: '서울', coordinates: [127, 37.5], status: 'done', boxes: 2, completedAt: '07:59' },
+      { id: 'O2', vehicleId: 'V1', name: '한우점', address: '서울', coordinates: [127, 37.5], status: 'done', boxes: 3, completedAt: '07:59' },
+      { id: 'O3', vehicleId: 'V1', name: '식당', address: '경기', coordinates: [127, 37.5], status: 'pending', boxes: 4 },
+      { id: 'O4', vehicleId: 'V2', name: '다른 식당', address: '인천', coordinates: [126.7, 37.4], status: 'pending', boxes: 5 },
+    ],
+    events: [{ action: 'shipping', vehicleId: 'V1', time: '07:58' }],
+  };
+  const rows = vehicleOperations(data);
+  assert.equal(rows[0].deliveries.length, 2);
+  assert.deepEqual(rows[0].deliveries[0].orderIds, ['O1', 'O2']);
+  assert.equal(rows[0].completed.length, 1);
+  assert.equal(rows[0].remainingStops, 1);
+  assert.equal(rows[0].remainingBoxes, 4);
+  assert.equal(rows[0].fixedDepartureText, '06:30');
+  assert.equal(rows[0].lastArrivalEta, '07:59');
+  assert.equal(rows[0].completionText, '08:03');
+  assert.equal(rows[0].remainingMinutes, 4);
+  assert.deepEqual(rows[0].actualSpeed, { completedStops: 1, elapsedMinutes: 1 });
+  assert.equal(rows[1].deliveries[0].preciseTimeText, '06:50');
+  assert.equal(rows[1].timing.actualDepartureMs, null);
+  assert.deepEqual(summarizeFleetTiming(rows), {
+    knownVehicles: 2,
+    totalVehicles: 2,
+    departureMs: Date.parse('2026-09-16T06:30:00+09:00'),
+    completionMs: Date.parse('2026-09-16T08:03:00+09:00'),
+    durationMinutes: 93,
+  });
 });
 
 test('vanished control selection falls back within the chosen vehicle', () => {
@@ -115,6 +150,20 @@ test('only actual stop facts and matching notices are merged in chronological or
   assert.deepEqual(noticesForDelivery(stop).map(item => item.id), ['c', 'a']);
   assert.equal(vehicleEvents(data, 'V1').length, 1);
   assert.deepEqual(vehicleEvents(data, 'V2'), []);
+});
+
+test('bundled delivery history deduplicates the same actual shipping fact across event and timeline', () => {
+  const stop = {
+    id: 'O1', orderIds: ['O1', 'O2'], vehicleId: 'V1', name: '1층 오소록',
+    timeline: [{ label: '배송 출발', time: '07:58', state: 'done', sourceOrderId: 'O2' }],
+  };
+  const data = { events: [
+    { id: 'ship', action: 'shipping', stopId: 'O2', vehicleId: 'V1', time: '07:58', message: '1층 오소록 배송 출발' },
+    { id: 'foreign', action: 'shipping', stopId: 'O2', vehicleId: 'V2', time: '07:58', message: '다른 차량 출발' },
+  ] };
+  assert.deepEqual(deliveryFacts(data, stop).map(item => [item.time, item.message]), [
+    ['07:58', '1층 오소록 배송 출발'],
+  ]);
 });
 
 test('delivery records interleave actual history and notices without changing their source data', () => {

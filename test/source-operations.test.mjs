@@ -13,6 +13,23 @@ function day() {
     orders: [order('O1', 'G1', 1, 1), order('O2', 'G1', 2, 2), order('O3', 'G1', 3, 3), order('O4', 'G2', 4, 1), order('O5', 'G2', 5, 2)],
   };
 }
+function bundledDay() {
+  const first = { ...order('O1', 'G1', 1, 1), name: '유쾌한우정육점', address: '서울 강남구 1' };
+  const sibling = {
+    ...order('O1B', 'G1', 2, 2),
+    name: '유쾌한우정육점'.normalize('NFD') + ' ',
+    address: ' 서울 강남구 1 ',
+    customerRequests: { source: 'actual', items: [{ id: 'O1B-handoff', kind: 'handoff', label: '직접 전달', required: true }] },
+  };
+  first.customerRequests = { source: 'actual', items: [{ id: 'O1-refrigerator', kind: 'refrigerator', label: '냉장고 보관', required: true }] };
+  return {
+    schemaVersion: 1,
+    date: '2025-09-12',
+    summary: { orders: 5, boxes: 15 },
+    groups: [group('G1'), group('G2')],
+    orders: [first, sibling, order('O2', 'G1', 3, 3), order('O3', 'G1', 4, 4), { ...first, id: 'O4', groupId: 'G2', sequence: 1, boxes: 5 }],
+  };
+}
 const command = (operations, body) => operations.command({ expectedRevision: operations.snapshot().revision, ...body });
 
 test('원본 주문과 실제 기사명을 보존한 전체 뷰어 상태를 만들며 초기 사건과 가짜 정보는 없다', () => {
@@ -79,6 +96,81 @@ test('완료 후 다음 배송지는 이전 피킹 상태 대신 이동 중 상�
   assert.equal(next.status, 'current');
   assert.equal(next.customerStatus.key, 'shipping');
   assert.equal(state.vehicleStates.G1.truck.toId, next.id);
+});
+
+test('같은 차량의 정규화된 동일 배송지는 한 번에 출발·도착·필수 요청 확인·완료하고 다음 고유 배송지로 이동한다', () => {
+  const source = bundledDay();
+  const before = structuredClone(source);
+  const operations = createSourceOperations(source, { sourceId: 'bundle-source', now: () => 1234 });
+  let changed = command(operations, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1B', scenario: 'shipping' });
+  assert.deepEqual(changed.result.orderIds, ['O1', 'O1B']);
+  assert.deepEqual(changed.state.fleetDeliveries.filter(item => ['O1', 'O1B'].includes(item.id)).map(item => item.status), ['current', 'current']);
+  assert.equal(changed.state.fleetDeliveries.find(item => item.id === 'O4').status, 'pending');
+
+  changed = command(operations, { type: 'arrive_stop', vehicleId: 'G1', stopId: 'O1B' });
+  const arrivedRevision = changed.state.revision;
+  assert.throws(() => command(operations, { type: 'complete_stop', vehicleId: 'G1', stopId: 'O1', hasPhoto: true, confirmedRequestIds: ['O1-refrigerator'] }), error => error.status === 400 && /필수 고객 요청/.test(error.message));
+  assert.equal(operations.revision, arrivedRevision);
+  assert.throws(() => command(operations, { type: 'complete_stop', vehicleId: 'G1', stopId: 'O1', confirmedRequestIds: ['O1-refrigerator', 'O1B-handoff'] }), error => error.status === 400 && /사진/.test(error.message));
+  assert.equal(operations.revision, arrivedRevision);
+
+  changed = command(operations, {
+    type: 'complete_stop', vehicleId: 'G1', stopId: 'O1B', hasPhoto: true,
+    confirmedRequestIds: ['O1-refrigerator', 'O1B-handoff'],
+  });
+  assert.equal(changed.result.stopId, 'O1');
+  assert.equal(changed.result.nextStopId, 'O2');
+  assert.deepEqual(changed.state.fleetDeliveries.filter(item => ['O1', 'O1B'].includes(item.id)).map(item => item.status), ['done', 'done']);
+  assert.equal(changed.state.fleetDeliveries.find(item => item.id === 'O2').status, 'current');
+  assert.equal(changed.state.vehicleStates.G1.kpi.boxesDelivered, 3);
+  assert.deepEqual(changed.state.events.map(item => [item.action, item.stopId, item.orderIds]), [
+    ['completed', 'O1', ['O1', 'O1B']], ['arrived', 'O1', ['O1', 'O1B']], ['shipping', 'O1', ['O1', 'O1B']],
+  ]);
+  assert.equal(changed.state.notifications.length, 3);
+  for (const id of ['O1', 'O1B']) {
+    const child = changed.state.fleetDeliveries.find(item => item.id === id);
+    assert.equal(child.timeline.length, 3);
+    assert.equal(child.notices.length, 3);
+  }
+  assert.deepEqual(source, before);
+
+  const restored = createSourceOperations(source, { sourceId: 'bundle-source', checkpoint: operations.exportCheckpoint() }).snapshot();
+  for (const id of ['O1', 'O1B']) {
+    const child = restored.fleetDeliveries.find(item => item.id === id);
+    assert.equal(child.status, 'done');
+    assert.equal(child.timeline.length, 3);
+    assert.equal(child.notices.length, 3);
+  }
+});
+
+test('동일 배송지의 준비·보류·팁과 순서 편집은 묶음 단위이며 분리·현재 배송지 이동을 거부한다', () => {
+  const operations = createSourceOperations(bundledDay(), { now: () => 5678 });
+  let changed = command(operations, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1B', scenario: 'picking' });
+  assert.deepEqual(changed.state.fleetDeliveries.filter(item => ['O1', 'O1B'].includes(item.id)).map(item => item.customerStatus.key), ['picking', 'picking']);
+  changed = command(operations, { type: 'toggle_skip', vehicleId: 'G1', stopId: 'O1B' });
+  assert.deepEqual(changed.state.fleetDeliveries.filter(item => ['O1', 'O1B'].includes(item.id)).map(item => item.status), ['skipped', 'skipped']);
+  changed = command(operations, { type: 'toggle_skip', vehicleId: 'G1', stopId: 'O1' });
+  assert.deepEqual(changed.state.fleetDeliveries.filter(item => ['O1', 'O1B'].includes(item.id)).map(item => item.status), ['pending', 'pending']);
+  changed = command(operations, { type: 'set_delivery_tip', vehicleId: 'G1', stopId: 'O1B', body: '  뒷문 이용  ' });
+  assert.deepEqual(changed.state.fleetDeliveries.filter(item => ['O1', 'O1B'].includes(item.id)).map(item => item.tip.body), ['뒷문 이용', '뒷문 이용']);
+
+  const route = changed.state.fleetDeliveries.filter(item => item.vehicleId === 'G1');
+  const routeCommand = orderIds => ({
+    type: 'set_route_order', vehicleId: 'G1', order: orderIds,
+    expectedOrder: route.map(item => item.id), expectedStatuses: route.map(item => item.status), expectedPhase: changed.state.vehicleStates.G1.phase,
+  });
+  const revision = operations.revision;
+  assert.throws(() => command(operations, routeCommand(['O1', 'O2', 'O1B', 'O3'])), error => error.status === 400 && /붙어/.test(error.message));
+  assert.equal(operations.revision, revision);
+  changed = command(operations, routeCommand(['O2', 'O1', 'O1B', 'O3']));
+  assert.deepEqual(changed.state.fleetDeliveries.filter(item => item.vehicleId === 'G1').map(item => item.id), ['O2', 'O1', 'O1B', 'O3']);
+
+  command(operations, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1', scenario: 'shipping' });
+  const currentRoute = operations.snapshot().fleetDeliveries.filter(item => item.vehicleId === 'G1');
+  assert.throws(() => command(operations, {
+    type: 'set_route_order', vehicleId: 'G1', order: ['O1', 'O1B', 'O2', 'O3'],
+    expectedOrder: currentRoute.map(item => item.id), expectedStatuses: currentRoute.map(item => item.status), expectedPhase: 'delivering',
+  }), error => error.status === 400 && /현재/.test(error.message));
 });
 
 test('CAS와 배송 순서 기준 상태가 오래되면 변경 없이 충돌한다', () => {
@@ -202,6 +294,91 @@ test('작은 체크포인트는 원본 필드를 복제하지 않고 모든 변�
   assert.deepEqual(restored.snapshot(), operations.snapshot());
   assert.throws(() => restored.command({ type: 'reset', expectedRevision: restored.revision - 1 }), error => error.status === 409);
   assert.equal(command(restored, { type: 'reset' }).state.revision, operations.revision + 1);
+});
+
+test('레거시 체크포인트의 비대표 현재 주문을 물리 배송지 상태와 대표 참조로 정규화한다', () => {
+  const source = bundledDay();
+  const original = createSourceOperations(source, { sourceId: 'legacy-current', now: () => 1234 });
+  command(original, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1B', scenario: 'shipping' });
+  const checkpoint = original.exportCheckpoint();
+  delete checkpoint.orders.O1;
+  checkpoint.states.G1.scenarioStopId = 'O1B';
+  checkpoint.states.G1.truck.toId = 'O1B';
+  checkpoint.events[0].stopId = 'O1B';
+  delete checkpoint.events[0].orderIds;
+  checkpoint.notices[0].stopId = 'O1B';
+  delete checkpoint.notices[0].orderIds;
+  const before = structuredClone(checkpoint);
+
+  const restored = createSourceOperations(source, { sourceId: 'legacy-current', now: () => 5678, checkpoint });
+  assert.deepEqual(checkpoint, before);
+  let state = restored.snapshot();
+  assert.deepEqual(state.fleetDeliveries.filter(item => ['O1', 'O1B'].includes(item.id)).map(item => [item.status, item.customerStatus.key]), [
+    ['current', 'shipping'], ['current', 'shipping'],
+  ]);
+  assert.equal(state.vehicleStates.G1.phase, 'delivering');
+  assert.equal(state.vehicleStates.G1.scenarioStopId, 'O1');
+  assert.equal(state.vehicleStates.G1.truck.toId, 'O1');
+  for (const id of ['O1', 'O1B']) {
+    const child = state.fleetDeliveries.find(item => item.id === id);
+    assert.equal(child.timeline.length, 1);
+    assert.equal(child.notices.length, 1);
+  }
+
+  state = command(restored, { type: 'arrive_stop', vehicleId: 'G1', stopId: 'O1B' }).state;
+  assert.deepEqual(state.fleetDeliveries.filter(item => ['O1', 'O1B'].includes(item.id)).map(item => item.customerStatus.key), ['arrived', 'arrived']);
+  const migrated = restored.exportCheckpoint();
+  assert.deepEqual(createSourceOperations(source, { sourceId: 'legacy-current', checkpoint: migrated }).snapshot(), restored.snapshot());
+});
+
+test('레거시 완료 자식은 전체 배송지를 완료로 보호하고 차량 참조를 대표 주문으로 복원한다', () => {
+  const source = bundledDay();
+  const original = createSourceOperations(source, { sourceId: 'legacy-done', now: () => 1234 });
+  command(original, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1B', scenario: 'arrived' });
+  command(original, {
+    type: 'complete_stop', vehicleId: 'G1', stopId: 'O1B', hasPhoto: true,
+    confirmedRequestIds: ['O1-refrigerator', 'O1B-handoff'],
+  });
+  const checkpoint = original.exportCheckpoint();
+  delete checkpoint.orders.O1;
+  checkpoint.states.G1.scenarioStopId = 'O1B';
+  checkpoint.states.G1.truck.fromId = 'O1B';
+  for (const event of checkpoint.events.filter(item => item.orderIds?.includes('O1B'))) {
+    event.stopId = 'O1B';
+    delete event.orderIds;
+  }
+  for (const notice of checkpoint.notices.filter(item => item.orderIds?.includes('O1B'))) {
+    notice.stopId = 'O1B';
+    delete notice.orderIds;
+  }
+
+  const restored = createSourceOperations(source, { sourceId: 'legacy-done', checkpoint });
+  const state = restored.snapshot();
+  assert.deepEqual(state.fleetDeliveries.filter(item => ['O1', 'O1B'].includes(item.id)).map(item => [item.status, item.customerStatus.key]), [
+    ['done', 'delivered'], ['done', 'delivered'],
+  ]);
+  assert.equal(state.vehicleStates.G1.scenarioStopId, 'O1');
+  assert.equal(state.vehicleStates.G1.truck.fromId, 'O1');
+  for (const id of ['O1', 'O1B']) {
+    const child = state.fleetDeliveries.find(item => item.id === id);
+    assert.equal(child.timeline.length, 2);
+    assert.equal(child.notices.length, 2);
+  }
+  assert.throws(() => command(restored, { type: 'set_delivery_tip', vehicleId: 'G1', stopId: 'O1B', body: '변경 금지' }), error => error.status === 400 && /완료/.test(error.message));
+});
+
+test('체크포인트 이력의 orderIds가 다른 차량이나 배송지를 섞으면 복원하지 않는다', () => {
+  const source = bundledDay();
+  const original = createSourceOperations(source, { sourceId: 'corrupt-membership' });
+  command(original, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1', scenario: 'shipping' });
+  const checkpoint = original.exportCheckpoint();
+  const wrongDestination = structuredClone(checkpoint);
+  wrongDestination.events[0].orderIds = ['O1', 'O2'];
+  const wrongVehicle = structuredClone(checkpoint);
+  wrongVehicle.notices[0].orderIds = ['O1', 'O4'];
+  for (const changed of [wrongDestination, wrongVehicle]) {
+    assert.throws(() => createSourceOperations(source, { sourceId: 'corrupt-membership', checkpoint: changed }), error => error.status === 400);
+  }
 });
 
 test('다른 날짜·자료나 손상된 체크포인트는 복원하지 않는다', () => {

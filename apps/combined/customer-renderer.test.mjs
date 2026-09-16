@@ -1,6 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { customerEtaText, customerMapView, customerNoticeBody, customerPopupState, customerViewerDeliveries, nextCustomerPopup } from './customer-renderer.mjs';
+import { customerDeliveryForId, customerEtaText, customerLocationName, customerMapView, customerNoticeBody, customerOrderSummary, customerPopupState, customerViewerDeliveries, nextCustomerPopup } from './customer-renderer.mjs';
+
+test('고객 주문 상세는 묶음의 원 주문 번호를 보존하고 상품이 없으면 주문/박스 요약을 안내한다', () => {
+  const delivery = {
+    id: 'INTERNAL-BUNDLE', name: '1층', address: '서울 중구 예시로 1', boxes: 7,
+    orders: [{ id: 'O1', orderNumber: 'PAY-101', boxes: 3 }, { id: 'O2', orderNumber: 'PAY-102', boxes: 4 }],
+  };
+  assert.equal(customerLocationName(delivery), '서울 중구 예시로 1');
+  assert.deepEqual(customerOrderSummary(delivery), {
+    orderText: 'PAY-101, PAY-102', items: [], emptyText: '상품 상세 미제공 · 주문 2건 / 총 7박스',
+  });
+  assert.doesNotMatch(customerOrderSummary(delivery).orderText, /O1|O2|INTERNAL/);
+  assert.equal(customerDeliveryForId([delivery], 'O2'), delivery);
+});
 
 test('고객에게는 정확 ETA 대신 30분 범위만 표시한다', () => {
   const delivery = { customerWindowText: '08:00~09:00', preciseTimeText: '08:30', status: 'current' };

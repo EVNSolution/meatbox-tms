@@ -144,15 +144,47 @@ test('운영 주문 좌표를 직접 쓰고 기본 차량을 선택하며 GPS �
   assert.deepEqual(marked, [['real-b-1', [127.2, 37.7]]]);
   assert.match(node('[data-control-summary]').innerHTML, /실제기사B/);
   assert.match(node('[data-control-summary]').innerHTML, /운영 현황/);
-  assert.match(node('[data-control-summary]').innerHTML, /2026-09-16 운영 기준/);
+  assert.match(node('[data-control-summary]').innerHTML, /2026-09-16 승인 운영 계획 추정치/);
   assert.doesNotMatch(node('[data-control-summary]').innerHTML, /원본|로컬|시연|데모|예시/);
   assert.match(node('[data-control-map-note]').textContent, /남은 배송지 1곳 표시, 위치 미등록 1곳/);
   assert.match(node('[data-control-map-note]').textContent, /차량 기준 위치 표시.*실시간 GPS 미수신/);
   assert.doesNotMatch(node('[data-control-map-note]').textContent, /원본|로컬|시연|데모|예시/);
   node('[data-control-support]').listeners.click();
   assert.match(node('[data-support-data]').innerHTML, /차량 운영 현황/);
-  assert.match(node('[data-support-data]').innerHTML, /완료 시각·GPS·ETA가 미수신/);
+  assert.match(node('[data-support-data]').innerHTML, /승인 운영 계획/);
+  assert.match(node('[data-support-data]').innerHTML, /GPS 기반 주변 차량 비교는 산정 대기/);
+  assert.match(node('[data-support-data]').innerHTML, /계획 출발/);
+  assert.match(node('[data-support-data]').innerHTML, /06:30/);
+  assert.match(node('[data-support-data]').innerHTML, /기준 미정/);
   assert.doesNotMatch(node('[data-support-data]').innerHTML, /원본|로컬|시연|데모|예시/);
+  control.destroy();
+});
+
+test('지원배차는 승인 계획과 수신된 실제 처리 구간을 보여주되 등급과 외부 연결을 만들지 않는다', () => {
+  const { element, node } = fixture();
+  const source = {
+    sourceData: { date: '2026-09-16', defaultVehicleId: 'V1' },
+    fleetVehicles: [{ id: 'V1', plate: '11가 1111', driver: '배송원' }],
+    fleetDeliveries: [
+      { id: 'O1', vehicleId: 'V1', name: '완료점', address: '서울', coordinates: [127, 37.5], status: 'done', boxes: 2, completedAt: '07:59' },
+      { id: 'O2', vehicleId: 'V1', name: '다음점', address: '경기', coordinates: [127, 37.5], status: 'pending', boxes: 3 },
+    ],
+    events: [{ action: 'shipping', vehicleId: 'V1', time: '07:58' }],
+  };
+  const control = mountVehicleControl({
+    element, mapFactory, loadRouteData: () => Promise.reject(new Error('must not load')),
+    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+  });
+  control.update(source, null, null);
+  assert.match(node('[data-control-summary]').innerHTML, /고정 출발 기준<\/dt><dd>06:30/);
+  assert.match(node('[data-control-summary]').innerHTML, /마지막 도착 ETA<\/dt><dd>07:59/);
+  assert.match(node('[data-control-summary]').innerHTML, /전체 인도 완료<\/dt><dd>08:03/);
+  node('[data-control-support]').listeners.click();
+  const support = node('[data-support-data]').innerHTML;
+  assert.match(support, /승인 운영계획/);
+  assert.match(support, /1곳 \/ 1분/);
+  assert.match(support, /기준 미정/);
+  assert.doesNotMatch(support, /실시간 GPS 수신|외부 전송 완료|호출 완료|수락 완료/);
   control.destroy();
 });
 

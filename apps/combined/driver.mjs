@@ -8,8 +8,13 @@ import {
   completionProofShouldClose,
   driverCanArrive,
   driverCanStart,
+  driverConfirmedVehicles,
   driverHasConfirmedDispatch,
+  driverLocationPresentation,
   driverMapDelivery,
+  driverOrderDetails,
+  driverRouteSnapshot,
+  driverTipAttribution,
   driverTipDelivery,
   driverViewModel,
   reconcileDriverRoute,
@@ -17,7 +22,7 @@ import {
 import { movePendingOrder } from './route-editor.mjs';
 import { mountDriverMap } from './driver-map.mjs';
 import { openDriverSettings } from './driver-settings.mjs';
-import { driverHistoryForDate, exampleHistoryDates, selectedHistoryVehicle, sourceDriverHistoryForDate } from './driver-history.mjs';
+import { driverHistoryForDate, driverOperatingDate, exampleHistoryDates, latestPastHistoryDate, selectedHistoryVehicle, sourceDriverHistoryForDate } from './driver-history.mjs';
 import { renderDriverHistoryCalendar, shiftHistoryMonth } from './driver-history-calendar.mjs';
 import { referenceIcon } from './reference-icons.mjs';
 import { renderCustomerRequests } from './customer-requests.mjs';
@@ -43,7 +48,7 @@ let draft = null, base = null, editMapOpen = true, drag = null, pending = null, 
 let sheet = null, returnFocus = null, proofUrl = null, detailTab = 'order';
 let proofCheckedIds = new Set();
 let historyDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
-let historySourceDate = null, historySelectionKey = null;
+let historySourceDate = null, historySelectionKey = null, historyInitializedFor = null;
 let viewerVehicleId = new URLSearchParams(location.search).get('vehicle');
 const historyCache = new Map();
 const tipDrafts = new Map();
@@ -76,7 +81,7 @@ const map = mountDriverMap(byId('dv-map'), id => { mapSelection = id; renderMapD
 const editMap = mountDriverMap(byId('dv-edit-map'), () => {});
 const view = () => driverViewModel(latest, connected, selectedId);
 const hasSelectedRoute = () => Boolean(view().vehicle && (viewerVehicleId === null || view().vehicle.id === viewerVehicleId));
-const signature = () => JSON.stringify([latest.phase, view().deliveries.map(stop => [stop.id, stop.status])]);
+const signature = () => JSON.stringify([latest.phase, driverRouteSnapshot(view().deliveries)]);
 const activeRoute = () => group === 'today';
 const disabled = condition => condition ? 'disabled' : '';
 const dispatchPending = () => Boolean(latest?.sourceData && !driverHasConfirmedDispatch(latest));
@@ -84,7 +89,10 @@ const dispatchReadOnly = () => Boolean(latest?.sourceData && latest.dispatch?.re
 const eta = stop => stop?.completedAt || stop?.arrivedAt || stop?.preciseTimeText || stop?.officialEta?.time || '—';
 const vehicleDisplay = vehicle => vehicle?.plate || '미확인';
 const conditionText = stop => latest?.sourceData ? transportConditionText(stop) : [...new Set((stop.items || []).flatMap(item => ['냉장', '냉동'].filter(condition => String(item.name).includes(condition))))].join(' / ') || '운송 조건 미등록';
-const summary = deliveries => `${deliveries.length}곳 <span>${deliveries.reduce((sum, stop) => sum + (stop.boxes || 0), 0)}박스</span>`;
+const summary = deliveries => {
+  const boxes = deliveries.every(stop => Number.isFinite(stop.boxes)) ? deliveries.reduce((sum, stop) => sum + stop.boxes, 0) : null;
+  return `${deliveries.length}곳 <span>${boxes == null ? '박스 수량 미확인' : `${boxes}박스`}</span>`;
+};
 const requestSignature = stop => JSON.stringify((stop?.customerRequests?.items || []).map(item => item.id));
 const compactRequest = stop => {
   const html = renderCustomerRequests(stop, { compact: true, showSource: false });
@@ -147,9 +155,11 @@ function render() {
     latest = sourceVehicleContext(fullLatest, selectedId);
     const url = new URL(location.href); url.searchParams.set('id', selectedId); history.replaceState(null, '', url);
   }
-  if (latest.sourceData?.date !== historySourceDate) {
-    historySourceDate = latest.sourceData?.date || null;
-    if (historySourceDate) historyDate = historySourceDate;
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+  const operatingDate = latest.sourceData ? driverOperatingDate(latest.sourceData, today) : null;
+  if (operatingDate !== historySourceDate) {
+    historySourceDate = operatingDate;
+    historyInitializedFor = null;
   }
   const route = reconcileDriverRoute(routeCompleted, latest.phase === 'done' && model.vehicle?.live !== false, group);
   routeCompleted = route.completed; group = route.group;
@@ -168,11 +178,13 @@ function render() {
   byId('driver-vehicle').textContent = vehicleLabel;
   byId('driver-region').textContent = viewerVehicle?.region || '미등록';
   byId('driver-done').textContent = routeAvailable ? model.progress : '—';
-  byId('driver-left').textContent = routeAvailable ? `${model.remainingBoxes}박스` : '—';
+  byId('driver-left').textContent = routeAvailable ? model.remainingBoxes == null ? '미확인' : `${model.remainingBoxes}박스` : '—';
   byId('driver-finish').textContent = waitingForDispatch ? '배차 전송 대기' : !routeAvailable ? '—' : latest.sourceData && model.finishEta === '—' ? '시간 정보 미제공' : model.finishEta;
   const sourceDateQuery = latest.sourceData?.date ? `&date=${encodeURIComponent(latest.sourceData.date)}` : '';
   byId('driver-manage-link').href = `/combined/?${selectedId ? `id=${encodeURIComponent(selectedId)}&` : ''}${sourceDateQuery.replace(/^&/, '')}#/control/manage`;
-  const vehicles = latest.fleetVehicles?.length ? latest.fleetVehicles : [model.vehicle].filter(Boolean);
+  const registeredVehicles = latest.fleetVehicles?.length ? latest.fleetVehicles : [model.vehicle].filter(Boolean);
+  const vehicles = latest.sourceData && group !== 'history' && driverHasConfirmedDispatch(latest)
+    ? driverConfirmedVehicles(latest) : registeredVehicles;
   const select = byId('driver-vehicle-select');
   const options = '<option value="">배송원을 선택해 주세요</option>' + vehicles.map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.plate)} / ${escapeHtml(vehicle.driver)}</option>`).join('');
   if (select._html !== options) { select.innerHTML = options; select._html = options; }
@@ -224,7 +236,7 @@ function render() {
   if (sheet?.kind === 'detail') {
     const stop = model.deliveries.find(stop => stop.id === sheet.stopId);
     if (stop) {
-      byId('dv-sheet-title').textContent = stop.name;
+      byId('dv-sheet-title').textContent = driverLocationPresentation(stop).heading;
       byId('dv-sheet-subtitle').textContent = `${stop.sequence}번째 배송지`;
     }
     updateTip();
@@ -239,7 +251,8 @@ function render() {
   if (sheet) byId('dv-sheet-close').disabled = Boolean(pending);
 }
 function stopCard(stop, attributes = '') {
-  return `<button class="dv-stop" data-status="${escapeHtml(stop.status)}" data-stop="${escapeHtml(stop.id)}" data-focus="stop-${escapeHtml(stop.id)}" ${attributes}><span class="dv-stop-number">${stop.status === 'done' ? referenceIcon('check') : stop.sequence}</span><span class="dv-stop-copy"><span class="dv-stop-name"><strong>${escapeHtml(stop.name)}</strong>${stop.status === 'current' ? '<span class="dv-chip">배송 중</span>' : ''}</span><span class="dv-stop-address">${escapeHtml(stop.address)}</span><span class="dv-stop-meta"><span>${escapeHtml(conditionText(stop))}</span><span>${stop.boxes ?? '—'}박스</span><span>${stop.status === 'done' ? `${escapeHtml(eta(stop))} 완료` : statusLabels[stop.status]}</span></span></span></button>`;
+  const location = driverLocationPresentation(stop);
+  return `<button class="dv-stop" data-status="${escapeHtml(stop.status)}" data-stop="${escapeHtml(stop.id)}" data-focus="stop-${escapeHtml(stop.id)}" ${attributes}><span class="dv-stop-number">${stop.status === 'done' ? referenceIcon('check') : stop.sequence}</span><span class="dv-stop-copy"><span class="dv-stop-name"><strong>${escapeHtml(location.heading)}</strong>${stop.status === 'current' ? '<span class="dv-chip">배송 중</span>' : ''}</span>${location.address ? `<span class="dv-stop-address">${escapeHtml(location.address)}</span>` : ''}<span class="dv-stop-meta"><span>${escapeHtml(conditionText(stop))}</span><span>${stop.boxes ?? '—'}박스</span><span>${stop.status === 'done' ? `${escapeHtml(eta(stop))} 완료` : statusLabels[stop.status]}</span></span></span></button>`;
 }
 function executionButtons() {
   const model = view();
@@ -260,20 +273,29 @@ function renderDelivery() {
   const title = latest.sourceData ? `${latest.sourceData.date} 배차` : '금일 배차';
   const finish = latest.viewerPlan?.finishText || (latest.sourceData && model.finishEta === '—' ? '시간 정보 미제공' : model.finishEta);
   const finishLabel = latest.phase === 'done' ? '배송 완료' : '완료 예상';
-  patch('dv-delivery', `<header class="dv-delivery-heading"><div><h2>${escapeHtml(title)}</h2><p>${summary(model.deliveries)}</p></div><div class="dv-heading-actions"><button class="dv-button dv-soft" data-action="orders">주문 목록</button><button class="dv-button dv-primary" data-action="edit" ${disabled(dispatchReadOnly() || model.vehicle?.live === false || !connected || pending || model.deliveries.filter(stop => stop.status === 'pending').length < 2)}>순서 편집</button></div></header><section class="dv-today-status" aria-label="배차 진행 및 완료 현황"><div><span>진행·대기</span><strong>${model.todayCounts.active}곳</strong></div><div><span>완료</span><strong>${model.todayCounts.done}곳</strong></div><div><span>보류</span><strong>${model.todayCounts.skipped}곳</strong></div></section><section class="dv-eta" aria-label="배송 예상 시간"><div><span>${departureLabel}</span><strong>${escapeHtml(departure)}</strong></div>${icon('arrow')}<div><span>${finishLabel}</span><strong>${escapeHtml(finish)}</strong></div></section><section class="dv-execution"><p class="dv-eyebrow">${latest.phase === 'done' ? '완료된 배차' : '지금 가는 배송지'}</p>${compactRequest(model.current)}<h3>${escapeHtml(model.destination)}</h3><p class="dv-muted">${escapeHtml(model.address)}</p>${executionButtons()}</section><ol class="dv-route">${model.deliveries.map(stop => `<li>${stopCard(stop)}</li>`).join('')}</ol>`);
+  const currentLocation = driverLocationPresentation(model.current);
+  const currentHeading = model.current ? currentLocation.heading : model.destination;
+  const currentAddress = model.current ? currentLocation.address : model.address;
+  patch('dv-delivery', `<header class="dv-delivery-heading"><div><h2>${escapeHtml(title)}</h2><p>${summary(model.deliveries)}</p></div><div class="dv-heading-actions"><button class="dv-button dv-soft" data-action="orders">주문 목록</button><button class="dv-button dv-primary" data-action="edit" ${disabled(dispatchReadOnly() || model.vehicle?.live === false || !connected || pending || model.deliveries.filter(stop => stop.status === 'pending').length < 2)}>순서 편집</button></div></header><section class="dv-today-status" aria-label="배차 진행 및 완료 현황"><div><span>진행·대기</span><strong>${model.todayCounts.active}곳</strong></div><div><span>완료</span><strong>${model.todayCounts.done}곳</strong></div><div><span>보류</span><strong>${model.todayCounts.skipped}곳</strong></div></section><section class="dv-eta" aria-label="배송 예상 시간"><div><span>${departureLabel}</span><strong>${escapeHtml(departure)}</strong></div>${icon('arrow')}<div><span>${finishLabel}</span><strong>${escapeHtml(finish)}</strong></div></section><section class="dv-execution"><p class="dv-eyebrow">${latest.phase === 'done' ? '완료된 배차' : '지금 가는 배송지'}</p>${compactRequest(model.current)}<h3>${escapeHtml(currentHeading)}</h3>${latest.phase === 'done' || !currentAddress ? '' : `<p class="dv-muted">${escapeHtml(currentAddress)}</p>`}${executionButtons()}</section><ol class="dv-route">${model.deliveries.map(stop => `<li>${stopCard(stop)}</li>`).join('')}</ol>`);
 }
 function renderHistory() {
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
-  const calendar = renderDriverHistoryCalendar(historyDate, latest.sourceData?.dates || exampleHistoryDates, today, Boolean(latest.sourceData));
+  const operatingDate = latest.sourceData ? driverOperatingDate(latest.sourceData, today) : null;
+  const availableDates = latest.sourceData
+    ? (latest.sourceData.dates || []).filter(value => (typeof value === 'string' ? value : value?.date) < operatingDate)
+    : exampleHistoryDates;
+  const calendar = renderDriverHistoryCalendar(historyDate, availableDates, today, Boolean(latest.sourceData));
   const heading = `<header class="dv-delivery-heading"><div><h2>근무 이력</h2><p>달력에서 날짜를 선택해 주세요.</p></div></header>`;
   const selectedHeading = `<h3 class="dv-history-selected">${escapeHtml(historyDate.replaceAll('-', '.'))} 이력</h3>`;
   if (latest.sourceData) {
+    const layout = heading + calendar + selectedHeading;
+    if (historyDate === operatingDate) { patch('dv-history', `${layout}<div class="dv-empty">금일 배차에서 진행 상황을 확인해 주세요.</div>`); return; }
+    if (historyDate > operatingDate) { patch('dv-history', `${layout}<div class="dv-empty">아직 근무 이력이 없습니다.</div>`); return; }
     const model = view();
     const vehicle = selectedHistoryVehicle(latest.fleetVehicles || [], viewerVehicleId, model.vehicle);
-    const identity = { driver: vehicle?.driver, plate: vehicleDisplay(vehicle), originalGroupId: vehicle?.id };
+    const identity = { driver: vehicle?.driver, plate: vehicleDisplay(vehicle), originalGroupId: vehicle?.id, operatingDate };
     const cacheKey = `${historyDate}|${identity.driver}|${identity.originalGroupId || ''}`;
     historySelectionKey = cacheKey;
-    const layout = heading + calendar + selectedHeading;
     if (!identity.driver) { patch('dv-history', `${layout}<p class="dv-empty">화면 밖의 배송원 선택에서 배송원을 선택해 주세요.</p>`); return; }
     let cached = historyCache.get(cacheKey);
     if (!cached) {
@@ -287,7 +309,7 @@ function renderHistory() {
     }
     if (cached.status === 'loading') { patch('dv-history', `${layout}<div class="dv-empty" role="status">배차 내역을 불러오고 있습니다.</div>`); return; }
     if (cached.status === 'error') { patch('dv-history', `${layout}<div class="dv-empty" role="status">${escapeHtml(cached.message === '배송원을 구분할 수 없어 이력을 표시하지 않습니다.' ? cached.message : '배차 내역을 불러오지 못했습니다.')}<button type="button" class="dv-button" data-action="retry-history">다시 불러오기</button></div>`); return; }
-    const records = cached.records.map(item => `<article class="dv-history-card"><header><div><h3>${escapeHtml(item.label)}</h3></div></header><dl class="dv-key-values"><div><dt>배송 규모</dt><dd>${item.destinations}곳 / ${item.boxes}박스</dd></div></dl><p class="dv-muted">원본 배차 내역 · 실제 근무 시간 미제공</p></article>`).join('');
+    const records = cached.records.map(item => `<article class="dv-history-card"><header><div><h3>${escapeHtml(item.label)}</h3></div></header><dl class="dv-key-values"><div><dt>배송 규모</dt><dd>${item.destinations}곳 / ${item.boxes == null ? '박스 수량 미확인' : `${item.boxes}박스`}</dd></div>${item.plannedStartAt && item.plannedEndAt ? `<div><dt>계획 시간</dt><dd>${escapeHtml(item.plannedStartAt)}–${escapeHtml(item.plannedEndAt)} (계획)</dd></div>` : ''}</dl><p class="dv-muted">배차 기록 · 실제 근무 시간 미제공</p></article>`).join('');
     patch('dv-history', layout + (records || '<div class="dv-empty">선택한 날짜에 이 배송원의 배차가 없습니다.</div>'));
     return;
   }
@@ -301,7 +323,7 @@ function renderMapDetail() {
   const stop = driverMapDelivery(model.deliveries, mapSelection);
   mapSelection = stop?.id || null;
   if (!activeRoute() || !stop) { patch('dv-map-detail', '<p class="dv-empty">선택할 배송지가 없습니다.</p>'); return; }
-  patch('dv-map-detail', `<p class="dv-eyebrow">${stop.status === 'current' ? '지금 가는 배송지' : `${stop.sequence}번째 배송지`}</p>${stopCard(stop)}<dl class="dv-stats"><div><dt>상품 종류</dt><dd>${stop.items?.length || '—'}</dd></div><div><dt>박스 수</dt><dd>${stop.boxes ?? '—'}</dd></div><div><dt>ETA</dt><dd>${escapeHtml(eta(stop))}</dd></div></dl>${stop.id === model.current?.id ? executionButtons() : `<button class="dv-button dv-soft" data-stop="${escapeHtml(stop.id)}">주문 정보</button>`}`);
+  patch('dv-map-detail', `<p class="dv-eyebrow">${stop.status === 'current' ? '지금 가는 배송지' : `${stop.sequence}번째 배송지`}</p>${stopCard(stop)}<dl class="dv-stats"><div><dt>${latest.sourceData ? '주문 수' : '상품 종류'}</dt><dd>${latest.sourceData ? stop.orderIds?.length || 1 : stop.items?.length || '—'}</dd></div><div><dt>박스 수</dt><dd>${stop.boxes ?? '—'}</dd></div><div><dt>ETA</dt><dd>${escapeHtml(eta(stop))}</dd></div></dl>${stop.id === model.current?.id ? executionButtons() : `<button class="dv-button dv-soft" data-stop="${escapeHtml(stop.id)}">주문 정보</button>`}`);
 }
 function renderOrders() {
   const model = view();
@@ -313,7 +335,8 @@ function beginEdit() {
   const model = view();
   if (!connected || pending || model.vehicle?.live === false || model.deliveries.filter(stop => stop.status === 'pending').length < 2) return;
   draft = model.deliveries.map(stop => stop.id);
-  base = { order: [...draft], statuses: model.deliveries.map(stop => stop.status), phase: latest.phase, signature: signature() };
+  const raw = driverRouteSnapshot(model.deliveries);
+  base = { order: [...draft], rawOrder: raw.map(item => item.id), rawStatuses: raw.map(item => item.status), phase: latest.phase, signature: signature() };
   screen = 'edit'; feedback(''); render();
 }
 function renderEditor() {
@@ -329,7 +352,10 @@ function renderEditor() {
     : view().vehicle;
   if (editMapOpen) editMap.update(stops.map((stop, index) => ({ ...stop, sequence: index + 1 })), latest.truck?.dwelling, true, { sourceData: latest.sourceData, vehicle: mapVehicle });
   if (drag) return;
-  patch('dv-edit-list', stops.map((stop, index) => `<li class="dv-edit-row" data-route-id="${stop.id}" data-status="${stop.status}"><button class="dv-icon dv-handle" data-handle="${stop.id}" data-focus="handle-${stop.id}" aria-label="${escapeHtml(stop.name)} 순서 이동" ${disabled(stop.status !== 'pending' || pending || !connected)}>${referenceIcon('handle')}</button><span class="dv-stop-number">${index + 1}</span><span class="dv-stop-copy"><strong>${escapeHtml(stop.name)}</strong><span class="dv-stop-address">${escapeHtml(stop.address)}</span><span class="dv-stop-meta">${stop.boxes}박스</span></span>${stop.status === 'pending' ? `<span class="dv-move"><button data-move="${stop.id}" data-direction="-1" data-focus="up-${stop.id}" aria-label="${escapeHtml(stop.name)} 위로" ${disabled(eligible[0] === stop || pending || !connected)}>${referenceIcon('up')}</button><button data-move="${stop.id}" data-direction="1" data-focus="down-${stop.id}" aria-label="${escapeHtml(stop.name)} 아래로" ${disabled(eligible.at(-1) === stop || pending || !connected)}>${referenceIcon('down')}</button></span>` : '<span class="dv-muted">고정</span>'}</li>`).join(''));
+  patch('dv-edit-list', stops.map((stop, index) => {
+    const location = driverLocationPresentation(stop);
+    return `<li class="dv-edit-row" data-route-id="${stop.id}" data-status="${stop.status}"><button class="dv-icon dv-handle" data-handle="${stop.id}" data-focus="handle-${stop.id}" aria-label="${escapeHtml(location.heading)} 순서 이동" ${disabled(stop.status !== 'pending' || pending || !connected)}>${referenceIcon('handle')}</button><span class="dv-stop-number">${index + 1}</span><span class="dv-stop-copy"><strong>${escapeHtml(location.heading)}</strong>${location.address ? `<span class="dv-stop-address">${escapeHtml(location.address)}</span>` : ''}<span class="dv-stop-meta">${stop.boxes}박스</span></span>${stop.status === 'pending' ? `<span class="dv-move"><button data-move="${stop.id}" data-direction="-1" data-focus="up-${stop.id}" aria-label="${escapeHtml(location.heading)} 위로" ${disabled(eligible[0] === stop || pending || !connected)}>${referenceIcon('up')}</button><button data-move="${stop.id}" data-direction="1" data-focus="down-${stop.id}" aria-label="${escapeHtml(location.heading)} 아래로" ${disabled(eligible.at(-1) === stop || pending || !connected)}>${referenceIcon('down')}</button></span>` : '<span class="dv-muted">고정</span>'}</li>`;
+  }).join(''));
 }
 function move(id, target) {
   if (!draft || pending || !connected) return;
@@ -376,7 +402,7 @@ function openRequest(id) {
   const stop = view().current;
   const request = stop?.customerRequests?.items?.find(item => item.id === id);
   if (!request) return;
-  showSheet({ kind: 'request', stopId: stop.id, title: '고객 요청', subtitle: stop.name,
+  showSheet({ kind: 'request', stopId: stop.id, title: '고객 요청', subtitle: driverLocationPresentation(stop).heading,
     body: renderCustomerRequests({ ...stop, customerRequests: { ...stop.customerRequests, items: [request] } }, { showSource: false }),
   });
 }
@@ -385,8 +411,11 @@ function openDetail(id, nextTab = 'order') {
   if (!stop) return;
   detailTab = nextTab;
   const tabs = `<div class="dv-segments" role="group" aria-label="배송지 상세"><button data-detail="order" aria-pressed="${detailTab === 'order'}">주문 정보</button><button data-detail="destination" aria-pressed="${detailTab === 'destination'}">배송지 정보</button></div>`;
-  const body = detailTab === 'order' ? `<dl class="dv-key-values"><div><dt>주문 번호</dt><dd>${escapeHtml(stop.orderNumber || stop.orderNo || '미제공')}</dd></div><div><dt>배송지</dt><dd>${escapeHtml(stop.name)}</dd></div><div><dt>상품 보관 조건</dt><dd>${escapeHtml(conditionText(stop))}</dd></div><div><dt>박스 수</dt><dd>${stop.boxes ?? '—'}박스</dd></div></dl><ul class="dv-items">${(stop.items || []).map(item => `<li><div><strong>${escapeHtml(item.name)}</strong><p class="dv-muted">${escapeHtml(item.opt)}</p></div><strong>×${escapeHtml(item.qty)}</strong></li>`).join('') || '<li class="dv-muted">상품 상세 정보가 제공되지 않았습니다.</li>'}</ul>` : `${renderCustomerRequests(stop, { showSource: false })}<dl class="dv-key-values"><div><dt>주소</dt><dd>${escapeHtml(stop.address)}</dd></div><div><dt>점심시간</dt><dd>등록된 정보 없음</dd></div></dl><label class="dv-field" for="driver-tip-body">배송원 팁</label><p class="dv-muted">고객 요청과 별도로 배송원이 작성하는 메모입니다.</p><textarea id="driver-tip-body" rows="4" maxlength="500" placeholder="출입 방법과 하차 위치를 적어 주세요.">${escapeHtml(tipDrafts.get(id) ?? stop.tip?.body ?? '')}</textarea><div class="dv-inline dv-muted"><span id="driver-tip-author"></span><span id="driver-tip-count"></span></div><button class="dv-button dv-primary" id="driver-tip-save" data-detail-save>배송 팁 저장</button><p class="dv-muted" id="driver-tip-status" role="status"></p>`;
-  showSheet({ kind: 'detail', stopId: id, title: stop.name, subtitle: `${stop.sequence}번째 배송지`, body: tabs + body,
+  const orders = driverOrderDetails(stop);
+  const orderDetails = orders.map(order => `<section class="dv-order-detail"><dl class="dv-key-values"><div><dt>주문 번호</dt><dd>${escapeHtml(order.orderNumber || '미제공')}</dd></div><div><dt>박스 수</dt><dd>${order.boxes ?? '—'}박스</dd></div></dl><ul class="dv-items">${order.items.map(item => `<li><div><strong>${escapeHtml(item.name)}</strong><p class="dv-muted">${escapeHtml(item.opt)}</p></div><strong>×${escapeHtml(item.qty)}</strong></li>`).join('') || `<li class="dv-muted">상품 상세 정보 미제공 · ${order.boxes ?? '—'}박스</li>`}</ul></section>`).join('');
+  const location = driverLocationPresentation(stop);
+  const body = detailTab === 'order' ? `<dl class="dv-key-values"><div><dt>배송지</dt><dd>${escapeHtml(location.heading)}</dd></div><div><dt>상품 보관 조건</dt><dd>${escapeHtml(conditionText(stop))}</dd></div><div><dt>주문/박스</dt><dd>${orders.length}건 / ${stop.boxes ?? '—'}박스</dd></div></dl>${orderDetails}` : `${renderCustomerRequests(stop, { showSource: false })}<dl class="dv-key-values"><div><dt>주소</dt><dd>${escapeHtml(stop.address)}</dd></div><div><dt>점심시간</dt><dd>등록된 정보 없음</dd></div></dl><label class="dv-field" for="driver-tip-body">배송원 팁</label><p class="dv-muted">고객 요청과 별도로 배송원이 작성하는 메모입니다.</p><textarea id="driver-tip-body" rows="4" maxlength="500" placeholder="출입 방법과 하차 위치를 적어 주세요.">${escapeHtml(tipDrafts.get(id) ?? stop.tip?.body ?? '')}</textarea><div class="dv-inline dv-muted"><span id="driver-tip-author"></span><span id="driver-tip-count"></span></div><button class="dv-button dv-primary" id="driver-tip-save" data-detail-save>배송 팁 저장</button><p class="dv-muted" id="driver-tip-status" role="status"></p>`;
+  showSheet({ kind: 'detail', stopId: id, title: location.heading, subtitle: `${stop.sequence}번째 배송지`, body: tabs + body,
     onClick(event) {
       const detail = event.target.closest('[data-detail]');
       if (detail) openDetail(id, detail.dataset.detail);
@@ -402,7 +431,7 @@ function updateTip() {
   const textarea = byId('driver-tip-body');
   textarea.disabled = Boolean(pending) || dispatchReadOnly();
   byId('driver-tip-count').textContent = `${textarea.value.length}/500`;
-  byId('driver-tip-author').textContent = stop?.tip ? `${stop.tip.author || '배송원'} (${stop.tip.updatedAt || '시각 미확인'})` : '작성 기록 없음';
+  byId('driver-tip-author').textContent = driverTipAttribution(stop?.tip);
   byId('driver-tip-save').disabled = !connected || pending || dispatchReadOnly() || !textarea.value.trim();
 }
 function saveTip(id) {
@@ -420,8 +449,9 @@ function openProof() {
   const hasCustomerRequests = Boolean(stop.customerRequests?.items?.length);
   const proofPreview = () => proofUrl ? `<img src="${escapeHtml(proofUrl)}" alt="배송 증빙 사진 미리보기">` : `<div>${icon('photo')}배송 완료에 사진이 필요합니다.</div>`;
   const cameraBody = () => `<label class="dv-field" for="dv-proof-time">완료 시간</label><input id="dv-proof-time" value="${escapeHtml(latest.simClock)}" readonly><p class="dv-muted">현재 배송 시각으로 기록합니다.</p><p class="dv-field">배송 증빙 사진 (필수)</p><div class="dv-proof-preview" id="dv-proof-preview">${proofPreview()}</div><div class="dv-form-actions"><button class="dv-button" data-photo="camera">${proofUrl ? '재촬영' : '사진 촬영'}</button><button class="dv-button" data-photo="album">앨범에서 선택</button></div><input id="dv-proof-file" type="file" accept="image/*" hidden>${latest.sourceData ? '' : '<p class="dv-muted">사진은 이 화면에서만 미리보기 됩니다. 서버 사진 저장은 연결되지 않았습니다.</p>'}<div class="dv-form-actions"><button class="dv-button" data-proof-cancel>취소</button><button class="dv-button dv-primary" data-proof-next ${disabled(!proofUrl)}>${hasCustomerRequests ? '고객 요청 확인' : '완료 확인'}</button></div>`;
-  const requestBody = () => `<section class="dv-request-confirm"><p class="dv-eyebrow">${hasCustomerRequests ? '고객 요청 이행 확인' : '배송 완료 확인'}</p><h3>${escapeHtml(stop.name)}</h3>${renderCustomerRequests(stop, { showSource: false, confirmation: true, checkedIds: [...proofCheckedIds] })}<dl class="dv-key-values"><div><dt>상품 보관 조건</dt><dd>${escapeHtml(conditionText(stop))}</dd></div><div><dt>배송원 팁</dt><dd>${escapeHtml(stop.tip?.body || '미등록')}</dd></div></dl><p class="dv-muted">상품 보관 조건과 배송원 팁은 고객 요청과 별도 정보입니다.</p><div class="dv-proof-thumb">${proofPreview()}</div><p class="dv-muted">${hasCustomerRequests ? '필수 고객 요청을 확인하면 배송이 완료됩니다.' : '사진을 확인한 뒤 배송 완료를 확정합니다.'}${latest.sourceData ? '' : ' 사진은 이 화면에서만 확인할 수 있으며 서버에 저장되지 않습니다.'}</p><button class="dv-button dv-primary" id="dv-proof-confirm" data-proof-confirm ${disabled(!completionProofCanSubmit(latest, connected, stop.id, proofUrl, [...proofCheckedIds]))}>확인하고 배송 완료</button></section>`;
-  const config = { kind: 'proof', stopId: stop.id, requestSignature: requestSignature(stop), title: '배송 완료 사진', subtitle: `${stop.name} 배송 증빙을 촬영합니다.`, body: cameraBody(),
+  const stopHeading = driverLocationPresentation(stop).heading;
+  const requestBody = () => `<section class="dv-request-confirm"><p class="dv-eyebrow">${hasCustomerRequests ? '고객 요청 이행 확인' : '배송 완료 확인'}</p><h3>${escapeHtml(stopHeading)}</h3>${renderCustomerRequests(stop, { showSource: false, confirmation: true, checkedIds: [...proofCheckedIds] })}<dl class="dv-key-values"><div><dt>상품 보관 조건</dt><dd>${escapeHtml(conditionText(stop))}</dd></div><div><dt>배송원 팁</dt><dd>${escapeHtml(stop.tip?.body || '미등록')}</dd></div></dl><p class="dv-muted">상품 보관 조건과 배송원 팁은 고객 요청과 별도 정보입니다.</p><div class="dv-proof-thumb">${proofPreview()}</div><p class="dv-muted">${hasCustomerRequests ? '필수 고객 요청을 확인하면 배송이 완료됩니다.' : '사진을 확인한 뒤 배송 완료를 확정합니다.'}${latest.sourceData ? '' : ' 사진은 이 화면에서만 확인할 수 있으며 서버에 저장되지 않습니다.'}</p><button class="dv-button dv-primary" id="dv-proof-confirm" data-proof-confirm ${disabled(!completionProofCanSubmit(latest, connected, stop.id, proofUrl, [...proofCheckedIds]))}>확인하고 배송 완료</button></section>`;
+  const config = { kind: 'proof', stopId: stop.id, requestSignature: requestSignature(stop), title: '배송 완료 사진', subtitle: `${stopHeading} 배송 증빙을 촬영합니다.`, body: cameraBody(),
     onClick(event) {
       if (event.target.closest('[data-proof-cancel]')) closeSheet();
       const photo = event.target.closest('[data-photo]');
@@ -439,12 +469,12 @@ function openProof() {
       if (event.target.closest('[data-proof-next]') && proofUrl) {
         proofCheckedIds.clear();
         byId('dv-sheet-title').textContent = hasCustomerRequests ? '고객 요청 확인' : '배송 완료 확인';
-        byId('dv-sheet-subtitle').textContent = `${stop.name} ${hasCustomerRequests ? '배송 전 확인' : '사진 확인'}`;
+        byId('dv-sheet-subtitle').textContent = `${stopHeading} ${hasCustomerRequests ? '배송 전 확인' : '사진 확인'}`;
         byId('dv-sheet-back').hidden = false;
         config.back = () => {
           proofCheckedIds.clear();
           byId('dv-sheet-title').textContent = '배송 완료 사진';
-          byId('dv-sheet-subtitle').textContent = `${stop.name} 배송 증빙을 촬영합니다.`;
+          byId('dv-sheet-subtitle').textContent = `${stopHeading} 배송 증빙을 촬영합니다.`;
           byId('dv-sheet-body').innerHTML = cameraBody();
           byId('dv-sheet-back').hidden = true;
         };
@@ -495,7 +525,17 @@ byId('dv-app').addEventListener('click', event => {
   if (pending) return;
   const target = event.target.closest('button'); if (!target || target.disabled) return;
   if (target.dataset.tab) switchTab(target.dataset.tab);
-  if (target.dataset.group) { group = target.dataset.group; tab = 'delivery'; screen = 'main'; draft = null; render(); }
+  if (target.dataset.group) {
+    if (target.dataset.group === 'history' && group !== 'history') {
+      const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+      const operatingDate = latest.sourceData ? driverOperatingDate(latest.sourceData, today) : null;
+      if (operatingDate && historyInitializedFor !== operatingDate) {
+        historyDate = latestPastHistoryDate(latest.sourceData?.dates, operatingDate, historyDate);
+        historyInitializedFor = operatingDate;
+      }
+    }
+    group = target.dataset.group; tab = 'delivery'; screen = 'main'; draft = null; render();
+  }
   if (target.dataset.historyDate) { historyDate = target.dataset.historyDate; renderHistory(); }
   if (target.dataset.historyMonth) { historyDate = shiftHistoryMonth(historyDate, Number(target.dataset.historyMonth)); renderHistory(); }
   if (target.dataset.orders) { orderGroup = target.dataset.orders; renderOrders(); }
@@ -512,7 +552,7 @@ byId('dv-app').addEventListener('click', event => {
     case 'save-edit': {
       if (!draft || signature() !== base.signature) { feedback('배송 상태를 다시 확인한 뒤 편집해 주세요.'); break; }
       const order = [...draft];
-      sendCommand('set_route_order', { order, expectedOrder: base.order, expectedStatuses: base.statuses, expectedPhase: base.phase }, state => state.deliveries.every((stop, index) => stop.id === order[index]), () => { draft = null; screen = 'main'; feedback('배송 순서를 저장했습니다.'); });
+      sendCommand('set_route_order', { order, expectedOrder: base.rawOrder, expectedStatuses: base.rawStatuses, expectedPhase: base.phase }, state => state.deliveries.every((stop, index) => stop.id === order[index]), () => { draft = null; screen = 'main'; feedback('배송 순서를 저장했습니다.'); });
       break;
     }
     case 'open-map': switchTab('map'); break;

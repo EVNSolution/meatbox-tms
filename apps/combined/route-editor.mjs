@@ -3,7 +3,9 @@ import { referenceIcon } from './reference-icons.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const labels = { pending: '대기', current: '배송 중', done: '완료', skipped: '보류' };
-const signature = state => JSON.stringify([state.phase, state.deliveries.map(stop => [stop.id, stop.status])]);
+const childOrders = stop => Array.isArray(stop?.orders) && stop.orders.length ? stop.orders : [stop];
+const rawBaseline = deliveries => deliveries.flatMap(childOrders).map(order => [order.id, order.status]);
+const signature = state => JSON.stringify([state.phase, rawBaseline(state.deliveries)]);
 
 export const routeEditability = state => state?.vehicle?.live === false
   ? { editable: false, reason: '조회 전용 차량은 배송 순서를 편집할 수 없습니다.' }
@@ -39,7 +41,8 @@ export function mountRouteEditor({ element, onSend, onSelect, onCancel = () => {
   }
   function resetDraft() {
     draft = order();
-    base = { order: order(), statuses: latest.deliveries.map(stop => stop.status), phase: latest.phase, signature: signature(latest) };
+    const raw = rawBaseline(latest.deliveries);
+    base = { order: order(), rawOrder: raw.map(item => item[0]), rawStatuses: raw.map(item => item[1]), phase: latest.phase, signature: signature(latest) };
   }
   function beginEdit() {
     if (!latest || !connected || draft || !routeEditability(latest).editable || latest.deliveries.filter(stop => stop.status === 'pending').length < 2) return;
@@ -107,7 +110,7 @@ export function mountRouteEditor({ element, onSend, onSelect, onCancel = () => {
     }
     if (action === 'save' && changed() && connected && !pending && routeEditability(latest).editable) {
       pending = true; message = '배송 순서를 저장하고 있습니다.';
-      onSend('set_route_order', { order: draft, expectedOrder: base.order, expectedStatuses: base.statuses, expectedPhase: base.phase });
+      onSend('set_route_order', { order: draft, expectedOrder: base.rawOrder, expectedStatuses: base.rawStatuses, expectedPhase: base.phase });
     }
     const moving = event.target.closest('[data-move]');
     if (moving) moveBy(moving.dataset.move, Number(moving.dataset.direction));

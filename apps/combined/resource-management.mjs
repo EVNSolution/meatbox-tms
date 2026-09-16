@@ -1,12 +1,15 @@
 import { referenceIcon } from './reference-icons.mjs';
+import { bundleDeliveries } from './delivery-bundles.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
 
-const sourceDeliveries = data => Array.isArray(data?.fleetDeliveries)
-  ? data.fleetDeliveries
-  : Array.isArray(data?.deliveries) ? data.deliveries : null;
+const sourceDeliveries = data => {
+  const deliveries = Array.isArray(data?.fleetDeliveries) ? data.fleetDeliveries
+    : Array.isArray(data?.deliveries) ? data.deliveries : null;
+  return deliveries && data?.sourceData ? bundleDeliveries(deliveries) : deliveries;
+};
 
 const displayText = value => String(value ?? '').trim() || '미등록';
 
@@ -46,7 +49,7 @@ export function resourceManagementModel(data, query = '') {
   const sourceDate = data?.sourceData?.date ?? null;
   const resources = vehicles.map(vehicle => {
     const assigned = deliveries === null ? null : deliveriesByVehicle.get(vehicle.id);
-    const originRegions = [...new Set((assigned || []).map(delivery => delivery.regionName).filter(Boolean))];
+    const originRegions = [...new Set((assigned || []).flatMap(delivery => (delivery.orders || [delivery]).map(order => order.regionName)).filter(Boolean))];
     if (!originRegions.length && String(vehicle.region ?? '').trim()) originRegions.push(String(vehicle.region).trim());
     return {
       id: vehicle.id,
@@ -57,7 +60,7 @@ export function resourceManagementModel(data, query = '') {
       sourceDate,
       sourceMode: Boolean(data?.sourceData),
       originRegions,
-      searchText: [vehicle.id, vehicle.plate, vehicle.driver, vehicle.region, ...originRegions, ...(assigned || []).flatMap(delivery => [delivery.id, delivery.name, delivery.address, delivery.orderNumber])]
+      searchText: [vehicle.id, vehicle.plate, vehicle.driver, vehicle.region, ...originRegions, ...(assigned || []).flatMap(delivery => (delivery.orders || [delivery]).flatMap(order => [order.id, order.name, order.address, order.orderNumber]))]
         .map(value => String(value ?? '').toLocaleLowerCase('ko-KR')).join(' '),
     };
   });
@@ -109,8 +112,8 @@ function resourceDetail(resource, kind) {
   const locationText = String(vehicle.location?.label ?? '').trim();
   const operationLocationText = locationText.replace(/\s*예시\s*/g, ' ').replace(/\s+/g, ' ').trim() || '미등록';
   const unknownFields = kind === 'drivers' ? `
-    <div><dt>성향</dt><dd>미등록</dd></div>
-    <div><dt>메인 권역</dt><dd>미등록</dd></div>
+    <div><dt>성향</dt><dd>${escapeHtml(displayText(vehicle.personality))}</dd></div>
+    <div><dt>${resource.sourceMode && !vehicle.mainRegion ? '기록 권역' : '메인 권역'}</dt><dd>${escapeHtml(displayText(vehicle.mainRegion || (resource.sourceMode ? vehicle.region : null)))}</dd></div>
     <div><dt>배송 권역</dt><dd>${escapeHtml(sourceRegions)}</dd></div>` : `
     <div><dt>배송 권역</dt><dd>${escapeHtml(sourceRegions)}</dd></div>
     <div><dt>운영 상태</dt><dd>${resource.sourceMode ? resource.summary.destinationCount ? '배차 운영' : '배정 대기' : escapeHtml(displayText(vehicle.status))}</dd></div>
@@ -133,7 +136,7 @@ function resourceDetail(resource, kind) {
       </dl>
       <p>보류 배송은 잔여에 포함됩니다.</p>
     </section>
-    <section class="resource-assignments" aria-label="${escapeHtml(title)} 배정 배송지"><h4>당일 배정 주문</h4><p class="resource-assignment-hint">주문을 선택하면 배송 관제로 이동합니다.</p>${assignmentList(resource)}</section>
+    <section class="resource-assignments" aria-label="${escapeHtml(title)} 배정 배송지"><h4>당일 배정 배송지</h4><p class="resource-assignment-hint">배송지를 선택하면 배송 관제로 이동합니다.</p>${assignmentList(resource)}</section>
   </div>`;
 }
 
