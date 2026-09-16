@@ -5,7 +5,8 @@ const stopName = stop => `${stop.sequence}번 ${stop.name}`;
 
 export function deliveryLinks(id, date) {
   const params = new URLSearchParams();
-  if (/^(?:S[1-8]|V(?:[2-9]|[1-9][0-9]|1[0-2][0-9]|130)-S[1-3]|ord_[a-f0-9]{8,64})$/.test(id || '')) params.set('id', id);
+  // Links preserve opaque delivery IDs; the selected day's data resolves membership.
+  if (typeof id === 'string' && /^[A-Za-z0-9_-]+$/.test(id)) params.set('id', id);
   if (/^\d{4}-\d{2}-\d{2}$/.test(date || '')) params.set('date', date);
   const query = params.size ? `?${params}` : '';
   return {

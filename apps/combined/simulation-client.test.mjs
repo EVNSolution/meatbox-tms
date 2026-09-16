@@ -2,6 +2,29 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { connectSimulation, expandSourceCommand } from './simulation-client.mjs';
 
+test('종료한 연결은 늦게 읽힌 날짜 목록으로 상태 조회를 다시 시작하지 않는다', async t => {
+  const saved = { fetch: globalThis.fetch, location: globalThis.location, window: globalThis.window,
+    sessionStorage: globalThis.sessionStorage, history: globalThis.history };
+  let finishManifest; const calls = [], listeners = [];
+  const manifest = new Promise(resolve => { finishManifest = resolve; });
+  globalThis.fetch = async url => {
+    calls.push(url);
+    if (url === '/api/dispatch-data/manifest') return { status: 200, ok: true, json: () => manifest };
+    return { status: 200, ok: true };
+  };
+  globalThis.location = { href: 'https://demo.test/combined/', search: '' };
+  globalThis.window = { addEventListener: name => listeners.push(name), removeEventListener() {} };
+  globalThis.sessionStorage = { getItem() { return null; } };
+  const client = connectSimulation({ onState() {}, onStatus() {}, onError() {} });
+  t.after(() => { client.close(); Object.assign(globalThis, saved); });
+  await new Promise(resolve => setImmediate(resolve));
+  client.close();
+  finishManifest({ schemaVersion: 1, defaultDate: '2026-09-16', dates: [{ date: '2026-09-16' }] });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(calls, ['/api/session', '/api/dispatch-data/manifest']);
+  assert.deepEqual(listeners, []);
+});
+
 test('묶음 순서 명령은 원본 주문 순서와 개별 상태 CAS로 확장된다', () => {
   const state = { sourceData: { date: '2026-09-16' }, fleetDeliveries: [
     { id: 'O1', vehicleId: 'V1', name: 'A', address: '서울', status: 'current' },
