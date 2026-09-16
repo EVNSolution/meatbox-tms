@@ -30,6 +30,14 @@ function bundledDay() {
     orders: [first, sibling, order('O2', 'G1', 3, 3), order('O3', 'G1', 4, 4), { ...first, id: 'O4', groupId: 'G2', sequence: 1, boxes: 5 }],
   };
 }
+function presentationDay() {
+  const source = day();
+  source.date = '2026-09-16';
+  source.orders[1].customerRequests = { source: 'actual', items: [{ id: 'actual-request', kind: 'handoff', label: '직접 전달', required: true }] };
+  source.orders[1].tip = { body: '실제 배송 안내', author: '운영자', updatedAt: null, source: 'actual' };
+  source.orders[1].transportConditions = ['실제 보냉 운송'];
+  return source;
+}
 const command = (operations, body) => operations.command({ expectedRevision: operations.snapshot().revision, ...body });
 
 test('원본 주문과 실제 기사명을 보존한 전체 뷰어 상태를 만들며 초기 사건과 가짜 정보는 없다', () => {
@@ -320,6 +328,51 @@ test('작은 체크포인트는 원본 필드를 복제하지 않고 모든 변�
   assert.deepEqual(restored.snapshot(), operations.snapshot());
   assert.throws(() => restored.command({ type: 'reset', expectedRevision: restored.revision - 1 }), error => error.status === 409);
   assert.equal(command(restored, { type: 'reset' }).state.revision, operations.revision + 1);
+});
+
+test('기존 운행의 표현 콘텐츠 정책은 인위적 필수 요청 없이 완료되고 체크포인트에서 유지된다', () => {
+  const source = presentationDay();
+  const sourceId = 'published-2026-09-16';
+  const currentPolicy = createSourceOperations(source, { sourceId });
+  assert.equal(currentPolicy.snapshot().fleetDeliveries.find(order => order.id === 'O1').customerRequests.source, 'presentation');
+  command(currentPolicy, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1', scenario: 'arrived' });
+  const migratedCheckpoint = currentPolicy.exportCheckpoint();
+  assert.equal(migratedCheckpoint.presentationContentVersion, 1);
+  const markerlessCheckpoint = structuredClone(migratedCheckpoint);
+  delete markerlessCheckpoint.presentationContentVersion;
+  const markerless = createSourceOperations(source, { sourceId, checkpoint: markerlessCheckpoint });
+  assert.equal(markerless.snapshot().fleetDeliveries.find(order => order.id === 'O1').customerRequests.source, 'presentation');
+  assert.equal(markerless.exportCheckpoint().presentationContentVersion, 1);
+  migratedCheckpoint.presentationContentVersion = 0;
+
+  const operations = createSourceOperations(source, { sourceId, checkpoint: migratedCheckpoint });
+  let state = operations.snapshot();
+  const generatedFreeOrder = state.fleetDeliveries.find(order => order.id === 'O1');
+  assert.equal(generatedFreeOrder.customerRequests, null);
+  assert.equal(generatedFreeOrder.tip, null);
+  assert.equal(generatedFreeOrder.transportConditions, null);
+  const actualOrder = state.fleetDeliveries.find(order => order.id === 'O2');
+  assert.equal(actualOrder.customerRequests.source, 'actual');
+  assert.equal(actualOrder.tip.source, 'actual');
+  assert.deepEqual(actualOrder.transportConditions, ['실제 보냉 운송']);
+
+  state = command(operations, { type: 'complete_stop', vehicleId: 'G1', stopId: 'O1', hasPhoto: true }).state;
+  assert.equal(state.fleetDeliveries.find(order => order.id === 'O1').status, 'done');
+  const checkpoint = operations.exportCheckpoint();
+  assert.equal(checkpoint.presentationContentVersion, 0);
+  const restored = createSourceOperations(source, { sourceId, checkpoint });
+  assert.equal(restored.snapshot().fleetDeliveries.find(order => order.id === 'O1').customerRequests, null);
+  assert.equal(restored.exportCheckpoint().presentationContentVersion, 0);
+});
+
+test('잘못된 표현 콘텐츠 버전의 체크포인트는 복원하지 않는다', () => {
+  const source = presentationDay();
+  const checkpoint = createSourceOperations(source, { sourceId: 'bad-presentation-version' }).exportCheckpoint();
+  for (const presentationContentVersion of [-1, 2, '0', null]) {
+    assert.throws(() => createSourceOperations(source, {
+      sourceId: 'bad-presentation-version', checkpoint: { ...checkpoint, presentationContentVersion },
+    }), error => error.status === 400 && /저장된 운행 상태/.test(error.message));
+  }
 });
 
 test('레거시 체크포인트의 비대표 현재 주문을 물리 배송지 상태와 대표 참조로 정규화한다', () => {
