@@ -64,8 +64,10 @@ export function connectSimulation({ onState, onStatus, onError }) {
         if (stopped) return;
         if (available.status === 401) return login();
         if (available.ok) {
-          source = connectSourceOperations({ manifest: await available.json(), onState(state, context) {
-            sourceState = state; onState(state, context);
+          const manifest = await available.json();
+          if (stopped) return;
+          source = connectSourceOperations({ manifest, onState(state, context) {
+            onState(state, context); sourceState = state;
           }, onStatus, onError, login });
           return;
         }

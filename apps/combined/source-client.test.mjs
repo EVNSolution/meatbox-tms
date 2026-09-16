@@ -8,13 +8,14 @@ const state = (date, revision = 1) => ({ boot: 'boot-1', revision, sourceData: {
 
 function globals(t, fetchImpl) {
   const saved = { fetch: globalThis.fetch, location: globalThis.location, history: globalThis.history, sessionStorage: globalThis.sessionStorage, window: globalThis.window, setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout };
-  const events = new Map(); const stored = new Map();
+  const events = new Map(); const stored = new Map(); const timers = new Set(); const cleanups = [];
   globalThis.fetch = fetchImpl; globalThis.location = { href: 'https://demo.test/combined/?id=O-2025-09-12', search: '' };
   globalThis.history = { replaceState() {} }; globalThis.sessionStorage = { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) };
   globalThis.window = { addEventListener: (name, fn) => events.set(name, fn), removeEventListener: name => events.delete(name) };
-  globalThis.setTimeout = () => 1; globalThis.clearTimeout = () => {};
-  t.after(() => Object.assign(globalThis, saved));
-  return { events, stored };
+  globalThis.setTimeout = (callback, delay) => { const timer = { callback, delay }; timers.add(timer); return timer; };
+  globalThis.clearTimeout = timer => timers.delete(timer);
+  t.after(() => { cleanups.forEach(cleanup => cleanup()); Object.assign(globalThis, saved); });
+  return { events, stored, timers, cleanup: callback => cleanups.push(callback) };
 }
 
 test('날짜 목록은 기본 날짜로 안전하게 보정된다', () => {
@@ -88,4 +89,118 @@ test('과거 조회 상태에서는 운행 및 배차 명령을 전송하지 않
   assert.equal(posts, 0);
   assert.match(errors[0], /과거 배차 기록/);
   client.close();
+});
+
+test('연결 종료 뒤에는 남아 있는 상태로 명령을 보내지 않는다', async t => {
+  let posts = 0;
+  globals(t, async (_url, options = {}) => {
+    if (options.method === 'POST') { posts++; return response({ state: state('2025-09-12', 2) }); }
+    return response(state('2025-09-12'));
+  });
+  const client = connectSourceOperations({ manifest, onState() {}, onStatus() {}, onError() {}, login() {} });
+  await new Promise(resolve => setImmediate(resolve));
+  client.close();
+  assert.equal(await client.send('arrive_stop', { stopId: 'O-2025-09-12' }), null);
+  assert.equal(posts, 0);
+});
+
+test('새 날짜를 조회하면 이전 날짜의 네트워크 요청을 취소한다', async t => {
+  const oldDay = deferredResponse();
+  let oldSignal;
+  const { cleanup } = globals(t, async (url, options) => {
+    if (url.endsWith('2025-09-12/state')) { oldSignal = options.signal; return oldDay.promise; }
+    return response(state('2025-09-13'));
+  });
+  const states = [];
+  const client = connectSourceOperations({ manifest, onState: value => states.push(value), onStatus() {}, onError() {}, login() {} });
+  cleanup(() => client.close());
+  await client.selectDate('2025-09-13');
+  assert.equal(oldSignal?.aborted, true);
+  oldDay.resolve(response(state('2025-09-12')));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(states.map(value => value.sourceData.date), ['2025-09-13']);
+});
+
+test('이전 날짜 명령의 늦은 인증 오류는 새 날짜 연결을 종료하지 않는다', async t => {
+  const oldCommand = deferredResponse();
+  let logins = 0;
+  const { cleanup } = globals(t, async (url, options = {}) => options.method === 'POST' ? oldCommand.promise
+    : response(state(url.includes('2025-09-13') ? '2025-09-13' : '2025-09-12')));
+  const client = connectSourceOperations({ manifest, onState() {}, onStatus() {}, onError() {}, login: () => logins++ });
+  cleanup(() => client.close());
+  await new Promise(resolve => setImmediate(resolve));
+  const sending = client.send('arrive_stop');
+  await client.selectDate('2025-09-13');
+  oldCommand.resolve(response(null, 401));
+  await sending;
+  assert.equal(logins, 0);
+});
+
+test('화면이 거절한 상태는 다음 명령의 revision 기준으로 사용하지 않는다', async t => {
+  const calls = []; let rejectState = true;
+  const { timers, cleanup } = globals(t, async (_url, options = {}) => {
+    calls.push(options);
+    return response(state('2025-09-12', 7));
+  });
+  const client = connectSourceOperations({ manifest, onState() { if (rejectState) throw new Error('render failed'); }, onStatus() {}, onError() {}, login() {} });
+  cleanup(() => client.close());
+  await new Promise(resolve => setImmediate(resolve));
+  await client.send('arrive_stop');
+  assert.equal(calls.some(options => options.method === 'POST'), false);
+  rejectState = false;
+  await [...timers].find(timer => timer.delay === 2000).callback();
+  assert.equal(calls.at(-1).headers['If-None-Match'], undefined);
+});
+
+test('응답이 멈춘 상태 조회는 시간 제한 후 다음 조회로 복구한다', async t => {
+  const statuses = []; let signal;
+  const { timers, cleanup } = globals(t, (_url, options) => {
+    signal = options.signal;
+    return new Promise((_resolve, reject) => options.signal?.addEventListener('abort', () => reject(options.signal.reason), { once: true }));
+  });
+  const client = connectSourceOperations({ manifest, onState() {}, onStatus: (...args) => statuses.push(args), onError() {}, login() {} });
+  cleanup(() => client.close());
+  const deadline = [...timers].find(timer => timer.delay === 10000);
+  assert.ok(deadline, 'state requests need a bounded deadline');
+  deadline.callback();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(signal.aborted, true);
+  assert.equal(statuses.at(-1)[0], false);
+  assert.ok([...timers].some(timer => timer.delay === 2000));
+});
+
+test('명령 인증 만료 시 폴링과 후속 명령을 중단한다', async t => {
+  let posts = 0, logins = 0;
+  const { timers, cleanup } = globals(t, async (_url, options = {}) => {
+    if (options.method === 'POST') { posts++; return response(null, 401); }
+    return response(state('2025-09-12'));
+  });
+  const client = connectSourceOperations({ manifest, onState() {}, onStatus() {}, onError() {}, login: () => logins++ });
+  cleanup(() => client.close());
+  await new Promise(resolve => setImmediate(resolve));
+  await client.send('arrive_stop');
+  await client.send('arrive_stop');
+  assert.equal(logins, 1);
+  assert.equal(posts, 1);
+  assert.equal(timers.size, 0);
+});
+
+test('명령 응답이 멈추면 재전송하지 않고 최신 상태로 처리 여부를 확인한다', async t => {
+  const posts = [], errors = [];
+  const { timers, cleanup } = globals(t, async (_url, options = {}) => {
+    if (options.method !== 'POST') return response(state('2025-09-12', posts.length ? 2 : 1));
+    posts.push(JSON.parse(options.body));
+    if (posts.length === 1) return new Promise((_resolve, reject) => options.signal?.addEventListener('abort', () => reject(options.signal.reason), { once: true }));
+    return response({ state: state('2025-09-12', 3), result: { accepted: true } });
+  });
+  const client = connectSourceOperations({ manifest, onState() {}, onStatus() {}, onError: message => errors.push(message), login() {} });
+  cleanup(() => client.close());
+  await new Promise(resolve => setImmediate(resolve));
+  const sending = client.send('arrive_stop');
+  [...timers].find(timer => timer.delay === 10000).callback();
+  assert.equal(await sending, null);
+  assert.equal(posts.length, 1);
+  assert.match(errors[0], /처리 여부/);
+  assert.deepEqual(await client.send('complete_stop'), { accepted: true });
+  assert.equal(posts[1].expectedRevision, 2);
 });

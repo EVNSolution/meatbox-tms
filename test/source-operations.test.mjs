@@ -88,7 +88,8 @@ test('배송 출발부터 도착과 사진 완료까지 한 차량에서 일관�
 });
 
 test('완료 후 다음 배송지는 이전 피킹 상태 대신 이동 중 상태를 공유한다', () => {
-  const operations = createSourceOperations(day());
+  const source = day();
+  const operations = createSourceOperations(source, { sourceId: 'position-source' });
   command(operations, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O2', scenario: 'picking' });
   command(operations, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1', scenario: 'arrived' });
   const { state } = command(operations, { type: 'complete_stop', vehicleId: 'G1', stopId: 'O1', hasPhoto: true });
@@ -96,6 +97,31 @@ test('완료 후 다음 배송지는 이전 피킹 상태 대신 이동 중 상�
   assert.equal(next.status, 'current');
   assert.equal(next.customerStatus.key, 'shipping');
   assert.equal(state.vehicleStates.G1.truck.toId, next.id);
+  assert.deepEqual(state.fleetVehicles.find(vehicle => vehicle.id === 'G1').location.coordinates, source.orders[0].coordinates);
+  assert.deepEqual([state.vehicleStates.G1.truck.lng, state.vehicleStates.G1.truck.lat], source.orders[0].coordinates);
+
+  const restored = createSourceOperations(source, {
+    sourceId: 'position-source', checkpoint: operations.exportCheckpoint(),
+  }).snapshot();
+  assert.deepEqual(restored.fleetVehicles.find(vehicle => vehicle.id === 'G1').location.coordinates, source.orders[0].coordinates);
+  assert.deepEqual([restored.vehicleStates.G1.truck.lng, restored.vehicleStates.G1.truck.lat], source.orders[0].coordinates);
+});
+
+test('완료 배송지에 좌표가 없어도 차량과 트럭은 다음 목적지로 먼저 옮겨가지 않는다', () => {
+  const source = day();
+  delete source.orders[0].coordinates;
+  const operations = createSourceOperations(source, { sourceId: 'unknown-position-source' });
+  const initialPosition = operations.snapshot().fleetVehicles.find(vehicle => vehicle.id === 'G1').location.coordinates;
+  command(operations, { type: 'set_scenario', vehicleId: 'G1', stopId: 'O1', scenario: 'arrived' });
+  const state = command(operations, { type: 'complete_stop', vehicleId: 'G1', stopId: 'O1', hasPhoto: true }).state;
+
+  assert.deepEqual(state.fleetVehicles.find(vehicle => vehicle.id === 'G1').location.coordinates, initialPosition);
+  assert.deepEqual([state.vehicleStates.G1.truck.lng, state.vehicleStates.G1.truck.lat], initialPosition);
+  const restored = createSourceOperations(source, {
+    sourceId: 'unknown-position-source', checkpoint: operations.exportCheckpoint(),
+  }).snapshot();
+  assert.deepEqual(restored.fleetVehicles.find(vehicle => vehicle.id === 'G1').location.coordinates, initialPosition);
+  assert.deepEqual([restored.vehicleStates.G1.truck.lng, restored.vehicleStates.G1.truck.lat], initialPosition);
 });
 
 test('같은 차량의 정규화된 동일 배송지는 한 번에 출발·도착·필수 요청 확인·완료하고 다음 고유 배송지로 이동한다', () => {

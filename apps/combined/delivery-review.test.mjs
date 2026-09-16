@@ -11,16 +11,27 @@ function fixture() {
   return { sim, snapshot: () => adaptSimulation(sim.snapshot()) };
 }
 
-test('고객 링크는 같은 배송을 유지하며 잘못된 배송 ID를 URL에 전달하지 않는다', () => {
+test('고객 링크는 같은 배송을 유지하며 URL 구분자가 포함된 ID를 전달하지 않는다', () => {
   const links = deliveryLinks('S1');
   assert.equal(links.mobile, '/combined/mobile-customer.html?id=S1');
   assert.equal(links.customer, links.mobile);
   assert.equal(links.driver, '/combined/driver.html?id=S1');
   assert.equal(links.operator, '/combined/?id=S1#/control');
   assert.equal(deliveryLinks('V130-S3').customer, '/combined/mobile-customer.html?id=V130-S3');
-  for (const id of [null, 'S9', 'V131-S1', 'V2-S4', 'S1&next=https://example.invalid', '../']) {
+  for (const id of [null, '', {}, 'S1&next=https://example.invalid', '../', 'line\nbreak']) {
     assert.equal(deliveryLinks(id).operator, '/combined/#/control');
     assert.equal(deliveryLinks(id).driver, '/combined/driver.html');
+  }
+});
+
+test('전체 표본 배송지와 원본 주문 ID를 뷰어 사이에서 보존한다', () => {
+  for (const id of ['V2-S4', 'V130-S35', 'ord_12345678', 'BUNDLE-1', 'QA1']) {
+    const links = deliveryLinks(id, '2026-09-16');
+    for (const link of Object.values(links)) {
+      const url = new URL(link, 'https://local.test');
+      assert.equal(url.searchParams.get('id'), id);
+      assert.equal(url.searchParams.get('date'), '2026-09-16');
+    }
   }
 });
 
