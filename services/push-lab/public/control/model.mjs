@@ -41,8 +41,26 @@ export function statusText(status, senderMode = 'unknown') {
   return `${status} · 기기 미확인`;
 }
 
+export function authState(error, mode) {
+  if (mode === 'unknown') return 'unavailable';
+  if (error?.status === 401) return 'login';
+  if (mode === 'tms' && error?.status === 403 && error?.code === 'admin_forbidden') return 'forbidden';
+  return 'unavailable';
+}
+
+export function authActions(state, mode) {
+  return {
+    password: mode === 'password' && state === 'login',
+    tmsLogin: mode === 'tms' && state === 'login',
+    retry: state !== 'login' || mode === 'tms',
+  };
+}
+
 export function errorText(code, status) {
   if (code === 'invalid_credentials') return '비밀번호가 올바르지 않습니다.';
+  if (code === 'admin_session_required') return '기존 TMS 계정으로 로그인해 주세요.';
+  if (code === 'admin_forbidden') return '현재 TMS 계정에는 TEST 관제 권한이 없습니다.';
+  if (code === 'tms_auth_unavailable') return 'TMS 인증 서비스에 일시적으로 연결할 수 없습니다. 잠시 후 다시 확인해 주세요.';
   if (status === 401) return '관리자 세션이 만료되었습니다. 다시 로그인해 주세요.';
   if (status === 403) return '보안 확인에 실패했습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.';
   if (status === 404) return '대상을 찾을 수 없습니다. 목록을 새로고침해 주세요.';

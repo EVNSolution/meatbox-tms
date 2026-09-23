@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canSend, deliveryValidity, errorText, inviteAccess, nextStage, statusText, STAGES } from './model.mjs';
+import { authActions, authState, canSend, deliveryValidity, errorText, inviteAccess, nextStage, statusText, STAGES } from './model.mjs';
 import { ApiFailure, createControlApi, createRetryableAction, createTransientInviteLink } from './app.mjs';
 
 test('초대 링크를 공개 HTTPS 형식과 기기·내부망 주소로 구분한다', () => {
@@ -58,6 +58,21 @@ test('접수/대기 상태는 기기 수신이나 표시로 표현하지 않는�
   assert.match(errorText('invalid_credentials', 401), /비밀번호/);
 });
 
+test('TMS 세션 인증 상태는 로그인, 권한 없음, 연결 실패를 구분한다', () => {
+  assert.equal(authState({ status:401, code:'admin_session_required' }, 'tms'), 'login');
+  assert.equal(authState({ status:403, code:'admin_forbidden' }, 'tms'), 'forbidden');
+  assert.equal(authState({ status:503, code:'tms_auth_unavailable' }, 'tms'), 'unavailable');
+  assert.equal(authState(new TypeError('network'), 'tms'), 'unavailable');
+  assert.equal(authState({ status:401 }, 'unknown'), 'unavailable');
+  assert.deepEqual(authActions('login', 'tms'), { password:false, tmsLogin:true, retry:true });
+  assert.deepEqual(authActions('forbidden', 'tms'), { password:false, tmsLogin:false, retry:true });
+  assert.deepEqual(authActions('unavailable', 'tms'), { password:false, tmsLogin:false, retry:true });
+  assert.deepEqual(authActions('login', 'password'), { password:true, tmsLogin:false, retry:false });
+  assert.match(errorText('admin_session_required', 401), /TMS/);
+  assert.match(errorText('admin_forbidden', 403), /권한/);
+  assert.match(errorText('tms_auth_unavailable', 503), /일시적으로/);
+});
+
 test('API는 세션 쿠키를 사용하고 CSRF는 메모리의 POST 헤더에만 실으며 오류를 분류한다', async () => {
   const requests = [];
   const api = createControlApi(async (url, options) => {
@@ -67,11 +82,11 @@ test('API는 세션 쿠키를 사용하고 CSRF는 메모리의 POST 헤더에�
   });
   api.setCsrf('session-secret');
   await api.request('/session');
-  await api.request('/login', { method:'POST', csrfToken:'login-secret', body:{ password:'redacted' } });
+  await assert.rejects(api.request('/deliveries', { method:'POST', csrfToken:'override-secret', body:{ userId:'test-a' } }), ApiFailure);
   await assert.rejects(api.request('/deliveries', { method:'POST', body:{} }), (error) => error instanceof ApiFailure && error.status === 409);
   assert.equal(requests[0].options.credentials, 'same-origin');
   assert.equal(requests[0].options.headers['X-CSRF-Token'], undefined);
-  assert.equal(requests[1].options.headers['X-CSRF-Token'], 'login-secret');
+  assert.equal(requests[1].options.headers['X-CSRF-Token'], 'override-secret');
   assert.equal(requests[2].options.headers['X-CSRF-Token'], 'session-secret');
   assert.equal(requests[2].url, '/push-lab/control/api/deliveries');
 });

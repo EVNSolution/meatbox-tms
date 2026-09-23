@@ -7,6 +7,7 @@ import { ApiError } from './errors.mjs';
 import { SCHEMA_VERSION } from './db.mjs';
 import { validateExchangeKeys } from './crypto.mjs';
 import { AdminAuth } from './admin-auth.mjs';
+import { TmsAdminAuth } from './tms-admin-auth.mjs';
 
 const SESSION_COOKIE = 'mb_push_session';
 const INSTALLATION_COOKIE = 'mb_push_installation';
@@ -131,6 +132,8 @@ export function createPushLabServer({
   db,
   service,
   adminAuth = new AdminAuth(db),
+  tmsAdminAuth = new TmsAdminAuth(),
+  adminAuthMode = process.env.PUSH_LAB_ADMIN_AUTH_MODE || 'password',
   origin = process.env.ALLOWED_ORIGIN,
   trustedProxyPeers = process.env.PUSH_LAB_TRUSTED_PROXY_PEERS || '',
   buildSha = process.env.BUILD_SHA || 'dev',
@@ -140,6 +143,8 @@ export function createPushLabServer({
   headersTimeoutMs = 20_000,
   keepAliveTimeoutMs = 5_000,
 }) {
+  if (!['password', 'tms_session'].includes(adminAuthMode)) throw new Error('PUSH_LAB_ADMIN_AUTH_MODE must be password or tms_session');
+  const tmsMode = adminAuthMode === 'tms_session';
   const peers = trustedPeers(trustedProxyPeers);
   let draining = false;
   const server = createServer(async (req, res) => {
@@ -179,7 +184,9 @@ export function createPushLabServer({
 
       if (url.pathname.startsWith('/push-lab/control/api/')) {
         const path = url.pathname.slice('/push-lab/control/api'.length);
-        const jar = cookies(req.headers.cookie);
+        if (path === '/auth-mode' && method === 'GET') return send(res, 200, { authMode: tmsMode ? 'tms' : 'password' });
+        if (tmsMode && ['/login-challenge', '/login', '/logout'].includes(path)) return send(res, 404, { error: 'not_found' });
+        const jar = tmsMode ? {} : cookies(req.headers.cookie);
         const csrf = req.headers['x-csrf-token'];
         if (path === '/login-challenge' && method === 'GET') {
           const challenge = adminAuth.challenge();
@@ -191,18 +198,22 @@ export function createPushLabServer({
           if (!/^application\/json(?:\s*;|\s*$)/i.test(req.headers['content-type'] || '')) throw new ApiError(415, 'content_type_invalid');
           const input = await body(req);
           const result = adminAuth.login({ password: input.password, cookieToken: jar[ADMIN_LOGIN_COOKIE], headerToken: csrf, source: loginSource(req, peers) });
-          return send(res, 200, { authenticated: true, csrfToken: result.csrfToken, expiresAt: result.expiresAt, senderMode: process.env.PUSH_LAB_SENDER_MODE === 'real' ? 'real' : 'mock' },
+          return send(res, 200, { authenticated: true, csrfToken: result.csrfToken, expiresAt: result.expiresAt, authMode: 'password', senderMode: process.env.PUSH_LAB_SENDER_MODE === 'real' ? 'real' : 'mock' },
             { 'Set-Cookie': [adminCookie(ADMIN_SESSION_COOKIE, result.sessionToken, result.expiresAt - Date.now()), adminCookie(ADMIN_LOGIN_COOKIE, '', 0)] });
         }
         const adminToken = jar[ADMIN_SESSION_COOKIE];
         if (path === '/session' && method === 'GET') {
-          const session = adminAuth.session(adminToken);
-          return send(res, 200, { authenticated: true, ...session, senderMode: process.env.PUSH_LAB_SENDER_MODE === 'real' ? 'real' : 'mock' });
+          const session = tmsMode ? await tmsAdminAuth.session(req) : adminAuth.session(adminToken);
+          return send(res, 200, { authenticated: true, ...session, authMode: tmsMode ? 'tms' : 'password', senderMode: process.env.PUSH_LAB_SENDER_MODE === 'real' ? 'real' : 'mock' });
         }
-        if (method === 'GET') adminAuth.session(adminToken);
+        if (method === 'GET') {
+          if (tmsMode) await tmsAdminAuth.session(req);
+          else adminAuth.session(adminToken);
+        }
         else {
           if (!origin || req.headers.origin !== origin) throw new ApiError(403, 'origin_invalid');
-          adminAuth.mutation(adminToken, csrf);
+          if (tmsMode) await tmsAdminAuth.mutation(req, csrf);
+          else adminAuth.mutation(adminToken, csrf);
           if (!/^application\/json(?:\s*;|\s*$)/i.test(req.headers['content-type'] || '')) throw new ApiError(415, 'content_type_invalid');
         }
         if (path === '/logout' && method === 'POST') {

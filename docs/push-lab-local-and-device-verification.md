@@ -90,7 +90,7 @@ COMPOSE_FILE=compose.yaml:compose.split.yaml ./restore-check.sh push-lab-YYYYmmd
 
 로컬 CI 순서(`npm ci` 루트 → `npm ci`와 `npm run vendor:firebase` push-lab → 루트 `npm test` → push-lab `npm audit --omit=dev`, `npm test` → `docker build`)에서 루트 493/493, push-lab 63/63, audit 취약점 0건, 이미지 빌드 성공을 확인했다. GitHub Actions 실행·PR 상태는 별도 증거다.
 
-## 기존 HTTPS 서버의 격리 mock sidecar 준비
+## 기존 HTTPS 서버의 격리 mock sidecar 준비와 배포
 
 2026-09-23 읽기 전용 preflight에서 기존 서버는 `x86_64`, systemd 259, Caddy 2.11.4, Node 22.22.1이며 Docker/Podman이 없었다. `/etc/caddy/Caddyfile` SHA-256은 저장소의 `deploy/Caddyfile`과 같은 `383f21698a2ac51b3f02c7e2c6bdfbfcdb1f31225b16d507cf064d2f00fe9f49`였다. 기존 TMS는 `127.0.0.1:3001`, 활성 릴리스 `549f13b5741328656d20ce27ef10e36692efda5b`, `/login` 200과 익명 `/api/session` 401이었다. 메모리 available 492 MiB/전체 908 MiB, swap 0, 루트 디스크 여유 2.3 GiB, `3300` 포트 미사용을 관측했다. 기존 TMS·Caddy의 systemd 메모리 peak는 각각 약 84/43 MiB였고, 배차 checkpoint는 파일 2개였다. 이는 **전환 전 시점** 증거이며 현재 용량·내용 불변의 보장은 아니다.
 
@@ -115,6 +115,30 @@ native 백업/복원 점검은 전용 사용자와 Node로 `deploy/push-lab/nati
 `deploy/push-lab/Caddyfile.same-origin.example`은 현재 TLS 부분과 TMS `3001` upstream을 유지한 **후보**다. `/push-lab`만 슬래시 경로로 redirect하고 `handle /push-lab/*`로 URI를 그대로 `127.0.0.1:3300`에 전달한다. 인터넷 대면 Caddy가 `X-Push-Lab-Client-IP: {remote_host}`를 덮어쓰며, Node는 실측한 loopback TCP peer만 `PUSH_LAB_TRUSTED_PROXY_PEERS`로 신뢰한다. `handle_path`는 필요한 접두사를 제거하므로 사용하지 않는다. 같은 origin은 프로세스·DB 격리이지 브라우저의 별도 신뢰 경계가 아니다. DNS/Firebase/실제 FCM은 변경하지 않는다.
 
 후보를 별도 `caddy validate`하고 내부 readiness·native 백업 복원·root의 최종 gate를 통과한 뒤에만 Caddy를 reload한다. native 서비스의 stop/restart도 65초 이내 정상 drain, DB 보존, `/readyz` 복귀를 확인한다. 공개 전환 뒤 HTTPS 인증서 검증, `/push-lab/`·관제·모바일 고객 링크/QR, 기존 `/login`·`/combined/`·`/api/session`, TMS PID/시작 시각/SHA와 checkpoint 개수/hash/mtime을 전후 비교한다. 문제가 생기면 **보관한 기존 Caddyfile만 복원해 validate/reload하고 새 pilot 서비스만 중지**한다. 파일럿 SQLite·backup과 기존 TMS 데이터는 보존하며 TMS 서비스 재시작·릴리스 전환은 하지 않는다. 공개 HTTPS 페이지 확인은 FCM 접수나 실기기 알림 수신 증거가 아니다.
+
+### 2026-09-23 공개 mock 배포 증거
+
+- Git SHA `25329736a98fdb5ba6a2cfc1875ee490565eb053`의 Linux x64 아티팩트를 서버 밖에서 빌드했다. 45,280,276바이트 tar SHA-256 `8fe34da7a2bae723ba6d6bab72fdc2124836b823e43a7315a659004df3683e64`를 전송 후 서버에서 재확인하고 전용 릴리스 경로에 풀었다. 전용 Node 26.3.1과 SQLite 3.53.1을 사용했고 전역 Node 22와 기존 TMS 릴리스는 바꾸지 않았다.
+- 새 systemd unit을 `systemd-analyze verify`한 뒤 전용 비특권 사용자로 `127.0.0.1:3300`에만 기동했다. 내부 health/ready 200, 관리자 login/session 200, 고객·관제·vendor JavaScript MIME을 확인했다. 파일럿 전용 합성 구독 1건에서 `queued → mock accepted`를 관측했으며 실제 FCM 발송은 없었다. 최고 관측 메모리는 약 91 MiB로 설정 상한 192 MiB 이하였다.
+- native **현재 schema 5→5** SQLite backup→격리 restore는 `integrity_check=ok`, 외래키 위반 0, 원본 14개 테이블의 전체 열·행 digest 동일, 활성 구독 1건을 확인했다. 백업 SHA-256은 `998a8fcd1082c0e395eb8d7b0f58a34a69ac86fa2729dd5518c1191e63502aa0`이고 백업과 manifest는 파일럿 전용 `backups/`에 남겼다. 새 서비스만 정상 재시작한 후에도 ready 200, 활성 구독 1건과 mock accepted outbox 1건이 유지됐다. 이 native 검사는 과거 v1/v2 migration 증거가 아니다.
+- 기존 `/etc/caddy/Caddyfile`과 보관본의 SHA-256 `383f21698a2ac51b3f02c7e2c6bdfbfcdb1f31225b16d507cf064d2f00fe9f49`를 CAS 확인하고 후보를 `caddy validate`한 뒤 원자 적용·graceful reload했다. 현재 설정 SHA-256은 `4e4000b92a5aba4ec72abf24633cee2097aa0082728a7bc75db6953c23aa7260`이다. 인증서 검증을 켠 외부 HTTPS에서 `/push-lab/`·`/push-lab/control/`·health/ready가 200, ready의 build SHA가 위 릴리스와 같고 vendor JS·앱 JS·TTF·manifest MIME이 정확했다. Caddy가 위조된 전용 client-IP 헤더를 덮어쓰는지 서버 loopback A의 401×5→429와 별도 외부 B의 정상 login 200으로 확인했다. A는 서버 loopback bucket이며 사용자 IP의 오답 제한을 시험하지 않았다.
+- 전후 기존 TMS PID `102395`, 시작 시각, 릴리스 `549f13b5741328656d20ce27ef10e36692efda5b`, 배차 checkpoint 2개·집계 내용 hash·최신 mtime이 같았다. 기존 `/login`은 200, 익명 `/api/session`은 401, Caddy PID `42150`도 유지됐다. 익명 `/combined/` 경로는 기존 TMS 로그인으로 302 전달됨을 배포 후 확인했으며 이 경로의 전환 전 HTTP 코드는 기록하지 않았다. 루트 디스크 여유는 전환 후 약 1.7 GiB였다.
+
+현재 공개 관제의 관리자 인증은 파일럿 전용 hash 비밀번호이며 기존 TMS 계정과 연결되지 않는다. 기존 계정 연동은 별도 코드·계정 허용 범위 검토와 재검증 전에는 완료로 기록하지 않는다. 공개 HTTPS/QR 표시나 mock `accepted`는 모바일 브라우저의 실제 링크 열기, FCM 접수, Android/iOS 알림 표시·클릭을 증명하지 않는다.
+
+첫 배포에서 서버 전용 Node 아카이브 설치(10:29 KST), 서버 밖 Docker 이미지 생성(10:37), 45MB 아티팩트 작성(10:38)·서버 배치(10:41), 전용 unit 설치(10:42), 파일럿 재시작(10:46), Caddy 공개 전환(10:49)을 완료 시각으로 관측했다. 각 구간은 인증·전송·압축 해제·검증·판단 시간을 함께 포함하므로 **개별 build/upload/restart 소요 시간이나 병목 순위를 측정한 값이 아니다**. Docker가 서버에 없어서 이미지 빌드가 느려졌다고 단정할 근거는 없다. Docker를 사용하면 변경되지 않은 빌드 [레이어 캐시](https://docs.docker.com/build/cache/)와 [이미지 레이어 재사용](https://docs.docker.com/get-started/docker-concepts/building-images/understanding-image-layers/)의 이점이 있지만, 이번 이미지는 이미 서버 밖 Docker에서 빌드했고 서버에 Docker를 설치하지 않았다. 다음 배포는 최초 런타임·서비스 계정 준비를 반복하지 않는다.
+
+### 기존 TMS 세션 인증 연동 준비 — 아직 미배포
+
+현재 배포는 `PUSH_LAB_ADMIN_AUTH_MODE=password`와 별도 관리자 hash를 사용한다. 검토된 새 코드에서만 `tms_session`으로 전환하며, 운영 env에는 `PUSH_LAB_TMS_SESSION_URL=http://127.0.0.1:3001/api/session`과 **사용자가 승인한 실제 TMS canonical 소문자 username의 정확한 목록** `PUSH_LAB_TMS_ALLOWED_USERNAMES`를 함께 명시해야 한다. 목록이 없거나 빈 값이면 관리자 인증은 fail-closed 503이어야 하며, 임의의 관리자/전체 사용자 허용 값으로 대체하지 않는다. [`native.env.example`](../deploy/push-lab/native.env.example)의 TMS 설정은 비활성 주석 예시이고 현재 서버 env는 수정하지 않았다.
+
+새 adapter 계약은 브라우저의 단일 `meatbox_session` 쿠키만 TMS loopback `GET /api/session`에 `Cookie`와 `Accept: application/json`으로 전달하며, 다른 쿠키·비밀번호·identity 헤더는 보내지 않는다. redirect·retry·cache 없이 TMS 401은 파일럿 401, 허용된 사용자 200은 통과, 목록 밖은 403, 그 밖의 응답·설정 오류는 503으로 처리한다. 기존 unit의 `IPAddressDeny=any`와 `IPAddressAllow=localhost`는 TMS의 `127.0.0.1:3001` 호출을 정책상 허용하므로 외부 네트워크를 열기 위한 unit 변경은 계획하지 않는다. 이는 **설정 검토**이며 실제 기존 계정 로그인 성공 증거가 아니다. TMS 서비스·계정·`access.json`은 변경하거나 열람하지 않았다.
+
+전환 게이트는 코드·독립 보안 리뷰, 사용자가 승인한 username allowlist, 파일럿만의 env 백업/변경과 재시작, 승인된 계정으로 200·미허용 계정 403·무세션 401·TMS 장애 503, 기존 TMS PID·릴리스·checkpoint 불변, 기존 mock sender/고객 페이지 회귀 점검을 각각 요구한다. 어떤 계정의 비밀번호도 파일럿 설정에 넣지 않는다. 오류 시 파일럿 env의 인증 모드만 기존 `password`로 되돌리고 기존 TMS를 재시작하지 않는다.
+
+2026-09-23 동결된 새 소스는 루트 `npm test` 508/508, push-lab `npm test` 78/78과 전체 `git diff --check`를 통과했다. 여기에는 합성 TMS 세션의 정확한 허용·거부, 쿠키 파싱, upstream 장애·timeout fail-closed 테스트가 포함된다. 프런트의 인증 모드별 화면·재확인 동작도 로컬에서 검증했으나 마지막 네트워크 오류 분기까지 공개 브라우저에서 재검증한 것은 아니다. **이 소스는 위 공개 SHA `2532973`에 아직 배포되지 않았고**, 기존 파일럿 별도 비밀번호 인증이 계속 활성이다. 인증 직후 TMS logout/비활성화가 일어나는 경합은 요청 시마다 TMS 세션을 재검증하는 계약으로 제한하되 이미 진행 중인 작업의 동시 경계를 운영에서 검증했다고 주장하지 않는다.
+
+최초 제시된 이메일은 현재 배포 TMS username 규칙의 `@` 금지에 맞지 않았고, 비밀 제외 메타데이터에서 정확한 이메일 매핑도 찾지 못했다. 이후 사용자가 실제 TMS canonical username으로 정정했으며, **그 한 계정만** 좁은 조회로 존재·활성 상태를 확인했다. 승인된 정확한 한 username만 배포 시 allowlist에 설정하며, 이 소스 커밋 시점에는 아직 운영 모드를 바꾸지 않는다. 이메일 원문·계정 목록·비밀번호·hash·토큰은 이 저장소와 PR에 기록하지 않는다.
 
 ## P2 HTTPS·실기기 시험 전 필수 입력
 
@@ -178,7 +202,7 @@ docker compose \
 
 마지막 재생성 뒤 컨테이너 환경에 `PUSH_LAB_CLEAR_PAUSE`가 남지 않았는지 확인한다. 해제 뒤에도 configuration 오류가 재발하면 worker는 marker를 즉시 다시 만들고 health가 다시 실패한다. marker 파일을 수동 삭제하거나 자격증명 수정 전에 일회성 overlay를 반복 적용하지 않는다. single/all 점검에서는 base와 일회성 overlay 두 파일을 사용하고 대상 서비스만 `push-lab`로 바꾼다.
 
-Caddy 예제도 준비 산출물일 뿐이다. 실제 설정은 기존 TMS 경로를 보존한 상태에서 별도 파일로 `caddy validate`하고, 후보 readiness를 연속 확인한 뒤에만 reload한다. 고정 origin과 Firebase SDK 통신 범위를 확정한 뒤 push-lab 전용 CSP를 검증하며 기존 TMS CSP를 넓히지 않는다. 위 로컬 mock·P2 real sender 준비 단계에서는 서버, DNS, 인증서, Caddy를 변경하지 않았다. 동일-origin mock sidecar의 별도 승인·전환 증거는 해당 절에 구분해 기록한다.
+이 절의 Caddy 예제는 P2 real sender를 켜는 지시가 아니다. 동일-origin **mock** sidecar의 별도 승인·공개 전환은 위 증거에 기록했으며 DNS·Firebase 설정·기존 TMS 데이터는 바꾸지 않았다. 실제 FCM을 위한 고정 origin, Firebase SDK 통신 범위, 전용 CSP와 기기 증거는 별도 승인·검증이 필요하다.
 
 ## 증거를 구분하는 기록표
 

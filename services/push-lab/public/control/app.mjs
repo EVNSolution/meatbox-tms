@@ -1,4 +1,4 @@
-import { canSend, deliveryValidity, errorText, inviteAccess, nextStage, statusText } from './model.mjs';
+import { authActions, authState, canSend, deliveryValidity, errorText, inviteAccess, nextStage, statusText } from './model.mjs';
 
 const API = '/push-lab/control/api';
 const el = (id) => document.getElementById(id);
@@ -65,6 +65,9 @@ if (typeof document !== 'undefined') {
   let current = null;
   let selectedSubscriptionId = '';
   let senderMode = 'unknown';
+  let authMode = 'unknown';
+  let checkingSession = false;
+  let waitingForTmsLogin = false;
   let inviteTimer;
   let busy = false;
   const inviteLink = createTransientInviteLink((url) => navigator.clipboard.writeText(url));
@@ -99,26 +102,41 @@ if (typeof document !== 'undefined') {
     inviteTimer = setTimeout(clearInvite, 120_000);
   }
 
-  function unauthenticated(text = '관리자 로그인이 필요합니다.') {
+  function showAuthState(state, text) {
     api.setCsrf('');
     clearInvite();
     current = null;
     deliveries = [];
     cursor = null;
+    selectedSubscriptionId = '';
     stageAction.clear();
     sendAction.clear();
     el('console-view').hidden = true;
     el('detail').hidden = true;
     el('login-view').hidden = false;
     el('logout').hidden = true;
-    el('mode').textContent = '로그인 필요';
+    el('exit-console').hidden = true;
+    el('mode').textContent = state === 'login' ? '로그인 필요' : state === 'forbidden' ? '권한 없음' : '세션 확인 불가';
+    el('login-title').textContent = state === 'login' ? '관리자 로그인' : state === 'forbidden' ? '관제 접근 권한 없음' : '세션 확인 불가';
+    el('login-description').textContent = state === 'forbidden'
+      ? '현재 TMS 계정은 TEST 관제 허용 목록에 없습니다. 관리자에게 계정 권한을 확인해 주세요.'
+      : state === 'unavailable' ? '인증 연결 상태를 확인하지 못했습니다. 배송 데이터는 표시하지 않습니다.'
+        : authMode === 'tms' ? '기존 미트박스 TMS 계정으로 로그인한 뒤 이 탭에서 세션을 다시 확인해 주세요.'
+          : 'TEST 배송 링크와 개별 웹 알림을 관리합니다.';
+    const actions = authActions(state, authMode);
+    el('login-form').hidden = !actions.password;
+    el('tms-login').hidden = !actions.tmsLogin;
+    el('retry-session').hidden = !actions.retry;
     el('password').value = '';
-    message('login-message', text);
+    message('login-message', text || (state === 'login' ? '로그인이 필요합니다.' : '잠시 후 다시 확인해 주세요.'), state !== 'login');
   }
 
   async function run(action, destination = 'notice') {
     try { return await action(); } catch (error) {
-      if (error.status === 401 && destination !== 'login-message') { unauthenticated(error.message); return null; }
+      if (destination !== 'login-message' && (error.status === 401 || error.code === 'admin_forbidden'
+        || error.code === 'tms_auth_unavailable' || authMode === 'tms' && !(error instanceof ApiFailure))) {
+        showAuthState(authState(error, authMode), error.message); return null;
+      }
       message(destination, error instanceof ApiFailure ? error.message : '연결에 실패했습니다. 다시 시도해 주세요.', true);
       return null;
     }
@@ -128,18 +146,35 @@ if (typeof document !== 'undefined') {
     api.setCsrf(session.csrfToken);
     senderMode = session.senderMode === 'mock' || session.senderMode === 'real' ? session.senderMode : 'unknown';
     el('mode').textContent = senderMode === 'mock' ? 'MOCK 발송 · 기기 표시 없음' : senderMode === 'real' ? 'FCM 서버 전송' : '발송 모드 미확인';
-    el('session-expiry').textContent = `관리자 세션 ${dateText(session.expiresAt)} 만료`;
+    el('session-expiry').textContent = authMode === 'tms' ? 'TMS 계정으로 접속 중' : `관리자 세션 ${dateText(session.expiresAt)} 만료`;
     el('login-view').hidden = true;
     el('console-view').hidden = false;
-    el('logout').hidden = false;
+    el('logout').hidden = authMode !== 'password';
+    el('exit-console').hidden = authMode !== 'tms';
     el('password').value = '';
   }
 
   async function loadSession() {
-    const session = await run(() => api.request('/session'), 'login-message');
-    if (!session) { unauthenticated(el('login-message').textContent); return; }
-    authenticated(session);
-    await loadDeliveries();
+    if (checkingSession) return;
+    checkingSession = true;
+    el('retry-session').disabled = true;
+    message('login-message', '세션을 확인하는 중입니다.');
+    try {
+      if (authMode === 'unknown') {
+        const config = await api.request('/auth-mode');
+        if (config.authMode !== 'tms' && config.authMode !== 'password') throw new Error('unknown auth mode');
+        authMode = config.authMode;
+      }
+      const session = await api.request('/session');
+      if (session.authMode && session.authMode !== authMode) throw new Error('auth mode changed');
+      authenticated(session);
+      await loadDeliveries();
+    } catch (error) {
+      showAuthState(authState(error, authMode), error instanceof ApiFailure ? error.message : '인증 연결에 실패했습니다. 잠시 후 다시 확인해 주세요.');
+    } finally {
+      checkingSession = false;
+      el('retry-session').disabled = false;
+    }
   }
 
   function cell(row, content, className = '') {
@@ -284,6 +319,7 @@ if (typeof document !== 'undefined') {
 
   el('login-form').addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (authMode !== 'password') return;
     const password = el('password').value;
     message('login-message', '로그인 중입니다.');
     const challenge = await run(() => api.request('/login-challenge'), 'login-message');
@@ -295,8 +331,16 @@ if (typeof document !== 'undefined') {
     await loadDeliveries();
   });
   el('logout').addEventListener('click', async () => {
+    if (authMode !== 'password') return;
     const result = await run(() => api.request('/logout', { method:'POST', body:{} }));
-    if (result) unauthenticated('로그아웃했습니다.');
+    if (result) showAuthState('login', '로그아웃했습니다.');
+  });
+  el('retry-session').addEventListener('click', loadSession);
+  el('tms-login').addEventListener('click', () => { waitingForTmsLogin = true; });
+  window.addEventListener('focus', () => {
+    if (!waitingForTmsLogin || authMode !== 'tms') return;
+    waitingForTmsLogin = false;
+    loadSession();
   });
   el('filter').addEventListener('input', renderDeliveries);
   el('refresh').addEventListener('click', () => loadDeliveries());
