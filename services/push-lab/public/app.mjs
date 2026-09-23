@@ -1,4 +1,4 @@
-import { STAGES, browserGuidance, inviteFromFragment, notificationUiState, shouldRefreshProvider, subscriptionHasConsent, toTimestamp, viewForDelivery } from './model.mjs?v=20260922-3';
+import { STAGES, browserGuidance, firebaseConfigured, inviteFromFragment, notificationUiState, shouldRefreshProvider, subscriptionHasConsent, toTimestamp, viewForDelivery } from './model.mjs?v=20260923-1';
 import { createFidRegistrationWorker, createLatestSerialQueue } from './fid-sync.mjs?v=20260922-5';
 import { ApiResponseError, StaleSessionError, clearSessionData, createSessionGate, isTerminalSessionError } from './session-state.mjs?v=20260922-4';
 
@@ -84,19 +84,16 @@ function renderDelivery() {
   $('delivery-title').textContent = view.unknown ? '배송 단계 확인 오류' : STAGES[view.index];
   $('order-id').textContent = `TEST 배송 ${delivery.id}`;
   $('stage-pill').textContent = view.unknown ? '단계 오류' : STAGES[view.index];
+  $('summary-stage').textContent = view.unknown ? '확인 불가' : STAGES[view.index];
   $('stage-list').innerHTML = STAGES.map((label, index) => `<li class="${index < view.index ? 'done' : index === view.index ? 'current' : ''}"><span class="stage-dot">${index < view.index ? '✓' : index + 1}</span><span>${label}</span><span class="stage-test">TEST</span></li>`).join('');
-  $('map-card').hidden = !view.showMap;
-  $('truck').hidden = !view.showTruck;
+  $('map-card').hidden = false;
   $('eta-card').hidden = !view.showEta;
-  if (view.showEta) $('eta-text').textContent = `${formatDate(delivery.etaAt)} 도착예정`;
+  if (view.showEta) $('eta-text').textContent = formatDate(delivery.etaAt);
   $('status-note').textContent = view.unknown
     ? `알 수 없는 TEST 배송 단계(${String(delivery.stage ?? '없음')})입니다. 배송 상태를 임의로 표시하지 않습니다.`
     : view.etaError
-    ? 'TEST ETA 오류: 도착예정이 기준시각보다 이전이어서 표시하지 않았습니다.'
-    : view.index < 3 ? '초기 단계에는 지도·차량·ETA를 표시하지 않습니다.'
-      : view.index === 3 ? 'TEST 지도만 표시합니다. 차량 위치와 ETA는 아직 제공하지 않습니다.'
-        : view.index === 5 ? '근처 도착 단계도 확정 시각이 아닌 도착예정입니다.'
-          : '표시된 지도·차량·ETA는 모두 TEST 합성 데이터입니다.';
+    ? 'TEST 예상시각이 기준시각보다 이전이어서 표시하지 않았습니다.'
+    : '단계 변경만으로 알림이 자동 발송되지는 않습니다. 위치·상품 정보는 제공되지 않습니다.';
   if (delivery.deliverable === false) $('status-note').textContent = '이 TEST 배송은 배포 확인용이며 알림 발송 대상이 아닙니다.';
   renderSubscription();
 }
@@ -105,11 +102,12 @@ function renderSubscription() {
   const consentActive = subscriptionHasConsent(state.subscription);
   const capability = pushCapability();
   const ui = notificationUiState({ subscription:state.subscription, capability, providerReady:state.providerReady, phase:state.notificationPhase });
-  $('notification-state').textContent = ui.label;
+  const configured = firebaseConfigured(state.config);
+  $('notification-state').textContent = configured ? ui.label : '설정 대기';
   $('notification-state').dataset.state = ui.key;
   $('notification-state').style.background = ui.active ? '#e6f7f1' : '';
   $('notification-state').style.color = ui.active ? '#087f5b' : '';
-  $('subscribe').disabled = ui.active || ui.key === 'registering' || state.delivery?.deliverable === false || !$('consent').checked
+  $('subscribe').disabled = !configured || ui.active || ui.key === 'registering' || state.delivery?.deliverable === false || !$('consent').checked
     || !capability.supported || capability.permission === 'denied';
   $('self-test').disabled = !ui.active;
   $('unsubscribe').disabled = !consentActive;
@@ -128,8 +126,10 @@ function pushCapability() {
 
 function renderCapability() {
   const capability = pushCapability();
-  $('support-message').textContent = browserGuidance(capability);
-  $('consent').disabled = !capability.supported || capability.permission === 'denied';
+  const configured = firebaseConfigured(state.config);
+  $('support-message').textContent = configured ? browserGuidance(capability)
+    : '이 TEST 환경은 알림 제공자 설정이 없어 알림 등록·기기 수신을 확인할 수 없습니다. 배송 조회는 가능합니다.';
+  $('consent').disabled = !configured || !capability.supported || capability.permission === 'denied';
   renderSubscription();
 }
 

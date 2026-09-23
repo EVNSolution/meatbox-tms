@@ -7,12 +7,13 @@
   <meta name="color-scheme" content="light">
   <title>TEST 배송 관제 · meatbox</title>
   <link rel="icon" href="/push-lab/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/push-lab/control/styles.css">
-  <script type="module" src="/push-lab/control/app.mjs"></script>
+  <link rel="stylesheet" href="/push-lab/brand.css">
+  <link rel="stylesheet" href="/push-lab/control/styles.css?v=20260923-1">
+  <script type="module" src="/push-lab/control/app.mjs?v=20260923-1"></script>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">meatbox <span>TEST 배송 관제</span></div>
+    <div class="brand"><img src="/push-lab/assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TEST 배송 관제</span></div>
     <div class="header-right"><span id="mode" class="mode">서버 모드 확인 중</span><button id="logout" type="button" hidden>로그아웃</button></div>
   </header>
   <main>
@@ -39,7 +40,7 @@
         <button id="show-create" type="button" class="primary" aria-expanded="false" aria-controls="create-wrap">TEST 배송 생성</button>
       </div>
       <form id="create-wrap" class="create-form" hidden>
-        <div><label for="user-id">TEST 사용자 별칭</label><input id="user-id" name="userId" required maxlength="64" pattern="[Tt][Ee][Ss][Tt][-_A-Za-z0-9]{1,59}" title="test-로 시작하는 영문·숫자·-·_ 별칭" autocomplete="off" placeholder="예: test-customer-01"></div>
+        <div><label for="user-id">TEST 사용자 별칭</label><input id="user-id" name="userId" required maxlength="64" pattern="[Tt][Ee][Ss][Tt][A-Za-z0-9_\-]{1,59}" title="test-로 시작하는 영문·숫자·-·_ 별칭" autocomplete="off" placeholder="예: test-customer-01"></div>
         <div><label for="baseline-at">기준 시각</label><input id="baseline-at" name="baselineAt" type="datetime-local"></div>
         <div><label for="eta-at">예상 시각</label><input id="eta-at" name="etaAt" type="datetime-local"></div>
         <div><label for="expires-at">배송 만료 시각</label><input id="expires-at" name="expiresAt" type="datetime-local" required></div>
@@ -68,7 +69,8 @@
           </div>
           <div id="invite-box" class="invite-box" hidden>
             <label for="invite-url">이번에 발급한 링크 · 만료 <span id="invite-expiry"></span></label>
-            <div class="form-row"><input id="invite-url" type="text" readonly autocomplete="off"><button id="copy-invite" type="button">복사</button><button id="clear-invite" type="button">지우기</button></div>
+            <p id="invite-access" class="invite-access" role="status"></p>
+            <div class="form-row"><input id="invite-url" type="text" readonly autocomplete="off" aria-label="이번에 발급된 고객 보안 링크"><button id="copy-invite" type="button">링크 복사</button><button id="share-invite" type="button" hidden>공유</button><button id="clear-invite" type="button">지우기</button></div>
           </div>
           <div class="action-strip">
             <div><strong>단계 변경</strong><small>다음 한 단계로만 변경합니다. 단계 변경은 알림을 자동 발송하지 않습니다.</small></div>

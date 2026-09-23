@@ -21,8 +21,6 @@ export function viewForDelivery(delivery) {
   return {
     index,
     unknown,
-    showMap: index >= 3,
-    showTruck: index >= 4 && index < 6,
     showEta: etaValid && index < 6,
     etaError: index >= 4 && delivery?.etaAt && !etaValid,
   };
@@ -41,6 +39,11 @@ export function browserGuidance({ supported, ios, standalone, webview, permissio
   if (!supported) return '이 환경은 Web Push 필수 기능을 지원하지 않습니다. Android의 최신 지원 브라우저 등에서 열어 주세요.';
   if (permission === 'denied') return '알림이 차단되어 있습니다. 브라우저 또는 기기 설정에서 이 사이트의 알림을 허용해 주세요.';
   return '체크 후 버튼을 누르면 브라우저가 별도로 알림 권한을 요청합니다.';
+}
+
+export function firebaseConfigured(config) {
+  return Boolean(config?.firebase && ['apiKey', 'projectId', 'appId', 'messagingSenderId', 'vapidKey']
+    .every((key) => typeof config.firebase[key] === 'string' && config.firebase[key].trim()));
 }
 
 export function notificationIsActive(serverActive, capability, providerReady) {

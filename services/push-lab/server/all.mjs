@@ -1,16 +1,18 @@
 import { openDatabase } from './db.mjs';
+import { isIP } from 'node:net';
 import { createPushLabServer } from './http.mjs';
 import { PushLabService } from './service.mjs';
 import { startWorker } from '../worker/worker.mjs';
 import { drainHttpServer } from './shutdown.mjs';
 
-export async function startAll({ db = openDatabase(), port = Number(process.env.PORT || 3000) } = {}) {
+export async function startAll({ db = openDatabase(), port = Number(process.env.PORT || 3000), host = process.env.PUSH_LAB_BIND_HOST ?? '0.0.0.0' } = {}) {
+  if (!isIP(host)) throw new Error('PUSH_LAB_BIND_HOST must be a literal IP address');
   const service = new PushLabService(db);
   const server = createPushLabServer({ db, service });
   const worker = await startWorker({ db });
   await new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(port, '0.0.0.0', resolve);
+    server.listen(port, host, resolve);
   });
   return { db, service, server, worker };
 }

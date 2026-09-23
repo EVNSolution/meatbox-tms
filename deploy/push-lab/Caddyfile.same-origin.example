@@ -1,0 +1,25 @@
+# Candidate only. Compare with the live Caddyfile before installing or reloading.
+{
+	default_sni 3.36.96.156
+}
+
+https://3.36.96.156 {
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+		}
+	}
+
+	redir /push-lab /push-lab/ 308
+	handle /push-lab/* {
+		header Referrer-Policy "no-referrer"
+		header X-Content-Type-Options "nosniff"
+		reverse_proxy 127.0.0.1:3300 {
+			header_up X-Push-Lab-Client-IP {remote_host}
+		}
+	}
+	handle {
+		reverse_proxy 127.0.0.1:3001
+	}
+}

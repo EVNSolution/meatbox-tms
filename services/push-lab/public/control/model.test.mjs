@@ -1,7 +1,36 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canSend, deliveryValidity, errorText, nextStage, statusText, STAGES } from './model.mjs';
-import { ApiFailure, createControlApi, createRetryableAction } from './app.mjs';
+import { canSend, deliveryValidity, errorText, inviteAccess, nextStage, statusText, STAGES } from './model.mjs';
+import { ApiFailure, createControlApi, createRetryableAction, createTransientInviteLink } from './app.mjs';
+
+test('초대 링크를 공개 HTTPS 형식과 기기·내부망 주소로 구분한다', () => {
+  assert.equal(inviteAccess('https://demo.meatbox.co.kr/push-lab/#invite=secret'), 'public-https');
+  for (const host of ['localhost', '127.0.0.1', '192.168.1.3', '10.0.0.2', '172.20.0.4', 'device.local']) {
+    assert.equal(inviteAccess(`http://${host}/push-lab/#invite=secret`), 'local');
+  }
+  assert.equal(inviteAccess('http://demo.meatbox.co.kr/push-lab/#invite=secret'), 'unverified');
+  assert.equal(inviteAccess('https://100.64.0.1/push-lab/#invite=secret'), 'unverified');
+  assert.equal(inviteAccess('https://100.127.255.254/push-lab/#invite=secret'), 'unverified');
+  assert.equal(inviteAccess('https://push-lab.example.invalid/push-lab/#invite=secret'), 'unverified');
+  assert.equal(inviteAccess('https://demo.meatbox.co.kr/other/#invite=secret'), 'unverified');
+  assert.equal(inviteAccess('garbage'), 'unverified');
+});
+
+test('초대 링크는 발급과 재발급 원문만 복사하고 지우면 재조회할 수 없다', async () => {
+  const copied = [];
+  const link = createTransientInviteLink(async value => copied.push(value));
+  assert.equal(link.get(), '');
+  assert.equal(await link.copy(), false);
+  const first = 'https://demo.meatbox.co.kr/push-lab/#invite=first';
+  const second = 'https://demo.meatbox.co.kr/push-lab/#invite=second';
+  assert.equal(link.issue({ url:first }), 'public-https');
+  assert.equal(link.issue({ url:second }), 'public-https');
+  assert.equal(await link.copy(), true);
+  assert.deepEqual(copied, [second]);
+  link.clear();
+  assert.equal(link.get(), '');
+  assert.equal(await link.copy(), false);
+});
 
 test('7단계는 바로 다음 단계만 노출하고 완료 시 발송을 막는다', () => {
   for (let index = 0; index < STAGES.length - 1; index++) assert.equal(nextStage(STAGES[index]), STAGES[index + 1]);

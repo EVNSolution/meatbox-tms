@@ -8,12 +8,13 @@
   <title>TEST 미트박스 배송조회</title>
   <link rel="manifest" href="/push-lab/manifest.webmanifest">
   <link rel="icon" href="/push-lab/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/push-lab/styles.css?v=20260922-2">
-  <script type="module" src="/push-lab/app.mjs?v=20260922-5"></script>
+  <link rel="stylesheet" href="/push-lab/brand.css">
+  <link rel="stylesheet" href="/push-lab/styles.css?v=20260923-1">
+  <script type="module" src="/push-lab/app.mjs?v=20260923-1"></script>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">meatbox</div>
+    <img class="brand" src="/push-lab/assets/meatbox-logo.svg" width="126" height="30" alt="미트박스">
     <span class="test-badge">TEST 파일럿</span>
   </header>
 
@@ -32,42 +33,32 @@
     </section>
 
     <div id="delivery-view" hidden>
-      <section class="hero" aria-labelledby="delivery-title">
-        <div>
-          <p class="eyebrow">TEST 배송조회</p>
-          <h1 id="delivery-title">배송 정보를 불러오는 중입니다</h1>
-          <p id="order-id" class="muted"></p>
-        </div>
-        <span id="stage-pill" class="stage-pill">조회 중</span>
-      </section>
-
-      <section id="eta-card" class="eta-card" hidden aria-labelledby="eta-title">
-        <p id="eta-title">도착예정</p>
-        <strong id="eta-text">—</strong>
-        <small>TEST 기준시각과 테스트 경로를 이용한 예상이며 확정 시각이 아닙니다.</small>
-      </section>
-
-      <section id="map-card" class="map-card" hidden aria-labelledby="map-title">
-        <div class="section-heading">
-          <h2 id="map-title">TEST 배송 위치</h2>
-          <span>실제 GPS 아님</span>
-        </div>
-        <div class="test-map" role="img" aria-label="실제 GPS가 아닌 테스트 배송 경로">
-          <div class="road road-a"></div><div class="road road-b"></div><div class="road road-c"></div>
-          <div class="route"></div>
-          <div id="truck" class="truck" hidden aria-label="테스트 차량">TEST<br>차량</div>
-          <div class="destination" aria-label="테스트 배송지">TEST<br>배송지</div>
-        </div>
-        <p>이 지도·좌표·차량 이동은 기능 검증용 합성 데이터입니다.</p>
-      </section>
-
-      <section class="tracking-card" aria-labelledby="tracking-title">
-        <h2 id="tracking-title">배송 현황</h2>
-        <ol id="stage-list" class="stages"></ol>
-        <p id="status-note" class="status-note" role="status"></p>
-      </section>
-
-      <section class="notification-card" aria-labelledby="notification-title">
+      <div class="customer-intro"><h1>배송 조회</h1><p>이번 TEST 배송의 단계와 웹 알림 신청 상태를 확인합니다.</p></div>
+      <div class="customer-workspace">
+        <div class="customer-device"><div class="customer-screen">
+          <div class="customer-heading"><img src="/push-lab/assets/meatbox-logo.svg" width="105" height="25" alt="미트박스"><span class="test-badge">TEST 배송</span></div>
+          <section class="hero" aria-labelledby="delivery-title">
+            <p class="eyebrow">배송 안내</p>
+            <div class="hero-status"><h2 id="delivery-title">배송 정보를 불러오는 중입니다</h2><span id="stage-pill" class="stage-pill">조회 중</span></div>
+            <p id="order-id" class="muted"></p>
+            <div id="eta-card" class="eta-card" hidden><span id="eta-title">입력된 TEST 예상시각</span><strong id="eta-text">—</strong><small>확정 도착 시각이 아닙니다.</small></div>
+          </section>
+          <section class="order-card" aria-labelledby="order-title">
+            <h2 id="order-title">배송 요약</h2>
+            <dl><div><dt>배송 상태</dt><dd id="summary-stage">조회 중</dd></div><div><dt>상품·수량</dt><dd>제공되지 않음</dd></div></dl>
+          </section>
+          <section id="map-card" class="map-card" aria-labelledby="map-title">
+            <h2 id="map-title">배송 위치</h2>
+            <p>위치 정보가 제공되지 않습니다. 실제 GPS나 차량 이동을 표시하지 않습니다.</p>
+          </section>
+        </div></div>
+        <div class="customer-aside">
+          <section class="tracking-card" aria-labelledby="tracking-title">
+            <h2 id="tracking-title">배송 현황</h2>
+            <ol id="stage-list" class="stages"></ol>
+            <p id="status-note" class="status-note" role="status"></p>
+          </section>
+          <section class="notification-card" aria-labelledby="notification-title">
         <div class="section-heading">
           <div><p class="eyebrow">우리 배송조회 웹 알림</p><h2 id="notification-title">이번 배송 알림</h2></div>
           <span id="notification-state" class="state-badge">사용 전</span>
@@ -84,8 +75,9 @@
           <button id="unsubscribe" type="button" class="text-button" disabled>이번 배송 알림 철회</button>
         </div>
         <p id="notification-detail" class="detail" aria-live="polite"></p>
-      </section>
-
+          </section>
+        </div>
+      </div>
       <footer>
         <strong>TEST 전용 화면</strong>
         <span id="session-expiry"></span>

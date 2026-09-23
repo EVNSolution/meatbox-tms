@@ -20,8 +20,11 @@ self.addEventListener('notificationclick', event => {
   const candidate = new URL(event.notification.data?.url || '/push-lab/', self.location.origin);
   const url = candidate.origin === self.location.origin && candidate.pathname.startsWith('/push-lab/') ? candidate.href : `${self.location.origin}/push-lab/`;
   event.waitUntil(self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(clients => {
-    const current = clients.find(client => new URL(client.url).origin === self.location.origin);
-    if (current) { current.navigate(url); return current.focus(); }
+    const current = clients.find(client => {
+      const page = new URL(client.url);
+      return page.origin === self.location.origin && ['/push-lab/', '/push-lab/index.html'].includes(page.pathname);
+    });
+    if (current) return current.navigate(url).then(page => page?.focus());
     return self.clients.openWindow(url);
   }));
 });

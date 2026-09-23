@@ -1,5 +1,12 @@
 # Design
 
+## Isolated Web Push pilot reuse (2026-09-23)
+
+- Source: the deployed demo's `apps/combined/mobile-customer.html`, `mobile-customer.css`, `app-viewer.css`, `demo-shell.css`, `brand.css`, official logo and self-hosted Pretendard. The separate `/push-lab/` and `/push-lab/control/` pages reuse their brand tokens, restrained white/gray composition, compact customer header/summary/step display, and operator table density. They do not inherit the demo's source-order data or authenticated navigation.
+- Customer: preserve the secure invite exchange, seven actual pilot stages and explicit Web Push consent. A map, vehicle position, product lines and ETA are not inferred from the demo. Show an unavailable state for absent location/product facts; show ETA only when supplied in the pilot delivery, identified as a TEST estimate.
+- Operator: retain one core delivery table and selected detail. Use the official logo/font and the existing demo's 56px header, compact controls/rows and responsive layout without adding decorative cards, charts or fictitious menu destinations.
+- Issued invite URLs are transient secrets. Show and copy/share only the newly issued URL; never reconstruct one from a later read, place it in storage, logs or a query string, or send it to an external QR service. Only a public HTTPS origin may be described as a mobile-opening link. Localhost/private/insecure origins are labeled local or unverified and never represented as phone-ready. A deployed HTTPS route still requires separate runtime verification.
+
 ## Driver work-history calendar correction (2026-09-16, local)
 
 - `근무 이력` opens a dedicated month calendar in the driver screen, with previous/next month, weekdays, selected date, today outline, and records below the calendar. Hide the delivery/map tab bar while this page is selected.

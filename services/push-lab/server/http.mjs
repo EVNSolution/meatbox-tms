@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { isIP } from 'node:net';
 import { readFile } from 'node:fs/promises';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,11 +12,13 @@ const SESSION_COOKIE = 'mb_push_session';
 const INSTALLATION_COOKIE = 'mb_push_installation';
 const ADMIN_SESSION_COOKIE = 'mb_push_admin_session';
 const ADMIN_LOGIN_COOKIE = 'mb_push_admin_login_csrf';
+const CLIENT_IP_HEADER = 'x-push-lab-client-ip';
 const PUBLIC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../public');
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; connect-src 'self' https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 const TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'], ['.mjs', 'text/javascript; charset=utf-8'], ['.js', 'text/javascript; charset=utf-8'],
-  ['.css', 'text/css; charset=utf-8'], ['.svg', 'image/svg+xml'], ['.webmanifest', 'application/manifest+json; charset=utf-8'],
+  ['.css', 'text/css; charset=utf-8'], ['.svg', 'image/svg+xml'], ['.webp', 'image/webp'],
+  ['.ttf', 'font/ttf'], ['.webmanifest', 'application/manifest+json; charset=utf-8'],
 ]);
 
 function cookies(header = '') {
@@ -28,6 +31,30 @@ function cookie(name, value, maxAge) {
 
 function adminCookie(name, value, maxAge) {
   return `${name}=${encodeURIComponent(value)}; Max-Age=${Math.max(0, Math.floor(maxAge / 1000))}; Path=/push-lab/control/; Secure; HttpOnly; SameSite=Strict`;
+}
+
+function mappedIpv4(address) {
+  return address?.startsWith('::ffff:') && isIP(address.slice(7)) === 4 ? address.slice(7) : address;
+}
+
+function trustedPeers(value) {
+  if (!value) return new Set();
+  const peers = value.split(',').map((item) => item.trim());
+  if (peers.some((peer) => !isIP(peer))) throw new Error('PUSH_LAB_TRUSTED_PROXY_PEERS must contain exact IP addresses');
+  return new Set(peers.map(mappedIpv4));
+}
+
+function loginSource(req, peers) {
+  const peer = req.socket.remoteAddress;
+  if (!peers.has(mappedIpv4(peer))) return peer;
+  const values = [];
+  for (let index = 0; index < req.rawHeaders.length; index += 2) {
+    if (req.rawHeaders[index].toLowerCase() === CLIENT_IP_HEADER) values.push(req.rawHeaders[index + 1]);
+  }
+  if (values.length !== 1 || values[0].length > 45 || /[\s,%]/.test(values[0]) || !isIP(values[0])) {
+    throw new ApiError(400, 'client_ip_invalid');
+  }
+  return mappedIpv4(values[0]);
 }
 
 async function body(req) {
@@ -105,6 +132,7 @@ export function createPushLabServer({
   service,
   adminAuth = new AdminAuth(db),
   origin = process.env.ALLOWED_ORIGIN,
+  trustedProxyPeers = process.env.PUSH_LAB_TRUSTED_PROXY_PEERS || '',
   buildSha = process.env.BUILD_SHA || 'dev',
   slot = process.env.SLOT || 'local',
   logger = console,
@@ -112,6 +140,7 @@ export function createPushLabServer({
   headersTimeoutMs = 20_000,
   keepAliveTimeoutMs = 5_000,
 }) {
+  const peers = trustedPeers(trustedProxyPeers);
   let draining = false;
   const server = createServer(async (req, res) => {
     try {
@@ -161,7 +190,7 @@ export function createPushLabServer({
           if (!origin || req.headers.origin !== origin) throw new ApiError(403, 'origin_invalid');
           if (!/^application\/json(?:\s*;|\s*$)/i.test(req.headers['content-type'] || '')) throw new ApiError(415, 'content_type_invalid');
           const input = await body(req);
-          const result = adminAuth.login({ password: input.password, cookieToken: jar[ADMIN_LOGIN_COOKIE], headerToken: csrf, source: req.socket.remoteAddress });
+          const result = adminAuth.login({ password: input.password, cookieToken: jar[ADMIN_LOGIN_COOKIE], headerToken: csrf, source: loginSource(req, peers) });
           return send(res, 200, { authenticated: true, csrfToken: result.csrfToken, expiresAt: result.expiresAt, senderMode: process.env.PUSH_LAB_SENDER_MODE === 'real' ? 'real' : 'mock' },
             { 'Set-Cookie': [adminCookie(ADMIN_SESSION_COOKIE, result.sessionToken, result.expiresAt - Date.now()), adminCookie(ADMIN_LOGIN_COOKIE, '', 0)] });
         }

@@ -1,14 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserGuidance, inviteFromFragment, notificationIsActive, notificationUiState, shouldRefreshProvider, stageIndex, subscriptionHasConsent, toTimestamp, viewForDelivery } from './model.mjs';
+import { browserGuidance, firebaseConfigured, inviteFromFragment, notificationIsActive, notificationUiState, shouldRefreshProvider, stageIndex, subscriptionHasConsent, toTimestamp, viewForDelivery } from './model.mjs';
 
-test('7단계별 지도, 차량, ETA 공개 경계를 지킨다', () => {
+test('Firebase 공개 설정이 비면 신청 불가로 분류한다', () => {
+  assert.equal(firebaseConfigured(null), false);
+  assert.equal(firebaseConfigured({ firebase:{ apiKey:'key', projectId:'project', appId:'app', messagingSenderId:'sender' } }), false);
+  assert.equal(firebaseConfigured({ firebase:{ apiKey:'key', projectId:'project', appId:'app', messagingSenderId:'sender', vapidKey:'vapid' } }), true);
+});
+
+test('7단계별 근거 없는 위치·차량을 숨기고 입력된 ETA만 공개한다', () => {
   const time = { baselineAt:'2026-09-22T01:00:00Z', etaAt:'2026-09-22T02:00:00Z' };
-  assert.deepEqual(viewForDelivery({ stage:'물류입고', ...time }), { index:2, unknown:false, showMap:false, showTruck:false, showEta:false, etaError:false });
-  assert.deepEqual(viewForDelivery({ stage:'배송대기', ...time }), { index:3, unknown:false, showMap:true, showTruck:false, showEta:false, etaError:false });
-  assert.equal(viewForDelivery({ stage:'배송 중', ...time }).showTruck, true);
+  assert.deepEqual(viewForDelivery({ stage:'물류입고', ...time }), { index:2, unknown:false, showEta:false, etaError:false });
+  assert.deepEqual(viewForDelivery({ stage:'배송대기', ...time }), { index:3, unknown:false, showEta:false, etaError:false });
   assert.equal(viewForDelivery({ stage:'근처 도착', ...time }).showEta, true);
-  assert.equal(viewForDelivery({ stage:'배송 완료', ...time }).showTruck, false);
+  assert.equal(viewForDelivery({ stage:'배송 완료', ...time }).showEta, false);
   assert.equal(stageIndex('nearby'), 5);
 });
 
@@ -24,7 +29,6 @@ test('알 수 없는 단계는 결제완료로 대체하지 않는다', () => {
   const view = viewForDelivery({ stage:'mystery', baselineAt:1, etaAt:2 });
   assert.equal(view.index, -1);
   assert.equal(view.unknown, true);
-  assert.equal(view.showMap, false);
   assert.equal(view.showEta, false);
 });
 

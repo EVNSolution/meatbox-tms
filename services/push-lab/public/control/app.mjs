@@ -1,4 +1,4 @@
-import { canSend, deliveryValidity, errorText, nextStage, statusText } from './model.mjs';
+import { canSend, deliveryValidity, errorText, inviteAccess, nextStage, statusText } from './model.mjs';
 
 const API = '/push-lab/control/api';
 const el = (id) => document.getElementById(id);
@@ -46,6 +46,16 @@ export function createRetryableAction() {
   };
 }
 
+export function createTransientInviteLink(copyText) {
+  let url = '';
+  return {
+    issue(invite) { url = invite.url; return inviteAccess(url); },
+    clear() { url = ''; },
+    get() { return url; },
+    async copy() { if (!url) return false; await copyText(url); return true; },
+  };
+}
+
 if (typeof document !== 'undefined') {
   const api = createControlApi();
   const stageAction = createRetryableAction();
@@ -57,6 +67,7 @@ if (typeof document !== 'undefined') {
   let senderMode = 'unknown';
   let inviteTimer;
   let busy = false;
+  const inviteLink = createTransientInviteLink((url) => navigator.clipboard.writeText(url));
 
   function message(id, value, isError = false) {
     const node = el(id);
@@ -66,15 +77,24 @@ if (typeof document !== 'undefined') {
 
   function clearInvite() {
     clearTimeout(inviteTimer);
+    inviteLink.clear();
     el('invite-url').value = '';
     el('invite-expiry').textContent = '';
+    el('invite-access').textContent = '';
+    el('share-invite').hidden = true;
     el('invite-box').hidden = true;
   }
 
   function showInvite(invite) {
     clearInvite();
-    el('invite-url').value = invite.url;
+    const access = inviteLink.issue(invite);
+    el('invite-url').value = inviteLink.get();
     el('invite-expiry').textContent = dateText(invite.expiresAt);
+    el('invite-access').textContent = access === 'public-https'
+      ? '모바일에서 열 수 있는 HTTPS 형식입니다. 실제 외부 접속과 배포 상태는 별도 확인이 필요합니다.'
+      : access === 'local' ? '이 기기 또는 내부망 전용 테스트 주소입니다. 모바일에서 열 수 있다고 보장하지 않습니다.'
+        : '모바일 접속을 확인하지 못한 주소입니다. 공개 HTTPS 배포를 확인해 주세요.';
+    el('share-invite').hidden = access !== 'public-https' || typeof navigator.share !== 'function';
     el('invite-box').hidden = false;
     inviteTimer = setTimeout(clearInvite, 120_000);
   }
@@ -326,10 +346,17 @@ if (typeof document !== 'undefined') {
     if (result) showInvite(result.invite);
   });
   el('copy-invite').addEventListener('click', async () => {
+    if (!inviteLink.get()) return;
     try {
-      await navigator.clipboard.writeText(el('invite-url').value);
+      await inviteLink.copy();
       message('detail-state', '보안 링크를 복사했습니다. 공유 대상과 만료 시각을 확인해 주세요.');
     } catch { message('detail-state', '자동 복사에 실패했습니다. 링크 입력칸에서 직접 복사해 주세요.', true); el('invite-url').select(); }
+  });
+  el('share-invite').addEventListener('click', async () => {
+    const url = inviteLink.get();
+    if (inviteAccess(url) !== 'public-https' || typeof navigator.share !== 'function') return;
+    try { await navigator.share({ title:'TEST 미트박스 배송조회', url }); }
+    catch (error) { if (error?.name !== 'AbortError') message('detail-state', '공유하지 못했습니다. 링크 복사를 이용해 주세요.', true); }
   });
   el('clear-invite').addEventListener('click', clearInvite);
   el('advance-stage').addEventListener('click', async () => {

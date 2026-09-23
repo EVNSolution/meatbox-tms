@@ -1,0 +1,29 @@
+@font-face {
+  font-family: "Meatbox Pretendard";
+  src: url("./assets/PretendardVariable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --meatbox-red: #e60028;
+  --meatbox-pink: #db0e64;
+  --meatbox-ink: #212322;
+  --meatbox-font: "Meatbox Pretendard", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
+  --meatbox-radius-field: 4px;
+  --meatbox-radius-control: 6px;
+  --meatbox-radius-card: 8px;
+  --meatbox-radius-panel: 12px;
+}
+
+html,
+body,
+button,
+input,
+select {
+  font-family: var(--meatbox-font);
+}
+
+.reference-icon { display: block; flex-shrink: 0; width: 20px; height: 20px; pointer-events: none; }

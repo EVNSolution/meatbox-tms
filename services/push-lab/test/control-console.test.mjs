@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID, scryptSync } from 'node:crypto';
-import { writeFileSync } from 'node:fs';
+import { unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { once } from 'node:events';
+import { request } from 'node:http';
 import { createPushLabServer } from '../server/http.mjs';
 import { AdminAuth } from '../server/admin-auth.mjs';
 import { harness } from './helpers.mjs';
@@ -12,20 +13,39 @@ import { MockSender } from '../worker/sender.mjs';
 
 const ORIGIN = 'https://push-lab.example.test';
 
-async function serverFor(h, hashFile) {
+async function serverFor(h, hashFile, trustedProxyPeers = '') {
   const server = createPushLabServer({ db: h.db, service: h.service, origin: ORIGIN,
-    adminAuth: new AdminAuth(h.db, { now: h.clock, hashFile }) });
+    trustedProxyPeers, adminAuth: new AdminAuth(h.db, { now: h.clock, hashFile }) });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   return { server, base: `http://127.0.0.1:${server.address().port}/push-lab/control/api` };
 }
 
-async function call(base, path, { method = 'GET', cookie = '', csrf = '', input, origin = ORIGIN } = {}) {
+async function call(base, path, { method = 'GET', cookie = '', csrf = '', input, origin = ORIGIN, clientIp, xff } = {}) {
   const headers = { cookie };
   if (csrf) headers['X-CSRF-Token'] = csrf;
+  if (clientIp) headers['X-Push-Lab-Client-IP'] = clientIp;
+  if (xff) headers['X-Forwarded-For'] = xff;
   if (method !== 'GET') { headers.Origin = origin; headers['Content-Type'] = 'application/json'; }
   const response = await fetch(`${base}${path}`, { method, headers, body: input === undefined ? undefined : JSON.stringify(input) });
   return { status: response.status, data: await response.json(), setCookie: response.headers.getSetCookie() };
+}
+
+async function loginChallenge(base) {
+  const challenge = await call(base, '/login-challenge');
+  return { cookie: challenge.setCookie[0].split(';')[0], csrf: challenge.data.csrfToken };
+}
+
+async function duplicateClientIpLogin(base, challenge) {
+  return new Promise((resolve, reject) => {
+    const req = request(`${base}/login`, { method: 'POST', headers: [
+      'Origin', ORIGIN, 'Content-Type', 'application/json',
+      'Cookie', challenge.cookie, 'X-CSRF-Token', challenge.csrf,
+      'X-Push-Lab-Client-IP', '198.51.100.10', 'X-Push-Lab-Client-IP', '198.51.100.20',
+    ] }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
+    req.on('error', reject);
+    req.end(JSON.stringify({ password: 'test-password-12345' }));
+  });
 }
 
 test('admin HTTP fails closed and requires independent session, origin, and CSRF', async () => {
@@ -90,6 +110,76 @@ test('admin failures are limited by socket source and sessions expire after eigh
     h.advance(8 * 60 * 60_000);
     assert.throws(() => auth.session(session.sessionToken), { status: 401 });
   } finally { h.close(); }
+});
+
+test('trusted proxy limits login per validated client IP and rejects missing, invalid, or duplicate headers', async () => {
+  const h = harness();
+  const hashFile = join(dirname(h.path), 'admin.hash');
+  const salt = randomBytes(16);
+  writeFileSync(hashFile, `${salt.toString('hex')}:${scryptSync('test-password-12345', salt, 64).toString('hex')}\n`, { mode: 0o600 });
+  const { server, base } = await serverFor(h, hashFile, '127.0.0.1');
+  try {
+    const challenge = await loginChallenge(base);
+    assert.equal((await call(base, '/login', { method: 'POST', cookie: challenge.cookie, csrf: challenge.csrf, input: { password: 'test-password-12345' } })).status, 400);
+    assert.equal((await call(base, '/login', { method: 'POST', cookie: challenge.cookie, csrf: challenge.csrf, clientIp: 'not-an-ip', input: { password: 'test-password-12345' } })).status, 400);
+    assert.equal(await duplicateClientIpLogin(base, challenge), 400);
+    for (let index = 0; index < 5; index++) {
+      const next = await loginChallenge(base);
+      assert.equal((await call(base, '/login', { method: 'POST', cookie: next.cookie, csrf: next.csrf, clientIp: '198.51.100.10', xff: `203.0.113.${index + 1}`, input: { password: 'wrong' } })).status, 401);
+    }
+    const blocked = await loginChallenge(base);
+    assert.equal((await call(base, '/login', { method: 'POST', cookie: blocked.cookie, csrf: blocked.csrf, clientIp: '198.51.100.10', input: { password: 'test-password-12345' } })).status, 429);
+    const other = await loginChallenge(base);
+    assert.equal((await call(base, '/login', { method: 'POST', cookie: other.cookie, csrf: other.csrf, clientIp: '198.51.100.20', xff: '198.51.100.10', input: { password: 'test-password-12345' } })).status, 200);
+  } finally { await new Promise((resolve) => server.close(resolve)); h.close(); }
+});
+
+test('untrusted peer ignores supplied client IP and XFF; empty proxy config keeps socket limit', async () => {
+  for (const trustedProxyPeers of ['', '192.0.2.99']) {
+    const h = harness();
+    const hashFile = join(dirname(h.path), 'admin.hash');
+    const salt = randomBytes(16);
+    writeFileSync(hashFile, `${salt.toString('hex')}:${scryptSync('test-password-12345', salt, 64).toString('hex')}\n`, { mode: 0o600 });
+    const { server, base } = await serverFor(h, hashFile, trustedProxyPeers);
+    try {
+      for (let index = 0; index < 5; index++) {
+        const challenge = await loginChallenge(base);
+        assert.equal((await call(base, '/login', { method: 'POST', cookie: challenge.cookie, csrf: challenge.csrf,
+          clientIp: `198.51.100.${index + 1}`, xff: `203.0.113.${index + 1}`, input: { password: 'wrong' } })).status, 401);
+      }
+      const next = await loginChallenge(base);
+      assert.equal((await call(base, '/login', { method: 'POST', cookie: next.cookie, csrf: next.csrf,
+        clientIp: '198.51.100.20', xff: '203.0.113.20', input: { password: 'test-password-12345' } })).status, 429);
+    } finally { await new Promise((resolve) => server.close(resolve)); h.close(); }
+  }
+});
+
+test('public font and WebP assets retain MIME, security headers, and traversal rejection', async () => {
+  const h = harness();
+  const webpName = `mime-${randomUUID()}.webp`;
+  const webpPath = new URL(`../public/assets/${webpName}`, import.meta.url);
+  writeFileSync(webpPath, Buffer.from('RIFFxxxxWEBP', 'ascii'), { flag: 'wx' });
+  let server;
+  try {
+    const started = await serverFor(h, undefined);
+    server = started.server;
+    const publicBase = started.base.replace('/push-lab/control/api', '/push-lab');
+    for (const [path, mime] of [['/assets/PretendardVariable.ttf', 'font/ttf'], [`/assets/${webpName}`, 'image/webp']]) {
+      const response = await fetch(`${publicBase}${path}`, { method: 'HEAD' });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get('content-type'), mime);
+      assert.equal(response.headers.get('cache-control'), 'no-cache');
+      assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+      assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+      assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
+    }
+    const traversal = await fetch(`${publicBase}/assets/%2e%2e%2f%2e%2e%2fserver/http.mjs`);
+    assert.equal(traversal.status, 404);
+  } finally {
+    if (server) await new Promise((resolve) => server.close(resolve));
+    h.close();
+    unlinkSync(webpPath);
+  }
 });
 
 test('TEST workflow reissues invite, advances one stage without fanout, and enqueues one selected subscription', async () => {

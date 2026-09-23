@@ -90,10 +90,36 @@ COMPOSE_FILE=compose.yaml:compose.split.yaml ./restore-check.sh push-lab-YYYYmmd
 
 로컬 CI 순서(`npm ci` 루트 → `npm ci`와 `npm run vendor:firebase` push-lab → 루트 `npm test` → push-lab `npm audit --omit=dev`, `npm test` → `docker build`)에서 루트 493/493, push-lab 63/63, audit 취약점 0건, 이미지 빌드 성공을 확인했다. GitHub Actions 실행·PR 상태는 별도 증거다.
 
+## 기존 HTTPS 서버의 격리 mock sidecar 준비
+
+2026-09-23 읽기 전용 preflight에서 기존 서버는 `x86_64`, systemd 259, Caddy 2.11.4, Node 22.22.1이며 Docker/Podman이 없었다. `/etc/caddy/Caddyfile` SHA-256은 저장소의 `deploy/Caddyfile`과 같은 `383f21698a2ac51b3f02c7e2c6bdfbfcdb1f31225b16d507cf064d2f00fe9f49`였다. 기존 TMS는 `127.0.0.1:3001`, 활성 릴리스 `549f13b5741328656d20ce27ef10e36692efda5b`, `/login` 200과 익명 `/api/session` 401이었다. 메모리 available 492 MiB/전체 908 MiB, swap 0, 루트 디스크 여유 2.3 GiB, `3300` 포트 미사용을 관측했다. 기존 TMS·Caddy의 systemd 메모리 peak는 각각 약 84/43 MiB였고, 배차 checkpoint는 파일 2개였다. 이는 **전환 전 시점** 증거이며 현재 용량·내용 불변의 보장은 아니다.
+
+Docker 설치나 전역 Node 교체 없이 `deploy/push-lab/meatbox-push-lab.service.example`의 단일 web+mock worker를 전용 비특권 사용자로 실행한다. 공식 Node 26.3.1 `linux-x64.tar.xz`의 SHA-256은 `55647180e4ae58ffeaa3294e89aa4abda7c371dfbd64b44cbdb022980177aae0`([공식 SHASUMS](https://nodejs.org/dist/v26.3.1/SHASUMS256.txt))이다. 실제 내려받은 파일을 이 값과 대조하고 그 Node의 SQLite가 3.51.3 이상임을 확인한다. 의존성·`public/vendor`는 서버 밖 Linux x64 빌드에서 만들고, 테스트한 Git SHA를 `/opt/meatbox-push-lab/releases/<sha>`에 읽기 전용으로 설치한다. `/opt/meatbox-push-lab/current`는 검증한 릴리스만 가리킨다. 시작 명령은 전용 Node의 `server/all.mjs`를 직접 실행한다. `npm start:all`의 prestart vendor 생성은 읽기 전용 릴리스에 쓰므로 사용하지 않는다.
+
+서버 내 위치와 권한은 다음과 같다.
+
+| 대상 | 소유·권한 | 역할 |
+|---|---|---|
+| `/etc/systemd/system/meatbox-push-lab.service` | root:root 0644 | 독립 서비스; StateDirectory 0700, MemoryHigh 128M/Max 192M, CPUQuota 50%, TasksMax 64, 정상 drain용 TimeoutStopSec 65초 |
+| `/etc/meatbox-push-lab/push-lab.env` | root:root 0600 | `native.env.example` 기반 mock·origin·교환키·빌드 SHA; Git/로그에 값 미기록 |
+| `/etc/meatbox-push-lab/admin-password.hash` | root:root 0600 | 새 테스트 관리자 hash; systemd `LoadCredential`로 서비스에만 읽기 경로 제공 |
+| `/var/lib/meatbox-push-lab/` | meatbox-push-lab 0700 | 전용 SQLite, worker lock/pause, `backups/`; 기존 TMS 상태와 분리 |
+| `/opt/meatbox-push-lab/` | root 소유, 릴리스 쓰기 금지 | 전용 Node runtime·불변 릴리스·current 링크 |
+
+관리자 원문 비밀번호는 서버와 저장소가 아닌 운영자 로컬 0600 파일에만 보관하고, 새 hash만 서버에 둔다. `EXCHANGE_KEYS`는 별도 무작위 32바이트 base64 키이며 실값을 명령 인자·PR·문서·로그에 넣지 않는다. `PUSH_LAB_SENDER_MODE=mock`, `DEPLOYMENT_PROBE_DELIVERABLE=false`, `PUSH_LAB_BIND_HOST=127.0.0.1`, `PUBLIC_ORIGIN=ALLOWED_ORIGIN=https://3.36.96.156`을 고정한다. worker 락 하위 프로세스는 `process.execPath`로 같은 전용 Node를 사용한다. systemd의 localhost 전용 네트워크 허용은 외부 FCM egress를 열지 않는다.
+
+공개 진입 전에는 live Caddyfile·기존 TMS PID/시작 시각/릴리스 SHA/health와 checkpoint 파일 개수·내용 hash·최신 mtime을 읽기 전용으로 기록하고, 기존 Caddyfile을 별도 보관한다. 서버의 실제 여유 메모리·디스크, 설치/스테이징/롤백 보관의 총량을 다시 측정해 한계를 넘으면 중단한다. `systemd-analyze verify`, 전용 Node/SQLite 확인, 서비스 기동 후 `ss`의 **127.0.0.1:3300** 바인딩, `/healthz`·`/readyz`, 관제 login 및 `senderMode=mock`, 고객/관제 정적 JS의 JavaScript MIME, 전용 DB 백업→격리 복원 점검을 먼저 통과해야 한다. Docker 전용 `smoke.sh`·`backup.sh`·`restore-check.sh` 결과를 native 검증으로 대체하지 않는다.
+
+native 백업/복원 점검은 전용 사용자와 Node로 `deploy/push-lab/native-backup-check.mjs`를 실행한다. `DB_PATH=/var/lib/meatbox-push-lab/push-lab.sqlite`, `PUSH_LAB_BACKUP_DIR=/var/lib/meatbox-push-lab/backups`, `PUSH_LAB_APP_DIR=/opt/meatbox-push-lab/current`를 전달하며 실제 파일은 그 사용자의 0700 state 안에 생성한다. 이 도구는 **현재 schema만** 받아 live DB를 SQLite backup API로 스냅샷하고 파일 SHA·무결성·외래키를 확인한 뒤, 별도 임시 복사본의 원본 테이블 전체 열·행 digest와 활성/철회 구독·queued/cancelled outbox 집계를 비교한다. 과거 v1/v2 migration 호환성은 위의 Docker 격리 시험 증거이며 native 도구의 주장에 포함하지 않는다. 성공한 백업만 0600 manifest와 짝을 이룬다. 임시 복사본은 정리하며 live DB 교체나 sender 시작은 하지 않는다.
+
+`deploy/push-lab/Caddyfile.same-origin.example`은 현재 TLS 부분과 TMS `3001` upstream을 유지한 **후보**다. `/push-lab`만 슬래시 경로로 redirect하고 `handle /push-lab/*`로 URI를 그대로 `127.0.0.1:3300`에 전달한다. 인터넷 대면 Caddy가 `X-Push-Lab-Client-IP: {remote_host}`를 덮어쓰며, Node는 실측한 loopback TCP peer만 `PUSH_LAB_TRUSTED_PROXY_PEERS`로 신뢰한다. `handle_path`는 필요한 접두사를 제거하므로 사용하지 않는다. 같은 origin은 프로세스·DB 격리이지 브라우저의 별도 신뢰 경계가 아니다. DNS/Firebase/실제 FCM은 변경하지 않는다.
+
+후보를 별도 `caddy validate`하고 내부 readiness·native 백업 복원·root의 최종 gate를 통과한 뒤에만 Caddy를 reload한다. native 서비스의 stop/restart도 65초 이내 정상 drain, DB 보존, `/readyz` 복귀를 확인한다. 공개 전환 뒤 HTTPS 인증서 검증, `/push-lab/`·관제·모바일 고객 링크/QR, 기존 `/login`·`/combined/`·`/api/session`, TMS PID/시작 시각/SHA와 checkpoint 개수/hash/mtime을 전후 비교한다. 문제가 생기면 **보관한 기존 Caddyfile만 복원해 validate/reload하고 새 pilot 서비스만 중지**한다. 파일럿 SQLite·backup과 기존 TMS 데이터는 보존하며 TMS 서비스 재시작·릴리스 전환은 하지 않는다. 공개 HTTPS 페이지 확인은 FCM 접수나 실기기 알림 수신 증거가 아니다.
+
 ## P2 HTTPS·실기기 시험 전 필수 입력
 
 - 고정 HTTPS origin과 DNS 소유권, 인증서 발급·갱신 방식
-- 실제 호스트의 Docker/Caddy 버전, 가용 메모리·디스크, 사용 포트, 현재 서비스와 실행 SHA
+- 실제 호스트의 컨테이너 또는 native runtime/Caddy 버전, 가용 메모리·디스크, 사용 포트, 현재 서비스와 실행 SHA
 - 테스트 전용 Firebase project의 공개 web config와 VAPID 공개키
 - 최소 권한 service account 파일의 승인된 호스트 경로, 소유자, 교체·폐기 담당자
 - Android 실기기/Chrome 버전과 iPhone 또는 iPad의 OS 버전, 홈 화면 Web App 설치 절차
@@ -152,7 +178,7 @@ docker compose \
 
 마지막 재생성 뒤 컨테이너 환경에 `PUSH_LAB_CLEAR_PAUSE`가 남지 않았는지 확인한다. 해제 뒤에도 configuration 오류가 재발하면 worker는 marker를 즉시 다시 만들고 health가 다시 실패한다. marker 파일을 수동 삭제하거나 자격증명 수정 전에 일회성 overlay를 반복 적용하지 않는다. single/all 점검에서는 base와 일회성 overlay 두 파일을 사용하고 대상 서비스만 `push-lab`로 바꾼다.
 
-Caddy 예제도 준비 산출물일 뿐이다. 실제 설정은 기존 TMS 경로를 보존한 상태에서 별도 파일로 `caddy validate`하고, 후보 readiness를 연속 확인한 뒤에만 reload한다. 고정 origin과 Firebase SDK 통신 범위를 확정한 뒤 push-lab 전용 CSP를 검증하며 기존 TMS CSP를 넓히지 않는다. 이 작업에서는 서버, DNS, 인증서, Caddy를 변경하지 않는다.
+Caddy 예제도 준비 산출물일 뿐이다. 실제 설정은 기존 TMS 경로를 보존한 상태에서 별도 파일로 `caddy validate`하고, 후보 readiness를 연속 확인한 뒤에만 reload한다. 고정 origin과 Firebase SDK 통신 범위를 확정한 뒤 push-lab 전용 CSP를 검증하며 기존 TMS CSP를 넓히지 않는다. 위 로컬 mock·P2 real sender 준비 단계에서는 서버, DNS, 인증서, Caddy를 변경하지 않았다. 동일-origin mock sidecar의 별도 승인·전환 증거는 해당 절에 구분해 기록한다.
 
 ## 증거를 구분하는 기록표
 

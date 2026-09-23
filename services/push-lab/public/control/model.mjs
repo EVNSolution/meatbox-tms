@@ -1,5 +1,20 @@
 export const STAGES = ['결제완료', '배송접수', '물류입고', '배송대기', '배송 중', '근처 도착', '배송 완료'];
 
+export function inviteAccess(rawUrl) {
+  let url;
+  try { url = new URL(rawUrl); } catch { return 'unverified'; }
+  const host = url.hostname.toLowerCase();
+  const octets = host.split('.').map(Number);
+  const ipv4 = octets.length === 4 && octets.every((part, index) => /^\d{1,3}$/.test(host.split('.')[index]) && part >= 0 && part <= 255);
+  const privateIp = ipv4 && (octets[0] === 0 || octets[0] === 10 || octets[0] === 127 || octets[0] === 169 && octets[1] === 254
+    || octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31 || octets[0] === 192 && octets[1] === 168);
+  const carrierNat = ipv4 && octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127;
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || privateIp || host === '[::1]') return 'local';
+  if (carrierNat || url.protocol !== 'https:' || url.username || url.password || !url.pathname.startsWith('/push-lab/')
+    || /\.(?:invalid|test|example|internal)$/.test(host) || (host.includes(':') && !ipv4)) return 'unverified';
+  return 'public-https';
+}
+
 export function nextStage(stage) {
   const index = STAGES.indexOf(stage);
   return index < 0 || index >= STAGES.length - 1 ? null : STAGES[index + 1];
