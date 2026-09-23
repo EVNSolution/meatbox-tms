@@ -173,7 +173,7 @@ adapter는 브라우저의 단일 `meatbox_session` 쿠키만 TMS loopback `GET 
 
 - 운영 릴리스 SHA `ef707380a1155367c48d11009e3b6b92462f51ae`를 유지한 채 단일 mock unit을 중지하고 웹·워커 unit을 분리 기동했다. 승인된 `meatbox-push-pilot-20260923` 프로젝트에서 Safari로 동의·등록한 테스트 기기 **1개만** 워커에 허용했고 이전 mock 설치는 제외했다. 워커 전용 자격증명, 웹의 TMS 세션·loopback 제한, 자체 `activation_hold` marker와 빈 큐 확인을 거쳐 활성화했다.
 - 2026-09-23 14:31 KST에 그 기기로 **한 번** 실제 발송했다. 새 outbox는 시도 1회로 `accepted`, 오류 없음이고 FCM 반환 ID가 `projects/meatbox-push-pilot-20260923/messages/...`와 일치했다. 사용자가 **Mac에 테스트 알림이 표시됐다**고 확인했다. 기존 mock accepted 5건은 보존했으며 사후 `queued`·`retrying`·`sending`은 0건이다. 배너 자동 캡처·알림 클릭 이동·iPhone 수신은 확인하지 않았다.
-- 전후 native schema 5→5 백업·격리 복원은 무결성 정상, 외래키 위반 0, 원본 14개 테이블 보존으로 통과했다. 발송 후 백업 SHA-256은 `c1e7cdadc193476a9bb999809f9a12438ca51d2e62ca5f147d88a4c2adee11bb`이다. 웹·워커 재시작 0회, 가용 메모리 184 MiB였고 TMS/Caddy PID·Caddy 설정 hash·배차 checkpoint 2개 집계 hash는 이전 배포 영수증과 같았다. 상세 계측·파일럿 전용 롤백 경로는 비공개 배포 영수증에 기록했다.
+- 전후 native schema 5→5 백업·격리 복원은 무결성 정상, 외래키 위반 0, 원본 14개 테이블 보존으로 통과했다. 발송 후 백업 SHA-256은 `c1e7cdadc193476a9bb999809f9a12438ca51d2e62ca5f147d88a4c2adee11bb`이다. 웹·워커 자동 재시작(`NRestarts`) 0회, 가용 메모리 184 MiB였고 TMS/Caddy PID·Caddy 설정 hash·배차 checkpoint 2개 집계 hash는 이전 배포 영수증과 같았다. 상세 계측·파일럿 전용 롤백 경로는 비공개 배포 영수증에 기록했다.
 
 단일 mock unit으로 롤백할 때에는 새 워커를 먼저 정상 중지하고 `queued`/`retrying` real 작업을 보존한다. mock worker가 이를 claim하지 않도록 gate를 유지한다. pause marker가 있으면 내용과 SHA-256을 보존하고 `/var/lib/meatbox-push-lab/worker.pause` **해당 파일만** 기존 `meatbox-push-lab` 사용자 소유 `0600`으로 되돌린다. 기존 오류 marker는 삭제하거나 자동 해제하지 않는다. mock worker를 다시 시작하기 전에는 real 대기 작업이 0건이고 pause 상태가 의도대로 처리되는지 별도로 확인한다. lock 파일과 DB는 위 공통 그룹 권한을 유지하며 백업 및 기존 TMS 상태는 변경하지 않는다.
 
