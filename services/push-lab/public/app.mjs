@@ -1,4 +1,4 @@
-import { STAGES, browserGuidance, firebaseConfigured, inviteFromFragment, notificationUiState, shouldRefreshProvider, subscriptionHasConsent, toTimestamp, viewForDelivery } from './model.mjs?v=20260923-1';
+import { STAGES, browserGuidance, firebaseConfigured, inviteFromInput, notificationUiState, shouldDeferInvite, shouldRefreshProvider, subscriptionHasConsent, toTimestamp, viewForDelivery } from './model.mjs?v=20260923-2';
 import { createFidRegistrationWorker, createLatestSerialQueue } from './fid-sync.mjs?v=20260922-5';
 import { ApiResponseError, StaleSessionError, clearSessionData, createSessionGate, isTerminalSessionError } from './session-state.mjs?v=20260922-4';
 
@@ -11,6 +11,8 @@ const state = {
 const sessionGate = createSessionGate();
 const BOOTSTRAP_KEY = 'mb-push-registration-bootstrap-key';
 let volatileBootstrapKey = '';
+let pendingInviteCode = '';
+let pendingInviteUrl = '';
 
 function registrationBootstrapKey() {
   try {
@@ -59,6 +61,7 @@ function closeSession(message) {
   $('delivery-view').hidden = true;
   $('invite-view').hidden = false;
   $('invite-form').hidden = true;
+  $('install-gate').hidden = true;
   $('invite-message').style.color = '#b42318';
   $('invite-message').textContent = message;
   $('stage-list').replaceChildren();
@@ -95,7 +98,7 @@ function renderDelivery() {
     ? 'TEST 예상시각이 기준시각보다 이전이어서 표시하지 않았습니다.'
     : '단계 변경만으로 알림이 자동 발송되지는 않습니다. 위치·상품 정보는 제공되지 않습니다.';
   if (delivery.deliverable === false) $('status-note').textContent = '이 TEST 배송은 배포 확인용이며 알림 발송 대상이 아닙니다.';
-  renderSubscription();
+  renderCapability();
 }
 
 function renderSubscription() {
@@ -103,15 +106,20 @@ function renderSubscription() {
   const capability = pushCapability();
   const ui = notificationUiState({ subscription:state.subscription, capability, providerReady:state.providerReady, phase:state.notificationPhase });
   const configured = firebaseConfigured(state.config);
-  $('notification-state').textContent = configured ? ui.label : '설정 대기';
+  const senderMode = state.config?.senderMode;
+  const receiving = configured && senderMode === 'real' && ui.active;
+  $('notification-state').textContent = ui.key === 'unsupported' || ui.key === 'denied' ? ui.label
+    : !configured ? '설정 대기' : ui.active && senderMode !== 'real' ? '발송 준비 중'
+    : receiving ? '알림 등록 완료' : ui.label;
   $('notification-state').dataset.state = ui.key;
-  $('notification-state').style.background = ui.active ? '#e6f7f1' : '';
-  $('notification-state').style.color = ui.active ? '#087f5b' : '';
+  $('notification-state').style.background = receiving ? '#e6f7f1' : '';
+  $('notification-state').style.color = receiving ? '#087f5b' : '';
   $('subscribe').disabled = !configured || ui.active || ui.key === 'registering' || state.delivery?.deliverable === false || !$('consent').checked
     || !capability.supported || capability.permission === 'denied';
-  $('self-test').disabled = !ui.active;
+  $('self-test').disabled = !receiving;
   $('unsubscribe').disabled = !consentActive;
-  if (ui.active) setDetail(`서버 구독 저장 완료 · ${formatDate(state.subscription.expiresAt, true)}까지`);
+  if (receiving) setDetail(`서버 구독 저장 완료 · ${formatDate(state.subscription.expiresAt, true)}까지 · 기기 수신은 확인되지 않았습니다.`);
+  else if (ui.active && senderMode === 'mock') setDetail('브라우저 등록은 완료됐지만 현재 모의 발송 모드여서 실제 기기 수신은 확인할 수 없습니다.');
   else if (consentActive && capability.permission === 'denied') setDetail('서버 동의는 남아 있지만 브라우저 권한이 차단되어 알림 수신 상태로 표시하지 않습니다.', true);
 }
 
@@ -127,19 +135,39 @@ function pushCapability() {
 function renderCapability() {
   const capability = pushCapability();
   const configured = firebaseConfigured(state.config);
-  $('support-message').textContent = configured ? browserGuidance(capability)
-    : '이 TEST 환경은 알림 제공자 설정이 없어 알림 등록·기기 수신을 확인할 수 없습니다. 배송 조회는 가능합니다.';
-  $('consent').disabled = !configured || !capability.supported || capability.permission === 'denied';
+  $('support-message').textContent = browserGuidance(capability);
+  $('provider-message').textContent = !configured
+    ? '이 TEST 환경은 알림 제공자 설정이 없어 알림 등록·기기 수신을 확인할 수 없습니다. 배송 조회는 가능합니다.'
+    : state.config?.senderMode === 'mock' ? '현재 모의 발송 모드입니다. 실제 기기 알림은 발송되지 않으며 30초 TEST 알림도 사용할 수 없습니다.'
+    : state.config?.senderMode === 'real' ? '' : '발송 모드를 확인할 수 없어 실제 기기 알림을 시험할 수 없습니다.';
+  $('consent').disabled = !sessionGate.active || state.delivery?.deliverable === false;
+  $('install-message').hidden = !shouldDeferInvite(capability) || !sessionGate.active;
+  $('install-message').textContent = 'iPhone 알림은 공유 메뉴에서 “홈 화면에 추가”한 웹 앱에서만 신청할 수 있습니다. 현재 브라우저에서는 배송 조회만 가능합니다.';
   renderSubscription();
 }
 
+function deferInvite(inviteCode, inviteUrl = '') {
+  pendingInviteCode = inviteCode;
+  pendingInviteUrl = inviteUrl;
+  $('invite-title').textContent = '홈 화면에 추가한 뒤 배송 조회';
+  $('invite-message').style.color = '';
+  $('invite-message').textContent = '보안 초대는 아직 사용되지 않았습니다.';
+  $('copy-invite').textContent = inviteUrl ? '보안 링크 복사' : '초대 코드 복사';
+  $('install-gate').hidden = false;
+  $('invite-form').hidden = true;
+}
+
 async function exchange(inviteCode) {
+  if (!inviteCode) throw new Error('올바른 TEST 초대 링크 또는 코드를 입력해 주세요.');
+  $('install-gate').hidden = true;
   const generation = sessionGate.begin();
   $('invite-message').textContent = 'TEST 초대를 확인하고 있습니다.';
   const exchangeKey = sessionStorage.getItem('mb-push-exchange-key') || crypto.randomUUID();
   sessionStorage.setItem('mb-push-exchange-key', exchangeKey);
   const result = await api('/session/exchange', { method:'POST', body:JSON.stringify({ inviteCode, exchangeKey }) }, generation);
   await openSession(result, generation);
+  pendingInviteCode = '';
+  pendingInviteUrl = '';
 }
 
 async function openSession(result, generation) {
@@ -299,7 +327,7 @@ async function refreshActiveRegistration() {
   state.providerReady = false;
   state.notificationPhase = '';
   renderCapability();
-  if (!shouldRefreshProvider(state.subscription, capability)) return;
+  if (!firebaseConfigured(state.config) || !shouldRefreshProvider(state.subscription, capability)) return;
   state.notificationPhase = 'registering';
   renderSubscription();
   try {
@@ -315,6 +343,8 @@ async function refreshActiveRegistration() {
 async function subscribe() {
   if (!$('consent').checked) return;
   try {
+    const capability = pushCapability();
+    if (!capability.supported || capability.permission === 'denied') throw new Error(browserGuidance(capability));
     state.notificationPhase = 'registering';
     renderSubscription();
     $('subscribe').disabled = true;
@@ -359,6 +389,10 @@ async function unsubscribe() {
 }
 
 async function selfTest() {
+  if (state.config?.senderMode !== 'real') {
+    setDetail('실제 발송 모드가 아니므로 기기 TEST 알림을 보낼 수 없습니다.', true);
+    return;
+  }
   try {
     $('self-test').disabled = true;
     const delay = state.config?.selfTestDelaySeconds || 30;
@@ -381,7 +415,28 @@ $('consent').addEventListener('change', renderSubscription);
 $('subscribe').addEventListener('click', subscribe);
 $('unsubscribe').addEventListener('click', unsubscribe);
 $('self-test').addEventListener('click', selfTest);
-$('invite-form').addEventListener('submit', event => { event.preventDefault(); exchange(new FormData(event.currentTarget).get('inviteCode')).catch(showInviteError); });
+$('invite-form').addEventListener('submit', event => {
+  event.preventDefault();
+  const input = $('invite-code');
+  const raw = input.value.trim();
+  const inviteCode = inviteFromInput(raw, location.origin);
+  input.value = '';
+  if (inviteCode && shouldDeferInvite(pushCapability())) deferInvite(inviteCode, raw === inviteCode ? '' : raw);
+  else exchange(inviteCode).catch(showInviteError);
+});
+$('copy-invite').addEventListener('click', async () => {
+  if (!pendingInviteCode) return;
+  try {
+    await navigator.clipboard.writeText(pendingInviteUrl || pendingInviteCode);
+    $('invite-message').textContent = `${pendingInviteUrl ? '보안 링크' : '초대 코드'}를 복사했습니다. 홈 화면 웹 앱을 열어 붙여 넣어 주세요.`;
+  } catch {
+    $('invite-message').textContent = '복사하지 못했습니다. 원래 초대 링크 또는 코드를 다시 확인해 주세요.';
+  }
+});
+$('continue-browser').addEventListener('click', () => {
+  if (!pendingInviteCode) return;
+  exchange(pendingInviteCode).catch(showInviteError);
+});
 
 function showInviteError(error) {
   if (error instanceof StaleSessionError) return;
@@ -391,10 +446,15 @@ function showInviteError(error) {
 }
 
 renderCapability();
-const inviteCode = inviteFromFragment(location.hash);
-if (location.hash) history.replaceState(null, '', `${location.pathname}${location.search}`);
-if (inviteCode) exchange(inviteCode).catch(showInviteError);
-else restoreSession().catch(() => {
-  $('invite-message').textContent = 'TEST 초대 링크를 열거나 초대 코드를 입력해 주세요.';
-  $('invite-form').hidden = false;
-});
+const hadInviteFragment = Boolean(location.hash);
+const inviteCode = hadInviteFragment ? inviteFromInput(location.href, location.origin) : '';
+if (inviteCode && shouldDeferInvite(pushCapability())) deferInvite(inviteCode, location.href);
+if (hadInviteFragment) history.replaceState(null, '', location.pathname);
+if (!pendingInviteCode) {
+  if (inviteCode) exchange(inviteCode).catch(showInviteError);
+  else if (hadInviteFragment) showInviteError(new Error('초대 링크 형식이 올바르지 않습니다. 새 TEST 초대 링크 또는 코드를 입력해 주세요.'));
+  else restoreSession().catch(() => {
+    $('invite-message').textContent = 'TEST 초대 링크를 열거나 초대 코드를 입력해 주세요.';
+    $('invite-form').hidden = false;
+  });
+}

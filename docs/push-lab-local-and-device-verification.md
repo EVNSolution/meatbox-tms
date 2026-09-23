@@ -155,6 +155,20 @@ adapter는 브라우저의 단일 `meatbox_session` 쿠키만 TMS loopback `GET 
 - 공개 origin에서 사용할 세션 검증 키와 교환 복구 키, N/N-1 교체 호환 방식
 - 배포 이미지 digest, Git SHA, schema 범위, rollback 보관 위치
 
+### Native real split 후보 (미적용)
+
+[`meatbox-push-lab-web.service.example`](../deploy/push-lab/meatbox-push-lab-web.service.example)과 [`meatbox-push-lab-worker.service.example`](../deploy/push-lab/meatbox-push-lab-worker.service.example)은 현재 단일 mock unit을 대체할 **후보**다. 각각 전용 Node 26.3.1로 `server/main.mjs`, `worker/main.mjs`를 직접 실행한다. 호스트에 Docker를 설치하지 않는다. 배포 전 현재 mock unit·릴리스·DB의 백업 및 롤백 경로를 확정하고, 실제 호스트에서 두 프로세스의 합산 메모리와 기존 TMS 여유를 측정해야 한다. 각 unit은 `MemoryHigh=96M`, `MemoryMax=128M`, `CPUQuota=25%`, `TimeoutStopSec=65s`이며 1 GiB 호스트의 **실측 통과**를 뜻하지 않는다.
+
+웹 설정은 [`native-web.env.example`](../deploy/push-lab/native-web.env.example), 워커 설정은 [`native-worker.env.example`](../deploy/push-lab/native-worker.env.example)을 별도 root:root 0600 파일로 설치한다. 웹은 기존 TMS loopback 세션 검증, 기존 `EXCHANGE_KEYS`, `127.0.0.1:3300`만 사용하며 systemd `IPAddressDeny=any`/`IPAddressAllow=localhost`를 유지한다. 워커는 독립 OS 사용자 `meatbox-push-worker`로 실행하고, Firebase용 DNS 및 outbound HTTPS 접근이 필요하다. 승인된 테스트 프로젝트의 `service_account` JSON 원본은 `/etc/meatbox-push-lab/firebase-service-account.json` root:root 0600에만 두고 워커 unit의 `LoadCredential` 및 전용 mount namespace로 전달한다. 웹 unit에는 credential 경로나 ADC 환경변수가 없다. 워커는 명시적 credential 파일이 없거나 `project_id`가 `FIREBASE_PROJECT_ID`와 다르면 시작하지 않으며, web 등록 API도 설정된 프로젝트와 다른 `projectId`를 DB 변경 전에 거부한다.
+
+기존 단일 mock 서비스를 **중지하고 백업을 확인한 뒤에만** 파일럿 전용 `/var/lib/meatbox-push-lab` 디렉터리의 소유자를 `meatbox-push-lab:meatbox-push-lab`, 모드를 `2770`으로 바꾼다. 파일럿 SQLite 본체 및 남아 있는 `-wal`, `-shm`만 같은 그룹의 `0660`으로 바꾼다. 기존 `worker.lock`은 공통 그룹 `0660`으로, 기존 `worker.pause`가 있으면 삭제하거나 해제하지 말고 새 워커 소유 `0600`으로 좁게 이전한다. 백업 디렉터리와 백업·manifest는 기존 웹 사용자 전용 `0700`/`0600`으로 유지한다. `StateDirectory`를 두 unit에 중복 선언하지 않은 이유는 systemd가 시작 시 동일 DB 트리의 소유권을 서로 다른 사용자로 재귀 변경하지 않게 하기 위해서다. 두 unit은 이 준비된 경로에만 `ReadWritePaths`를 부여하며 기존 TMS 디렉터리와 DB는 건드리지 않는다. Node 26.3.1 SQLite가 신규 DB를 `UMask=0007` 아래 `0640`으로 만들 수 있으므로, 워커는 미리 준비된 DB에 대한 쓰기 권한이 없으면 시작하지 않는다. 기존 DB를 `0660`으로 바꾼 뒤 다시 생성되는 WAL/SHM의 그룹 쓰기 권한을 실제 호스트에서 확인한다.
+
+`PUSH_LAB_REAL_FID_ALLOWLIST`는 처음에는 비워 두고 워커를 시작하지 않는다. 실제 승인된 테스트 FID만 정확히 기입한다. 와일드카드는 허용하지 않으며 빈 목록이 mock 전송으로 바뀌지 않는다. **real 워커의 pause 해제 후 시작이 실제 외부 발송 활성화 gate**다. 먼저 기존 단일 mock worker를 중지하고, 파일럿 DB의 `queued`/`retrying` 전체를 읽기 전용으로 조사한다. 연결된 설치의 `project_id`가 승인된 프로젝트인지, FID가 정확한 allowlist에 있는지, 구독·배송이 유효한지 대조한다. 비허용 FID를 가리키는 `queued`/`retrying` 건수는 반드시 0이어야 한다. FID 원문을 로그나 보고서에 남기지 않는다.
+
+기존 `worker.pause`가 **없을 때에만** 새 워커 사용자로 `{"code":"activation_hold","timestamp":...}` marker를 배타적으로 생성하고 파일의 inode·SHA-256을 기록한다. 기존 오류 marker가 있으면 덮어쓰거나 자동 해제하지 않고 중단한다. 승인된 프로젝트·자격증명·FID 목록을 설정한 real 워커를 이 marker가 있는 상태로 시작해 `paused`이며 새 claim·provider call이 0인지 확인한다. 이때 `systemd-analyze verify`, 사용자·그룹·credential 노출 범위, 공유 DB/lock 접근, 두 프로세스 메모리를 확인한다. 그 다음 웹 설정의 `PUSH_LAB_SENDER_MODE=real`을 적용한다. 공개 `/push-lab/api/config.senderMode`는 설정 의도를 표시할 뿐 워커 가동, FCM 접수, 기기 수신을 증명하지 않는다. 실제 발송 직전 워커를 정상 중지하고 `queued`/`retrying`과 비허용 FID 0건을 다시 확인한다. 기록한 inode·SHA-256과 marker 내용이 모두 그대로인 **자체 생성 activation marker만** 제거한 뒤 일반 재시작으로 real 워커를 가동한다. 오류 marker로 바뀌었거나 큐 감사가 달라졌다면 해제하지 않는다. 현재 템플릿은 설치·시작·Caddy 변경을 수행하지 않는다.
+
+단일 mock unit으로 롤백할 때에는 새 워커를 먼저 정상 중지하고 `queued`/`retrying` real 작업을 보존한다. mock worker가 이를 claim하지 않도록 gate를 유지한다. pause marker가 있으면 내용과 SHA-256을 보존하고 `/var/lib/meatbox-push-lab/worker.pause` **해당 파일만** 기존 `meatbox-push-lab` 사용자 소유 `0600`으로 되돌린다. 기존 오류 marker는 삭제하거나 자동 해제하지 않는다. mock worker를 다시 시작하기 전에는 real 대기 작업이 0건이고 pause 상태가 의도대로 처리되는지 별도로 확인한다. lock 파일과 DB는 위 공통 그룹 권한을 유지하며 백업 및 기존 TMS 상태는 변경하지 않는다.
+
 `compose.real-split.yaml.example`은 입력 형식만 제공하며 반드시 base, split, real 순서의 세 파일로만 사용한다. base+real 두 파일만 실행하지 않는다.
 
 ```sh
@@ -163,17 +177,11 @@ docker compose \
   -f compose.split.yaml \
   -f compose.real-split.yaml.example \
   --profile split config
-
-docker compose \
-  -f compose.yaml \
-  -f compose.split.yaml \
-  -f compose.real-split.yaml.example \
-  --profile split up -d --wait
 ```
 
 real 구성에서 공개 Firebase web config와 VAPID 공개키는 `push-lab-web`에만 전달한다. 승인된 테스트 Firebase service account는 `PUSH_LAB_FIREBASE_CREDENTIALS`로 지정하며 `push-lab-worker`에만 `/run/secrets/firebase-service-account.json` read-only secret으로 마운트한다. `PUSH_LAB_REAL_FID_ALLOWLIST`에는 발송이 허용된 테스트 FID만 콤마로 구분해 넣는다. 자격증명과 FID allowlist는 이미지, Git, 브라우저, 로그에 넣지 않는다.
 
-기본 `compose.yaml`과 `compose.yaml + compose.split.yaml`은 계속 mock sender다. real overlay를 붙인 세 파일 구성에서만 worker가 real sender가 되며, web에는 발송 자격증명을 제공하지 않는다. 이 오버레이는 이번 로컬 mock 검증에서 실행하지 않는다.
+기본 `compose.yaml`과 `compose.yaml + compose.split.yaml`은 계속 mock sender다. real overlay를 붙인 세 파일 구성은 web의 표시 모드와 worker sender를 모두 `real`로 설정하며, web에는 발송 자격증명을 제공하지 않는다. 위 `config` 명령은 구성 확인만 한다. real `up`은 큐 감사와 발송 활성화 gate가 정해지기 전에는 실행하지 않는다. 이 오버레이는 이번 로컬 mock 검증에서 실행하지 않는다.
 
 ## Worker configuration pause 해제
 

@@ -10,7 +10,7 @@ export function harness(start = 1_800_000_000_000, options = {}) {
   let now = start;
   const clock = () => now;
   const db = openDatabase(path);
-  const service = new PushLabService(db, { now: clock, selfTestDelayMs: options.selfTestDelayMs ?? 0 });
+  const service = new PushLabService(db, { now: clock, selfTestDelayMs: options.selfTestDelayMs ?? 0, firebaseProjectId: options.firebaseProjectId ?? '' });
   return {
     db, service, path, clock,
     advance(ms) { now += ms; },

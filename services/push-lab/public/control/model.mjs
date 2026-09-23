@@ -30,11 +30,11 @@ export function canSend(delivery, subscription, now = Date.now()) {
     && subscription.providerActive === true && Number(subscription.expiresAt) > now);
 }
 
-export function statusText(status, senderMode = 'unknown') {
+export function statusText(status) {
   if (!status) return '발송 없음';
   if (status === 'queued') return '대기 · 기기 미확인';
   if (status === 'retrying') return '재시도 중 · 기기 미확인';
-  if (status === 'accepted') return `${senderMode === 'mock' ? 'mock' : senderMode === 'real' ? 'FCM' : '서버'} 접수 · 기기 미확인`;
+  if (status === 'accepted') return '서버 처리 완료 · 기기 미확인';
   if (status === 'unknown') return '결과 불명 · 기기 미확인';
   if (status === 'failed') return '실패';
   if (status === 'cancelled') return '취소';

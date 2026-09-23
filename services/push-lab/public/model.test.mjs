@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserGuidance, firebaseConfigured, inviteFromFragment, notificationIsActive, notificationUiState, shouldRefreshProvider, stageIndex, subscriptionHasConsent, toTimestamp, viewForDelivery } from './model.mjs';
+import { browserGuidance, firebaseConfigured, inviteFromFragment, inviteFromInput, notificationIsActive, notificationUiState, shouldDeferInvite, shouldRefreshProvider, stageIndex, subscriptionHasConsent, toTimestamp, viewForDelivery } from './model.mjs';
 
 test('Firebase 공개 설정이 비면 신청 불가로 분류한다', () => {
   assert.equal(firebaseConfigured(null), false);
@@ -72,7 +72,29 @@ test('초대 fragment와 플랫폼별 안내를 정규화한다', () => {
   assert.equal(inviteFromFragment('#inviteCode=secret'), 'secret');
   assert.equal(inviteFromFragment('#secret'), 'secret');
   assert.equal(inviteFromFragment('#%zz'), '');
+  assert.equal(inviteFromFragment('#invite=secret&code=other'), '');
   assert.match(browserGuidance({ webview:true }), /WebView/);
   assert.match(browserGuidance({ ios:true, standalone:false }), /홈 화면에 추가/);
   assert.match(browserGuidance({ supported:false }), /지원하지/);
+});
+
+test('설치된 웹 앱은 현재 출처의 TEST 링크 또는 코드만 받아들인다', () => {
+  const origin = 'https://demo.meatbox.co.kr';
+  assert.equal(inviteFromInput('invite-1', origin), 'invite-1');
+  assert.equal(inviteFromInput(`${origin}/push-lab/#invite=secret`, origin), 'secret');
+  for (const value of [
+    'https://other.example/push-lab/#invite=secret',
+    `${origin}/push-lab/?invite=secret#invite=secret`,
+    `${origin}/push-lab/control/#invite=secret`,
+    `${origin}/push-lab/#invite=secret&code=other`,
+    'javascript:alert(1)',
+    'https://demo.meatbox.co.kr@other.example/push-lab/#invite=secret',
+  ]) assert.equal(inviteFromInput(value, origin), '');
+});
+
+test('새 iPhone 링크는 브라우저 종류와 관계없이 설치 안내까지 보류한다', () => {
+  assert.equal(shouldDeferInvite({ ios:true, standalone:false, webview:false }), true);
+  assert.equal(shouldDeferInvite({ ios:true, standalone:false, webview:true }), true);
+  assert.equal(shouldDeferInvite({ ios:true, standalone:true, webview:false }), false);
+  assert.equal(shouldDeferInvite({ ios:false, standalone:false, webview:false }), false);
 });

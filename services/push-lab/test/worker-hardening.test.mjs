@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { access, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { harness, onboard } from './helpers.mjs';
@@ -170,6 +171,58 @@ test('real sender refuses to start without a non-empty FID allowlist', async () 
   } finally {
     if (previous == null) delete process.env.PUSH_LAB_REAL_FID_ALLOWLIST;
     else process.env.PUSH_LAB_REAL_FID_ALLOWLIST = previous;
+  }
+});
+
+test('real sender requires exact FIDs and an explicit credential path', async () => {
+  const previousAllowlist = process.env.PUSH_LAB_REAL_FID_ALLOWLIST;
+  const previousCredential = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const previousProject = process.env.FIREBASE_PROJECT_ID;
+  try {
+    process.env.PUSH_LAB_REAL_FID_ALLOWLIST = '*';
+    await assert.rejects(createSender('real'), /must contain exact FIDs/);
+    process.env.PUSH_LAB_REAL_FID_ALLOWLIST = 'approved-fid';
+    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    process.env.FIREBASE_PROJECT_ID = 'approved-project';
+    await assert.rejects(createSender('real'), /GOOGLE_APPLICATION_CREDENTIALS and FIREBASE_PROJECT_ID are required/);
+  } finally {
+    if (previousAllowlist == null) delete process.env.PUSH_LAB_REAL_FID_ALLOWLIST;
+    else process.env.PUSH_LAB_REAL_FID_ALLOWLIST = previousAllowlist;
+    if (previousCredential == null) delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    else process.env.GOOGLE_APPLICATION_CREDENTIALS = previousCredential;
+    if (previousProject == null) delete process.env.FIREBASE_PROJECT_ID;
+    else process.env.FIREBASE_PROJECT_ID = previousProject;
+  }
+});
+
+test('real sender rejects malformed, non-service-account, and wrong-project credentials before Firebase initialization', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'push-lab-credential-test-'));
+  const credentialPath = join(directory, 'credential.json');
+  const previousAllowlist = process.env.PUSH_LAB_REAL_FID_ALLOWLIST;
+  const previousCredential = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const previousProject = process.env.FIREBASE_PROJECT_ID;
+  try {
+    process.env.PUSH_LAB_REAL_FID_ALLOWLIST = 'approved-fid';
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialPath;
+    process.env.FIREBASE_PROJECT_ID = 'approved-project';
+    await writeFile(credentialPath, '{"private_key":"secret-fragment",');
+    await assert.rejects(createSender('real'), (error) => {
+      assert.equal(error.message, 'Firebase service account configuration invalid');
+      assert.doesNotMatch(error.message, /secret-fragment/);
+      return true;
+    });
+    await writeFile(credentialPath, JSON.stringify({ type: 'authorized_user', project_id: 'approved-project' }));
+    await assert.rejects(createSender('real'), /Firebase service account configuration invalid/);
+    await writeFile(credentialPath, JSON.stringify({ type: 'service_account', project_id: 'foreign-project' }));
+    await assert.rejects(createSender('real'), /Firebase service account configuration invalid/);
+  } finally {
+    if (previousAllowlist == null) delete process.env.PUSH_LAB_REAL_FID_ALLOWLIST;
+    else process.env.PUSH_LAB_REAL_FID_ALLOWLIST = previousAllowlist;
+    if (previousCredential == null) delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    else process.env.GOOGLE_APPLICATION_CREDENTIALS = previousCredential;
+    if (previousProject == null) delete process.env.FIREBASE_PROJECT_ID;
+    else process.env.FIREBASE_PROJECT_ID = previousProject;
+    await rm(directory, { recursive: true, force: true });
   }
 });
 

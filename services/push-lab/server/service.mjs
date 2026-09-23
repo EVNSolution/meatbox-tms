@@ -11,10 +11,11 @@ const INSTALLATION_BOOTSTRAP_RETRY = 120_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export class PushLabService {
-  constructor(db, { now = () => Date.now(), selfTestDelayMs = 30_000 } = {}) {
+  constructor(db, { now = () => Date.now(), selfTestDelayMs = 30_000, firebaseProjectId = process.env.FIREBASE_PROJECT_ID || '' } = {}) {
     this.db = db;
     this.now = now;
     this.selfTestDelayMs = selfTestDelayMs;
+    this.firebaseProjectId = firebaseProjectId;
   }
 
   createFixture({ deliveryId = id(), userId, inviteCode = token(), stage = '배송대기', baselineAt, etaAt = null, expiresAt, deliverable = true }) {
@@ -155,6 +156,7 @@ export class PushLabService {
   registerInstallation(sessionToken, csrfToken, proofToken, { fid, provider = 'fcm', projectId, expectedFidVersion = null, bootstrapKey = null }) {
     this.authenticateMutation(sessionToken, csrfToken);
     assert(provider === 'fcm' && fid && projectId, 400, 'registration_invalid');
+    assert(!this.firebaseProjectId || projectId === this.firebaseProjectId, 400, 'firebase_project_mismatch');
     const now = this.now();
     return transaction(this.db, () => {
       let installation = proofToken ? this.db.prepare('SELECT * FROM installations WHERE proof_hash=?').get(hash(proofToken)) : null;

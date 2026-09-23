@@ -6,6 +6,7 @@ button,input { font:inherit; }
 button { min-height:44px; border:1px solid var(--line); border-radius:var(--meatbox-radius-control); padding:0 14px; color:var(--ink); background:#fff; font-weight:600; cursor:pointer; }
 button:disabled { color:#92969e; background:#f6f7f8; cursor:not-allowed; }
 button.primary { border-color:var(--red); color:#fff; background:var(--red); }
+button.primary:disabled { border-color:var(--line); color:#92969e; background:#f6f7f8; }
 button.text-button { border:0; color:var(--muted); background:transparent; }
 :focus-visible { outline:3px solid #1d4ed8; outline-offset:3px; }
 h1,h2,p { margin-top:0; }
@@ -20,6 +21,8 @@ main { min-height:calc(100dvh - 56px); }
 .gate { width:min(100% - 32px,480px); margin:8vh auto 24px; padding:24px; border:1px solid var(--line); border-radius:var(--meatbox-radius-card); background:#fff; }
 .gate h1 { margin-bottom:10px; }
 .gate label { display:block; margin:18px 0 6px; font-size:13px; font-weight:600; }
+.gate-warning,.install-message { padding:10px 12px; color:#755300; background:#fff8e1; font-size:12px; }
+.gate-actions { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
 .input-row { display:grid; grid-template-columns:1fr auto; gap:8px; }
 .input-row input { min-width:0; height:44px; border:1px solid var(--line); border-radius:var(--meatbox-radius-control); padding:0 12px; }
 .customer-intro { min-height:108px; padding:24px 24px 20px; border-bottom:1px solid var(--line); background:#fff; }

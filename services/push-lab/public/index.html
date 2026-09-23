@@ -9,8 +9,8 @@
   <link rel="manifest" href="/push-lab/manifest.webmanifest">
   <link rel="icon" href="/push-lab/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/push-lab/brand.css">
-  <link rel="stylesheet" href="/push-lab/styles.css?v=20260923-1">
-  <script type="module" src="/push-lab/app.mjs?v=20260923-1"></script>
+  <link rel="stylesheet" href="/push-lab/styles.css?v=20260923-2">
+  <script type="module" src="/push-lab/app.mjs?v=20260923-2"></script>
 </head>
 <body>
   <header class="topbar">
@@ -23,17 +23,25 @@
       <p class="eyebrow">테스트 배송 전용</p>
       <h1 id="invite-title">배송 초대 확인</h1>
       <p id="invite-message">초대 정보를 확인하고 있습니다.</p>
+      <div id="install-gate" hidden>
+        <p>iPhone에서 알림을 받으려면 Safari 등 지원 브라우저의 공유 메뉴에서 먼저 <strong>홈 화면에 추가</strong>를 선택해 주세요. 앱 안 브라우저에서는 복사한 링크를 Safari에서 열어 진행해 주세요. 설치된 웹 앱의 입력창에 보안 링크 또는 코드를 붙여 넣으면 배송을 조회할 수 있습니다.</p>
+        <p class="gate-warning">이 링크는 한 번만 사용할 수 있습니다. 현재 브라우저에서 지금 조회하면 링크가 소비되며, 설치된 웹 앱에서 다시 열려면 새 링크가 필요할 수 있습니다.</p>
+        <div class="gate-actions">
+          <button id="copy-invite" type="button">보안 링크 복사</button>
+          <button id="continue-browser" type="button" class="text-button">현재 브라우저에서 배송만 조회</button>
+        </div>
+      </div>
       <form id="invite-form" hidden>
-        <label for="invite-code">테스트 초대 코드</label>
+        <label for="invite-code">테스트 초대 링크 또는 코드</label>
         <div class="input-row">
-          <input id="invite-code" name="inviteCode" autocomplete="one-time-code" required>
+          <input id="invite-code" name="inviteCode" autocomplete="off" autocapitalize="off" spellcheck="false" required>
           <button type="submit">배송 조회</button>
         </div>
       </form>
     </section>
 
     <div id="delivery-view" hidden>
-      <div class="customer-intro"><h1>배송 조회</h1><p>이번 TEST 배송의 단계와 웹 알림 신청 상태를 확인합니다.</p></div>
+      <div class="customer-intro"><h1>배송 조회</h1><p>이번 TEST 배송의 단계와 웹 알림 신청 상태를 확인합니다.</p><p id="install-message" class="install-message" hidden></p></div>
       <div class="customer-workspace">
         <div class="customer-device"><div class="customer-screen">
           <div class="customer-heading"><img src="/push-lab/assets/meatbox-logo.svg" width="105" height="25" alt="미트박스"><span class="test-badge">TEST 배송</span></div>
@@ -65,9 +73,10 @@
         </div>
         <p>기존 미트박스 앱의 네이티브 PUSH가 아닌, 이 TEST 웹/PWA의 알림입니다.</p>
         <div id="support-message" class="support-message" role="status"></div>
+        <div id="provider-message" class="support-message" role="status"></div>
         <label class="consent-row">
           <input id="consent" type="checkbox">
-          <span><strong>이번 TEST 배송 알림 수신에 동의합니다.</strong><small>체크 동의와 브라우저 알림 권한은 별도입니다.</small></span>
+          <span><strong>이번 TEST 배송 알림 수신에 동의합니다.</strong><small>체크는 이 화면의 선택입니다. 버튼으로 등록해야 서버에 저장되며 브라우저 권한은 별도입니다.</small></span>
         </label>
         <div class="actions">
           <button id="subscribe" type="button" class="primary" disabled>브라우저 권한 확인 후 알림 받기</button>

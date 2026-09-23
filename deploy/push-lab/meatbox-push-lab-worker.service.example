@@ -1,0 +1,40 @@
+[Unit]
+Description=Meatbox Push Lab isolated real FCM worker pilot
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60s
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=meatbox-push-worker
+Group=meatbox-push-lab
+WorkingDirectory=/opt/meatbox-push-lab/current
+EnvironmentFile=/etc/meatbox-push-lab/push-lab-worker.env
+LoadCredential=firebase-service-account.json:/etc/meatbox-push-lab/firebase-service-account.json
+Environment=GOOGLE_APPLICATION_CREDENTIALS=%d/firebase-service-account.json
+ExecStartPre=/usr/bin/test -w /var/lib/meatbox-push-lab/push-lab.sqlite
+ExecStart=/opt/meatbox-push-lab/runtime/node-v26.3.1-linux-x64/bin/node worker/main.mjs
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=65s
+UMask=0007
+ReadWritePaths=/var/lib/meatbox-push-lab
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateMounts=true
+PrivateTmp=true
+PrivateDevices=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryHigh=96M
+MemoryMax=128M
+CPUQuota=25%
+Nice=10
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

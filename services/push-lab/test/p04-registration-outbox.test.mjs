@@ -2,6 +2,24 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { harness, onboard } from './helpers.mjs';
 
+test('configured Firebase project rejects mismatched registration before changing installations', () => {
+  const h = harness(undefined, { firebaseProjectId: 'approved-project' });
+  try {
+    h.service.createFixture({ userId: 'user-1', deliveryId: 'delivery-1', inviteCode: 'invite-1' });
+    const session = h.service.exchangeInvite({ inviteCode: 'invite-1', exchangeKey: 'exchange-1' });
+    const input = { fid: 'fid-1', provider: 'fcm', bootstrapKey: 'bootstrap-key-0123456789' };
+    assert.throws(() => h.service.registerInstallation(session.sessionToken, session.csrfToken, null,
+      { ...input, projectId: 'foreign-project' }), { code: 'firebase_project_mismatch' });
+    assert.equal(h.db.prepare('SELECT count(*) AS count FROM installations').get().count, 0);
+    const registered = h.service.registerInstallation(session.sessionToken, session.csrfToken, null,
+      { ...input, projectId: 'approved-project' });
+    assert.throws(() => h.service.registerInstallation(session.sessionToken, session.csrfToken, registered.proofToken,
+      { ...input, fid: 'fid-2', projectId: 'foreign-project', expectedFidVersion: 1 }), { code: 'firebase_project_mismatch' });
+    assert.deepEqual(h.db.prepare('SELECT project_id, fcm_fid, fid_version FROM installations').get(),
+      Object.assign(Object.create(null), { project_id: 'approved-project', fcm_fid: 'fid-1', fid_version: 1 }));
+  } finally { h.close(); }
+});
+
 test('P-04 deduplicates events, preserves multi-order consent, and atomically replaces the FID', () => {
     const h = harness();
   try {

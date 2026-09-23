@@ -3,6 +3,33 @@ import assert from 'node:assert/strict';
 import { harness, onboard } from './helpers.mjs';
 import { createPushLabServer } from '../server/http.mjs';
 
+test('public config reports configured sender mode without exposing worker credentials', async () => {
+  const h = harness();
+  const oldMode = process.env.PUSH_LAB_SENDER_MODE;
+  const oldProject = process.env.FIREBASE_PROJECT_ID;
+  process.env.PUSH_LAB_SENDER_MODE = 'mock';
+  process.env.FIREBASE_PROJECT_ID = 'approved-project';
+  const server = createPushLabServer({ db: h.db, service: h.service, origin: 'https://push.test' });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const mockResponse = await fetch(`http://127.0.0.1:${server.address().port}/push-lab/api/config`);
+    assert.equal((await mockResponse.json()).senderMode, 'mock');
+    process.env.PUSH_LAB_SENDER_MODE = 'real';
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/push-lab/api/config`);
+    assert.equal(response.status, 200);
+    const config = await response.json();
+    assert.equal(config.senderMode, 'real');
+    assert.equal(config.firebase.projectId, 'approved-project');
+    assert.equal('GOOGLE_APPLICATION_CREDENTIALS' in config, false);
+    assert.equal('PUSH_LAB_REAL_FID_ALLOWLIST' in config, false);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    h.close();
+    if (oldMode == null) delete process.env.PUSH_LAB_SENDER_MODE; else process.env.PUSH_LAB_SENDER_MODE = oldMode;
+    if (oldProject == null) delete process.env.FIREBASE_PROJECT_ID; else process.env.FIREBASE_PROJECT_ID = oldProject;
+  }
+});
+
 test('P-09 invite exchange is CAS/idempotent, self-test is bounded, and probes never enqueue', () => {
   const h = harness();
   try {

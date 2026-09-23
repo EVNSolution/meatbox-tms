@@ -53,8 +53,8 @@ test('접수/대기 상태는 기기 수신이나 표시로 표현하지 않는�
   for (const status of ['queued', 'retrying', 'accepted', 'unknown']) {
     assert.match(statusText(status, 'mock'), /기기 미확인/);
   }
-  assert.match(statusText('accepted', 'mock'), /mock 접수/);
-  assert.match(statusText('accepted', 'real'), /FCM 접수/);
+  assert.equal(statusText('accepted', 'mock'), '서버 처리 완료 · 기기 미확인');
+  assert.equal(statusText('accepted', 'real'), '서버 처리 완료 · 기기 미확인');
   assert.match(errorText('invalid_credentials', 401), /비밀번호/);
 });
 

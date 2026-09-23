@@ -1,0 +1,36 @@
+[Unit]
+Description=Meatbox Push Lab isolated web pilot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=meatbox-push-lab
+Group=meatbox-push-lab
+WorkingDirectory=/opt/meatbox-push-lab/current
+EnvironmentFile=/etc/meatbox-push-lab/push-lab-web.env
+ExecStart=/opt/meatbox-push-lab/runtime/node-v26.3.1-linux-x64/bin/node server/main.mjs
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=65s
+UMask=0007
+ReadWritePaths=/var/lib/meatbox-push-lab
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost
+MemoryHigh=96M
+MemoryMax=128M
+CPUQuota=25%
+Nice=10
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

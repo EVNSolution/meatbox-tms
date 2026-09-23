@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+
 export class MockSender {
   constructor(results = []) {
     this.results = [...results];
@@ -66,11 +68,29 @@ export async function createSender(mode = process.env.PUSH_LAB_SENDER_MODE || 'm
   if (mode !== 'real') throw new Error('PUSH_LAB_SENDER_MODE must be mock or real');
   const allowlist = new Set((process.env.PUSH_LAB_REAL_FID_ALLOWLIST || '').split(',').map((value) => value.trim()).filter(Boolean));
   if (allowlist.size === 0) throw Object.assign(new Error('PUSH_LAB_REAL_FID_ALLOWLIST is required in real sender mode'), { code: 'messaging/authentication-error' });
-  const [{ applicationDefault, getApps, initializeApp }, { getMessaging }] = await Promise.all([
+  if (allowlist.has('*')) throw new Error('PUSH_LAB_REAL_FID_ALLOWLIST must contain exact FIDs');
+  const credentialPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  if (!credentialPath || !projectId) throw new Error('GOOGLE_APPLICATION_CREDENTIALS and FIREBASE_PROJECT_ID are required in real sender mode');
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(await readFile(credentialPath, 'utf8'));
+    if (serviceAccount?.type !== 'service_account' || serviceAccount.project_id !== projectId) {
+      throw new Error('invalid service account');
+    }
+  } catch {
+    throw new Error('Firebase service account configuration invalid');
+  }
+  const [{ cert, initializeApp }, { getMessaging }] = await Promise.all([
     import('firebase-admin/app'),
     import('firebase-admin/messaging'),
   ]);
-  const app = getApps()[0] || initializeApp({ credential: applicationDefault() });
+  let app;
+  try {
+    app = initializeApp({ credential: cert(serviceAccount), projectId }, 'push-lab-real');
+  } catch {
+    throw new Error('Firebase sender initialization failed');
+  }
   return createRealSender(getMessaging(app), allowlist);
 }
 

@@ -28,14 +28,31 @@ export function viewForDelivery(delivery) {
 
 export function inviteFromFragment(hash) {
   const value = hash.replace(/^#/, '');
-  const params = new URLSearchParams(value);
-  if (params.get('inviteCode') || params.get('invite') || params.get('code')) return params.get('inviteCode') || params.get('invite') || params.get('code');
-  try { return !value.includes('=') ? decodeURIComponent(value) : ''; } catch { return ''; }
+  try {
+    const entries = [...new URLSearchParams(value)];
+    const code = entries.length === 1 && ['inviteCode', 'invite', 'code'].includes(entries[0][0])
+      ? entries[0][1] : !value.includes('=') ? decodeURIComponent(value) : '';
+    return /^[A-Za-z0-9_-]{1,128}$/.test(code) ? code : '';
+  } catch { return ''; }
+}
+
+export function inviteFromInput(input, origin) {
+  const value = String(input || '').trim();
+  if (/^[A-Za-z0-9_-]{1,128}$/.test(value)) return value;
+  try {
+    const url = new URL(value);
+    return url.origin === origin && url.pathname === '/push-lab/' && !url.search && !url.username && !url.password
+      ? inviteFromFragment(url.hash) : '';
+  } catch { return ''; }
+}
+
+export function shouldDeferInvite(capability) {
+  return Boolean(capability.ios && !capability.standalone);
 }
 
 export function browserGuidance({ supported, ios, standalone, webview, permission }) {
   if (webview) return '앱 안의 WebView에서는 Web Push를 전제하지 않습니다. 주소를 복사해 지원 브라우저에서 열어 주세요.';
-  if (ios && !standalone) return 'iPhone에서는 Safari 공유 메뉴의 “홈 화면에 추가” 후 설치된 Web App에서 열어 주세요.';
+  if (ios && !standalone) return 'iPhone에서는 공유 메뉴의 “홈 화면에 추가” 후 설치된 Web App에서 열어 주세요.';
   if (!supported) return '이 환경은 Web Push 필수 기능을 지원하지 않습니다. Android의 최신 지원 브라우저 등에서 열어 주세요.';
   if (permission === 'denied') return '알림이 차단되어 있습니다. 브라우저 또는 기기 설정에서 이 사이트의 알림을 허용해 주세요.';
   return '체크 후 버튼을 누르면 브라우저가 별도로 알림 권한을 요청합니다.';

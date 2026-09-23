@@ -170,6 +170,7 @@ export function createPushLabServer({
       }
       if (url.pathname === '/push-lab/api/config' && method === 'GET') {
         return send(res, 200, {
+          senderMode: process.env.PUSH_LAB_SENDER_MODE === 'real' ? 'real' : 'mock',
           firebase: {
             apiKey: process.env.FIREBASE_API_KEY || '',
             authDomain: process.env.FIREBASE_AUTH_DOMAIN || '',
