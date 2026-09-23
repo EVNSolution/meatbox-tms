@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { authActions, authState, canSend, deliveryValidity, errorText, inviteAccess, nextStage, statusText, STAGES } from './model.mjs';
+import { readFileSync } from 'node:fs';
+import { authActions, authState, canSend, chooseSubscriptionId, deliveryValidity, errorText, inviteAccess, nextStage, statusText, STAGES } from './model.mjs';
 import { ApiFailure, createControlApi, createRetryableAction, createTransientInviteLink } from './app.mjs';
+
+test('화면 코드가 참조하는 요소 ID는 실제 HTML에 존재한다', () => {
+  const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('./app.mjs', import.meta.url), 'utf8');
+  const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
+  for (const [, id] of app.matchAll(/\bel\('([^']+)'\)/g)) {
+    assert.ok(ids.has(id), `missing HTML id: ${id}`);
+  }
+});
 
 test('초대 링크를 공개 HTTPS 형식과 기기·내부망 주소로 구분한다', () => {
   assert.equal(inviteAccess('https://demo.meatbox.co.kr/push-lab/#invite=secret'), 'public-https');
@@ -34,6 +44,19 @@ test('초대 링크는 발급과 재발급 원문만 복사하고 지우면 재�
   assert.equal(await link.copy(), false);
 });
 
+test('링크는 발급 직후 현재 상태에만 있고 오류나 상세 전환 시 지울 수 있다', async () => {
+  const copied = [];
+  const link = createTransientInviteLink(async value => copied.push(value));
+  const url = 'https://demo.meatbox.co.kr/push-lab/#invite=one-time-secret';
+  link.issue({ url });
+  assert.equal(link.get(), url);
+  assert.deepEqual(copied, []);
+  link.clear();
+  assert.equal(link.get(), '');
+  assert.equal(await link.copy(), false);
+  assert.deepEqual(copied, []);
+});
+
 test('7단계는 바로 다음 단계만 노출하고 완료 시 발송을 막는다', () => {
   for (let index = 0; index < STAGES.length - 1; index++) assert.equal(nextStage(STAGES[index]), STAGES[index + 1]);
   assert.equal(nextStage('배송 완료'), null);
@@ -49,12 +72,23 @@ test('7단계는 바로 다음 단계만 노출하고 완료 시 발송을 막�
   assert.equal(deliveryValidity(delivery, 2_000), '만료');
 });
 
-test('접수/대기 상태는 기기 수신이나 표시로 표현하지 않는다', () => {
-  for (const status of ['queued', 'retrying', 'accepted', 'unknown']) {
-    assert.match(statusText(status, 'mock'), /기기 미확인/);
-  }
-  assert.equal(statusText('accepted', 'mock'), '서버 처리 완료 · 기기 미확인');
-  assert.equal(statusText('accepted', 'real'), '서버 처리 완료 · 기기 미확인');
+test('보낼 수 있는 기기 하나만 자동 선택하고 여러 기기는 명시적으로 고르게 한다', () => {
+  const delivery = { stage:'배송대기', expiresAt:2_000 };
+  const active = (id) => ({ id, status:'active', providerActive:true, expiresAt:1_500 });
+  assert.equal(chooseSubscriptionId(delivery, [], '', 1_000), '');
+  assert.equal(chooseSubscriptionId(delivery, [active('one')], '', 1_000), 'one');
+  assert.equal(chooseSubscriptionId(delivery, [active('one'), active('two')], '', 1_000), '');
+  assert.equal(chooseSubscriptionId(delivery, [active('one'), active('two')], 'two', 1_000), 'two');
+  assert.equal(chooseSubscriptionId(delivery, [active('one'), { ...active('two'), providerActive:false }], 'two', 1_000), 'one');
+  assert.equal(chooseSubscriptionId({ ...delivery, stage:'배송 완료' }, [active('one')], '', 1_000), '');
+});
+
+test('접수/대기 상태는 짧게 표시하되 기기 수신이나 표시로 표현하지 않는다', () => {
+  assert.equal(statusText('queued'), '발송 대기');
+  assert.equal(statusText('retrying'), '재시도 중');
+  assert.equal(statusText('accepted'), '서버 처리 완료');
+  assert.equal(statusText('unknown'), '결과 불명');
+  assert.doesNotMatch(statusText('accepted'), /수신|표시|전달/);
   assert.match(errorText('invalid_credentials', 401), /비밀번호/);
 });
 
@@ -105,4 +139,18 @@ test('네트워크 오류 후 같은 eventId를 재사용하고 서버 오류 �
   assert.equal(seen[0].eventId, seen[1].eventId);
   await action.run('stage:1', { stage:'배송접수', expectedRevision:1 }, async (body) => { seen.push(body); return { ok:true }; });
   assert.notEqual(seen[1].eventId, seen[2].eventId);
+});
+
+test('단일 대상 발송 동작은 subscriptionId와 expectedRevision을 유지하고 자동 발송하지 않는다', async () => {
+  const action = createRetryableAction();
+  const sent = [];
+  await action.run('delivery:4:sub-one', { subscriptionId:'sub-one', expectedRevision:4 }, async body => {
+    sent.push(body);
+    return { status:'queued' };
+  });
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].subscriptionId, 'sub-one');
+  assert.equal(sent[0].expectedRevision, 4);
+  assert.equal(typeof sent[0].eventId, 'string');
+  assert.equal('fid' in sent[0], false);
 });

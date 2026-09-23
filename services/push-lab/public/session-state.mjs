@@ -31,6 +31,6 @@ export function clearSessionData(state) {
   return Object.assign(state, {
     csrfToken:'', deliveryIds:[], deliveryId:'', delivery:null, subscription:null,
     providerReady:false, notificationPhase:'', fidVersion:null, latestFidSync:null, fidSyncError:null,
-    pollingTimer:null, countdown:null,
+    pollingTimer:null,
   });
 }

@@ -28,7 +28,8 @@ h3 { margin:0; font-size:14px; }
 .eyebrow { margin-bottom:2px; color:var(--red); font-size:11px; font-weight:800; letter-spacing:.04em; }
 .muted,small { color:var(--muted); font-size:12px; }
 .title-row,.section-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-.title-row { margin-bottom:16px; }
+.title-row { margin-bottom:12px; }
+.title-row p { margin-bottom:0; }
 .login-panel { width:min(100%,470px); margin:9vh auto; padding:26px; border:1px solid var(--line); border-radius:10px; background:#fff; }
 .login-panel p:not(.eyebrow) { color:var(--muted); font-size:13px; }
 .login-panel form { margin-top:20px; }
@@ -41,6 +42,10 @@ h3 { margin:0; font-size:14px; }
 .create-form { display:flex; flex-wrap:wrap; align-items:end; gap:9px; margin:9px 0; padding:14px; border:1px solid var(--line); border-radius:8px; background:#fff; }
 .create-form > div { min-width:160px; flex:1; }
 .create-form input { width:100%; }
+.create-options { flex-basis:100%; font-size:12px; }
+.create-options summary,.disclosure summary { cursor:pointer; font-weight:700; }
+.option-fields { display:flex; flex-wrap:wrap; gap:9px; padding-top:10px; }
+.option-fields > div { min-width:160px; flex:1; }
 .message { min-height:20px; margin:5px 0 12px; color:#5b6470; font-size:12px; }
 .message.error { color:#b00020; font-weight:700; }
 .table-section,.detail-section { padding:0 0 10px; border:1px solid var(--line); border-radius:var(--meatbox-radius-card); background:#fff; overflow:hidden; }
@@ -62,7 +67,7 @@ td button.row-button { display:block; width:100%; min-height:auto; padding:0; bo
 #load-more { margin:0 14px 8px; }
 .detail-section { margin-top:14px; padding-bottom:14px; }
 .detail-section #detail-state { padding:0 14px; }
-.facts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:0; padding:12px 14px; border-bottom:1px solid var(--line); }
+.facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0; padding:12px 14px; border-bottom:1px solid var(--line); }
 .facts div { min-width:0; }.facts dt { color:var(--muted); font-size:11px; }.facts dd { margin:3px 0 0; font-size:12px; font-weight:700; overflow-wrap:anywhere; }
 .action-strip { display:flex; align-items:center; justify-content:space-between; gap:15px; min-height:66px; padding:10px 14px; border-bottom:1px solid var(--line); }
 .action-strip strong,.action-strip small { display:block; }.action-strip strong { font-size:13px; }.action-strip small { margin-top:3px; }
@@ -70,8 +75,31 @@ td button.row-button { display:block; width:100%; min-height:auto; padding:0; bo
 .invite-box .form-row { max-width:900px; }
 .invite-access { margin:0 0 7px; color:#6e5700; font-size:12px; }
 .subsection { padding:15px 14px 8px; }
+.subsection h3 { margin:0; }
 .send-row { display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line); font-size:12px; color:var(--muted); }
+.disclosure { border-bottom:1px solid var(--line); }
+.disclosure > summary { padding:12px 14px; }
+.disclosure-content { padding:0 14px 12px; }
+.disclosure-content > button { margin-bottom:8px; }
+.technical-facts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:0; padding:0 14px 14px; }
+.technical-facts div { min-width:0; }
+.technical-facts dt { color:var(--muted); font-size:11px; }
+.technical-facts dd { margin:3px 0 0; overflow-wrap:anywhere; font-size:12px; }
+td details { margin-top:2px; font-size:11px; }
+td details code { display:block; padding:3px 0; overflow-wrap:anywhere; }
 input[type=radio] { width:16px; height:16px; accent-color:var(--red); }
 .noscript { position:fixed; inset:0; z-index:20; margin:0; padding:40px 20px; background:#fff; }
-@media (max-width:800px) { .facts { grid-template-columns:repeat(2,minmax(0,1fr)); } table { min-width:750px; } .toolbar { flex-wrap:wrap; }.toolbar input { min-width:180px; } }
-@media (max-width:530px) { main { padding-top:16px; }.topbar { align-items:start; }.brand { flex-direction:column; align-items:start; gap:2px; }.brand img { width:105px; height:25px; }.brand span { font-size:12px; }.header-right { align-items:end; flex-direction:column; gap:5px; }.button-link,button:not(.row-button) { min-height:44px; }input { height:44px; }.toolbar label { width:100%; margin:0; }.toolbar input { width:100%; max-width:none; }.create-form > div { min-width:100%; }.action-strip,.send-row { align-items:start; flex-direction:column; }.invite-box .form-row { flex-wrap:wrap; }.invite-box input { min-width:100%; } }
+@media (max-width:800px) { .toolbar { flex-wrap:wrap; }.toolbar input { min-width:180px; } .technical-facts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:640px) {
+  .delivery-table thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+  .delivery-table tbody { display:block; }
+  .delivery-table tr { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); padding:8px 4px; border-top:1px solid #edf0f2; }
+  .delivery-table td { height:auto; padding:3px 8px; border:0; }
+  .delivery-table td:first-child { grid-column:1 / -1; }
+  .delivery-table td:nth-child(2)::before { content:'단계'; }
+  .delivery-table td:nth-child(3)::before { content:'등록 기기'; }
+  .delivery-table td:nth-child(4)::before { content:'최근 결과'; }
+  .delivery-table td:nth-child(5)::before { content:'만료'; }
+  .delivery-table td:not(:first-child)::before { display:block; color:var(--muted); font-size:10px; }
+}
+@media (max-width:530px) { main { padding-top:16px; }.topbar { align-items:start; flex-wrap:wrap; }.brand { gap:5px; }.brand img { width:105px; height:25px; }.brand span { font-size:12px; }.header-right { width:100%; justify-content:space-between; gap:5px; }.mode { white-space:normal; }.button-link,button:not(.row-button) { min-height:44px; } input { height:44px; max-width:100%; }.toolbar label { width:100%; margin:0; }.toolbar input { width:100%; max-width:none; }.create-form > div { min-width:100%; }.option-fields > div { min-width:100%; }.action-strip,.send-row { align-items:start; flex-direction:column; }.invite-box .form-row { flex-wrap:wrap; }.invite-box input { min-width:100%; }.technical-facts { grid-template-columns:1fr; } }

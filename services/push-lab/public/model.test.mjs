@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserGuidance, firebaseConfigured, inviteFromFragment, inviteFromInput, notificationIsActive, notificationUiState, shouldDeferInvite, shouldRefreshProvider, stageIndex, subscriptionHasConsent, toTimestamp, viewForDelivery } from './model.mjs';
+import { browserGuidance, firebaseConfigured, inviteFromFragment, inviteFromUrl, notificationIsActive, notificationUiState, shouldRefreshProvider, stageIndex, subscriptionHasConsent, toTimestamp, viewForDelivery } from './model.mjs';
 
 test('Firebase 공개 설정이 비면 신청 불가로 분류한다', () => {
   assert.equal(firebaseConfigured(null), false);
@@ -56,7 +56,7 @@ test('알림 배지의 8개 상태를 명시적으로 구분한다', () => {
   assert.equal(label({ capability:granted, subscription:null }), '신청 전');
   assert.equal(label({ capability:{ supported:true, permission:'denied' }, subscription:null }), '권한 거부');
   assert.equal(label({ capability:granted, subscription:null, phase:'registering' }), '등록 중');
-  assert.equal(label({ capability:granted, subscription:{ active:true }, providerReady:true }), '알림 받는 중');
+  assert.equal(label({ capability:granted, subscription:{ active:true }, providerReady:true }), '알림 등록 완료');
   assert.equal(label({ capability:granted, subscription:null, phase:'failed' }), '등록 실패');
   assert.equal(label({ capability:granted, subscription:{ status:'revoked' } }), '해제');
   assert.equal(label({ capability:granted, subscription:{ status:'expired' } }), '만료');
@@ -73,28 +73,21 @@ test('초대 fragment와 플랫폼별 안내를 정규화한다', () => {
   assert.equal(inviteFromFragment('#secret'), 'secret');
   assert.equal(inviteFromFragment('#%zz'), '');
   assert.equal(inviteFromFragment('#invite=secret&code=other'), '');
-  assert.match(browserGuidance({ webview:true }), /WebView/);
-  assert.match(browserGuidance({ ios:true, standalone:false }), /홈 화면에 추가/);
-  assert.match(browserGuidance({ supported:false }), /지원하지/);
+  assert.match(browserGuidance({ supported:false }), /사용할 수 없습니다/);
+  assert.match(browserGuidance({ supported:true, permission:'denied' }), /차단/);
+  assert.equal(browserGuidance({ supported:true, permission:'default' }), '');
 });
 
-test('설치된 웹 앱은 현재 출처의 TEST 링크 또는 코드만 받아들인다', () => {
+test('보안 링크는 현재 출처의 TEST 경로와 fragment만 받아들인다', () => {
   const origin = 'https://demo.meatbox.co.kr';
-  assert.equal(inviteFromInput('invite-1', origin), 'invite-1');
-  assert.equal(inviteFromInput(`${origin}/push-lab/#invite=secret`, origin), 'secret');
+  assert.equal(inviteFromUrl(`${origin}/push-lab/#invite=secret`, origin), 'secret');
   for (const value of [
+    'invite-1',
     'https://other.example/push-lab/#invite=secret',
     `${origin}/push-lab/?invite=secret#invite=secret`,
     `${origin}/push-lab/control/#invite=secret`,
     `${origin}/push-lab/#invite=secret&code=other`,
     'javascript:alert(1)',
     'https://demo.meatbox.co.kr@other.example/push-lab/#invite=secret',
-  ]) assert.equal(inviteFromInput(value, origin), '');
-});
-
-test('새 iPhone 링크는 브라우저 종류와 관계없이 설치 안내까지 보류한다', () => {
-  assert.equal(shouldDeferInvite({ ios:true, standalone:false, webview:false }), true);
-  assert.equal(shouldDeferInvite({ ios:true, standalone:false, webview:true }), true);
-  assert.equal(shouldDeferInvite({ ios:true, standalone:true, webview:false }), false);
-  assert.equal(shouldDeferInvite({ ios:false, standalone:false, webview:false }), false);
+  ]) assert.equal(inviteFromUrl(value, origin), '');
 });

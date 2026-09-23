@@ -2,6 +2,8 @@
 
 이 문서는 `push-lab`의 로컬 mock 검증과 HTTPS·실기기 시험 준비를 분리한다. 이 저장소의 결과만으로 공개 배포, FCM 접수 또는 기기 표시를 완료했다고 기록하지 않는다.
 
+2026-09-23 고객·관제 두 화면 단순화 후보는 로컬에서 루트 `npm test` 528/528, `services/push-lab` `npm test` 98/98, 변경 JS `node --check`, `git diff --check`를 통과했고 두 패키지의 `npm audit --omit=dev --audit-level=high`는 각각 취약점 0건이었다. 서버·워커·배포 설정과 package/lockfile은 이 후보에서 변경되지 않았다. 이는 소스 검증 기록이며 공개 배포나 실기기 결과가 아니다.
+
 ## 로컬 mock 실행
 
 Node 26.3.1 이미지가 포함한 SQLite가 3.51.3 이상인지 이미지 빌드와 컨테이너 시작 때 각각 검사한다. 조건을 만족하지 않으면 실행하지 않는다. SQLite 파일과 백업은 서로 다른 Docker volume에 남고, 컨테이너 root filesystem은 read-only다.

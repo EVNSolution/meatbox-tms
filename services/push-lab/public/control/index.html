@@ -8,8 +8,8 @@
   <title>TEST 배송 관제 · meatbox</title>
   <link rel="icon" href="/push-lab/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/push-lab/brand.css">
-  <link rel="stylesheet" href="/push-lab/control/styles.css?v=20260923-1">
-  <script type="module" src="/push-lab/control/app.mjs?v=20260923-1"></script>
+  <link rel="stylesheet" href="/push-lab/control/styles.css?v=20260923-3">
+  <script type="module" src="/push-lab/control/app.mjs?v=20260923-3"></script>
 </head>
 <body>
   <header class="topbar">
@@ -18,7 +18,6 @@
   </header>
   <main>
     <section id="login-view" class="login-panel" aria-labelledby="login-title">
-      <p class="eyebrow">독립 TEST 환경</p>
       <h1 id="login-title">세션 확인 중</h1>
       <p id="login-description">TEST 배송 링크와 개별 웹 알림을 관리합니다.</p>
       <form id="login-form" hidden>
@@ -31,28 +30,27 @@
 
     <div id="console-view" hidden>
       <div class="title-row">
-        <div><p class="eyebrow">TEST 전용 · 실제 배송 아님</p><h1>배송 관제</h1></div>
+        <div><h1>배송 관제</h1><p class="muted">테스트 배송만 표시합니다. 서버 처리 완료는 기기 표시 확인이 아닙니다.</p></div>
         <span id="session-expiry" class="muted"></span>
       </div>
       <div class="toolbar">
         <label for="filter">배송 찾기</label>
         <input id="filter" type="search" placeholder="TEST 사용자 또는 배송 ID" autocomplete="off">
         <button id="refresh" type="button">새로고침</button>
-        <button id="show-create" type="button" class="primary" aria-expanded="false" aria-controls="create-wrap">TEST 배송 생성</button>
+        <button id="show-create" type="button" class="primary" aria-expanded="false" aria-controls="create-wrap">배송 생성</button>
       </div>
       <form id="create-wrap" class="create-form" hidden>
-        <div><label for="user-id">TEST 사용자 별칭</label><input id="user-id" name="userId" required maxlength="64" pattern="[Tt][Ee][Ss][Tt][A-Za-z0-9_\-]{1,59}" title="test-로 시작하는 영문·숫자·-·_ 별칭" autocomplete="off" placeholder="예: test-customer-01"></div>
-        <div><label for="baseline-at">기준 시각</label><input id="baseline-at" name="baselineAt" type="datetime-local"></div>
-        <div><label for="eta-at">예상 시각</label><input id="eta-at" name="etaAt" type="datetime-local"></div>
-        <div><label for="expires-at">배송 만료 시각</label><input id="expires-at" name="expiresAt" type="datetime-local" required></div>
-        <button class="primary" type="submit">생성하고 링크 받기</button>
+        <div><label for="user-id">별칭</label><input id="user-id" name="userId" required maxlength="64" pattern="[Tt][Ee][Ss][Tt][A-Za-z0-9_\-]{1,59}" title="test-로 시작하는 영문·숫자·-·_ 별칭" autocomplete="off" placeholder="예: test-customer-01"></div>
+        <div><label for="expires-at">만료 시각</label><input id="expires-at" name="expiresAt" type="datetime-local" required></div>
+        <details class="create-options"><summary>시간 옵션</summary><div class="option-fields"><div><label for="baseline-at">기준 시각</label><input id="baseline-at" name="baselineAt" type="datetime-local"></div><div><label for="eta-at">예상 시각</label><input id="eta-at" name="etaAt" type="datetime-local"></div></div></details>
+        <button class="primary" type="submit">생성하고 배송조회 링크 받기</button>
       </form>
       <p id="notice" class="message" role="status" aria-live="polite"></p>
 
       <section class="table-section" aria-labelledby="table-title">
-        <div class="section-head"><h2 id="table-title">TEST 배송</h2><span id="count" class="muted"></span></div>
-        <div class="table-scroll"><table>
-          <thead><tr><th scope="col">배송 / 사용자</th><th scope="col">단계</th><th scope="col">유효성</th><th scope="col">활성 구독</th><th scope="col">최근 발송</th><th scope="col">예정 / 만료</th></tr></thead>
+        <div class="section-head"><h2 id="table-title">배송 목록</h2><span id="count" class="muted"></span></div>
+        <div class="table-scroll"><table class="delivery-table">
+          <thead><tr><th scope="col">별칭</th><th scope="col">단계</th><th scope="col">등록 기기</th><th scope="col">최근 결과</th><th scope="col">만료</th></tr></thead>
           <tbody id="delivery-rows"></tbody>
         </table></div>
         <p id="table-state" class="empty" role="status"></p>
@@ -60,30 +58,28 @@
       </section>
 
       <section id="detail" class="detail-section" hidden aria-labelledby="detail-title">
-        <div class="section-head"><div><p class="eyebrow">선택한 TEST 배송</p><h2 id="detail-title"></h2></div><button id="close-detail" type="button">닫기</button></div>
+        <div class="section-head"><h2 id="detail-title"></h2><button id="close-detail" type="button">닫기</button></div>
         <p id="detail-state" class="message" role="status" aria-live="polite"></p>
         <div id="detail-content" hidden>
-          <dl class="facts"><div><dt>현재 단계</dt><dd id="detail-stage"></dd></div><div><dt>기준 / ETA</dt><dd id="detail-time"></dd></div><div><dt>만료</dt><dd id="detail-expiry"></dd></div><div><dt>revision</dt><dd id="detail-revision"></dd></div></dl>
+          <dl class="facts"><div><dt>현재 단계</dt><dd id="detail-stage"></dd></div><div><dt>만료</dt><dd id="detail-expiry"></dd></div></dl>
           <div class="action-strip">
-            <div><strong>고객 보안 링크</strong><small>발급 직후에만 복사할 수 있습니다. 다시 조회해도 링크 원문은 표시되지 않습니다.</small></div>
-            <button id="renew-invite" type="button">새 링크 발급</button>
+            <div><strong>배송조회 링크</strong><small>발급한 링크는 지금만 볼 수 있습니다.</small></div>
+            <button id="renew-invite" type="button">배송조회 링크 발급</button>
           </div>
-          <div id="invite-box" class="invite-box" hidden>
-            <label for="invite-url">이번에 발급한 링크 · 만료 <span id="invite-expiry"></span></label>
+          <div id="invite-box" class="invite-box" tabindex="-1" hidden>
+            <label for="invite-url">배송조회 링크 · <span id="invite-expiry"></span> 만료</label>
             <p id="invite-access" class="invite-access" role="status"></p>
-            <div class="form-row"><input id="invite-url" type="text" readonly autocomplete="off" aria-label="이번에 발급된 고객 보안 링크"><button id="copy-invite" type="button">링크 복사</button><button id="share-invite" type="button" hidden>공유</button><button id="clear-invite" type="button">지우기</button></div>
+            <div class="form-row"><input id="invite-url" type="text" readonly autocomplete="off" aria-label="이번에 발급된 배송조회 링크"><button id="copy-invite" type="button" class="primary">링크 복사</button></div>
           </div>
           <div class="action-strip">
-            <div><strong>단계 변경</strong><small>다음 한 단계로만 변경합니다. 단계 변경은 알림을 자동 발송하지 않습니다.</small></div>
+            <div><strong>다음 단계로 변경</strong><small>단계 변경은 알림을 보내지 않습니다.</small></div>
             <button id="advance-stage" type="button"></button>
           </div>
-          <div class="section-head subsection"><h3>활성 구독 선택</h3><span id="send-hint" class="muted">한 건을 선택해야 TEST 알림을 보낼 수 있습니다.</span></div>
-          <div class="table-scroll"><table><thead><tr><th scope="col">선택</th><th scope="col">구독 ID</th><th scope="col">상태</th><th scope="col">제공자</th><th scope="col">구독 / 만료</th></tr></thead><tbody id="subscription-rows"></tbody></table></div>
-          <p id="subscription-empty" class="empty" hidden>등록된 구독이 없습니다. 고객이 링크에서 직접 동의하고 브라우저 권한을 허용해야 합니다.</p>
-          <div class="send-row"><button id="send-test" class="primary" type="button" disabled>선택 구독 한 건에 TEST 알림</button><span>enqueue는 전송 대기입니다. accepted는 서버 접수이며 기기 표시 증거가 아닙니다.</span></div>
-          <div class="section-head subsection"><h3>최근 발송 이력</h3><button id="refresh-detail" type="button">결과 새로고침</button></div>
-          <div class="table-scroll"><table><thead><tr><th scope="col">상태</th><th scope="col">유형</th><th scope="col">시도</th><th scope="col">갱신</th><th scope="col">오류 분류</th></tr></thead><tbody id="outbox-rows"></tbody></table></div>
-          <p id="outbox-empty" class="empty" hidden>발송 이력이 없습니다.</p>
+          <div class="section-head subsection"><h3>받을 기기</h3><span id="send-hint" class="muted"></span></div>
+          <div class="table-scroll"><table><thead><tr><th scope="col">선택</th><th scope="col">기기</th><th scope="col">상태</th><th scope="col">만료</th></tr></thead><tbody id="subscription-rows"></tbody></table></div>
+          <div class="send-row"><button id="send-test" class="primary" type="button" disabled>알림 보내기</button></div>
+          <details class="disclosure"><summary>발송 이력</summary><div class="disclosure-content"><button id="refresh-detail" type="button">결과 새로고침</button><div class="table-scroll"><table><thead><tr><th scope="col">결과</th><th scope="col">유형</th><th scope="col">시도</th><th scope="col">갱신</th><th scope="col">오류</th></tr></thead><tbody id="outbox-rows"></tbody></table></div><p id="outbox-empty" class="empty" hidden>발송 이력이 없습니다.</p></div></details>
+          <details class="disclosure"><summary>기술 정보</summary><dl class="technical-facts"><div><dt>배송 ID</dt><dd id="detail-id"></dd></div><div><dt>revision</dt><dd id="detail-revision"></dd></div><div><dt>기준 시각</dt><dd id="detail-baseline"></dd></div><div><dt>ETA</dt><dd id="detail-eta"></dd></div></dl></details>
         </div>
       </section>
     </div>

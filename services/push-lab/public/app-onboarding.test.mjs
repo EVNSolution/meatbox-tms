@@ -1,17 +1,23 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 
 const origin = 'https://demo.meatbox.co.kr';
 const secureLink = `${origin}/push-lab/#invite=invite-1`;
+const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
 
-function browser(startUrl, { standalone = false, session = false, configured = false, client = 'safari' } = {}) {
+function browser(startUrl, { standalone = false, fullscreen = false, session = false, configured = false, configFails = false, configHangs = false, client = 'safari', exchangeError = '', deliveryExpired = false, deliverable = true, permission = 'default' } = {}) {
   const elements = new Map();
   const requests = [];
-  const copies = [];
+  const intervals = new Map();
   let current = new URL(startUrl);
+  let permissionRequests = 0;
+  let registrations = 0;
   const element = id => {
+    if (!htmlIds.has(id)) throw new Error(`missing HTML element: ${id}`);
     if (!elements.has(id)) elements.set(id, {
-      hidden:['invite-form', 'install-gate', 'delivery-view', 'install-message'].includes(id), disabled:false, checked:false, value:'', textContent:'', innerHTML:'', style:{}, dataset:{},
+      hidden:['delivery-view', 'eta-card'].includes(id), disabled:false, checked:false, value:'', textContent:'', innerHTML:'', style:{}, dataset:{},
       listeners:{}, addEventListener(type, listener) { this.listeners[type] = listener; }, replaceChildren() {},
     });
     return elements.get(id);
@@ -23,161 +29,155 @@ function browser(startUrl, { standalone = false, session = false, configured = f
     get search() { return current.search; }, get origin() { return current.origin; },
   };
   globalThis.history = { replaceState(_state, _title, path) { current = new URL(path, current); } };
-  globalThis.matchMedia = () => ({ matches:standalone });
+  globalThis.matchMedia = query => ({ matches:query.includes('fullscreen') ? fullscreen : standalone });
   globalThis.isSecureContext = true;
-  globalThis.Notification = { permission:'default', requestPermission:async () => { throw new Error('unexpected permission prompt'); } };
+  globalThis.Notification = { permission, requestPermission:() => { permissionRequests += 1; return Promise.resolve('denied'); } };
   globalThis.PushManager = class {};
   Object.defineProperty(globalThis, 'navigator', { configurable:true, value:{
     userAgent:`Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 ${client === 'chrome' ? 'CriOS/120.0 Safari/604.1' : client === 'webview' ? 'Instagram/300.0' : 'Version/17.0 Safari/604.1'}`,
-    platform:'iPhone', maxTouchPoints:5, serviceWorker:{},
-    clipboard:{ writeText:async value => { copies.push(value); } },
+    platform:'iPhone', maxTouchPoints:5,
+    serviceWorker:{ register:async () => { registrations += 1; throw new Error('unexpected registration'); } },
   } });
   const storage = new Map();
   globalThis.sessionStorage = {
     getItem:key => storage.get(key) || null, setItem:(key, value) => storage.set(key, value), removeItem:key => storage.delete(key),
   };
-  globalThis.setInterval = () => 1;
-  globalThis.clearInterval = () => {};
-  globalThis.fetch = async path => {
-    requests.push(path);
+  globalThis.setInterval = callback => { const id = intervals.size + 1; intervals.set(id, callback); return id; };
+  globalThis.clearInterval = id => intervals.delete(id);
+  globalThis.fetch = async (path, options = {}) => {
+    requests.push({ path, method:options.method || 'GET' });
     if (path.endsWith('/session') && !session) return { ok:false, status:401, json:async () => ({ error:'session_required' }) };
+    if (path.endsWith('/session/exchange') && exchangeError) return { ok:false, status:410, json:async () => ({ error:exchangeError }) };
     if (path.endsWith('/session') || path.endsWith('/session/exchange')) return { ok:true, json:async () => ({ csrfToken:'csrf', deliveryIds:['delivery-1'], sessionExpiresAt:Date.now() + 60_000 }) };
+    if (path.endsWith('/config') && configHangs) return new Promise(() => {});
+    if (path.endsWith('/config') && configFails) return { ok:false, status:503, json:async () => ({ error:'config_unavailable' }) };
     if (path.endsWith('/config')) return { ok:true, json:async () => ({
       firebase:configured ? { apiKey:'key', projectId:'project', appId:'app', messagingSenderId:'sender', vapidKey:'vapid' } : null,
       senderMode:'mock',
     }) };
-    if (path.endsWith('/deliveries/delivery-1')) return { ok:true, json:async () => ({ delivery:{ id:'delivery-1', stage:'배송대기', deliverable:true }, subscription:null }) };
+    if (path.endsWith('/deliveries/delivery-1') && deliveryExpired) return { ok:false, status:410, json:async () => ({ error:'delivery_expired' }) };
+    if (path.endsWith('/deliveries/delivery-1')) return { ok:true, json:async () => ({ delivery:{ id:'delivery-1', stage:'배송대기', deliverable }, subscription:null }) };
     throw new Error(`unexpected request: ${path}`);
   };
-  return { element, requests, copies, url:() => current.href };
+  return {
+    element, requests, url:() => current.href, permissionRequests:() => permissionRequests, registrations:() => registrations,
+    tick:() => { for (const callback of [...intervals.values()]) callback(); },
+    count:suffix => requests.filter(request => request.path.endsWith(suffix)).length,
+  };
 }
 
 const settle = async () => { for (let i = 0; i < 6; i++) await new Promise(resolve => setImmediate(resolve)); };
 
-test('iPhone Safari 초대는 복사나 명시적 계속 전까지 소비하지 않는다', async () => {
+test('iPhone Safari 보안 링크는 설치 단계 없이 즉시 조회하고 fragment를 지운다', async () => {
   const ui = browser(secureLink);
-  await import('./app.mjs?onboarding=safari');
-  assert.equal(ui.url(), `${origin}/push-lab/`);
-  assert.equal(ui.element('install-gate').hidden, false);
-  assert.equal(ui.element('invite-form').hidden, true);
-  assert.deepEqual(ui.requests, []);
-  assert.deepEqual(ui.copies, []);
-  await ui.element('copy-invite').listeners.click();
-  assert.deepEqual(ui.copies, [secureLink]);
-  assert.deepEqual(ui.requests, []);
-  ui.element('continue-browser').listeners.click();
+  await import('./app.mjs?simple=safari');
   await settle();
-  assert.equal(ui.requests.filter(path => path.endsWith('/session/exchange')).length, 1);
+  assert.equal(ui.url(), `${origin}/push-lab/?delivery=delivery-1`);
+  assert.equal(ui.count('/session/exchange'), 1);
   assert.equal(ui.element('delivery-view').hidden, false);
-  assert.match(ui.element('install-message').textContent, /홈 화면에 추가/);
-  assert.match(ui.element('provider-message').textContent, /설정이 없어/);
-  assert.equal(ui.element('consent').disabled, false);
-  ui.element('consent').checked = true;
-  ui.element('consent').listeners.change();
-  assert.equal(ui.element('subscribe').disabled, true);
-  assert.equal(ui.element('self-test').disabled, true);
+  assert.equal(ui.element('consent-row').hidden, true);
+  assert.equal(ui.element('subscribe').hidden, true);
+  assert.equal(ui.element('unsubscribe').hidden, true);
+  assert.equal(ui.permissionRequests(), 0);
+  assert.equal(ui.registrations(), 0);
 });
 
-test('URLSearchParams.size가 없는 iOS에서도 발급 링크를 설치 안내로 보낸다', async () => {
-  const NativeParams = globalThis.URLSearchParams;
-  globalThis.URLSearchParams = class extends NativeParams { get size() { return undefined; } };
-  try {
-    const ui = browser(secureLink);
-    await import('./app.mjs?onboarding=no-param-size');
-    assert.equal(ui.element('install-gate').hidden, false);
-    assert.equal(ui.requests.filter(path => path.endsWith('/session/exchange')).length, 0);
-  } finally {
-    globalThis.URLSearchParams = NativeParams;
-  }
-});
-
-test('설치된 앱은 같은 출처의 전체 링크를 한 번 교환하고 입력을 비운다', async () => {
-  const ui = browser(`${origin}/push-lab/`, { standalone:true });
-  await import('./app.mjs?onboarding=installed');
-  await settle();
-  assert.equal(ui.element('invite-form').hidden, false);
-  ui.element('invite-code').value = secureLink;
-  ui.element('invite-form').listeners.submit({ preventDefault() {} });
-  await settle();
-  assert.equal(ui.element('invite-code').value, '');
-  assert.equal(ui.requests.filter(path => path.endsWith('/session/exchange')).length, 1);
-  assert.equal(ui.element('delivery-view').hidden, false);
-});
-
-test('Safari에 직접 붙여 넣은 링크는 설치 안내를 거친다', async () => {
-  const ui = browser(`${origin}/push-lab/`);
-  await import('./app.mjs?onboarding=manual');
-  await settle();
-  ui.element('invite-code').value = secureLink;
-  ui.element('invite-form').listeners.submit({ preventDefault() {} });
-  assert.equal(ui.element('invite-code').value, '');
-  assert.equal(ui.element('install-gate').hidden, false);
-  assert.equal(ui.requests.filter(path => path.endsWith('/session/exchange')).length, 0);
-  await ui.element('copy-invite').listeners.click();
-  assert.deepEqual(ui.copies, [secureLink]);
-});
-
-test('Safari에 직접 붙여 넣은 코드도 설치 안내에서 명시적으로 복사한다', async () => {
-  const ui = browser(`${origin}/push-lab/`);
-  await import('./app.mjs?onboarding=manual-code');
-  await settle();
-  ui.element('invite-code').value = 'invite-1';
-  ui.element('invite-form').listeners.submit({ preventDefault() {} });
-  assert.equal(ui.element('install-gate').hidden, false);
-  assert.equal(ui.requests.filter(path => path.endsWith('/session/exchange')).length, 0);
-  assert.deepEqual(ui.copies, []);
-  await ui.element('copy-invite').listeners.click();
-  assert.deepEqual(ui.copies, ['invite-1']);
-});
-
-test('iPhone Chrome와 앱 내 브라우저도 새 링크를 자동 소비하지 않는다', async () => {
+test('Chrome iOS와 앱 내 브라우저에서도 보안 링크는 즉시 교환한다', async () => {
   for (const client of ['chrome', 'webview']) {
     const ui = browser(secureLink, { client });
-    await import(`./app.mjs?onboarding=${client}`);
-    assert.equal(ui.element('install-gate').hidden, false);
-    assert.equal(ui.requests.filter(path => path.endsWith('/session/exchange')).length, 0);
+    await import(`./app.mjs?simple=${client}`);
+    await settle();
+    assert.equal(ui.count('/session/exchange'), 1);
+    assert.equal(ui.element('delivery-view').hidden, false);
+    assert.equal(ui.registrations(), 0);
   }
 });
 
-test('다른 출처 링크는 설치 앱에서도 교환하지 않는다', async () => {
-  const ui = browser(`${origin}/push-lab/`, { standalone:true });
-  await import('./app.mjs?onboarding=foreign');
+test('iOS fullscreen에서는 기능이 있으면 신청을 보이고 권한은 클릭에서만 요청한다', async () => {
+  const ui = browser(`${origin}/push-lab/`, { session:true, configured:true, fullscreen:true });
+  await import('./app.mjs?simple=fullscreen');
   await settle();
-  ui.element('invite-code').value = 'https://other.example/push-lab/#invite=invite-1';
-  ui.element('invite-form').listeners.submit({ preventDefault() {} });
-  await settle();
-  assert.equal(ui.requests.filter(path => path.endsWith('/session/exchange')).length, 0);
-  assert.match(ui.element('invite-message').textContent, /올바른 TEST 초대/);
-});
-
-test('기존 Safari 세션은 배송을 계속 보여 주고 설치·설정 누락을 함께 안내한다', async () => {
-  const ui = browser(`${origin}/push-lab/`, { session:true });
-  await import('./app.mjs?onboarding=restored');
-  await settle();
-  assert.equal(ui.element('delivery-view').hidden, false);
-  assert.equal(ui.element('install-message').hidden, false);
-  assert.match(ui.element('support-message').textContent, /홈 화면에 추가/);
-  assert.match(ui.element('provider-message').textContent, /설정이 없어/);
-  assert.equal(ui.element('consent').disabled, false);
-  assert.equal(ui.element('subscribe').disabled, true);
-});
-
-test('설치 앱의 모의 발송 환경은 동의를 허용해도 실제 기기 시험을 막는다', async () => {
-  const ui = browser(`${origin}/push-lab/`, { standalone:true, session:true, configured:true });
-  await import('./app.mjs?onboarding=mock');
-  await settle();
-  assert.match(ui.element('provider-message').textContent, /모의 발송/);
-  assert.equal(ui.element('consent').disabled, false);
+  assert.equal(ui.element('consent-row').hidden, false);
+  assert.equal(ui.element('subscribe').hidden, false);
+  assert.equal(ui.permissionRequests(), 0);
   ui.element('consent').checked = true;
   ui.element('consent').listeners.change();
   assert.equal(ui.element('subscribe').disabled, false);
-  assert.equal(ui.element('self-test').disabled, true);
+  const click = ui.element('subscribe').listeners.click();
+  assert.equal(ui.permissionRequests(), 1);
+  await click;
+  assert.equal(ui.registrations(), 0);
 });
 
-test('형식이 잘못된 초대 URL은 query와 fragment를 지우고 교환하지 않는다', async () => {
-  const ui = browser(`${origin}/push-lab/?invite=secret#invite=invite-1`);
-  await import('./app.mjs?onboarding=malformed');
-  assert.equal(ui.url(), `${origin}/push-lab/`);
-  assert.equal(ui.requests.filter(path => path.endsWith('/session/exchange')).length, 0);
-  assert.match(ui.element('invite-message').textContent, /형식이 올바르지/);
+test('설정 조회 실패는 배송 조회와 polling을 막지 않는다', async () => {
+  const ui = browser(secureLink, { configFails:true, fullscreen:true });
+  await import('./app.mjs?simple=config-failure');
+  await settle();
+  assert.equal(ui.element('delivery-view').hidden, false);
+  assert.match(ui.element('provider-message').textContent, /설정/);
+  ui.tick();
+  await settle();
+  assert.equal(ui.count('/deliveries/delivery-1'), 2);
+  assert.equal(ui.element('subscribe').disabled, true);
+  const safari = browser(secureLink, { configFails:true });
+  await import('./app.mjs?simple=config-failure-safari');
+  await settle();
+  assert.equal(safari.element('delivery-view').hidden, false);
+  assert.match(safari.element('provider-message').textContent, /알림 설정/);
+});
+
+test('설정 응답이 끝나지 않아도 배송 polling은 시작한다', async () => {
+  const ui = browser(secureLink, { configHangs:true, fullscreen:true });
+  await import('./app.mjs?simple=config-pending');
+  await settle();
+  assert.equal(ui.element('delivery-view').hidden, false);
+  ui.tick();
+  await settle();
+  assert.equal(ui.count('/deliveries/delivery-1'), 2);
+  assert.equal(ui.element('subscribe').disabled, true);
+});
+
+test('권한 거부와 발송 제외 배송은 알림 신청을 노출하지 않는다', async () => {
+  for (const [name, options] of [
+    ['denied', { permission:'denied' }],
+    ['probe', { deliverable:false }],
+  ]) {
+    const ui = browser(secureLink, { fullscreen:true, configured:true, ...options });
+    await import(`./app.mjs?simple=${name}`);
+    await settle();
+    assert.equal(ui.element('delivery-view').hidden, false);
+    assert.equal(ui.element('consent-row').hidden, true);
+    assert.equal(ui.element('subscribe').hidden, true);
+    assert.equal(ui.permissionRequests(), 0);
+    assert.equal(ui.registrations(), 0);
+  }
+});
+
+test('만료된 배송은 세션을 임의로 닫지 않고 새 링크 필요를 알린다', async () => {
+  const ui = browser(secureLink, { deliveryExpired:true });
+  await import('./app.mjs?simple=delivery-expired');
+  await settle();
+  assert.equal(ui.element('delivery-view').hidden, false);
+  assert.match(ui.element('status-note').textContent, /새 보안 링크/);
+});
+
+test('링크 없음·잘못된 링크·만료된 링크는 새 보안 링크를 요청한다', async () => {
+  const cases = [
+    [`${origin}/push-lab/`, { session:false }, 'missing'],
+    [`${origin}/push-lab/?invite=secret#invite=invite-1`, {}, 'invalid'],
+    [secureLink, { exchangeError:'invalid_invite' }, 'expired'],
+  ];
+  for (const [url, options, name] of cases) {
+    const ui = browser(url, options);
+    await import(`./app.mjs?simple=${name}`);
+    await settle();
+    assert.match(ui.element('invite-message').textContent, /새 보안 링크/);
+    assert.equal(ui.element('delivery-view').hidden, true);
+  }
+});
+
+test('고객 화면에는 설치 게이트, 코드 입력, 자가 발송 버튼과 빈 상품·위치 카드가 없다', async () => {
+  for (const marker of ['install-gate', 'invite-form', 'self-test', 'map-card', 'order-card', 'customer-device']) {
+    assert.doesNotMatch(html, new RegExp(`id="${marker}"|class="${marker}"`));
+  }
 });

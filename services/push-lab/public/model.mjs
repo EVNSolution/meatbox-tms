@@ -36,9 +36,7 @@ export function inviteFromFragment(hash) {
   } catch { return ''; }
 }
 
-export function inviteFromInput(input, origin) {
-  const value = String(input || '').trim();
-  if (/^[A-Za-z0-9_-]{1,128}$/.test(value)) return value;
+export function inviteFromUrl(value, origin) {
   try {
     const url = new URL(value);
     return url.origin === origin && url.pathname === '/push-lab/' && !url.search && !url.username && !url.password
@@ -46,16 +44,10 @@ export function inviteFromInput(input, origin) {
   } catch { return ''; }
 }
 
-export function shouldDeferInvite(capability) {
-  return Boolean(capability.ios && !capability.standalone);
-}
-
-export function browserGuidance({ supported, ios, standalone, webview, permission }) {
-  if (webview) return '앱 안의 WebView에서는 Web Push를 전제하지 않습니다. 주소를 복사해 지원 브라우저에서 열어 주세요.';
-  if (ios && !standalone) return 'iPhone에서는 공유 메뉴의 “홈 화면에 추가” 후 설치된 Web App에서 열어 주세요.';
-  if (!supported) return '이 환경은 Web Push 필수 기능을 지원하지 않습니다. Android의 최신 지원 브라우저 등에서 열어 주세요.';
-  if (permission === 'denied') return '알림이 차단되어 있습니다. 브라우저 또는 기기 설정에서 이 사이트의 알림을 허용해 주세요.';
-  return '체크 후 버튼을 누르면 브라우저가 별도로 알림 권한을 요청합니다.';
+export function browserGuidance({ supported, permission }) {
+  if (!supported) return '현재 브라우저에서는 웹 알림을 사용할 수 없습니다. 배송 조회는 가능합니다.';
+  if (permission === 'denied') return '알림이 차단되어 있습니다. 브라우저 또는 기기 설정에서 허용해 주세요.';
+  return '';
 }
 
 export function firebaseConfigured(config) {
@@ -94,6 +86,6 @@ export function notificationUiState({ subscription, capability, providerReady, p
   if (!capability.supported) return { key:'unsupported', label:'미지원', active:false };
   if (capability.permission === 'denied') return { key:'denied', label:'권한 거부', active:false };
   const active = notificationIsActive(subscription?.active, capability, providerReady);
-  return active ? { key:'receiving', label:'알림 받는 중', active:true }
+  return active ? { key:'registered', label:'알림 등록 완료', active:true }
     : { key:'idle', label:'신청 전', active:false };
 }

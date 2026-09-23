@@ -30,15 +30,22 @@ export function canSend(delivery, subscription, now = Date.now()) {
     && subscription.providerActive === true && Number(subscription.expiresAt) > now);
 }
 
+export function chooseSubscriptionId(delivery, subscriptions, previousId = '', now = Date.now()) {
+  const eligible = subscriptions.filter((item) => canSend(delivery, item, now));
+  if (eligible.some((item) => item.id === previousId)) return previousId;
+  return eligible.length === 1 ? eligible[0].id : '';
+}
+
 export function statusText(status) {
   if (!status) return '발송 없음';
-  if (status === 'queued') return '대기 · 기기 미확인';
-  if (status === 'retrying') return '재시도 중 · 기기 미확인';
-  if (status === 'accepted') return '서버 처리 완료 · 기기 미확인';
-  if (status === 'unknown') return '결과 불명 · 기기 미확인';
+  if (status === 'queued') return '발송 대기';
+  if (status === 'retrying') return '재시도 중';
+  if (status === 'accepted') return '서버 처리 완료';
+  if (status === 'unknown') return '결과 불명';
   if (status === 'failed') return '실패';
   if (status === 'cancelled') return '취소';
-  return `${status} · 기기 미확인`;
+  if (status === 'expired') return '만료';
+  return '상태 미확인';
 }
 
 export function authState(error, mode) {

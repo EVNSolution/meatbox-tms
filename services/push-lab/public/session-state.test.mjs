@@ -22,14 +22,14 @@ test('a response from a closed or replaced generation cannot revive UI state', (
   gate.assert(next);
 });
 
-test('terminal session cleanup removes stale delivery, auth, timers, and FID UI state', () => {
+test('terminal session cleanup removes stale delivery, auth, polling, and FID UI state', () => {
   const state = { csrfToken:'secret', deliveryIds:['d1'], deliveryId:'d1', delivery:{ id:'d1' }, subscription:{ active:true },
-    providerReady:true, notificationPhase:'registering', fidVersion:3, latestFidSync:Promise.resolve(), fidSyncError:new Error(), pollingTimer:1, countdown:2 };
+    providerReady:true, notificationPhase:'registering', fidVersion:3, latestFidSync:Promise.resolve(), fidSyncError:new Error(), pollingTimer:1 };
   clearSessionData(state);
   assert.deepEqual({ ...state, latestFidSync:null, fidSyncError:null }, {
     csrfToken:'', deliveryIds:[], deliveryId:'', delivery:null, subscription:null,
     providerReady:false, notificationPhase:'', fidVersion:null, latestFidSync:null, fidSyncError:null,
-    pollingTimer:null, countdown:null,
+    pollingTimer:null,
   });
 });
 

@@ -1,4 +1,4 @@
-import { authActions, authState, canSend, deliveryValidity, errorText, inviteAccess, nextStage, statusText } from './model.mjs';
+import { authActions, authState, canSend, chooseSubscriptionId, deliveryValidity, errorText, inviteAccess, nextStage, statusText } from './model.mjs';
 
 const API = '/push-lab/control/api';
 const el = (id) => document.getElementById(id);
@@ -70,6 +70,7 @@ if (typeof document !== 'undefined') {
   let waitingForTmsLogin = false;
   let inviteTimer;
   let busy = false;
+  let viewGeneration = 0;
   const inviteLink = createTransientInviteLink((url) => navigator.clipboard.writeText(url));
 
   function message(id, value, isError = false) {
@@ -84,25 +85,27 @@ if (typeof document !== 'undefined') {
     el('invite-url').value = '';
     el('invite-expiry').textContent = '';
     el('invite-access').textContent = '';
-    el('share-invite').hidden = true;
     el('invite-box').hidden = true;
   }
 
-  function showInvite(invite) {
+  function showInvite(invite, deliveryId, generation) {
+    if (generation !== viewGeneration || current?.delivery?.id !== deliveryId || el('console-view').hidden || el('detail').hidden) return;
     clearInvite();
     const access = inviteLink.issue(invite);
     el('invite-url').value = inviteLink.get();
     el('invite-expiry').textContent = dateText(invite.expiresAt);
     el('invite-access').textContent = access === 'public-https'
-      ? '모바일에서 열 수 있는 HTTPS 형식입니다. 실제 외부 접속과 배포 상태는 별도 확인이 필요합니다.'
-      : access === 'local' ? '이 기기 또는 내부망 전용 테스트 주소입니다. 모바일에서 열 수 있다고 보장하지 않습니다.'
-        : '모바일 접속을 확인하지 못한 주소입니다. 공개 HTTPS 배포를 확인해 주세요.';
-    el('share-invite').hidden = access !== 'public-https' || typeof navigator.share !== 'function';
+      ? '이 링크를 받을 사람에게만 전달해 주세요.'
+      : access === 'local' ? '내부망 주소입니다. 다른 기기에서 열리지 않을 수 있습니다.'
+        : '모바일 접속을 확인하지 못한 주소입니다.';
     el('invite-box').hidden = false;
     inviteTimer = setTimeout(clearInvite, 120_000);
+    el('invite-box').scrollIntoView({ block:'center' });
+    el('copy-invite').focus({ preventScroll:true });
   }
 
   function showAuthState(state, text) {
+    viewGeneration += 1;
     api.setCsrf('');
     clearInvite();
     current = null;
@@ -121,8 +124,8 @@ if (typeof document !== 'undefined') {
     el('login-description').textContent = state === 'forbidden'
       ? '현재 TMS 계정은 TEST 관제 허용 목록에 없습니다. 관리자에게 계정 권한을 확인해 주세요.'
       : state === 'unavailable' ? '인증 연결 상태를 확인하지 못했습니다. 배송 데이터는 표시하지 않습니다.'
-        : authMode === 'tms' ? '기존 미트박스 TMS 계정으로 로그인한 뒤 이 탭에서 세션을 다시 확인해 주세요.'
-          : 'TEST 배송 링크와 개별 웹 알림을 관리합니다.';
+      : authMode === 'tms' ? '기존 미트박스 TMS 계정으로 로그인한 뒤 이 탭에서 세션을 다시 확인해 주세요.'
+          : '배송조회 링크와 알림을 관리합니다.';
     const actions = authActions(state, authMode);
     el('login-form').hidden = !actions.password;
     el('tms-login').hidden = !actions.tmsLogin;
@@ -143,9 +146,10 @@ if (typeof document !== 'undefined') {
   }
 
   function authenticated(session) {
+    viewGeneration += 1;
     api.setCsrf(session.csrfToken);
     senderMode = session.senderMode === 'mock' || session.senderMode === 'real' ? session.senderMode : 'unknown';
-    el('mode').textContent = senderMode === 'mock' ? 'MOCK 발송 · 기기 표시 없음' : senderMode === 'real' ? 'FCM 서버 전송' : '발송 모드 미확인';
+    el('mode').textContent = senderMode === 'mock' ? '모의 발송 · 실제 알림 없음' : senderMode === 'real' ? '실제 발송' : '발송 모드 미확인';
     el('session-expiry').textContent = authMode === 'tms' ? 'TMS 계정으로 접속 중' : `관리자 세션 ${dateText(session.expiresAt)} 만료`;
     el('login-view').hidden = true;
     el('console-view').hidden = false;
@@ -156,20 +160,24 @@ if (typeof document !== 'undefined') {
 
   async function loadSession() {
     if (checkingSession) return;
+    const generation = viewGeneration;
     checkingSession = true;
     el('retry-session').disabled = true;
     message('login-message', '세션을 확인하는 중입니다.');
     try {
       if (authMode === 'unknown') {
         const config = await api.request('/auth-mode');
+        if (generation !== viewGeneration) return;
         if (config.authMode !== 'tms' && config.authMode !== 'password') throw new Error('unknown auth mode');
         authMode = config.authMode;
       }
       const session = await api.request('/session');
+      if (generation !== viewGeneration) return;
       if (session.authMode && session.authMode !== authMode) throw new Error('auth mode changed');
       authenticated(session);
       await loadDeliveries();
     } catch (error) {
+      if (generation !== viewGeneration) return;
       showAuthState(authState(error, authMode), error instanceof ApiFailure ? error.message : '인증 연결에 실패했습니다. 잠시 후 다시 확인해 주세요.');
     } finally {
       checkingSession = false;
@@ -204,68 +212,79 @@ if (typeof document !== 'undefined') {
       button.type = 'button';
       button.className = 'row-button';
       button.textContent = delivery.userId;
-      button.setAttribute('aria-label', `${delivery.userId} TEST 배송 상세 열기`);
+      button.setAttribute('aria-label', `${delivery.userId} 배송 상세 열기`);
       button.addEventListener('click', () => openDetail(delivery.id));
       first.append(button);
-      const id = document.createElement('small');
-      id.textContent = delivery.id;
-      first.append(id);
-      cell(row, delivery.stage);
-      badge(cell(row, ''), deliveryValidity(delivery), deliveryValidity(delivery) === '유효' ? 'ok' : 'bad');
-      cell(row, String(delivery.activeSubscriptions ?? 0));
+      const stage = cell(row, delivery.stage);
+      if (deliveryValidity(delivery) !== '유효') {
+        const expired = document.createElement('small');
+        expired.textContent = '만료';
+        stage.append(expired);
+      }
+      cell(row, `${delivery.activeSubscriptions ?? 0}대`);
       badge(cell(row, ''), statusText(delivery.latestStatus, senderMode), delivery.latestStatus === 'accepted' ? 'ok' : delivery.latestStatus === 'failed' ? 'bad' : 'warn');
-      cell(row, `${dateText(delivery.etaAt)} / ${dateText(delivery.expiresAt)}`);
+      cell(row, dateText(delivery.expiresAt));
     }
     el('count').textContent = `${visible.length}건 표시${cursor ? ' · 더 보기 가능' : ''}`;
-    el('table-state').textContent = visible.length ? '' : query ? '일치하는 TEST 배송이 없습니다.' : 'TEST 배송이 없습니다. 위에서 새 배송을 생성할 수 있습니다.';
+    el('table-state').textContent = visible.length ? '' : query ? '일치하는 배송이 없습니다.' : '배송이 없습니다. 위에서 새 배송을 생성할 수 있습니다.';
     el('load-more').hidden = !cursor;
   }
 
   async function loadDeliveries(more = false) {
-    message('notice', 'TEST 배송을 불러오는 중입니다.');
+    const generation = viewGeneration;
+    message('notice', '배송 목록을 불러오는 중입니다.');
     const path = `/deliveries?limit=50${more && cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
     const data = await run(() => api.request(path));
-    if (!data) return;
+    if (!data || generation !== viewGeneration || el('console-view').hidden) return null;
     deliveries = more ? [...deliveries, ...data.deliveries] : data.deliveries;
     cursor = data.nextCursor;
     renderDeliveries();
     message('notice', '');
+    return data;
   }
 
   function renderDetail(data) {
     current = data;
     const delivery = data.delivery;
-    el('detail-title').textContent = `${delivery.userId} · ${delivery.id}`;
+    el('detail-title').textContent = delivery.userId;
     el('detail-stage').textContent = delivery.stage;
-    el('detail-time').textContent = `${dateText(delivery.baselineAt)} / ${dateText(delivery.etaAt)}`;
     el('detail-expiry').textContent = dateText(delivery.expiresAt);
+    el('detail-id').textContent = delivery.id;
     el('detail-revision').textContent = String(delivery.revision);
+    el('detail-baseline').textContent = dateText(delivery.baselineAt);
+    el('detail-eta').textContent = dateText(delivery.etaAt);
     const next = nextStage(delivery.stage);
     el('advance-stage').textContent = next ? `다음 단계: ${next}` : '마지막 단계';
     el('advance-stage').disabled = !next || deliveryValidity(delivery) !== '유효' || busy;
     el('renew-invite').disabled = deliveryValidity(delivery) !== '유효' || busy;
     const subscriptions = data.subscriptions || [];
+    selectedSubscriptionId = chooseSubscriptionId(delivery, subscriptions, selectedSubscriptionId);
     const subBody = el('subscription-rows');
     subBody.replaceChildren();
-    for (const subscription of subscriptions) {
+    for (const [index, subscription] of subscriptions.entries()) {
       const row = subBody.insertRow();
       const choice = cell(row, '');
       const radio = document.createElement('input');
       radio.type = 'radio';
       radio.name = 'selected-subscription';
       radio.value = subscription.id;
-      radio.setAttribute('aria-label', `${subscription.id} 구독 선택`);
+      radio.setAttribute('aria-label', `기기 ${index + 1} 선택`);
       radio.checked = selectedSubscriptionId === subscription.id;
       radio.disabled = !canSend(delivery, subscription) || busy;
       radio.addEventListener('change', () => { selectedSubscriptionId = subscription.id; updateSendButton(); });
       choice.append(radio);
-      cell(row, subscription.id);
-      badge(cell(row, ''), subscription.status, subscription.status === 'active' ? 'ok' : 'bad');
-      cell(row, subscription.providerActive ? '활성' : '비활성');
-      cell(row, `${dateText(subscription.subscribedAt)} / ${dateText(subscription.expiresAt)}`);
+      const device = cell(row, `기기 ${index + 1}`);
+      const technical = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.textContent = '기술 ID';
+      const code = document.createElement('code');
+      code.textContent = subscription.id;
+      technical.append(summary, code);
+      device.append(technical);
+      const available = canSend(delivery, subscription);
+      badge(cell(row, ''), available ? '알림 가능' : '사용 불가', available ? 'ok' : 'bad');
+      cell(row, dateText(subscription.expiresAt));
     }
-    el('subscription-empty').hidden = subscriptions.length > 0;
-    if (!subscriptions.some((item) => item.id === selectedSubscriptionId && canSend(delivery, item))) selectedSubscriptionId = '';
     updateSendButton();
     const outboxBody = el('outbox-rows');
     outboxBody.replaceChildren();
@@ -284,20 +303,27 @@ if (typeof document !== 'undefined') {
 
   function updateSendButton() {
     const selected = current?.subscriptions?.find((item) => item.id === selectedSubscriptionId);
-    const allowed = canSend(current?.delivery, selected) && !busy;
+    const allowed = canSend(current?.delivery, selected) && !busy && senderMode !== 'unknown';
     el('send-test').disabled = !allowed;
-    el('send-hint').textContent = selectedSubscriptionId && allowed ? `선택: ${selectedSubscriptionId}` : '활성 구독 한 건을 선택해야 TEST 알림을 보낼 수 있습니다.';
+    el('send-test').textContent = senderMode === 'mock' ? '모의 알림 보내기' : '알림 보내기';
+    const eligible = current?.subscriptions?.filter((item) => canSend(current.delivery, item)) || [];
+    el('send-hint').textContent = senderMode === 'unknown' ? '발송 모드를 확인할 수 없습니다.'
+      : eligible.length === 0 ? current?.subscriptions?.length ? '보낼 수 있는 기기가 없습니다.' : '등록된 기기가 없습니다.'
+        : eligible.length === 1 ? '기기 1대를 선택했습니다.'
+          : selectedSubscriptionId ? '선택한 기기 1대에만 보냅니다.' : '받을 기기 1대를 선택해 주세요.';
   }
 
   async function openDetail(id) {
+    const generation = ++viewGeneration;
     if (current?.delivery?.id !== id) { clearInvite(); selectedSubscriptionId = ''; stageAction.clear(); sendAction.clear(); }
     el('detail').hidden = false;
     el('detail-content').hidden = true;
     message('detail-state', '배송 상세를 불러오는 중입니다.');
     const data = await run(() => api.request(`/deliveries/${encodeURIComponent(id)}`), 'detail-state');
-    if (!data) return;
+    if (!data || generation !== viewGeneration || el('console-view').hidden) return null;
     renderDetail(data);
     message('detail-state', '');
+    return data;
   }
 
   function setBusy(value) {
@@ -308,11 +334,12 @@ if (typeof document !== 'undefined') {
   }
 
   async function mutate(action, successMessage) {
+    const generation = viewGeneration;
     setBusy(true);
     message('detail-state', '처리 중입니다.');
     const result = await run(action, 'detail-state');
     setBusy(false);
-    if (!result) return null;
+    if (!result || generation !== viewGeneration || el('console-view').hidden) return null;
     message('detail-state', successMessage);
     return result;
   }
@@ -361,6 +388,7 @@ if (typeof document !== 'undefined') {
   });
   el('create-wrap').addEventListener('submit', async (event) => {
     event.preventDefault();
+    const generation = viewGeneration;
     const userId = el('user-id').value.trim();
     const baselineAt = el('baseline-at').value ? new Date(el('baseline-at').value).getTime() : Date.now();
     const etaAt = el('eta-at').value ? new Date(el('eta-at').value).getTime() : null;
@@ -370,39 +398,34 @@ if (typeof document !== 'undefined') {
     }
     message('notice', 'TEST 배송 생성 중입니다.');
     const result = await run(() => api.request('/deliveries', { method:'POST', body:{ userId, baselineAt, etaAt, expiresAt } }));
-    if (!result) return;
+    if (!result || generation !== viewGeneration || el('console-view').hidden) return;
     el('create-wrap').reset();
     el('create-wrap').hidden = true;
     el('show-create').setAttribute('aria-expanded', 'false');
-    await loadDeliveries();
-    await openDetail(result.delivery.id);
-    showInvite(result.invite);
-    message('detail-state', 'TEST 배송을 생성했습니다. 보안 링크는 지금 복사해 주세요.');
+    if (!await loadDeliveries()) return;
+    if (!await openDetail(result.delivery.id)) return;
+    showInvite(result.invite, result.delivery.id, viewGeneration);
+    message('detail-state', '배송을 생성했습니다. 배송조회 링크를 복사해 주세요.');
   });
   el('close-detail').addEventListener('click', () => {
+    viewGeneration += 1;
     clearInvite(); current = null; selectedSubscriptionId = ''; el('detail').hidden = true; renderDeliveries();
   });
   el('renew-invite').addEventListener('click', async () => {
     if (!current) return;
+    const generation = viewGeneration;
     clearInvite();
     const id = current.delivery.id;
     const result = await mutate(() => api.request(`/deliveries/${encodeURIComponent(id)}/invitations`, { method:'POST', body:{} }), '새 고객 링크를 발급했습니다. 이전 미사용 링크는 만료되었습니다.');
-    if (result) showInvite(result.invite);
+    if (result) showInvite(result.invite, id, generation);
   });
   el('copy-invite').addEventListener('click', async () => {
     if (!inviteLink.get()) return;
     try {
       await inviteLink.copy();
-      message('detail-state', '보안 링크를 복사했습니다. 공유 대상과 만료 시각을 확인해 주세요.');
-    } catch { message('detail-state', '자동 복사에 실패했습니다. 링크 입력칸에서 직접 복사해 주세요.', true); el('invite-url').select(); }
+      message('detail-state', '배송조회 링크를 복사했습니다. 받을 사람과 만료 시각을 확인해 주세요.');
+    } catch { message('detail-state', '복사에 실패했습니다. 링크 입력칸에서 직접 복사해 주세요.', true); el('invite-url').select(); }
   });
-  el('share-invite').addEventListener('click', async () => {
-    const url = inviteLink.get();
-    if (inviteAccess(url) !== 'public-https' || typeof navigator.share !== 'function') return;
-    try { await navigator.share({ title:'TEST 미트박스 배송조회', url }); }
-    catch (error) { if (error?.name !== 'AbortError') message('detail-state', '공유하지 못했습니다. 링크 복사를 이용해 주세요.', true); }
-  });
-  el('clear-invite').addEventListener('click', clearInvite);
   el('advance-stage').addEventListener('click', async () => {
     if (!current || !nextStage(current.delivery.stage)) return;
     const { id, revision, stage } = current.delivery;
@@ -420,7 +443,7 @@ if (typeof document !== 'undefined') {
     const subscriptionId = selectedSubscriptionId;
     const result = await mutate(() => sendAction.run(`${id}:${revision}:${subscriptionId}`, { subscriptionId, expectedRevision:revision },
       (body) => api.request(`/deliveries/${encodeURIComponent(id)}/test-notifications`, { method:'POST', body })),
-    'TEST 알림 한 건을 대기열에 넣었습니다. 기기 수신·표시는 아직 확인되지 않았습니다.');
+    senderMode === 'mock' ? '모의 알림을 대기열에 넣었습니다. 실제 기기 알림은 없습니다.' : '알림 한 건을 대기열에 넣었습니다. 기기 표시는 아직 확인되지 않았습니다.');
     if (result) { await loadDeliveries(); await openDetail(id); }
   });
   el('refresh-detail').addEventListener('click', () => current && openDetail(current.delivery.id));
