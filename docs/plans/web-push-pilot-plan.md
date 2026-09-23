@@ -1,8 +1,12 @@
 # 고객 배송조회 Web Push 파일럿 구현 계획
 
-작성일: 2026-09-21 · 상태: **계획 / 미구현** · 조사 기준: `main@c19010cd19fe7b3d74972d9953622349035883cd`
+작성일: 2026-09-21 · 갱신일: 2026-09-22 · 상태: **P1 로컬 mock 구현 / P2 미실행** · 기준: `a9f576d8e3279c6a579bca5df53e2e2eee0caaea`
 
-이 문서는 기존 회사 앱의 PUSH를 연동하지 않고, 우리가 제공하는 배송조회 웹 화면에서 고객이 직접 신청한 배송 알림을 보내는 실험 계획이다. 이번 변경은 문서만 포함하며, Firebase 설정·자격증명 발급·서버 배포·실제 알림 발송은 수행하지 않았다.
+이 문서는 기존 회사 앱의 PUSH를 연동하지 않고, 우리가 제공하는 배송조회 웹 화면에서 고객이 직접 신청한 배송 알림을 보내는 실험 계획과 단계별 완료 경계를 기록한다. P1 구현은 `services/push-lab/`의 PWA·API·SQLite outbox·mock/real sender 경계와 `deploy/push-lab/`의 로컬 컨테이너 산출물까지 진행했다. Firebase 설정·자격증명 발급·공개 서버 배포·실제 알림 발송·실기기 수신은 수행하지 않았다.
+
+P1 로컬 검증과 P2 입력은 [검증 문서](../push-lab-local-and-device-verification.md)에 기록한다. 로컬 mock, 컨테이너 readiness, 공개 HTTPS, FCM 접수, 실제 기기 표시·클릭은 서로 다른 증거다.
+
+2026-09-23 추가 승인된 **별도 TEST 관제 화면**의 구현 계약은 [Push Lab 관제 계획](push-lab-control-console-plan.md)에 둔다. 기존 고객 세션·구독과 outbox 경계를 유지하며, 관제의 관리자 인증은 고객 초대와 독립된다. 이 추가 계획은 로컬 mock 구현 범위이며 실제 sender, 서버, DNS 또는 운영 배포 승인으로 해석하지 않는다.
 
 ## 1. 결정과 완료 조건
 
@@ -97,7 +101,7 @@ flowchart LR
 
 조사에서 릴리스 소스로 확인한 조합은 **`firebase@12.19.0`의 `register()` / `onRegistered()` → `firebase-admin@14.4.0`의 `send({ fid, ... })`**다. Admin SDK는 `fid` 대상을 HTTP v1에 전달한다. `installationId`라는 발송 필드나 FID를 넣은 `token` 필드를 사용하지 않는다. [JS SDK register 원본](https://github.com/firebase/firebase-js-sdk/blob/9045b759b70e9d19b8cf007d69d988893d845a1e/packages/messaging/src/api/register.ts), [Admin SDK FID 타입 원본](https://github.com/firebase/firebase-admin-node/blob/7cf116b4c4e73ff5b58814f343738535153fdf08/src/messaging/messaging-api.ts), [Admin SDK 발송 가이드](https://firebase.google.com/docs/cloud-messaging/send/admin-sdk)
 
-이 조합을 구현 기준 후보로 고정하되, 저장소에는 아직 설치하지 않았다. P0에서 실제 패키지 export·타입 검사를 확인하고, P2의 작은 실발송 시험으로 프로젝트·기기까지 포함한 동작을 검증한다. 다음 근거를 lockfile과 시험 기록에 남긴다.
+이 조합은 `services/push-lab/package-lock.json`에 고정했고 로컬 mock 계약 시험을 통과했다. 다만 실제 Firebase project와 브라우저 FID를 이용한 발송 접수는 P2의 작은 실발송 시험으로 별도 검증한다. 다음 근거를 lockfile과 시험 기록에 남긴다.
 
 - 선택한 패키지의 실제 공개 export와 브라우저 등록 식별자 종류.
 - 해당 식별자를 받는 서버 발송 API의 정확한 필드·인증 방식 및 지원 버전.
@@ -108,7 +112,7 @@ FCM은 서버가 임의로 만든 문자열로 기기를 지정하는 서비스�
 
 ## 7. 최소 API와 권한 계약
 
-아래 경로·테이블·파일 이름은 구현 제안이며 현재 존재하는 API가 아니다.
+아래 경로·테이블·파일 경계는 P1 로컬 구현에 반영되었다. 실제 고객 식별·주문 이벤트·운영 발송 API와의 연결은 아직 없다.
 
 | 제안 API | 역할·조건 |
 |---|---|

@@ -1,0 +1,64 @@
+services:
+  push-lab:
+    profiles:
+      - single
+
+  push-lab-web:
+    extends:
+      service: push-lab
+      file: compose.yaml
+    profiles:
+      - split
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DB_PATH: /var/lib/push-lab/push-lab.sqlite
+      PUSH_LAB_MODE: web
+      PUSH_LAB_SENDER_MODE: mock
+      DEPLOYMENT_PROBE_DELIVERABLE: "false"
+      BUILD_SHA: ${PUSH_LAB_BUILD_SHA:-local}
+      EXCHANGE_KEYS: ${PUSH_LAB_EXCHANGE_KEYS:?set PUSH_LAB_EXCHANGE_KEYS to a base64 encoded 32-byte key}
+      ALLOWED_ORIGIN: ${PUSH_LAB_PUBLIC_ORIGIN:-http://localhost:3300}
+      PUBLIC_ORIGIN: ${PUSH_LAB_PUBLIC_ORIGIN:-http://localhost:3300}
+    ports:
+      - "127.0.0.1:${PUSH_LAB_PORT:-3300}:3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  push-lab-worker:
+    extends:
+      service: push-lab
+      file: compose.yaml
+    profiles:
+      - split
+    environment:
+      NODE_ENV: production
+      DB_PATH: /var/lib/push-lab/push-lab.sqlite
+      WORKER_LOCK_PATH: /var/lib/push-lab/worker.lock
+      WORKER_PAUSE_PATH: /var/lib/push-lab/worker.pause
+      PUSH_LAB_MODE: worker
+      PUSH_LAB_SENDER_MODE: mock
+      DEPLOYMENT_PROBE_DELIVERABLE: "false"
+      BUILD_SHA: ${PUSH_LAB_BUILD_SHA:-local}
+      EXCHANGE_KEYS: ${PUSH_LAB_EXCHANGE_KEYS:?set PUSH_LAB_EXCHANGE_KEYS to a base64 encoded 32-byte key}
+      ALLOWED_ORIGIN: ${PUSH_LAB_PUBLIC_ORIGIN:-http://localhost:3300}
+      PUBLIC_ORIGIN: ${PUSH_LAB_PUBLIC_ORIGIN:-http://localhost:3300}
+    ports: !reset []
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - const {existsSync}=require('node:fs'); try{process.kill(1,0)}catch{process.exit(1)} if(existsSync(process.env.WORKER_PAUSE_PATH))process.exit(1)
+      interval: 5s
+      timeout: 3s
+      retries: 1
+      start_period: 5s

@@ -1,0 +1,12 @@
+{
+  "name": "TEST 미트박스 배송조회",
+  "short_name": "TEST 배송조회",
+  "description": "독립 Web Push 파일럿용 TEST 배송조회 PWA",
+  "id": "/push-lab/",
+  "start_url": "/push-lab/",
+  "scope": "/push-lab/",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#e60028",
+  "icons": [{ "src": "/push-lab/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

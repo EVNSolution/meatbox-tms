@@ -1,0 +1,53 @@
+name: ${COMPOSE_PROJECT_NAME:-meatbox-push-lab}
+
+x-push-lab-common: &push-lab-common
+  build:
+    context: ../../services/push-lab
+  image: meatbox-push-lab:${PUSH_LAB_IMAGE_TAG:-local}
+  init: true
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:size=32m,mode=1777
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  environment: &push-lab-environment
+    NODE_ENV: production
+    PORT: "3000"
+    DB_PATH: /var/lib/push-lab/push-lab.sqlite
+    WORKER_LOCK_PATH: /var/lib/push-lab/worker.lock
+    WORKER_PAUSE_PATH: /var/lib/push-lab/worker.pause
+    PUSH_LAB_SENDER_MODE: mock
+    DEPLOYMENT_PROBE_DELIVERABLE: "false"
+    BUILD_SHA: ${PUSH_LAB_BUILD_SHA:-local}
+    EXCHANGE_KEYS: ${PUSH_LAB_EXCHANGE_KEYS:?set PUSH_LAB_EXCHANGE_KEYS to a base64 encoded 32-byte key}
+    ALLOWED_ORIGIN: ${PUSH_LAB_PUBLIC_ORIGIN:-http://localhost:3300}
+    PUBLIC_ORIGIN: ${PUSH_LAB_PUBLIC_ORIGIN:-http://localhost:3300}
+  volumes:
+    - push_lab_data:/var/lib/push-lab
+    - push_lab_backups:/var/backups/push-lab
+
+services:
+  push-lab:
+    <<: *push-lab-common
+    environment:
+      <<: *push-lab-environment
+      PUSH_LAB_MODE: all
+    ports:
+      - "127.0.0.1:${PUSH_LAB_PORT:-3300}:3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - const {existsSync}=require('node:fs'); if(existsSync(process.env.WORKER_PAUSE_PATH))process.exit(1); fetch('http://127.0.0.1:3000/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 5s
+      timeout: 3s
+      retries: 1
+      start_period: 10s
+
+volumes:
+  push_lab_data:
+  push_lab_backups:

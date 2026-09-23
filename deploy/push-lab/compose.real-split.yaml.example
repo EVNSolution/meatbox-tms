@@ -1,0 +1,24 @@
+# This overlay is valid only after compose.yaml and compose.split.yaml.
+secrets:
+  firebase_service_account:
+    file: ${PUSH_LAB_FIREBASE_CREDENTIALS:?set PUSH_LAB_FIREBASE_CREDENTIALS to an approved test-project credential file}
+
+services:
+  push-lab-web:
+    environment:
+      FIREBASE_API_KEY: ${PUSH_LAB_FIREBASE_API_KEY:?set PUSH_LAB_FIREBASE_API_KEY}
+      FIREBASE_AUTH_DOMAIN: ${PUSH_LAB_FIREBASE_AUTH_DOMAIN:?set PUSH_LAB_FIREBASE_AUTH_DOMAIN}
+      FIREBASE_PROJECT_ID: ${PUSH_LAB_FIREBASE_PROJECT_ID:?set PUSH_LAB_FIREBASE_PROJECT_ID}
+      FIREBASE_APP_ID: ${PUSH_LAB_FIREBASE_APP_ID:?set PUSH_LAB_FIREBASE_APP_ID}
+      FIREBASE_MESSAGING_SENDER_ID: ${PUSH_LAB_FIREBASE_MESSAGING_SENDER_ID:?set PUSH_LAB_FIREBASE_MESSAGING_SENDER_ID}
+      FIREBASE_VAPID_PUBLIC_KEY: ${PUSH_LAB_FIREBASE_VAPID_PUBLIC_KEY:?set PUSH_LAB_FIREBASE_VAPID_PUBLIC_KEY}
+
+  push-lab-worker:
+    environment:
+      PUSH_LAB_SENDER_MODE: real
+      PUSH_LAB_REAL_FID_ALLOWLIST: ${PUSH_LAB_REAL_FID_ALLOWLIST:?set PUSH_LAB_REAL_FID_ALLOWLIST to approved test FIDs}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-service-account.json
+    secrets:
+      - source: firebase_service_account
+        target: firebase-service-account.json
+        mode: 0444

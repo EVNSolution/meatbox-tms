@@ -1,0 +1,12 @@
+# Preparation artifact only. Merge into the approved Caddy configuration after
+# replacing the hostname and validating that the existing TMS routes are intact.
+push-lab.example.invalid {
+	encode zstd gzip
+	header Referrer-Policy "no-referrer"
+	header X-Content-Type-Options "nosniff"
+
+	redir /push-lab /push-lab/ 308
+	handle /push-lab/* {
+		reverse_proxy 127.0.0.1:3300
+	}
+}

@@ -1,0 +1,12 @@
+# One-time operator acknowledgement only. Remove this overlay immediately after
+# one successful worker recreation and health verification.
+services:
+  push-lab:
+    environment:
+      PUSH_LAB_CLEAR_PAUSE: "1"
+
+  push-lab-worker:
+    profiles:
+      - split
+    environment:
+      PUSH_LAB_CLEAR_PAUSE: "1"

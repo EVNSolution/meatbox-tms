@@ -1,0 +1,27 @@
+{
+  "name": "@meatbox/push-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=26.3.0"
+  },
+  "scripts": {
+    "vendor:firebase": "node scripts/build-firebase-vendor.mjs",
+    "prestart:web": "npm run vendor:firebase",
+    "start:web": "node server/main.mjs",
+    "start:worker": "node worker/main.mjs",
+    "prestart:all": "npm run vendor:firebase",
+    "start:all": "node server/all.mjs",
+    "fixture": "node server/fixture-cli.mjs",
+    "pretest": "npm run vendor:firebase",
+    "test": "node --test test/*.test.mjs public/*.test.mjs public/control/*.test.mjs"
+  },
+  "dependencies": {
+    "firebase": "12.19.0",
+    "firebase-admin": "14.4.0"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
+  }
+}

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e60028">
+  <meta name="color-scheme" content="light">
+  <title>TEST 미트박스 배송조회</title>
+  <link rel="manifest" href="/push-lab/manifest.webmanifest">
+  <link rel="icon" href="/push-lab/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/push-lab/styles.css?v=20260922-2">
+  <script type="module" src="/push-lab/app.mjs?v=20260922-5"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">meatbox</div>
+    <span class="test-badge">TEST 파일럿</span>
+  </header>
+
+  <main>
+    <section id="invite-view" class="gate" aria-labelledby="invite-title">
+      <p class="eyebrow">테스트 배송 전용</p>
+      <h1 id="invite-title">배송 초대 확인</h1>
+      <p id="invite-message">초대 정보를 확인하고 있습니다.</p>
+      <form id="invite-form" hidden>
+        <label for="invite-code">테스트 초대 코드</label>
+        <div class="input-row">
+          <input id="invite-code" name="inviteCode" autocomplete="one-time-code" required>
+          <button type="submit">배송 조회</button>
+        </div>
+      </form>
+    </section>
+
+    <div id="delivery-view" hidden>
+      <section class="hero" aria-labelledby="delivery-title">
+        <div>
+          <p class="eyebrow">TEST 배송조회</p>
+          <h1 id="delivery-title">배송 정보를 불러오는 중입니다</h1>
+          <p id="order-id" class="muted"></p>
+        </div>
+        <span id="stage-pill" class="stage-pill">조회 중</span>
+      </section>
+
+      <section id="eta-card" class="eta-card" hidden aria-labelledby="eta-title">
+        <p id="eta-title">도착예정</p>
+        <strong id="eta-text">—</strong>
+        <small>TEST 기준시각과 테스트 경로를 이용한 예상이며 확정 시각이 아닙니다.</small>
+      </section>
+
+      <section id="map-card" class="map-card" hidden aria-labelledby="map-title">
+        <div class="section-heading">
+          <h2 id="map-title">TEST 배송 위치</h2>
+          <span>실제 GPS 아님</span>
+        </div>
+        <div class="test-map" role="img" aria-label="실제 GPS가 아닌 테스트 배송 경로">
+          <div class="road road-a"></div><div class="road road-b"></div><div class="road road-c"></div>
+          <div class="route"></div>
+          <div id="truck" class="truck" hidden aria-label="테스트 차량">TEST<br>차량</div>
+          <div class="destination" aria-label="테스트 배송지">TEST<br>배송지</div>
+        </div>
+        <p>이 지도·좌표·차량 이동은 기능 검증용 합성 데이터입니다.</p>
+      </section>
+
+      <section class="tracking-card" aria-labelledby="tracking-title">
+        <h2 id="tracking-title">배송 현황</h2>
+        <ol id="stage-list" class="stages"></ol>
+        <p id="status-note" class="status-note" role="status"></p>
+      </section>
+
+      <section class="notification-card" aria-labelledby="notification-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">우리 배송조회 웹 알림</p><h2 id="notification-title">이번 배송 알림</h2></div>
+          <span id="notification-state" class="state-badge">사용 전</span>
+        </div>
+        <p>기존 미트박스 앱의 네이티브 PUSH가 아닌, 이 TEST 웹/PWA의 알림입니다.</p>
+        <div id="support-message" class="support-message" role="status"></div>
+        <label class="consent-row">
+          <input id="consent" type="checkbox">
+          <span><strong>이번 TEST 배송 알림 수신에 동의합니다.</strong><small>체크 동의와 브라우저 알림 권한은 별도입니다.</small></span>
+        </label>
+        <div class="actions">
+          <button id="subscribe" type="button" class="primary" disabled>브라우저 권한 확인 후 알림 받기</button>
+          <button id="self-test" type="button" disabled>30초 뒤 TEST 알림</button>
+          <button id="unsubscribe" type="button" class="text-button" disabled>이번 배송 알림 철회</button>
+        </div>
+        <p id="notification-detail" class="detail" aria-live="polite"></p>
+      </section>
+
+      <footer>
+        <strong>TEST 전용 화면</strong>
+        <span id="session-expiry"></span>
+      </footer>
+    </div>
+  </main>
+  <noscript><p class="noscript">배송조회와 알림을 사용하려면 JavaScript를 활성화해 주세요.</p></noscript>
+</body>
+</html>

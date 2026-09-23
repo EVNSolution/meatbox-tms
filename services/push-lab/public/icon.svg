@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#e60028"/>
+  <path fill="#fff" d="M116 142h280v228H116z" opacity=".16"/>
+  <text x="256" y="244" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="92" font-weight="900">TEST</text>
+  <text x="256" y="322" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="54" font-weight="800">배송</text>
+</svg>

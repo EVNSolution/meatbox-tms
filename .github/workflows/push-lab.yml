@@ -1,0 +1,44 @@
+name: Push Lab
+
+on:
+  pull_request:
+    paths:
+      - 'services/push-lab/**'
+      - 'deploy/push-lab/**'
+      - 'docs/plans/web-push-pilot-plan.md'
+      - 'docs/push-lab-local-and-device-verification.md'
+      - '.github/workflows/push-lab.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'services/push-lab/**'
+      - 'deploy/push-lab/**'
+      - '.github/workflows/push-lab.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.3.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            services/push-lab/package-lock.json
+      - name: Install existing TMS
+        run: npm ci
+      - name: Install and generate push-lab vendor modules
+        working-directory: services/push-lab
+        run: npm ci && npm run vendor:firebase
+      - name: Test existing TMS
+        run: npm test
+      - name: Audit and test push-lab
+        working-directory: services/push-lab
+        run: npm audit --omit=dev && npm test
+      - name: Build isolated push-lab image
+        run: docker build --tag meatbox-push-lab:${{ github.sha }} services/push-lab

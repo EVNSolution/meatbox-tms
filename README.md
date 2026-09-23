@@ -1,6 +1,6 @@
 # 미트박스 TMS 검토 작업 공간
 
-2026-09-21 계획 문서: [독립 고객 배송조회·Web Push 파일럿](docs/plans/web-push-pilot-plan.md), [파일럿 및 TMS Blue-Green 배포](docs/plans/blue-green-deployment-plan.md). 두 문서는 미구현 계획이며 기존 앱 PUSH 연동·운영 배포 완료를 뜻하지 않습니다.
+2026-09-22 현재 [독립 고객 배송조회·Web Push 파일럿](docs/plans/web-push-pilot-plan.md)의 P1 로컬 mock 구현은 `services/push-lab/`에, 컨테이너·실기기 준비 자료는 `deploy/push-lab/`과 [검증 문서](docs/push-lab-local-and-device-verification.md)에 있습니다. [파일럿 및 TMS Blue-Green 배포](docs/plans/blue-green-deployment-plan.md)의 실제 슬롯 전환은 아직 미구현이며, 기존 앱 PUSH 연동·공개 HTTPS 배포·실제 FCM 및 기기 수신 완료를 뜻하지 않습니다.
 
 2026-09-16 백엔드·웹·배송원 연결 점검과 실서비스 전환 순서는 [시스템 통합 점검](docs/system-integration-audit-2026-09-16.md)을 참고합니다. 통신 복구·뷰어 선택 유지·완료 후 위치 일치를 보강했으며, 실제 역할별 권한·증빙 저장·기기 연동은 별도 전환 과제로 구분했습니다.
 

@@ -1,0 +1,27 @@
+# Optional local mock control console. Use with compose.yaml, or after compose.split.yaml.
+# The host file must be readable by the container's node user and not world-readable.
+services:
+  push-lab:
+    environment:
+      PUSH_LAB_ADMIN_PASSWORD_HASH_FILE: /run/secrets/push-lab-admin-password-hash
+    volumes:
+      - type: bind
+        source: ${PUSH_LAB_ADMIN_HASH_HOST_FILE:?set PUSH_LAB_ADMIN_HASH_HOST_FILE to the local hash file}
+        target: /run/secrets/push-lab-admin-password-hash
+        read_only: true
+        bind:
+          create_host_path: false
+
+  push-lab-web:
+    image: meatbox-push-lab:${PUSH_LAB_IMAGE_TAG:-local}
+    profiles:
+      - split
+    environment:
+      PUSH_LAB_ADMIN_PASSWORD_HASH_FILE: /run/secrets/push-lab-admin-password-hash
+    volumes:
+      - type: bind
+        source: ${PUSH_LAB_ADMIN_HASH_HOST_FILE:?set PUSH_LAB_ADMIN_HASH_HOST_FILE to the local hash file}
+        target: /run/secrets/push-lab-admin-password-hash
+        read_only: true
+        bind:
+          create_host_path: false
