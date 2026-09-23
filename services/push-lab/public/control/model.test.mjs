@@ -13,6 +13,8 @@ test('초대 링크를 공개 HTTPS 형식과 기기·내부망 주소로 구분
   assert.equal(inviteAccess('https://100.127.255.254/push-lab/#invite=secret'), 'unverified');
   assert.equal(inviteAccess('https://push-lab.example.invalid/push-lab/#invite=secret'), 'unverified');
   assert.equal(inviteAccess('https://demo.meatbox.co.kr/other/#invite=secret'), 'unverified');
+  assert.equal(inviteAccess('https://demo.meatbox.co.kr/push-lab/control/#invite=secret'), 'unverified');
+  assert.equal(inviteAccess('https://demo.meatbox.co.kr/push-lab/?invite=secret'), 'unverified');
   assert.equal(inviteAccess('garbage'), 'unverified');
 });
 

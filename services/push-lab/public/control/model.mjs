@@ -10,7 +10,7 @@ export function inviteAccess(rawUrl) {
     || octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31 || octets[0] === 192 && octets[1] === 168);
   const carrierNat = ipv4 && octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127;
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || privateIp || host === '[::1]') return 'local';
-  if (carrierNat || url.protocol !== 'https:' || url.username || url.password || !url.pathname.startsWith('/push-lab/')
+  if (carrierNat || url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/push-lab/' || url.search || !url.hash.startsWith('#invite=')
     || /\.(?:invalid|test|example|internal)$/.test(host) || (host.includes(':') && !ipv4)) return 'unverified';
   return 'public-https';
 }
