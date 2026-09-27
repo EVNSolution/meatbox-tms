@@ -169,9 +169,6 @@
 
 @media (max-width: 520px) {
   .page-intro { grid-template-columns: 1fr; gap: 12px; }
-  .page-actions { justify-content: flex-start; }
-  .summary-counts { width: 100%; }
-  .summary-counts > div { flex: 1; min-width: 0; }
   .list-toolbar .field:first-child,
   .list-toolbar .field:nth-child(2),
   .list-toolbar .field:nth-child(3) { flex: 1 1 100%; }
@@ -223,8 +220,8 @@
   .monitor-detail .eta-grid { grid-template-columns: minmax(0, 1fr); }
   .monitor-detail .eta-secondary { border-top: 1px solid var(--border); border-left: 0; }
 }
-.control-date-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; padding: 10px 14px; background: #fff; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
-.control-date-toolbar .date-picker { min-width: 168px; }
-.control-date-toolbar .button { min-height: 36px; }
+.control-date-actions { flex-wrap: wrap; }
+.control-date-actions .date-picker { min-width: 168px; }
+.control-date-actions .button { min-height: 36px; }
 .control-readonly { padding: 5px 8px; color: #7a4e11; background: #fff5df; border-radius: 4px; font-size: 12px; font-weight: 600; }
 .control-empty { padding: 24px; color: var(--muted); }

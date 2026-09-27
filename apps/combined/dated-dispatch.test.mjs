@@ -56,6 +56,7 @@ function domFixture() {
   nodes.summary.hidden = true;
   nodes.retry.hidden = true;
   nodes.planning.hidden = true;
+  nodes.toolbar.querySelector = selector => selector === '[data-date-summary]' ? nodes.summary : null;
   const element = new FakeNode();
   element.querySelector = selector => nodes[selector.match(/data-dispatch-([^\]]+)/)?.[1]];
   return { element, nodes };
@@ -227,6 +228,33 @@ test('빠른 날짜 변경은 늦게 끝난 이전 응답을 버리고 최신 �
   dated.destroy();
 });
 
+test('로컬 날짜 조회 중 같은 관제 문맥의 갱신은 취소하지 않고 실제 문맥 변경만 우선한다', async t => {
+  installBrowserGlobals(t);
+  const { element, nodes } = domFixture();
+  const planning = planningSpy();
+  const pending16 = deferred();
+  const fetchJSON = async url => {
+    if (url.endsWith('/manifest')) return manifest;
+    if (url.endsWith('/regions')) return regions;
+    if (url.endsWith('/2025-09-16')) return pending16.promise;
+    return day(url.split('/').at(-1));
+  };
+  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  dated.update({}, null, '2025-09-15');
+  await waitFor(() => nodes.summary.hidden === false);
+  nodes.date.value = '2025-09-16'; nodes.date.dispatch('change');
+  dated.update({}, null, '2025-09-15');
+  assert.equal(nodes.date.value, '2025-09-16');
+  assert.equal(nodes.summary.hidden, true);
+  dated.update({}, null, '2025-09-17');
+  await waitFor(() => nodes.summary.hidden === false);
+  pending16.resolve(day('2025-09-16'));
+  await tick(); await tick();
+  assert.equal(nodes.date.value, '2025-09-17');
+  assert.equal(planning.mounts.at(-1).updates.at(-1)[0].dispatchSource.date, '2025-09-17');
+  dated.destroy();
+});
+
 test('준비되지 않은 날짜는 요청하지 않고 이전 지도를 숨긴다', async t => {
   installBrowserGlobals(t);
   const { element, nodes } = domFixture();
@@ -250,6 +278,30 @@ test('준비되지 않은 날짜는 요청하지 않고 이전 지도를 숨긴�
   assert.match(nodes.status.textContent, /주문 자료가 없습니다/);
   assert.equal(nodes.retry.hidden, true);
   assert.equal(dated.summary(), null);
+  dated.destroy();
+});
+
+test('관제에서 자료 없는 날짜로 바꾼 뒤 배차로 돌아오면 이전 날짜 집계를 비운다', async t => {
+  installBrowserGlobals(t);
+  const { element, nodes } = domFixture();
+  const planning = planningSpy();
+  const calls = [];
+  const fetchJSON = async url => {
+    calls.push(url);
+    if (url.endsWith('/manifest')) return manifest;
+    if (url.endsWith('/regions')) return regions;
+    return day(url.split('/').at(-1));
+  };
+  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  dated.update({}, null);
+  await waitFor(() => nodes.summary.hidden === false);
+  const before = calls.length;
+  dated.update(null, null, '2026-09-28');
+  await waitFor(() => nodes.status.textContent.includes('주문 자료가 없습니다'));
+  assert.equal(nodes.date.value, '2026-09-28');
+  assert.equal(nodes.summary.hidden, true);
+  assert.equal(nodes.planning.hidden, true);
+  assert.equal(calls.length, before);
   dated.destroy();
 });
 

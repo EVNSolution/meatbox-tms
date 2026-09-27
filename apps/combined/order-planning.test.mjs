@@ -210,7 +210,7 @@ test('주문 화면은 데이터와 로딩 상태에 관계없이 floating 시�
   assert.ok(body);
   assert.match(source, /scenarioTools\.update\(null, false\);\s*syncDispatchContext\(\);/);
   assert.match(source, /function render\(\) \{\s*syncDispatchContext\(\);\s*renderPage\(\);/);
-  assert.match(source, /if \(state\.page === 'orders'\) orderPlanning\.update\(state\.data, state\.selectedId\);\s*if \(!state\.data\)/);
+  assert.match(source, /if \(state\.page === 'orders'\) orderPlanning\.update\(state\.data, state\.selectedId, state\.dateContext\?\.date\);\s*if \(!state\.data\)/);
   const nodes = { 'scenario-tools': { hidden: false }, 'page-description': { textContent: '' } };
   const state = { page: 'orders' };
   const context = { state, orderPlanning: { usesSource: () => false }, byId: id => nodes[id] };
