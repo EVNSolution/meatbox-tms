@@ -4,8 +4,16 @@ import { customerDemoRoad } from './customer-demo-route.mjs';
 import { customerPickerPage, updateCustomerPickerState } from './customer-picker-model.mjs';
 import { sourceVehicleContext } from './source-context.mjs';
 import { transportConditionText } from './source-viewer-plan.mjs';
+import { seoulToday } from './operating-date.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+
+export function customerViewerSummary(state, today = seoulToday()) {
+  if (state?.customerDemo?.active) return '고객 시연 중 · 배송 상태, 시각과 차량 위치는 예시입니다.';
+  const date = state?.sourceData?.date;
+  if (date && (date < (state.sourceData.operatingDate || today) || state.dispatch?.readOnly)) return `${date} 배송 이력 · 조회 전용`;
+  return '선택한 매장의 배송 현황과 고객 안내를 확인합니다.';
+}
 
 export function customerLocationName(delivery) {
   return /^(?:\d+|\d+층|지층)$/.test(String(delivery?.name ?? '').trim())
@@ -281,9 +289,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
     if (!latest) return;
     const delivery = currentDelivery();
     if (!delivery) return showPicker();
-    byId('customer-viewer-summary').textContent = latest.customerDemo?.active
-      ? '고객 시연 중 · 배송 상태, 시각과 차량 위치는 예시입니다.'
-      : '선택한 매장의 배송 현황과 고객 안내를 확인합니다.';
+    byId('customer-viewer-summary').textContent = customerViewerSummary(latest);
     const demoLabel = byId('customer-demo-label');
     demoLabel.hidden = !latest.customerDemo;
     demoLabel.textContent = latest.customerDemo?.active

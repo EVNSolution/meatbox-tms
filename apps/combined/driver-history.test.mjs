@@ -5,7 +5,7 @@ import { driverHistoryForDate, driverOperatingDate, exampleHistoryDates, latestP
 test('근무 이력 운영일은 명시값을 우선하고 첫 진입 날짜는 운영일 이전 최신 기록을 고른다', () => {
   const dates = [{ date: '2026-09-14' }, { date: '2026-09-15' }, { date: '2026-09-16' }, { date: '2026-09-17' }];
   assert.equal(driverOperatingDate({ operatingDate: '2026-09-16', dates }, '2026-09-18'), '2026-09-16');
-  assert.equal(driverOperatingDate({ dates }, '2026-09-18'), '2026-09-16');
+  assert.equal(driverOperatingDate({ dates }, '2026-09-18'), '2026-09-18');
   assert.equal(driverOperatingDate({ dates: [{ date: '2025-09-12' }] }, '2026-09-18'), '2026-09-18');
   assert.equal(latestPastHistoryDate(dates, '2026-09-16', '2026-09-16'), '2026-09-15');
 });

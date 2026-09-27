@@ -11,6 +11,8 @@ import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from
 import { mountResourceManagement } from './resource-management.mjs';
 import { mountDestinationDirectory } from './destination-directory.mjs';
 import { sourceVehicleContext } from './source-context.mjs';
+import { mountDatePicker } from './date-picker.mjs';
+import { seoulToday, validOperatingDate } from './operating-date.mjs';
 
 const pages = {
   orders: { title: '배차 관리', description: '주문 확인, 배송원 선택과 배차 전송' },
@@ -20,6 +22,7 @@ const pages = {
 const state = {
   ...operatorRoute(location.hash),
   data: null,
+  dateContext: null,
   selectedId: new URLSearchParams(location.search).get('id'),
   controlVehicleId: null,
   noticeTargetId: null,
@@ -31,6 +34,8 @@ const state = {
 const byId = id => document.getElementById(id);
 document.querySelectorAll('[data-field-icon]').forEach(element => { element.innerHTML = referenceIcon(element.dataset.fieldIcon); });
 const scenarioTools = mountDemoShell({ viewer: 'operator', onSelect: selectDelivery, onSend: (type, extra) => simulation.send(type, extra) });
+const controlDatePicker = mountDatePicker({ element: byId('control-date-picker'), label: '관제 조회 날짜', onChange: date => simulation.selectDate(date) });
+byId('control-today').addEventListener('click', () => simulation.selectDate(seoulToday()));
 const vehicleControl = mountVehicleControl({ element: byId('vehicle-control'),
   onSelectVehicle: id => {
     const row = vehicleOperations(state.data).find(item => item.vehicle.id === id);
@@ -69,7 +74,17 @@ function selectDelivery(id) {
 if (location.hash === '#/customer') location.replace(deliveryLinks(state.selectedId).mobile);
 if (location.hash === '#/driver') location.replace(deliveryLinks(state.selectedId).driver);
 scenarioTools.update(null, false);
+syncDispatchContext();
 const simulation = connectSimulation({
+  onDateContext(context) {
+    if ((state.dateContext && context.date !== state.dateContext.date) || context.empty || context.invalid) {
+      state.data = null; state.selectedId = null; state.controlVehicleId = null;
+      scenarioTools.select(null);
+    }
+    state.dateContext = context;
+    scenarioTools.setDate(context.date);
+    render();
+  },
   onState(raw) {
     const next = adaptSimulation(raw);
     if (next.sourceData?.date !== state.data?.sourceData?.date) {
@@ -95,11 +110,12 @@ const simulation = connectSimulation({
       state.pendingNotice = null; state.noticeMessage = '연결이 끊겨 안내를 전달하지 못했습니다.'; state.noticeError = true;
     }
     byId('connection-panel').hidden = connected;
-    byId('live-pages').hidden = !connected;
+    byId('live-pages').hidden = !state.dateContext && !state.data;
     byId('connection-title').textContent = message;
     byId('connection-detail').textContent = connected ? '' : '연결이 복구되면 같은 진행 상태를 이어갑니다.';
     scenarioTools.update(state.data, connected);
-    if (state.data && !connected) render();
+    syncDispatchContext();
+    render();
   },
   onError: message => {
     if (state.pendingNotice) {
@@ -113,7 +129,16 @@ function selectedDelivery() {
 }
 
 function render() {
-  if (!state.data) return;
+  syncDispatchContext();
+  renderPage();
+  renderControlDate();
+  byId('vehicle-control').hidden = !state.data;
+  byId('resource-management').hidden = !state.data;
+  byId('resource-destinations').hidden = !state.data;
+  byId('resource-empty').hidden = Boolean(state.data) || !state.dateContext?.empty;
+  byId('resource-empty').textContent = state.dateContext?.invalid ? '요청한 날짜가 올바르지 않습니다. 배차 관리에서 날짜를 다시 선택해 주세요.' : `${state.dateContext?.date || '선택한 날짜'}에 조회할 자원 자료가 없습니다.`;
+  if (state.page === 'orders') orderPlanning.update(state.data, state.selectedId);
+  if (!state.data) { byId('summary-counts').innerHTML = ''; byId('summary-counts').hidden = true; scenarioTools.update(null, false); return; }
   let selected = selectedDelivery();
   const controlRow = state.page === 'control' ? resolveControlVehicle(vehicleOperations(state.data), state.controlVehicleId, selected?.id) : null;
   if (state.page === 'control') {
@@ -123,14 +148,12 @@ function render() {
   }
   if (selected) state.selectedId = selected.id;
   state.data = sourceVehicleContext(state.data, state.selectedId);
-  renderPage();
   renderSummary();
   renderReview(selected);
   if (state.page === 'deliveries') {
     resourceManagement.update(state.data, state.selectedId);
     destinationDirectory.update(state.data.sourceData?.date);
   }
-  if (state.page === 'orders') orderPlanning.update(state.data, state.selectedId);
   if (state.page === 'control') {
     const row = controlRow;
     vehicleControl.update({ ...state.data, connected: state.connected }, state.controlVehicleId, selected?.id);
@@ -146,9 +169,9 @@ function render() {
 }
 
 function syncDispatchContext() {
-  const sourcePage = state.page === 'orders' && orderPlanning.usesSource();
-  byId('scenario-tools').hidden = sourcePage;
-  if (sourcePage) byId('page-description').textContent = '주문 확인 → 배송원 선택 → 배차 계산 → 전체 배차 전송';
+  const ordersPage = state.page === 'orders';
+  byId('scenario-tools').hidden = ordersPage;
+  if (ordersPage && orderPlanning.usesSource()) byId('page-description').textContent = '주문 확인 → 배송원 선택 → 배차 계산 → 전체 배차 전송';
 }
 
 function renderPage() {
@@ -163,7 +186,19 @@ function renderPage() {
     sessionStorage.setItem('meatbox.operator.page', state.page);
   } catch {}
   byId('page-description').textContent = page.description;
-  if (state.data?.sourceData) byId('page-description').textContent = `${state.data.sourceData.date.replaceAll('-', '.')} 배송 운영`;
+}
+
+function renderControlDate() {
+  const context = state.dateContext;
+  const date = context?.date;
+  const today = seoulToday();
+  const dates = context?.dates || [];
+  controlDatePicker.update({ value: validOperatingDate(date) ? date : '', dates: [...dates, { date: today }], disabled: !context });
+  byId('control-today').disabled = !context || date === today;
+  byId('control-readonly').hidden = !(validOperatingDate(date) && date < today || state.data?.dispatch?.readOnly);
+  const empty = byId('control-empty');
+  empty.hidden = Boolean(state.data) || !context?.empty;
+  empty.textContent = context?.invalid ? '요청한 날짜가 올바르지 않습니다. 조회 날짜를 다시 선택해 주세요.' : `${date || '선택한 날짜'}에 배송 자료가 없습니다. 날짜를 선택해 이력을 조회할 수 있습니다.`;
 }
 
 function renderSummary() {

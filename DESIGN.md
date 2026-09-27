@@ -1,5 +1,17 @@
 # Design
 
+## Current header and operating-date decision (2026-09-27; locally verified)
+
+- Remove the shared header `운영일` picker and `운영/고객/배송원 뷰어` switch. Keep the responsive header on one row. Preserve operator navigation and direct customer/driver delivery links for the appropriate roles. This decision supersedes older shared-header and two-row responsive guidance below.
+- Date selection belongs to its task: dispatch keeps its date picker; control gets a contextual query-date/history control; resource master navigation has no date control. The current operating day comes from the actual Asia/Seoul calendar clock, never from a presentation manifest date. Explicit historical dates stay readable but cannot be mutated.
+- Preserve saved drafts and published checkpoints through date rollover and restart. Reject malformed identity/source records rather than restoring or substituting them. Do not silently show an old demo day when today is empty. Keep the beta weekday-average concept separate; this cleanup adds no beta UI.
+- Implementation and verification scope is [docs/header-date-cleanup-plan.md](docs/header-date-cleanup-plan.md). Existing B_AREA DB/API work remains in place; other audited demo replacements and a full new B_AREA UI are separate work. No production-file rewrite, deployment or commit is part of this decision.
+
+## Latest dispatch UI decision (2026-09-27)
+
+- Retire the `주문 시나리오` button, popup and 80–120% volume comparison from 배차 관리. Hide the floating scenario panel on the dispatch page regardless of loading or error state. Keep actual orders and box counts, vehicle selection, pin dispatch and the map visible.
+- Earlier 80-vehicle presentation, customer/driver demonstrations and recorded operating state are historical facts; this UI removal does not alter them. The decision below supersedes only instructions for the retired dispatch UI.
+
 ## Driver work-history calendar correction (2026-09-16, local)
 
 - `근무 이력` opens a dedicated month calendar in the driver screen, with previous/next month, weekdays, selected date, today outline, and records below the calendar. Hide the delivery/map tab bar while this page is selected.
@@ -34,7 +46,7 @@
 - Let operators scan received orders on a map, compare many deliveries in a thin list, and monitor selected vehicles and inspect destination facts.
 - Make presentation stages, time, changes and next action explainable in the guide.
 - Non-goals: external route optimization, production device integrations and external customer-message delivery. The approved scenario calculates assignments from provided coordinates and quantities; SHP boundaries remain unchanged and do not become editable or driver-exclusive automatically.
-- Success: operators can use the order map, data-sized delivery list, vehicle-first monitoring, customer notices and delivery tips without mistaking synthetic values or volume previews for live data.
+- Success: operators can use the order map, data-sized delivery list, vehicle-first monitoring, customer notices and delivery tips while actual order and box counts remain clear.
 
 ## Personas and jobs
 - Presenter: select a prepared order or delivery scene using a movable guide.
@@ -47,7 +59,7 @@
 - Operator left menu: 배차 관리 / 배송 관제 / 자원 관리. Preserve legacy orders/deliveries/control route IDs. Viewer switching preserves selected delivery, filters and last operator page; customer/driver viewers do not select an operator item.
 - 배차 관리: left vehicle list plus ALL coordinate-bearing order markers. Emphasize selected-vehicle orders with draw order and non-color cues, without hiding markers or changing coordinates. No vehicle markers on this map. Show location-unregistered counts.
 - Dispatch marker detail uses destination name/address, quantity and driver/region names without order or region IDs. Clicking any map area without an order marker clears order/vehicle/region emphasis and returns to all vehicles while retaining zoom and pin visibility mode. Region fills stay visible and no longer capture blank-map clicks.
-- 주문 시나리오: received-box total 80–120% local preview, total vehicles/destinations/boxes and individual driver assignments. For dated operations, group trimmed NFC-normalized name and address within the same date and vehicle into one destination and one sequence; retain every child order and sum every box. Missing identity fields stay separate. Do not infer household counts. Aggregate duration spans earliest fixed departure to latest handoff completion, with known vehicle coverage shown. Never mutate source quantities, assignment or ETA.
+- 배차 관리의 실제 주문·박스 수량과 차량별 배정 정보는 유지한다. 날짜별 운영에서는 같은 날짜·차량의 trim/NFC 정규화된 이름·주소를 한 배송지와 한 순서로 묶고, 모든 하위 주문과 박스 합계를 보존한다. 식별 필드가 없으면 분리하고 가구 수를 추정하지 않는다. 출발부터 최종 인계까지의 집계 시간과 확인된 차량 범위는 남아 있는 관제 화면에서 표시한다. 원본 수량·배정·ETA를 임의로 변경하지 않는다.
 - Distinguish fixed scenario departure, last arrival ETA and final handoff-completion forecast. Use the existing simulation movement and unloading inputs for clearly labeled forecasts; missing inputs remain unknown.
 - 권역: show verified boundaries from the provided SHP on the dispatch page. Verify CSV/SHP coordinate systems independently and preserve the source geometry. Connect only supplied region attributes; do not infer driver-exclusive boundaries. The approved dispatch calculator groups nearby destinations with balanced box totals. Pin dispatch moves the entire matching name/address bundle inside a review draft; only explicit publish changes driver assignments. Region editing and external optimization remain out of scope.
 - 배송 관제: vehicle remaining workload comparison, explicit vehicle selection, map and a right vehicle card with expandable destinations. Keep current vehicle summary stable during historical stop inspection. Received order is the initial UI order, not a business priority; selectable sorts place unknown values last.
@@ -87,7 +99,7 @@
 
 ## Components
 - Reuse existing ETA, timeline and event semantics while separating the customer time window from the precise operator ETA.
-- An order-planning component owns the order markers and selected vehicle. Its corner popup owns only the browser-side 80–120% target-volume preview without changing source boxes, fleet, ETA or route state or generating vehicle positions.
+- The dispatch page keeps actual order markers, selected vehicle and pin dispatch. It has no corner volume-comparison popup.
 - Customer notices and delivery tips are simulation records shared through the authenticated gateway. No screen claims external delivery.
 - Monitoring starts with vehicle workload and a map; expandable destination details remain in the right vehicle card. Keep ETA facts and the timeline compact, preserve empty time columns explicitly, and retain 44px mobile action targets.
 - Shared shell owns header viewer switching and the floating manual scenario selector. Scenario buttons target only live V1 stops `S1` through `S8`.
@@ -103,9 +115,9 @@
 ## Responsive behavior
 - Header wraps deliberately into two rows at <=860px; the operator rail stays vertical and narrows to72px. At <=520px viewer tabs divide the available row equally.
 - Customer and driver viewers share `app-viewer.css`: 390×780 phone, 8px frame, 38px outer radius, 30px screen radius, speaker and internal scrolling. Both use the same title band, 32px workspace spacing and 420px side-panel limit. Below 1000px the panels stack; below 520px the frame is omitted in both views while the screen retains bounded scrolling. Customer interior follows the approved compact white composition. Driver interior follows the explicitly requested Clever Driver reference below.
-- Guide and map-scenario popup stay within the viewport. Collapsed launcher occupies only a small footprint.
+- The guide stays within the viewport. The dispatch page does not render a floating scenario panel or launcher.
 - On narrow monitoring screens, stack vehicle comparison, the selected-vehicle map and the right detail card. ETA responds to its card width: below 520px, stack the two fact groups to the right of the ETA; below 380px, move them below the ETA. Dividers follow group boundaries and labels remain on one line.
-- At 320px and 390px, the order map and corner scenario popup stay within the viewport, and delivery rows keep at least 44px action height.
+- At 320px and 390px, the order map stays within the viewport, and delivery rows keep at least 44px action height.
 
 ## Interaction states
 - Existing connection notices cover loading and offline state.
@@ -137,10 +149,10 @@
 - `/scenario/` opens the preserved Sanghyun customer reference, and `/scenario/customer`, `/scenario/driver`, `/scenario/control`, `/scenario/present` serve their matching preserved HTML through the authenticated gateway. The gateway rewrites asset paths, normalizes the product title and hides retired traffic/dwell controls without editing frozen sources.
 - Retain timers used for authentication cleanup, command-window cleanup and browser WebSocket reconnection. The scenario itself has no continuous timer.
 - The current source of truth is [docs/vehicle-operations-redesign-plan.md](docs/vehicle-operations-redesign-plan.md), overriding conflicting older fleet decisions. This scope ends at local implementation and verification; deployment is a separate request.
-- Regression evidence: fixture-integrity and 80%/100%/120% preview tests, original snapshot checks, authentication and route-CAS tests, responsive browser interactions and deployment postchecks.
+- Regression evidence: actual order/box totals and dispatch-panel removal checks, original snapshot checks, authentication and route-CAS tests, responsive browser interactions and deployment postchecks.
 
 ## Open questions
-- Production coordinate, region-boundary, allocation-algorithm, evaluation-metric, device and external-notification contracts are not established by this demo. The temporary fixture and volume preview must yield to the cleaned real-data contract when those inputs arrive.
+- Production coordinate, region-boundary, allocation-algorithm, evaluation-metric, device and external-notification contracts are not established by this demo. The temporary fixture must yield to the cleaned real-data contract when those inputs arrive.
 - The demo does not require a real vehicle or GPS. Use a stable point partway through the stored OSRM road geometry as the example vehicle position, then draw only its remaining road coordinates to the selected store. Completed deliveries hide the vehicle and route. A new real address still requires a verified coordinate and a matching road-routing response; production geocoding and GPS integration remain pending.
 - Draw a vehicle-to-store route only from a successful road-routing geometry response, including the stored OSRM demo data. Never connect the endpoints with a fabricated straight line. If coordinates or road geometry are unavailable, leave the route absent. Do not describe a computed road route or the example vehicle position as recorded driving or live GPS.
 
@@ -262,5 +274,5 @@
 - Capture raw child order/status baselines when route editing begins; never refresh an old expected baseline at save time. Preserve protection for current/completed deliveries. Legacy checkpoint restore normalizes destination state/references and rejects cross-destination metadata.
 - Fixed departure remains 06:30. Planned travel uses the existing first-leg 20 minutes, coordinate-distance factor 1.3 at 30 km/h, and four minutes of service per unique destination. Actual shipping, arrival and completion update the remainder. All views share these estimates. Actual clock displays use minute truncation; estimated times use rounding. This is not road-route optimization or a live GPS estimate.
 - Only the 2026-09-16 presentation receives deterministic refrigerator/doorstep/indoor/handoff requests with a mandatory checkbox and corresponding guidance, without overwriting supplied content. Product screens omit a demo-request badge; metadata remains presentation. Do not fabricate item names, evaluation scores or attendance.
-- Keep dispatch rows compact; detailed per-vehicle fixed departure/completion times are in 주문 시나리오 and control. Phone headings and action buttons wrap as whole elements rather than breaking Korean labels.
+- Keep dispatch rows compact; detailed per-vehicle fixed departure/completion times remain in control. Phone headings and action buttons wrap as whole elements rather than breaking Korean labels.
 - Verification and limitations: docs/presentation-scenario-audit-2026-09-16.md and plan section 38.

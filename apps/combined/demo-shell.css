@@ -5,30 +5,11 @@
 .demo-navigation,
 .demo-navigation * { box-sizing: border-box; }
 
-.demo-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 0 20px;
-  color: var(--meatbox-ink, #212322);
-  background: #fff;
-  border-bottom: 1px solid #dce0e6;
-  font: 14px/1.4 var(--meatbox-font, sans-serif);
-}
-
+.demo-header { position: sticky; top: 0; z-index: 40; height: 56px; display: flex; align-items: center; padding: 0 20px; color: var(--meatbox-ink, #212322); background: #fff; border-bottom: 1px solid #dce0e6; font: 14px/1.4 var(--meatbox-font, sans-serif); }
 .demo-header a { color: inherit; text-decoration: none; }
 .demo-brand { display: inline-flex; align-items: center; gap: 8px; flex: none; white-space: nowrap; }
 .demo-brand img { display: block; width: 126px; height: 30px; }
 .demo-brand span { color: var(--meatbox-red, #e60028); font-size: 15px; font-weight: 700; }
-.viewer-switch { align-self: stretch; display: flex; height: 100%; gap: 4px; margin-left: 24px; }
-.viewer-switch a { position: relative; display: flex; flex: 0 0 112px; align-items: center; justify-content: center; height: 100%; padding: 0 12px; color: #667085; white-space: nowrap; font-weight: 500; }
-.viewer-switch a:hover { color: var(--meatbox-ink, #212322); background: #f9fafb; }
-.viewer-switch a[aria-current="page"] { color: var(--meatbox-red, #e60028); font-weight: 600; }
-.viewer-switch a[aria-current="page"]::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; height: 3px; background: var(--meatbox-red, #e60028); }
 .demo-header a:focus-visible,
 .operator-pages a:focus-visible { outline: 2px solid var(--meatbox-ink, #212322); outline-offset: -4px; }
 
@@ -44,24 +25,11 @@ body[data-viewer="operator"] .operator-pages a[aria-current="page"]::after { con
 .demo-connection { margin: 20px; padding: 12px; color: #61656e; background: #fff; border: 1px solid #dce0e6; border-radius: var(--meatbox-radius-field, 4px); font-size: 13px; }
 
 @media (max-width: 860px) {
-  .demo-header { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 44px 44px; height: 89px; gap: 0; padding: 0 12px; }
-  .demo-brand { grid-row: 1; }
+  .demo-header { padding: 0 12px; }
   .demo-brand img { width: 105px; height: 25px; }
-  .viewer-switch { grid-row: 2; width: 100%; height: 44px; margin: 0; }
-  .viewer-switch a { height: 44px; padding: 0 12px; font-size: 13px; }
-  .demo-layout { grid-template-columns: 72px minmax(0, 1fr); min-height: calc(100dvh - 89px); }
-  .operator-pages { top: 89px; height: calc(100dvh - 89px); }
+  .demo-layout { grid-template-columns: 72px minmax(0, 1fr); }
 }
-
 @media (max-width: 520px) {
-  .viewer-switch a { flex: 1; min-width: 0; padding: 0 6px; font-size: 12px; }
   .operator-axis { padding-inline: 2px; font-size: 9px; }
   .operator-pages a { padding-inline: 4px; font-size: 11px; white-space: normal; }
 }
-/* The source date is outside the handset, leaving the shared phone frame intact. */
-.viewer-source-context { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:8px 24px; color:#53616b; background:#f5f7f6; border-bottom:1px solid #e3e8e5; font-size:12px; }
-.viewer-source-context[hidden] { display:none; }
-.viewer-source-context details { position:relative; margin-left:auto; }
-.viewer-source-context summary { cursor:pointer; }
-.viewer-source-context details p { position:absolute; z-index:50; right:0; width:min(280px, calc(100vw - 48px)); padding:12px; background:white; border:1px solid #d8dfda; border-radius:8px; box-shadow:0 6px 20px #182b231a; line-height:1.6; }
-@media(max-width:480px) { .viewer-source-context { padding:8px 12px; gap:8px; } }

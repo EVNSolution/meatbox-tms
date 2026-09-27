@@ -30,7 +30,7 @@ function assignInOrder({ orders: sourceOrders, vehicleIds }) {
   return Object.fromEntries(sourceOrders.map((order, index) => [order.id, vehicleIds[index % vehicleIds.length]]));
 }
 
-async function fixture(t, { dispatchCalculator = assignInOrder, operatingDate = date, persistent = false, dispatchStateIO } = {}) {
+async function fixture(t, { dispatchCalculator = assignInOrder, operatingDate = date, now = () => Date.parse('2025-09-15T03:00:00Z'), persistent = false, dispatchStateIO } = {}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'meatbox-source-api-'));
   const dispatchDataDir = path.join(root, '.runtime', 'dispatch-data');
   const dispatchStateDir = persistent ? path.join(root, '.runtime', 'dispatch-state') : null;
@@ -44,7 +44,7 @@ async function fixture(t, { dispatchCalculator = assignInOrder, operatingDate = 
   }));
   await fs.writeFile(path.join(dispatchDataDir, 'days', `${date}.json`), JSON.stringify(day));
   await fs.writeFile(path.join(dispatchDataDir, 'regions.geojson'), JSON.stringify({ type: 'FeatureCollection', features: [] }));
-  const demo = createDemo({ accessFile, dispatchDataDir, dispatchStateDir, dispatchStateIO, origin, ...(dispatchCalculator === 'default' ? {} : { dispatchCalculator }) });
+  const demo = createDemo({ accessFile, dispatchDataDir, dispatchStateDir, dispatchStateIO, origin, now, ...(dispatchCalculator === 'default' ? {} : { dispatchCalculator }) });
   await new Promise(resolve => demo.server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${demo.server.address().port}`;
   const invite = await demo.access.issueInvite();
@@ -58,7 +58,7 @@ async function fixture(t, { dispatchCalculator = assignInOrder, operatingDate = 
     ...options,
     headers: { cookie, 'accept-encoding': 'identity', ...options.headers },
   });
-  return { base, cookie, request, dispatchDataDir, dispatchStateDir, dispatchStateIO, accessFile, credentials, access: demo.access, demo, root, dispatchCalculator };
+  return { base, cookie, request, dispatchDataDir, dispatchStateDir, dispatchStateIO, accessFile, credentials, access: demo.access, demo, root, dispatchCalculator, now };
 }
 
 async function restartFixture(t, api) {
@@ -68,6 +68,7 @@ async function restartFixture(t, api) {
     dispatchDataDir: api.dispatchDataDir,
     dispatchStateDir: api.dispatchStateDir,
     dispatchStateIO: api.dispatchStateIO,
+    now: api.now,
     origin,
     ...(api.dispatchCalculator === 'default' ? {} : { dispatchCalculator: api.dispatchCalculator }),
   });
@@ -250,7 +251,7 @@ test('orders stay unassigned until a calculated draft is published', async t => 
 });
 
 test('past dates expose records but reject dispatch mutations', async t => {
-  const api = await fixture(t, { operatingDate: '2025-09-16' });
+  const api = await fixture(t, { operatingDate: date, now: () => Date.parse('2025-09-16T03:00:00Z') });
   const initial = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
   assert.equal(initial.dispatch.readOnly, true);
 
@@ -259,6 +260,75 @@ test('past dates expose records but reject dispatch mutations', async t => {
   });
   assert.equal(response.status, 409);
   assert.deepEqual(await response.json(), { error: 'DATE_READ_ONLY', message: '과거 배차일은 조회만 할 수 있습니다.' });
+});
+
+test('manifest dates do not define the live Seoul operating date', async t => {
+  const api = await fixture(t, { operatingDate: '2030-01-01' });
+  const state = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  assert.equal(state.dispatch.today, date);
+  assert.equal(state.sourceData.operatingDate, date);
+  assert.equal(state.dispatch.readOnly, false);
+});
+
+test('midnight changes cached state and ETag, then blocks stale commands without rewriting a saved draft', async t => {
+  let clock = Date.parse('2025-09-15T14:59:59Z');
+  const api = await fixture(t, { persistent: true, now: () => clock });
+  const route = `/api/dispatch-data/days/${date}/state`;
+  const initial = await (await api.request(route)).json();
+  const calculated = await command(api, date, {
+    type: 'calculate_dispatch', expectedBoot: initial.boot, expectedRevision: initial.revision, vehicleIds: ['G1', 'G2'],
+  });
+  assert.equal(calculated.status, 200);
+  const draft = (await calculated.json()).state;
+  const savedPath = path.join(api.dispatchStateDir, `${date}.json`);
+  const before = await fs.readFile(savedPath, 'utf8');
+  const beforeResponse = await api.request(route);
+  const beforeEtag = beforeResponse.headers.get('etag');
+  clock = Date.parse('2025-09-15T15:00:00Z');
+  const afterResponse = await api.request(route, { headers: { 'if-none-match': beforeEtag } });
+  assert.equal(afterResponse.status, 200);
+  assert.notEqual(afterResponse.headers.get('etag'), beforeEtag);
+  const after = await afterResponse.json();
+  assert.equal(after.revision, draft.revision);
+  assert.equal(after.dispatch.phase, 'draft');
+  assert.equal(after.dispatch.today, '2025-09-16');
+  assert.equal(after.dispatch.readOnly, true);
+  assert.equal(after.dispatch.canPublish, false);
+  assert.equal(await fs.readFile(savedPath, 'utf8'), before);
+  const rejected = await command(api, date, {
+    type: 'publish_dispatch', expectedBoot: draft.boot, expectedRevision: draft.revision, draftVersion: draft.dispatch.draftVersion,
+  });
+  assert.equal(rejected.status, 409);
+  assert.equal((await rejected.json()).error, 'DATE_READ_ONLY');
+  assert.equal(await fs.readFile(savedPath, 'utf8'), before);
+  const restarted = await restartFixture(t, api);
+  const restored = await (await restarted.request(route)).json();
+  assert.equal(restored.dispatch.phase, 'draft');
+  assert.equal(restored.dispatch.today, '2025-09-16');
+  assert.equal(restored.dispatch.readOnly, true);
+  assert.equal(await fs.readFile(savedPath, 'utf8'), before);
+});
+
+test('a calculator crossing Seoul midnight cannot commit an already historical date', async t => {
+  let clock = Date.parse('2025-09-15T14:59:59Z');
+  const api = await fixture(t, {
+    persistent: true,
+    now: () => clock,
+    dispatchCalculator(input) {
+      clock = Date.parse('2025-09-15T15:00:00Z');
+      return assignInOrder(input);
+    },
+  });
+  const state = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  const response = await command(api, date, {
+    type: 'calculate_dispatch', expectedBoot: state.boot, expectedRevision: state.revision, vehicleIds: ['G1', 'G2'],
+  });
+  assert.equal(response.status, 409);
+  assert.equal((await response.json()).error, 'DATE_READ_ONLY');
+  const fresh = await (await api.request(`/api/dispatch-data/days/${date}/state`)).json();
+  assert.equal(fresh.revision, 0);
+  assert.equal(fresh.dispatch.phase, 'unplanned');
+  await assert.rejects(fs.access(path.join(api.dispatchStateDir, `${date}.json`)), { code: 'ENOENT' });
 });
 
 test('published routes retain ordered stops', async t => {
@@ -549,6 +619,15 @@ test('corrupt or source-mismatched durable checkpoints fail closed', async t => 
   response = await mismatch.request(`/api/dispatch-data/days/${date}/state`);
   assert.equal(response.status, 500);
   assert.deepEqual(await response.json(), { error: 'DISPATCH_STATE_SOURCE_MISMATCH' });
+
+  const invalidDate = await fixture(t, { persistent: true });
+  await fs.mkdir(invalidDate.dispatchStateDir, { recursive: true });
+  await fs.writeFile(path.join(invalidDate.dispatchStateDir, `${date}.json`), JSON.stringify({
+    schemaVersion: 2, date, sourceId: 'csv-test-source', operatingDate: '2025-02-30', revision: 0,
+  }));
+  response = await invalidDate.request(`/api/dispatch-data/days/${date}/state`);
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), { error: 'DISPATCH_STATE_INVALID' });
 });
 
 test('command rate limits are isolated by authenticated user', async t => {

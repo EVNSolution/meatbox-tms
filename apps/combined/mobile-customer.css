@@ -100,7 +100,7 @@ body:has(#account-picker:not([hidden])) .mobile-shell { visibility: hidden; }
 }
 
 @media (max-width: 860px) {
-  #account-picker { inset: 89px 0 0 72px; }
+  #account-picker { inset: 56px 0 0 72px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

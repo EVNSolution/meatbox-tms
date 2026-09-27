@@ -43,6 +43,7 @@ const icons = {
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
 const statusLabels = { pending: '대기', current: '배송 중', done: '완료', skipped: '보류' };
 let latest, fullLatest, connected = false, selectedId = new URLSearchParams(location.search).get('id');
+let emptyDate = false;
 let tab = 'delivery', screen = 'main', group = null, routeCompleted = null, orderGroup = 'own', mapSelection = null;
 let draft = null, base = null, editMapOpen = true, drag = null, pending = null, pendingTimer;
 let sheet = null, returnFocus = null, proofUrl = null, detailTab = 'order';
@@ -56,8 +57,16 @@ const shell = mountDemoShell({ viewer: 'driver', onSelect: selectScenarioDeliver
   onSend: (type, extra) => dispatchPending() || dispatchReadOnly() || !hasSelectedRoute() ? false : simulation.send(type, extra) });
 shell.update(null, false);
 const simulation = connectSimulation({
+  onDateContext(context) {
+    emptyDate = context.empty;
+    latest = null; fullLatest = null;
+    shell.setDate(context.date);
+    byId('dv-app').hidden = true;
+  },
   onState(raw) {
     fullLatest = adaptSimulation(raw);
+    emptyDate = false;
+    byId('dv-app').hidden = false;
     latest = sourceVehicleContext(fullLatest, selectedId);
     if (latest.truck && Number.isFinite(raw.truck?.remainingM)) latest.truck.remainingM = raw.truck.remainingM;
     if (pending?.accept(latest)) {
@@ -69,8 +78,8 @@ const simulation = connectSimulation({
   },
   onStatus(value, message) {
     connected = value;
-    byId('driver-connection').hidden = value;
-    byId('driver-connection').textContent = message;
+    byId('driver-connection').hidden = value && !emptyDate;
+    byId('driver-connection').textContent = emptyDate ? '선택한 날짜에 배송 자료가 없습니다. 운영자 화면에서 다른 날짜를 조회해 주세요.' : message;
     if (!value && pending) failCommand('연결이 끊겨 처리 여부를 확인할 수 없습니다. 다시 연결되면 상태를 확인해 주세요.');
     shell.update(latest, value);
     if (latest) render();
@@ -157,6 +166,7 @@ function render() {
   }
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
   const operatingDate = latest.sourceData ? driverOperatingDate(latest.sourceData, today) : null;
+  byId('dv-app').querySelector('[data-group="today"]').textContent = latest.sourceData && latest.sourceData.date !== today ? '배차 조회' : '금일 배차';
   if (operatingDate !== historySourceDate) {
     historySourceDate = operatingDate;
     historyInitializedFor = null;

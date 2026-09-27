@@ -1,20 +1,15 @@
 import { referenceIcon } from './reference-icons.mjs';
 import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
-import { summarizeFleetTiming, vehicleOperations } from './vehicle-operations-model.mjs';
+import { vehicleOperations } from './vehicle-operations-model.mjs';
 import { mountDispatchMapLayers } from './dispatch-map-layer.mjs';
 import { paginate } from './pagination-model.mjs';
 import { bundleDeliveries } from './delivery-bundles.mjs';
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
-export function volumeScenario(deliveries, value = 100) {
-  const parsed = Number.parseFloat(value);
-  const percent = Math.min(120, Math.max(80, Number.isFinite(parsed) ? Math.round(parsed) : 100));
+export function totalBoxes(deliveries) {
   const total = Array.isArray(deliveries) && deliveries.every(delivery => Number.isFinite(delivery?.boxes) && delivery.boxes >= 0)
     ? deliveries.reduce((sum, delivery) => sum + delivery.boxes, 0) : null;
-  const baselineBoxes = Number.isFinite(total) ? total : null;
-  // Only preview the total. Per-order changes await the real-data and allocation contract.
-  const targetBoxes = baselineBoxes === null ? null : Math.round(baselineBoxes * percent / 100);
-  return { percent, baselineBoxes, targetBoxes };
+  return Number.isFinite(total) ? total : null;
 }
 
 const deliveriesFor = data => Array.isArray(data?.fleetDeliveries) ? data.fleetDeliveries : Array.isArray(data?.deliveries) ? data.deliveries : null;
@@ -49,29 +44,6 @@ const clockText = (value, date) => {
   const day = days === 0 ? '' : days === 1 ? '다음날 ' : `+${days}일 `;
   return `${day}${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 };
-const durationText = minutes => {
-  if (!Number.isFinite(minutes)) return '미확인';
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return hours ? `${hours}시간${rest ? ` ${rest}분` : ''}` : `${rest}분`;
-};
-
-export function orderAssignmentSummary(data) {
-  const deliveries = deliveriesFor(data) || [];
-  const vehicles = planningVehicles(data);
-  const destinations = data?.dispatchSource ? bundleDeliveries(deliveries) : deliveries;
-  const fallbackVehicleId = deliveries === data?.deliveries ? data?.vehicle?.id : null;
-  return {
-    vehicles: vehicles.length,
-    destinations: destinations.length,
-    boxes: volumeScenario(deliveries).baselineBoxes,
-    assignments: vehicles.map(vehicle => {
-      const assigned = deliveries.filter(delivery => vehicleIdFor(delivery, fallbackVehicleId) === vehicle.id);
-      return { vehicle, destinations: data?.dispatchSource ? bundleDeliveries(assigned).length : assigned.length, orders: assigned.length, boxes: volumeScenario(assigned).baselineBoxes };
-    }),
-  };
-}
-
 export function orderMapModel(deliveries, routeData) {
   const points = new Map((routeData?.points || []).filter(point =>
     typeof point?.id === 'string' && Number.isFinite(point.lng) && Number.isFinite(point.lat)
@@ -145,30 +117,18 @@ export function mountOrderPlanning({
       <div class="order-map-canvas" data-order-map-canvas aria-label="주문 위치">
         <div class="order-map-layer" data-order-map-layer></div>
         <div class="order-map-status" data-order-map-status role="status"><span data-order-map-status-text>지도 준비 중</span><button type="button" class="button subtle" data-order-map-retry hidden>다시 시도</button></div>
-        <button type="button" class="order-scenario-trigger" data-order-scenario-open aria-haspopup="dialog">주문 시나리오</button>
         <section class="order-map-selection" data-order-selection aria-live="polite"><span>선택 주문</span><strong>지도에서 주문을 선택해 주세요.</strong></section>
-        <p class="order-map-summary" data-order-map-summary>기준 물량 확인 중</p>
+        <p class="order-map-summary" data-order-map-summary>총 물량 확인 중</p>
       </div>
       <details class="order-location-info"><summary>주문 위치 정보</summary><p data-order-map-count>위치 데이터 확인 중</p></details>
     </section>
     </div>
     <details class="order-source-list" data-order-list-panel hidden><summary>주문 목록으로 찾기 <span data-order-list-total></span></summary><div class="order-source-list-content"><label>주문 검색<input type="search" data-order-search placeholder="결제번호, 주소, 기사 검색"></label><div data-order-list></div><div class="order-list-pages"><button type="button" class="button subtle" data-order-previous>이전</button><span data-order-page></span><button type="button" class="button subtle" data-order-next>다음</button></div></div></details>
-    <dialog class="order-scenario-dialog" data-order-scenario-dialog aria-labelledby="order-scenario-title">
-      <form method="dialog" class="order-scenario-form">
-        <div class="order-scenario-heading"><div><span>물량 비교</span><h2 id="order-scenario-title">주문 시나리오</h2></div><button type="button" class="order-dialog-close" data-order-scenario-close aria-label="주문 시나리오 닫기">${referenceIcon('close')}</button></div>
-        <p class="order-scenario-description">불러온 전체 주문의 박스 수를 100% 기준으로 비교합니다.</p>
-        <dl class="order-plan-summary"><div><dt data-order-groups-label>총 차량</dt><dd data-order-total-vehicles>0대</dd></div><div><dt data-order-orders-label>총 배송지</dt><dd data-order-total-destinations>0곳</dd></div><div><dt>총 박스</dt><dd data-order-baseline>미확인</dd></div><div><dt>전체 소요 시간</dt><dd data-order-total-duration>미확인</dd></div><div><dt>비교 물량</dt><dd data-order-target>미확인</dd></div></dl>
-        <p class="order-timing-note" data-order-timing-note>운행 시간을 확인하고 있습니다.</p>
-        <div class="order-scenario-control"><span>물량 비율 <strong data-order-volume-display>100%</strong></span><input data-order-volume-range type="range" min="80" max="120" step="1" value="100" aria-label="물량 비율 슬라이더" aria-describedby="order-volume-note"><input data-order-volume-number type="number" min="80" max="120" step="1" value="100" inputmode="numeric" aria-label="물량 비율 입력" aria-describedby="order-volume-note"><div class="order-volume-scale" aria-hidden="true"><span>80%</span><span>100%</span><span>120%</span></div></div>
-        <p class="order-scenario-description" id="order-volume-note" data-order-volume-note>기준 물량을 확인하고 있습니다.</p>
-        <section class="order-assignment-section" aria-labelledby="order-assignment-heading"><h3 id="order-assignment-heading">기사별 물량</h3><p data-order-assignment-note>동일 차량 ID 단위이며 수신 순서로 표시합니다. 배송지를 가구 수로 환산하지 않습니다.</p><div class="order-assignment-list" data-order-assignments></div></section>
-      </form>
-    </dialog>
-    <dialog class="order-scenario-dialog order-reassign-dialog" data-order-reassign-dialog aria-labelledby="order-reassign-title">
-      <div class="order-scenario-form"><div class="order-scenario-heading"><h2 id="order-reassign-title" data-order-reassign-title>핀배차</h2><button type="button" class="order-dialog-close" data-order-reassign-close aria-label="배차 창 닫기">${referenceIcon('close')}</button></div>
-      <p class="order-scenario-description" data-order-reassign-from></p>
+    <dialog class="order-dialog order-reassign-dialog" data-order-reassign-dialog aria-labelledby="order-reassign-title">
+      <div class="order-dialog-body"><div class="order-dialog-heading"><h2 id="order-reassign-title" data-order-reassign-title>핀배차</h2><button type="button" class="order-dialog-close" data-order-reassign-close aria-label="배차 창 닫기">${referenceIcon('close')}</button></div>
+      <p class="order-dialog-description" data-order-reassign-from></p>
       <label class="order-reassign-target">배정할 차량<select data-order-reassign-target aria-label="배정할 차량"></select></label>
-      <p class="order-reassign-preview" data-order-reassign-preview></p><p class="order-scenario-description">같은 이름과 주소의 주문을 하나의 배송지로 묶어 배차 계산안에 반영합니다.</p>
+      <p class="order-reassign-preview" data-order-reassign-preview></p><p class="order-dialog-description">같은 이름과 주소의 주문을 하나의 배송지로 묶어 배차 계산안에 반영합니다.</p>
       <p class="order-reassign-error" data-order-reassign-error role="alert" hidden></p>
       <div class="order-reassign-footer"><button type="button" class="button subtle" data-order-reassign-cancel>취소</button><button type="button" class="button primary" data-order-reassign-confirm>배차 적용</button></div></div>
     </dialog>`;
@@ -183,24 +143,8 @@ export function mountOrderPlanning({
   const count = query('[data-order-map-count]');
   const selection = query('[data-order-selection]');
   const summary = query('[data-order-map-summary]');
-  const dialog = query('[data-order-scenario-dialog]');
-  const trigger = query('[data-order-scenario-open]');
-  const close = query('[data-order-scenario-close]');
-  const range = query('[data-order-volume-range]');
-  const number = query('[data-order-volume-number]');
-  const display = query('[data-order-volume-display]');
-  const baseline = query('[data-order-baseline]');
-  const target = query('[data-order-target]');
-  const totalVehicles = query('[data-order-total-vehicles]');
-  const totalDestinations = query('[data-order-total-destinations]');
-  const totalDuration = query('[data-order-total-duration]');
-  const timingNote = query('[data-order-timing-note]');
-  const assignments = query('[data-order-assignments]');
-  const note = query('[data-order-volume-note]');
   let data = null;
-  let percent = 100;
   let showAllPins = false;
-  let editingPercent = false;
   let selectedVehicleId = 'V1';
   let selectedDeliveryId = null;
   let lastExternalSelectedId = null;
@@ -243,9 +187,6 @@ export function mountOrderPlanning({
     setText('[data-order-group-heading]', isSource ? data?.dispatch?.phase === 'unplanned' ? '후보 배송원' : '차량별 배정' : '배차 차량');
     setText('[data-order-group-note]', isSource ? '주문 수신 순서' : '수신 순서');
     setText('[data-order-map-description]', isSource ? showAllPins ? '모든 주문 위치를 표시합니다.' : '확대하면 모든 주문 위치를 표시합니다.' : '전체 등록 주문과 선택 차량 배정');
-    setText('[data-order-groups-label]', isSource ? data?.dispatch?.phase === 'unplanned' ? '후보 차량' : '배정 차량' : '총 차량');
-    setText('[data-order-orders-label]', '총 배송지');
-    setText('[data-order-assignment-note]', isSource ? data?.dispatch?.phase === 'unplanned' ? '배송원을 선택하고 배차 계산을 진행해 주세요.' : data?.dispatch?.phase === 'draft' ? '아직 전송하지 않은 배차 계산안입니다.' : data?.dispatch?.phase === 'amending' ? '확정 배차는 유지하고, 이 수정안을 다시 전송하기 전에 검토합니다.' : '확정된 배차의 주문과 박스 수입니다.' : '동일 차량 ID 단위이며 수신 순서로 표시합니다. 배송지를 가구 수로 환산하지 않습니다.');
     const regionControl = query('[data-order-region-control]');
     if (regionControl) regionControl.hidden = !isSource;
     const listPanel = query('[data-order-list-panel]');
@@ -255,33 +196,12 @@ export function mountOrderPlanning({
       ? '<strong>배송 권역</strong>제공된 배송 권역 경계를 표시합니다.'
       : '<strong>권역 기능 준비 중</strong> 실제 권역 데이터가 연결되면 경계와 권역 내 배송지 정보를 제공합니다.';
   }
-  function syncControls() {
-    const volume = volumeScenario(deliveriesFor(data), percent);
-    const plan = orderAssignmentSummary(data);
-    const fleetTiming = summarizeFleetTiming(planningOperations(data));
-    range.value = String(percent);
-    if (!editingPercent) number.value = String(percent);
-    display.textContent = `${percent}%`;
-    range.disabled = number.disabled = volume.baselineBoxes === null;
-    baseline.textContent = boxesText(volume.baselineBoxes);
-    target.textContent = boxesText(volume.targetBoxes);
-    totalVehicles.textContent = `${plan.vehicles.toLocaleString('ko-KR')}대`;
-    totalDestinations.textContent = countText(plan.destinations);
-    totalDuration.textContent = durationText(fleetTiming.durationMinutes);
-    const unknownVehicles = fleetTiming.totalVehicles - fleetTiming.knownVehicles;
-    timingNote.textContent = `시간 확인 ${fleetTiming.knownVehicles.toLocaleString('ko-KR')}/${fleetTiming.totalVehicles.toLocaleString('ko-KR')}대${unknownVehicles ? `, 나머지 ${unknownVehicles.toLocaleString('ko-KR')}대 미확인` : ''}. 시뮬레이션 계산값: 가장 이른 고정 출발부터 가장 늦은 최종 인도 완료까지`;
-    if (imported()) timingNote.textContent = data?.dispatch?.phase === 'unplanned' ? '배차 계산 후 차량별 출발과 완료 예상 시간을 확인할 수 있습니다.'
-      : `계획 시간 확인 ${fleetTiming.knownVehicles}/${fleetTiming.totalVehicles}대${unknownVehicles ? `, ${unknownVehicles}대 미확인` : ''}. ${clockText(fleetTiming.departureMs, data.dispatchSource.date)} 고정 출발부터 ${clockText(fleetTiming.completionMs, data.dispatchSource.date)} 최종 인도 완료 예상까지`;
-    assignments.innerHTML = plan.assignments.map(({ vehicle, destinations, boxes }) => `<article><div><strong>${escapeHtml(vehicle.driver || '배송원 미확인')}</strong><span>${escapeHtml(vehicle.plate || vehicle.id)}</span></div><p><span>배정 배송지 ${countText(destinations)}</span><span>배정 박스 ${boxesText(boxes)}</span></p></article>`).join('') || '<p class="order-assignment-empty">배정 차량 데이터가 없습니다.</p>';
-    note.textContent = volume.baselineBoxes === null ? '수량이 확인된 전체 주문 데이터가 필요합니다.'
-      : '합계 기준의 물량 미리보기입니다. 주문별 수량과 배차는 변경하지 않습니다.';
-    summary.innerHTML = `<span>기준 ${boxesText(volume.baselineBoxes)}</span><span>비교 ${percent}% (${boxesText(volume.targetBoxes)})</span><span>차량 ${vehiclesFor(data).length}대</span>`;
-    if (imported()) {
-      const stats = data.dispatchSource.summary;
-      summary.innerHTML = `<span>주문 ${stats.orders.toLocaleString('ko-KR')}건</span><span>총 ${boxesText(stats.boxes)}</span><span>비교 ${percent}% (${boxesText(volume.targetBoxes)})</span>`;
-      const times = new Map(planningOperations(data).map(row => [row.vehicle.id, row]));
-      assignments.innerHTML = plan.assignments.map(({ vehicle, destinations, orders, boxes }) => { const row = times.get(vehicle.id); return `<article><div><strong>${escapeHtml(vehicle.driver)}</strong><span>${escapeHtml(vehicle.plate)}</span></div><p><span>${countText(destinations)} / 주문 ${orders.toLocaleString('ko-KR')}건</span><span>${boxesText(boxes)}</span></p>${row ? `<p><span>고정 출발 ${escapeHtml(row.fixedDepartureText || '미확인')}</span><span>완료 예상 ${clockText(row.completionEtaMs, data.dispatchSource.date)}</span></p>` : ''}</article>`; }).join('');
-    }
+  function syncSummary() {
+    const source = deliveriesFor(data);
+    const boxes = totalBoxes(source);
+    summary.innerHTML = imported()
+      ? `<span>주문 ${(source?.length || 0).toLocaleString('ko-KR')}건</span><span>총 ${boxesText(boxes)}</span>`
+      : `<span>총 ${boxesText(boxes)}</span><span>차량 ${vehiclesFor(data).length}대</span>`;
   }
 
   function syncDispatchActions() {
@@ -304,10 +224,11 @@ export function mountOrderPlanning({
     confirm.disabled = !vehicle || targetId === pendingAssignment.fromGroupId;
     if (confirm.disabled) { setText('[data-order-reassign-preview]', '배정할 다른 차량을 선택해 주세요.'); return; }
     const currentOrders = visibleDeliveries.filter(item => item.vehicleId === targetId);
-    const currentBoxes = volumeScenario(currentOrders).baselineBoxes;
+    const currentBoxes = totalBoxes(currentOrders);
     const coordinates = vehicle.location?.coordinates;
     const position = coordinates ? ` (${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)})` : '';
-    setText('[data-order-reassign-preview]', `대상 차량 ${vehicle.driver} / ${vehicle.plate}\n현재 ${currentOrders.length}건 / ${boxesText(currentBoxes)} → 배차 후 ${currentOrders.length + pendingAssignment.orderIds.length}건 / ${boxesText(currentBoxes + pendingAssignment.boxes)}\n${vehicle.location?.label?.replace(' 예시 위치', '') || '위치 미등록'}${position}`);
+    const nextBoxes = currentBoxes === null || pendingAssignment.boxes === null ? null : currentBoxes + pendingAssignment.boxes;
+    setText('[data-order-reassign-preview]', `대상 차량 ${vehicle.driver} / ${vehicle.plate}\n현재 ${currentOrders.length}건 / ${boxesText(currentBoxes)} → 배차 후 ${currentOrders.length + pendingAssignment.orderIds.length}건 / ${boxesText(nextBoxes)}\n${vehicle.location?.label?.replace(' 예시 위치', '') || '위치 미등록'}${position}`);
   }
 
   function openAssignment() {
@@ -317,7 +238,7 @@ export function mountOrderPlanning({
     const selected = chosen.assignmentUnitId ? visibleDeliveries.filter(item => item.assignmentUnitId === chosen.assignmentUnitId) : [chosen];
     const fromGroupId = chosen.vehicleId;
     const from = vehiclesFor(data).find(item => item.id === fromGroupId);
-    pendingAssignment = { date: data.dispatchSource.date, fromGroupId, orderIds: selected.map(item => item.id), boxes: volumeScenario(selected).baselineBoxes };
+    pendingAssignment = { date: data.dispatchSource.date, fromGroupId, orderIds: selected.map(item => item.id), boxes: totalBoxes(selected) };
     setText('[data-order-reassign-title]', '핀배차');
     setText('[data-order-reassign-from]', `${chosen.name} / ${selected.length}건 / ${boxesText(pendingAssignment.boxes)} / ${from?.driver || '배차 대기'}`);
     const select = query('[data-order-reassign-target]');
@@ -401,7 +322,7 @@ export function mountOrderPlanning({
       mapStatusText.textContent = mapFailure || (routeState === 'failed' ? '배송지 위치 데이터를 불러오지 못했습니다.' : '배송지 위치를 불러오고 있습니다.');
       mapRetry.hidden = !mapFailure && routeState !== 'failed';
       updateSelection();
-      syncControls();
+      syncSummary();
       return;
     }
     const model = imported() ? sourceModel : orderMapModel(source, routeData);
@@ -443,7 +364,7 @@ export function mountOrderPlanning({
     mapRetry.hidden = true;
     if (!model.mapped.length) mapStatusText.textContent = '배송지 위치 정보가 등록되지 않았습니다.';
     updateSelection();
-    syncControls();
+    syncSummary();
   }
 
   function ensureMap() {
@@ -506,7 +427,7 @@ export function mountOrderPlanning({
     const focusedVehicleId = typeof document === 'object' && vehicleSelect.contains?.(document.activeElement) ? document.activeElement?.dataset?.orderVehicleId : null;
     vehicleSelect.innerHTML = vehicles.map(vehicle => {
       const assigned = source.filter(delivery => vehicleIdFor(delivery, fallbackVehicleId) === vehicle.id);
-      const boxes = volumeScenario(assigned).baselineBoxes;
+      const boxes = totalBoxes(assigned);
       const departureLabel = vehicle.departure?.source === 'scenario-baseline' ? '고정 출발 (시나리오 기준)' : '고정 출발';
       const row = rowsByVehicle.get(vehicle.id);
       const departure = escapeHtml(row?.fixedDepartureText || vehicle.departure?.time || '미등록');
@@ -519,25 +440,12 @@ export function mountOrderPlanning({
       if (imported()) return `<button type="button" data-order-vehicle-id="${escapeHtml(vehicle.id)}" aria-pressed="${vehicle.id === selectedVehicleId}"><span class="order-vehicle-name"><strong title="${escapeHtml(vehicle.driver)}">${escapeHtml(vehicle.driver)}</strong><small>${escapeHtml(vehicle.plate)}</small></span><span class="order-vehicle-load"><b>${data?.dispatch?.phase === 'unplanned' ? '배차 대기' : `${countText(bundleDeliveries(assigned).length)} / 주문 ${assigned.length.toLocaleString('ko-KR')}건`}</b><b>${boxesText(boxes)}</b></span><span class="order-source-regions" title="${escapeHtml(regionLabel)}">${escapeHtml(regionLabel)}</span></button>`;
       return `<button type="button" data-order-vehicle-id="${escapeHtml(vehicle.id)}" aria-pressed="${vehicle.id === selectedVehicleId}"><span class="order-vehicle-name"><strong>${escapeHtml(vehicle.plate || vehicle.id)}</strong><small>${escapeHtml(vehicle.driver || '배송원 미확인')}</small></span><span class="order-vehicle-load"><b>${countText(assigned.length)}</b><b>${boxesText(boxes)}</b></span><span class="order-vehicle-times"><span>${departureLabel} <strong>${departure}</strong></span><span>마지막 도착 ETA <strong>${escapeHtml(lastArrival)}</strong></span><span>${completionLabel} <strong>${escapeHtml(completion)}</strong></span></span></button>`;
     }).join('') || '<p class="order-vehicle-empty">배차 차량이 없습니다.</p>';
-    if (imported()) vehicleSelect.innerHTML = `<button type="button" data-order-vehicle-id="all" aria-pressed="${selectedVehicleId === 'all'}"><span class="order-vehicle-name"><strong>${data?.dispatch?.phase === 'unplanned' ? '전체 주문' : '전체 차량'}</strong><small>${vehicles.length}대</small></span><span class="order-vehicle-load"><b>주문 ${source.length.toLocaleString('ko-KR')}건</b><b>${boxesText(volumeScenario(source).baselineBoxes)}</b></span></button>` + vehicleSelect.innerHTML;
+    if (imported()) vehicleSelect.innerHTML = `<button type="button" data-order-vehicle-id="all" aria-pressed="${selectedVehicleId === 'all'}"><span class="order-vehicle-name"><strong>${data?.dispatch?.phase === 'unplanned' ? '전체 주문' : '전체 차량'}</strong><small>${vehicles.length}대</small></span><span class="order-vehicle-load"><b>주문 ${source.length.toLocaleString('ko-KR')}건</b><b>${boxesText(totalBoxes(source))}</b></span></button>` + vehicleSelect.innerHTML;
     if (focusedVehicleId) Array.from(vehicleSelect.querySelectorAll?.('[data-order-vehicle-id]') || []).find(item => item.dataset.orderVehicleId === focusedVehicleId)?.focus();
-  }
-
-  function setPercent(value) {
-    percent = volumeScenario(deliveriesFor(data), value).percent;
-    syncControls();
   }
 
   const listeners = [];
   const listen = (node, type, listener) => { if (!node) return; node.addEventListener(type, listener); listeners.push(() => node.removeEventListener(type, listener)); };
-  listen(range, 'input', event => setPercent(event.target.value));
-  listen(number, 'focus', () => { editingPercent = true; });
-  listen(number, 'input', event => {
-    const value = Number(event.target.value);
-    if (Number.isInteger(value) && value >= 80 && value <= 120) setPercent(value);
-  });
-  listen(number, 'change', event => { editingPercent = false; setPercent(event.target.value); });
-  listen(number, 'blur', event => { editingPercent = false; setPercent(event.target.value); });
   listen(mapRetry, 'click', () => {
     if (mapFailure) {
       pointLayer?.destroy(); pointLayer = null; mapFailure = '';
@@ -560,9 +468,6 @@ export function mountOrderPlanning({
     renderScene();
   });
   listen(canvas, 'click', event => { const marker = event.target.closest('[data-order-marker]'); if (!marker) return; selectedDeliveryId = marker.dataset.orderMarker; renderScene(); onSelect(selectedDeliveryId); });
-  listen(trigger, 'click', () => dialog.showModal());
-  listen(dialog, 'close', () => trigger.focus());
-  listen(close, 'click', () => dialog.close());
   listen(query('[data-order-show-regions]'), 'change', renderScene);
   listen(query('[data-order-show-all-pins]'), 'change', event => {
     showAllPins = event.target.checked;
@@ -590,7 +495,7 @@ export function mountOrderPlanning({
   listen(query('[data-order-previous]'), 'click', () => { listPage--; renderOrderList(); });
   listen(query('[data-order-next]'), 'click', () => { listPage++; renderOrderList(); });
 
-  syncControls();
+  syncSummary();
   return {
     update(nextData, nextSelectedId) {
       const dateChanged = data?.dispatchSource?.date !== nextData?.dispatchSource?.date;

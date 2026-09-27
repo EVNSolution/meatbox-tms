@@ -10,6 +10,7 @@ let rawSnapshot, snapshotContext, displayed;
 let selectedId = new URLSearchParams(location.search).get('id');
 try { selectedId ||= localStorage.getItem('mb-account'); } catch {}
 let connected = false;
+let emptyDate = false;
 const scenarios = createCustomerScenarios();
 function render() {
   if (!adapted) return;
@@ -35,18 +36,28 @@ const renderer = mountCustomerRenderer({ onSelect: id => {
   if (changed) queueMicrotask(render);
 } });
 const simulation = connectSimulation({
+  onDateContext(context) {
+    emptyDate = context.empty;
+    adapted = null; rawSnapshot = null; displayed = null;
+    shell.setDate(context.date);
+    document.getElementById('customer-viewer-summary').textContent = context.empty ? `${context.date || '선택한 날짜'}에 배송 자료가 없습니다.` : '배송 정보를 불러오고 있습니다.';
+    if (context.empty) document.getElementById('account-picker').hidden = true;
+    document.querySelector('.mobile-shell').hidden = true;
+  },
   onState(raw, context) {
     adapted = adaptSimulation(raw);
     rawSnapshot = raw;
     snapshotContext = context;
     connected = true;
+    emptyDate = false;
+    document.querySelector('.mobile-shell').hidden = false;
     render();
   },
   onStatus(value, message) {
     connected = value;
     const notice = document.getElementById('customer-connection');
-    notice.hidden = connected;
-    notice.textContent = message;
+    notice.hidden = connected && !emptyDate;
+    notice.textContent = emptyDate ? '선택한 날짜에 배송 자료가 없습니다. 운영자 화면에서 다른 날짜를 조회해 주세요.' : message;
     shell.update(displayed || adapted, connected);
   },
   onError: message => shell.showError(message),

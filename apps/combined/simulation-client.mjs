@@ -35,7 +35,7 @@ export function expandSourceCommand(type, extra = {}, state) {
 }
 
 // Both viewers use one connection per page, including the original customer renderer.
-export function connectSimulation({ onState, onStatus, onError }) {
+export function connectSimulation({ onState, onStatus, onError, onDateContext = () => {} }) {
   let socket;
   let timer;
   let boot;
@@ -66,7 +66,7 @@ export function connectSimulation({ onState, onStatus, onError }) {
         if (available.ok) {
           const manifest = await available.json();
           if (stopped) return;
-          source = connectSourceOperations({ manifest, onState(state, context) {
+          source = connectSourceOperations({ manifest, onDateContext, onState(state, context) {
             onState(state, context); sourceState = state;
           }, onStatus, onError, login });
           return;

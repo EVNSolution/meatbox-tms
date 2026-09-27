@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { volumeScenario, orderAssignmentSummary, orderMapModel, mountOrderPlanning } from './order-planning.mjs';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
+import { totalBoxes, orderMapModel, mountOrderPlanning } from './order-planning.mjs';
 
 class FakeNode {
   constructor() { this.innerHTML = ''; this.value = ''; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.open = false; this.focused = false; }
@@ -17,10 +19,9 @@ class FakeNode {
 function fixture() {
   const names = [
     'vehicle', 'map-canvas', 'map-layer', 'map-status', 'map-status-text', 'map-retry', 'map-count', 'selection', 'map-summary',
-    'scenario-dialog', 'scenario-open', 'scenario-close', 'volume-range', 'volume-number', 'volume-display', 'baseline', 'target',
-    'total-vehicles', 'total-destinations', 'total-duration', 'timing-note', 'assignments', 'volume-note', 'dispatch-actions',
+    'dispatch-actions',
     'dispatch-all', 'dispatch-pin', 'dispatch-context', 'dispatch-result', 'region-note', 'group-heading', 'group-note', 'map-description',
-    'groups-label', 'orders-label', 'assignment-note', 'region-control', 'list-panel', 'show-regions', 'reassign-dialog', 'reassign-title',
+    'region-control', 'list-panel', 'show-regions', 'reassign-dialog', 'reassign-title',
     'reassign-close', 'reassign-from', 'reassign-target', 'reassign-preview', 'reassign-error', 'reassign-cancel', 'reassign-confirm',
     'search', 'list', 'list-total', 'page', 'previous', 'next', 'pin-control', 'show-all-pins',
   ];
@@ -51,7 +52,6 @@ const deliveries = [
   { id: 'V2-S1', vehicleId: 'V2', name: '주문 3', boxes: 20 },
 ];
 const data = { vehicle: vehicles[0], fleetVehicles: vehicles, fleetDeliveries: deliveries };
-const input = (nodes, name, value, type = 'input') => nodes[name].listeners[type]({ target: { value: String(value) } });
 const selectVehicle = (nodes, id) => nodes.vehicle.listeners.click({ target: { closest: () => ({ dataset: { orderVehicleId: id } }) } });
 function importedPlanningData(date = '2025-09-15') {
   const sourceGroups = [{ id: 'G1', label: '기사 1' }, { id: 'G2', label: '기사 2' }];
@@ -71,23 +71,16 @@ function importedPlanningData(date = '2025-09-15') {
   };
 }
 
-test('입력 물량을 100%로 삼고 80~120%의 합계만 미리 계산한다', () => {
-  for (const [percent, targetBoxes] of [[80, 32], [100, 40], [120, 48]]) {
-    assert.deepEqual(volumeScenario(deliveries, percent), { percent, baselineBoxes: 40, targetBoxes });
-  }
-  assert.deepEqual(volumeScenario([{ boxes: 12345 }], 120), { percent: 120, baselineBoxes: 12345, targetBoxes: 14814 });
-  assert.equal(volumeScenario([{ boxes: 7 }], 110).targetBoxes, 8);
-  assert.equal(volumeScenario(deliveries, 0).percent, 80);
-  assert.equal(volumeScenario(deliveries, 999).percent, 120);
-  assert.equal(volumeScenario(deliveries, '').percent, 100);
+test('실제 주문 박스 수만 합산한다', () => {
+  assert.equal(totalBoxes(deliveries), 40);
+  assert.equal(totalBoxes([{ boxes: 12345 }]), 12345);
 });
 
 test('확인된 0과 빈 목록은 0이며 누락되거나 잘못된 수량을 0으로 만들지 않는다', () => {
-  assert.equal(volumeScenario([], 120).targetBoxes, 0);
-  assert.equal(volumeScenario([{ boxes: 0 }], 80).baselineBoxes, 0);
+  assert.equal(totalBoxes([]), 0);
+  assert.equal(totalBoxes([{ boxes: 0 }]), 0);
   for (const source of [undefined, null, [{ boxes: null }], [{}], [{ boxes: -1 }], [{ boxes: Infinity }], [{ boxes: '8' }], [{ boxes: 8 }, {}]]) {
-    assert.equal(volumeScenario(source).baselineBoxes, null);
-    assert.equal(volumeScenario(source).targetBoxes, null);
+    assert.equal(totalBoxes(source), null);
   }
 });
 
@@ -203,27 +196,48 @@ test('차량을 바꿔도 전체 주문 마커와 좌표를 유지하고 선택 
   planning.destroy();
 });
 
-test('물량 비율 입력과 슬라이더에 이름과 80~120 경계를 제공한다', () => {
-  const { element, nodes } = fixture();
+test('주문 시나리오 버튼과 비교 입력 없이 지도와 핀배차만 표시한다', () => {
+  const { element } = fixture();
   mount({ element });
-  assert.match(element.innerHTML, /min="80" max="120" step="1" value="100" aria-label="물량 비율 슬라이더"/);
-  assert.match(element.innerHTML, /min="80" max="120" step="1" value="100" inputmode="numeric" aria-label="물량 비율 입력"/);
-  assert.doesNotMatch(element.innerHTML, /7800|7,800|60박스 기준|배송원 수 입력|차량 이동 시점/);
-  assert.equal(nodes['volume-range'].disabled, true);
+  assert.doesNotMatch(element.innerHTML, /data-order-scenario-|data-order-volume-|data-order-target|비교 물량|물량 비율/);
+  assert.match(element.innerHTML, /data-order-map-summary/);
+  assert.match(element.innerHTML, /data-order-reassign-dialog/);
 });
 
-test('차량 목록 선택과 외부 주문 선택은 기준 총량이나 각 주문의 수량을 바꾸지 않는다', () => {
+test('주문 화면은 데이터와 로딩 상태에 관계없이 floating 시나리오 패널을 숨긴다', () => {
+  const source = readFileSync(new URL('./app.mjs', import.meta.url), 'utf8');
+  const body = source.match(/function syncDispatchContext\(\) \{[\s\S]*?\n\}\n\nfunction renderPage/)?.[0].replace(/\n\nfunction renderPage$/, '');
+  assert.ok(body);
+  assert.match(source, /scenarioTools\.update\(null, false\);\s*syncDispatchContext\(\);/);
+  assert.match(source, /function render\(\) \{\s*syncDispatchContext\(\);\s*renderPage\(\);/);
+  assert.match(source, /if \(state\.page === 'orders'\) orderPlanning\.update\(state\.data, state\.selectedId\);\s*if \(!state\.data\)/);
+  const nodes = { 'scenario-tools': { hidden: false }, 'page-description': { textContent: '' } };
+  const state = { page: 'orders' };
+  const context = { state, orderPlanning: { usesSource: () => false }, byId: id => nodes[id] };
+  runInNewContext(body + '\nsyncDispatchContext();', context);
+  assert.equal(nodes['scenario-tools'].hidden, true);
+  state.page = 'control';
+  runInNewContext('syncDispatchContext();', context);
+  assert.equal(nodes['scenario-tools'].hidden, false);
+  state.page = 'orders';
+  context.orderPlanning.usesSource = () => true;
+  runInNewContext('syncDispatchContext();', context);
+  assert.equal(nodes['scenario-tools'].hidden, true);
+  assert.match(nodes['page-description'].textContent, /배차 계산/);
+});
+
+test('차량 목록 선택과 외부 주문 선택은 실제 총량이나 각 주문의 수량을 바꾸지 않는다', () => {
   const { element, nodes } = fixture();
   const planning = mount({ element });
   planning.update(data, 'V2-S1');
   assert.match(nodes.vehicle.innerHTML, /data-order-vehicle-id="V2" aria-pressed="true"/);
   assert.match(nodes.selection.innerHTML, /주문 3/);
-  assert.equal(nodes.baseline.textContent, '40박스');
+  assert.match(nodes['map-summary'].innerHTML, /총 40박스/);
   selectVehicle(nodes, 'V1');
   planning.update({ ...data, simClock: '06:10' }, 'V2-S1');
   assert.match(nodes.vehicle.innerHTML, /data-order-vehicle-id="V1" aria-pressed="true"/);
   assert.equal(nodes['map-count'].textContent, '위치 데이터 확인 중');
-  assert.equal(nodes.baseline.textContent, '40박스');
+  assert.match(nodes['map-summary'].innerHTML, /총 40박스/);
   planning.destroy();
 });
 
@@ -244,16 +258,17 @@ test('같은 주문의 배차 차량이 바뀌면 새 차량과 주문 선택을
   planning.destroy();
 });
 
-test('주문 시나리오는 배송지와 박스를 차량 ID별로 합산하고 같은 이름 배송원을 합치지 않는다', () => {
+test('차량 목록은 같은 이름 배송원도 ID별 실제 주문량으로 나눈다', () => {
+  const { element, nodes } = fixture();
   const sameNameVehicles = [
     { id: 'V1', plate: '차량 1', driver: '김배송' },
     { id: 'V2', plate: '차량 2', driver: '김배송' },
   ];
-  const summary = orderAssignmentSummary({ fleetVehicles: sameNameVehicles, fleetDeliveries: deliveries });
-  assert.equal(summary.vehicles, 2);
-  assert.equal(summary.destinations, 3);
-  assert.equal(summary.boxes, 40);
-  assert.deepEqual(summary.assignments.map(item => [item.vehicle.id, item.destinations, item.boxes]), [['V1', 2, 20], ['V2', 1, 20]]);
+  const planning = mount({ element });
+  planning.update({ fleetVehicles: sameNameVehicles, fleetDeliveries: deliveries });
+  assert.match(nodes.vehicle.innerHTML, /data-order-vehicle-id="V1"[\s\S]*?2곳[\s\S]*?20박스/);
+  assert.match(nodes.vehicle.innerHTML, /data-order-vehicle-id="V2"[\s\S]*?1곳[\s\S]*?20박스/);
+  planning.destroy();
 });
 
 test('차량 목록은 고정 출발, 마지막 도착 ETA, 시뮬레이션 최종 인도 완료를 구분한다', () => {
@@ -268,12 +283,7 @@ test('차량 목록은 고정 출발, 마지막 도착 ETA, 시뮬레이션 최�
   assert.match(nodes.vehicle.innerHTML, /마지막 도착 ETA <strong>09:20/);
   assert.match(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>09:45 예상/);
   assert.doesNotMatch(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>09:20/);
-  assert.equal(nodes['total-vehicles'].textContent, '2대');
-  assert.equal(nodes['total-destinations'].textContent, '3곳');
-  assert.equal(nodes['total-duration'].textContent, '3시간 15분');
-  assert.match(nodes['timing-note'].textContent, /시간 확인 1\/2대, 나머지 1대 미확인\. 시뮬레이션 계산값/);
-  assert.match(nodes.assignments.innerHTML, /배정 배송지 2곳/);
-  assert.doesNotMatch(nodes.assignments.innerHTML, /가구/);
+  assert.match(nodes['map-summary'].innerHTML, /총 40박스/);
 
   const completed = fixture();
   const completedPlanning = mount(completed);
@@ -289,7 +299,7 @@ test('차량 목록은 고정 출발, 마지막 도착 ETA, 시뮬레이션 최�
   completedPlanning.destroy();
 });
 
-test('보류 배송지가 있으면 차량과 전체 집계에서 완료 시간을 확정하지 않는다', () => {
+test('보류 배송지가 있으면 차량 완료 시간을 확정하지 않는다', () => {
   const { element, nodes } = fixture();
   mount({ element }).update({
     ...data,
@@ -298,8 +308,6 @@ test('보류 배송지가 있으면 차량과 전체 집계에서 완료 시간�
     kpi: { finishEta: '09:20', vehicleTiming: { source: 'simulation', departureMs: 23_400_000, completionMs: 35_100_000, remainingSeconds: 7_200, durationSeconds: 11_700, completed: false, heldStops: 1, estimatedStops: 1 } },
   }, 'S1');
   assert.match(nodes.vehicle.innerHTML, /최종 인도 완료 예측 <strong>보류 1곳, 미확인/);
-  assert.equal(nodes['total-duration'].textContent, '미확인');
-  assert.match(nodes['timing-note'].textContent, /시간 확인 0\/2대, 나머지 2대 미확인/);
 });
 
 test('최종 완료 시각은 분 단위로 반올림하고 자정을 넘긴 일수를 보존한다', () => {
@@ -319,61 +327,19 @@ test('최종 완료 시각은 분 단위로 반올림하고 자정을 넘긴 일
   planning.destroy();
 });
 
-test('비율 입력은 원본 상태와 지도 주문 수량을 보존하고 복귀 버튼은 없다', () => {
-  const original = structuredClone(data);
+test('데이터가 바뀌면 실제 총량을 갱신하고 미확인 수량을 보존한다', () => {
   const { element, nodes } = fixture();
   const planning = mount({ element });
   planning.update(data, 'S1');
-  input(nodes, 'volume-range', 80);
-  assert.equal(nodes.target.textContent, '32박스');
-  assert.equal(nodes['volume-number'].value, '80');
-  input(nodes, 'volume-range', 120);
-  assert.equal(nodes.target.textContent, '48박스');
-  assert.match(nodes.selection.innerHTML, /8박스/);
-  assert.deepEqual(data, original);
-  assert.doesNotMatch(element.innerHTML, /data-order-volume-reset|100%로 돌아가기/);
-  input(nodes, 'volume-range', 100);
-  assert.equal(nodes.target.textContent, '40박스');
-  assert.equal(nodes['volume-number'].value, '100');
-  nodes['scenario-open'].listeners.click();
-  assert.equal(nodes['scenario-dialog'].open, true);
-  nodes['scenario-close'].listeners.click();
-  assert.equal(nodes['scenario-open'].focused, true);
-  planning.destroy();
-});
-
-test('120 입력 중의 1과 12는 강제로 80으로 바뀌지 않고 확정 시 범위를 지킨다', () => {
-  const { element, nodes } = fixture();
-  mount({ element }).update(data, 'S1');
-  input(nodes, 'volume-number', 1);
-  input(nodes, 'volume-number', 12);
-  assert.equal(nodes.target.textContent, '40박스');
-  input(nodes, 'volume-number', 120);
-  assert.equal(nodes.target.textContent, '48박스');
-  input(nodes, 'volume-number', 20, 'change');
-  assert.equal(nodes['volume-number'].value, '80');
-  input(nodes, 'volume-number', '', 'change');
-  assert.equal(nodes['volume-number'].value, '100');
-});
-
-test('데이터가 바뀌면 새 총량으로 계산하고 비율과 필터를 유지한다', () => {
-  const { element, nodes } = fixture();
-  const planning = mount({ element });
-  planning.update(data, 'S1');
-  input(nodes, 'volume-range', 120);
   const changed = { ...data, fleetVehicles: [{ id: 'V1', plate: '새 차량' }], fleetDeliveries: [{ id: 'S1', vehicleId: 'V1', name: '새 주문', boxes: 20000 }] };
   planning.update(changed, 'S1');
-  assert.equal(nodes.baseline.textContent, '20,000박스');
-  assert.equal(nodes.target.textContent, '24,000박스');
-  assert.equal(nodes['volume-number'].value, '120');
+  assert.match(nodes['map-summary'].innerHTML, /총 20,000박스/);
   assert.match(nodes['map-summary'].innerHTML, /차량 1대/);
   planning.update({ ...changed, fleetDeliveries: [{ id: 'S1', vehicleId: 'V1' }] }, 'S1');
-  assert.equal(nodes.baseline.textContent, '미확인');
-  assert.equal(nodes.target.textContent, '미확인');
-  assert.equal(nodes['volume-range'].disabled, true);
+  assert.match(nodes['map-summary'].innerHTML, /총 미확인/);
+  assert.match(nodes.vehicle.innerHTML, /미확인/);
   planning.update({ ...changed, fleetDeliveries: [], deliveries }, 'S1');
-  assert.equal(nodes.baseline.textContent, '0박스');
-  assert.equal(nodes['volume-range'].disabled, false);
+  assert.match(nodes['map-summary'].innerHTML, /총 0박스/);
   planning.destroy();
 });
 
@@ -499,6 +465,25 @@ test('핀배차는 같은 배송지 주문 전체를 초안에서만 이동하�
   assert.equal(nodes['dispatch-pin'].disabled, true);
   assert.deepEqual(current.dispatchSource, original.dispatchSource);
   assert.equal(current.fleetVehicles.some(vehicle => vehicle.id === 'V1'), false);
+  planning.destroy();
+});
+
+test('핀배차 대상의 박스 수가 미확인이면 배차 후 미리보기도 미확인으로 남긴다', () => {
+  const { element, nodes } = fixture();
+  const input = importedPlanningData();
+  input.dispatch = { phase: 'draft', readOnly: false, candidateIds: ['G1', 'G2'] };
+  input.fleetDeliveries[2] = { ...input.fleetDeliveries[2], boxes: undefined };
+  let pick;
+  const planning = mount({ element }, {
+    onAssign: () => ({}),
+    layerFactory: (_map, callbacks) => { pick = callbacks.onPick; return { update() {}, destroy() {} }; },
+  });
+  planning.update(input, null);
+  pick(['O1']);
+  nodes['dispatch-pin'].listeners.click();
+  nodes['reassign-target'].value = 'G2';
+  nodes['reassign-target'].listeners.change();
+  assert.match(nodes['reassign-preview'].textContent, /현재 1건 \/ 미확인 → 배차 후 2건 \/ 미확인/);
   planning.destroy();
 });
 
@@ -628,22 +613,13 @@ test('계산안은 배정 차량만 집계하고 같은 배송지 주문은 한 
   source.dispatch = { phase: 'draft', candidateIds: ['G1'] };
   source.fleetDeliveries = source.fleetDeliveries.map((order, index) => ({ ...order, vehicleId: 'G1', status: 'pending', ...(index === 1 ? { name: '주문 1', address: '서울 1' } : {}) }));
   const before = structuredClone(source);
-  const summary = orderAssignmentSummary(source);
-  assert.equal(summary.vehicles, 1);
-  assert.equal(summary.destinations, 2);
-  assert.deepEqual(summary.assignments.map(row => [row.orders, row.destinations, row.boxes]), [[3, 2, 21]]);
   const { element, nodes } = fixture();
   let pinCount = 0;
   const planning = mount({ element }, { layerFactory: () => ({ update({ points }) { pinCount = points.features.length; }, destroy() {} }) });
   planning.update(source);
-  assert.equal(nodes['total-vehicles'].textContent, '1대');
-  assert.equal(nodes['total-destinations'].textContent, '2곳');
-  assert.notEqual(nodes['total-duration'].textContent, '미확인');
-  assert.match(nodes['timing-note'].textContent, /계획 시간 확인 1\/1대/);
-  assert.match(nodes['timing-note'].textContent, /06:30 고정 출발/);
-  assert.doesNotMatch(nodes.assignments.innerHTML, /\+\d{3,}일/);
-  assert.match(nodes.assignments.innerHTML, /2곳 \/ 주문 3건/);
-  assert.match(nodes.assignments.innerHTML, /고정 출발 06:30/);
+  assert.match(nodes['map-summary'].innerHTML, /주문 3건/);
+  assert.match(nodes['map-summary'].innerHTML, /총 21박스/);
+  assert.match(nodes.vehicle.innerHTML, /2곳 \/ 주문 3건/);
   assert.doesNotMatch(nodes.vehicle.innerHTML, /data-order-vehicle-id="G2"/);
   assert.equal(pinCount, 3);
   assert.deepEqual(source, before);

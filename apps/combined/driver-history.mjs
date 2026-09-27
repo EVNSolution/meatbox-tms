@@ -50,8 +50,7 @@ const dateValue = value => typeof value === 'string' ? value : value?.date;
 export function driverOperatingDate(sourceData, today) {
   if (validDate(sourceData?.operatingDate)) return sourceData.operatingDate;
   if (validDate(sourceData?.today)) return sourceData.today;
-  const dates = (sourceData?.dates || []).map(dateValue);
-  return dates.includes('2026-09-16') ? '2026-09-16' : today;
+  return today;
 }
 
 export function latestPastHistoryDate(dates, operatingDate, fallback) {
