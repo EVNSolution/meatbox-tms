@@ -50,9 +50,10 @@ function assignmentDay(date) {
 }
 
 function domFixture() {
-  const names = ['toolbar', 'date', 'status', 'retry', 'planning', 'workflow', 'prev', 'next', 'source-info'];
+  const names = ['toolbar', 'date', 'summary', 'status', 'retry', 'planning', 'workflow', 'prev', 'next', 'source-info'];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
   nodes.toolbar.hidden = true;
+  nodes.summary.hidden = true;
   nodes.retry.hidden = true;
   nodes.planning.hidden = true;
   const element = new FakeNode();
@@ -186,6 +187,8 @@ test('초기 갱신은 manifest, 권역, 기본일을 한 번만 읽고 미배�
   assert.equal(nodes.date.disabled, false);
   assert.doesNotMatch(element.innerHTML, /type="date"|data-dispatch-weekday|data-dispatch-date-count/);
   assert.equal(dated.summary(), source.summary);
+  assert.equal(nodes.summary.hidden, false);
+  assert.match(nodes.summary.innerHTML, /주문.*1.*박스.*2.*후보 차량.*1/);
   assert.match(replaced.at(-1), /\?date=2025-09-15$/);
   dated.destroy();
 });
@@ -209,15 +212,18 @@ test('빠른 날짜 변경은 늦게 끝난 이전 응답을 버리고 최신 �
   dated.update({}, null);
   await waitFor(() => planning.mounts[0]?.updates.length === 1);
   nodes.date.value = '2025-09-16'; nodes.date.dispatch('change');
+  assert.equal(nodes.summary.hidden, true);
   nodes.date.value = '2025-09-17'; nodes.date.dispatch('change');
-  pending17.resolve(day('2025-09-17'));
+  pending17.resolve({ ...day('2025-09-17'), summary: { orders: 1, boxes: 2, groups: 5 } });
   await waitFor(() => planning.mounts[0].updates.length === 2);
-  pending16.resolve(day('2025-09-16'));
+  pending16.resolve({ ...day('2025-09-16'), summary: { orders: 1, boxes: 2, groups: 9 } });
   await tick(); await tick();
   assert.deepEqual(calls.slice(-2), ['/api/dispatch-data/days/2025-09-16', '/api/dispatch-data/days/2025-09-17']);
   assert.equal(planning.mounts[0].updates.length, 2);
   assert.equal(planning.mounts[0].updates.at(-1)[0].dispatchSource.date, '2025-09-17');
   assert.equal(dated.summary().orders, 1);
+  assert.equal(nodes.summary.hidden, false);
+  assert.match(nodes.summary.innerHTML, /주문.*1.*박스.*2.*후보 차량.*5/);
   dated.destroy();
 });
 
@@ -240,8 +246,30 @@ test('준비되지 않은 날짜는 요청하지 않고 이전 지도를 숨긴�
   await tick();
   assert.equal(calls.length, before);
   assert.equal(nodes.planning.hidden, true);
+  assert.equal(nodes.summary.hidden, true);
   assert.match(nodes.status.textContent, /주문 자료가 없습니다/);
   assert.equal(nodes.retry.hidden, true);
+  assert.equal(dated.summary(), null);
+  dated.destroy();
+});
+
+test('날짜 조회 실패 시 이전 날짜의 집계를 남기지 않는다', async t => {
+  installBrowserGlobals(t);
+  const { element, nodes } = domFixture();
+  const planning = planningSpy();
+  const fetchJSON = async url => {
+    if (url.endsWith('/manifest')) return manifest;
+    if (url.endsWith('/regions')) return regions;
+    if (url.endsWith('/2025-09-16')) throw new Error('timeout');
+    return day('2025-09-15');
+  };
+  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  dated.update({}, null);
+  await waitFor(() => nodes.summary.hidden === false);
+  nodes.date.value = '2025-09-16'; nodes.date.dispatch('change');
+  assert.equal(nodes.summary.hidden, true);
+  await waitFor(() => nodes.retry.hidden === false);
+  assert.equal(nodes.summary.hidden, true);
   assert.equal(dated.summary(), null);
   dated.destroy();
 });
@@ -258,6 +286,7 @@ test('manifest 404에서도 이전 시나리오를 표시하지 않는다', asyn
   await waitFor(() => nodes.retry.hidden === false);
   assert.equal(dated.usesSource(), true);
   assert.equal(nodes.planning.hidden, true);
+  assert.equal(nodes.summary.hidden, true);
   assert.equal(planning.mounts.length, 0);
   assert.match(nodes.status.textContent, /불러오지 못했습니다/);
   assert.deepEqual(selected, []);
@@ -321,9 +350,11 @@ test('URL 없이 다시 열면 세션 과거 날짜 대신 실제 오늘의 빈 
   await waitFor(() => nodes.toolbar.hidden === false && nodes.status.textContent.includes('주문 자료가 없습니다'));
   assert.deepEqual(requested, []);
   assert.equal(nodes.date.value, '2026-09-27');
+  assert.equal(nodes.summary.hidden, true);
   assert.equal(nodes.date.disabled, false);
   nodes.date.value = '2025-09-17'; nodes.date.dispatch('change');
   await waitFor(() => planning.mounts[0]?.updates.length === 1);
+  assert.equal(nodes.summary.hidden, false);
   assert.deepEqual(requested, ['2025-09-17']);
   assert.equal(storage.values.get('meatbox.dispatch.date'), '2025-09-17');
   dated.destroy();

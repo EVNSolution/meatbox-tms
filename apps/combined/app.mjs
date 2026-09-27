@@ -192,13 +192,8 @@ function renderControlDate() {
 }
 
 function renderSummary() {
-  byId('summary-counts').hidden = state.page === 'deliveries';
-  if (state.page === 'deliveries') return;
-  if (state.page === 'orders' && orderPlanning.usesSource()) {
-    const summary = orderPlanning.summary();
-    byId('summary-counts').innerHTML = summary ? `<div><span>주문</span><strong>${summary.orders.toLocaleString('ko-KR')}</strong></div><div><span>박스</span><strong>${summary.boxes.toLocaleString('ko-KR')}</strong></div><div><span>후보 차량</span><strong>${summary.groups.toLocaleString('ko-KR')}</strong></div>` : '';
-    return;
-  }
+  byId('summary-counts').hidden = state.page !== 'control';
+  if (state.page !== 'control') return;
   const deliveries = state.data.fleetDeliveries || state.data.deliveries;
   byId('summary-counts').innerHTML = `
     <div><span>차량</span><strong>${state.data.dispatch ? new Set(deliveries.map(item => item.vehicleId)).size : state.data.fleetVehicles?.length || (state.data.vehicle ? 1 : 0)}</strong></div>

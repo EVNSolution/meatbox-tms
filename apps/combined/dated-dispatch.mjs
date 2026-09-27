@@ -40,9 +40,10 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   if (!response.ok) { const error = new Error('자료를 불러오지 못했습니다.'); error.status = response.status; throw error; }
   return response.json();
 }, planningFactory = mountOrderPlanning, datePickerFactory = mountDatePicker, workflowFactory = mountDispatchWorkflow }) {
-  element.innerHTML = `<section class="dispatch-date-toolbar" data-dispatch-toolbar hidden aria-label="배차 날짜"><div class="dispatch-date-picker"><span>배차일</span><button type="button" class="button subtle" data-dispatch-prev aria-label="이전 배차일">${referenceIcon('next')}</button><div data-dispatch-date></div><button type="button" class="button subtle" data-dispatch-next aria-label="다음 배차일">${referenceIcon('next')}</button></div></section><p class="dispatch-data-message" data-dispatch-status role="status">배차 정보를 확인하고 있습니다.</p><button type="button" class="button" data-dispatch-retry hidden>다시 불러오기</button><div data-dispatch-workflow hidden></div><div data-dispatch-planning hidden></div>`;
+  element.innerHTML = `<section class="dispatch-date-toolbar" data-dispatch-toolbar hidden aria-label="배차 날짜"><div class="dispatch-date-picker"><span>배차일</span><button type="button" class="button subtle" data-dispatch-prev aria-label="이전 배차일">${referenceIcon('next')}</button><div data-dispatch-date></div><button type="button" class="button subtle" data-dispatch-next aria-label="다음 배차일">${referenceIcon('next')}</button></div><div class="summary-counts" data-dispatch-summary hidden aria-label="선택 배차일 요약"></div></section><p class="dispatch-data-message" data-dispatch-status role="status">배차 정보를 확인하고 있습니다.</p><button type="button" class="button" data-dispatch-retry hidden>다시 불러오기</button><div data-dispatch-workflow hidden></div><div data-dispatch-planning hidden></div>`;
   const query = selector => element.querySelector(selector);
   const toolbar = query('[data-dispatch-toolbar]');
+  const summary = query('[data-dispatch-summary]');
   let selectedDate = null;
   const datePicker = datePickerFactory({ element: query('[data-dispatch-date]'), label: '배차일', onChange: date => { if (regions) selectDate(date); } });
   const status = query('[data-dispatch-status]');
@@ -70,6 +71,13 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   function message(text, failed = false) {
     status.textContent = text; status.hidden = !text; status.dataset.error = String(failed); retry.hidden = !failed;
   }
+  function renderSummary() {
+    summary.hidden = loading || !current;
+    if (summary.hidden) { summary.innerHTML = ''; return; }
+    const { orders, boxes } = current.summary;
+    const groups = Number.isFinite(current.summary.groups) ? current.summary.groups : current.groups.length;
+    summary.innerHTML = `<div><span>주문</span><strong>${orders.toLocaleString('ko-KR')}</strong></div><div><span>박스</span><strong>${boxes.toLocaleString('ko-KR')}</strong></div><div><span>후보 차량</span><strong>${groups.toLocaleString('ko-KR')}</strong></div>`;
+  }
   function setNavigation(date) {
     const index = manifest.dates.findIndex(item => item.date === date);
     previous.disabled = !regions || index <= 0; next.disabled = !regions || index < 0 || index >= manifest.dates.length - 1;
@@ -78,7 +86,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   async function selectDate(date) {
     const ticket = ++epoch;
     controller?.abort(); controller = new AbortController();
-    selectedDate = date; setNavigation(date); current = null; loading = true; host.hidden = true; workflowHost.hidden = true;
+    selectedDate = date; setNavigation(date); current = null; loading = true; renderSummary(); host.hidden = true; workflowHost.hidden = true;
     workflow.update(null, false);
     onContextChange();
     if (!date || !manifest.dates.some(item => item.date === date)) {
@@ -107,12 +115,13 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
       } } : {}) });
       host.hidden = false;
       updateViews();
+      renderSummary();
       message('');
       const url = new URL(location.href); url.searchParams.set('date', date); history.replaceState(null, '', url);
       onContextChange();
     } catch (error) {
       if (destroyed || ticket !== epoch || error.name === 'AbortError') return;
-      current = null; host.hidden = true; workflowHost.hidden = true;
+      current = null; renderSummary(); host.hidden = true; workflowHost.hidden = true;
       loading = false;
       message(error instanceof TypeError ? error.message : '배차 정보를 불러오지 못했습니다. 다시 시도해 주세요.', true);
       onContextChange();
