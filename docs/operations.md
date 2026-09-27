@@ -59,7 +59,20 @@ sudo -u meatbox-demo node /opt/meatbox-demo/current/scripts/manage-access.js dis
 
 배포 전에 저장 디렉터리와 계정 파일을 백업합니다. 새 릴리스의 체크포인트 계약이 호환되는지 확인한 후 교체하며, 구버전 롤백에서도 `DISPATCH_STATE_DIR` 지원 여부를 확인합니다. 저장 기능이 없던 릴리스로 돌아가면 파일은 남아도 화면이 이를 읽지 못하므로, 쓰기를 재개하기 전에 복원 호환성을 해결해야 합니다. 외부 기사 수신·수락과 사진 영구 저장은 별도입니다.
 
-1. 로컬 Node.js 22 환경에서 `npm ci`, 순차 전체 테스트(`npm test -- --test-concurrency=1`, 이 후보는 436건), 구문 검사와 브라우저 검증을 완료하고 커밋합니다.
+### 자원 등록부 전환 (운영 반영 전)
+
+자원 등록부 SQLite는 기존 날짜별 주문 자료·배차 체크포인트·계정 파일과 분리해 `/var/lib/meatbox-demo/resources/resources.sqlite`에 둡니다. 서비스 사용자 `meatbox-demo`가 디렉터리를 소유하고 권한은 0700, DB 파일은 0600이어야 합니다. 앱 시작 시 자동 이관하지 않으므로, 원본 날짜 JSON의 절대 경로를 확인한 뒤 **한 번만 명시적으로** 다음 명령을 실행합니다. 동일 출처 재실행은 변경하지 않고 다른 출처로 기존 DB를 덮어쓰지 않습니다.
+
+```sh
+sudo install -d -m 0700 -o meatbox-demo -g meatbox-demo /var/lib/meatbox-demo/resources
+sudo -u meatbox-demo node /opt/meatbox-demo/releases/<git-sha>/scripts/import-resource-catalog.mjs \
+  --day /opt/meatbox-demo/current/.runtime/dispatch-data/days/2026-09-16.json \
+  --output /var/lib/meatbox-demo/resources/resources.sqlite
+```
+
+기존 `meatbox-gateway.service` 본문은 유지하고 `/etc/systemd/system/meatbox-gateway.service.d/resource-database.conf`에 `[Service]`와 `Environment=RESOURCE_DATABASE=/var/lib/meatbox-demo/resources/resources.sqlite`를 추가해 연결합니다. 전환 전에 자원 DB와 기존 체크포인트·계정 파일을 백업하고, 기존 자료의 원본 지문·차량 155건 보존·활성 31건을 확인합니다. 실패하면 이전 인증 릴리스와 기존 환경 설정으로 되돌리고 백업 DB는 보존합니다. 롤백을 위해 자원 DB를 삭제하거나 날짜 JSON·배차 체크포인트를 수정하지 않습니다.
+
+1. 로컬 Node.js 22 환경에서 `npm ci`, 순차 전체 테스트(`npm test -- --test-concurrency=1`, 이 후보는 450건), 구문 검사와 브라우저 검증을 완료하고 커밋합니다.
 2. `git archive <sha>`의 내용을 새 릴리스 디렉터리에 풀고 `npm ci --omit=dev`를 실행합니다. 소형 운영 서버에서는 전체 테스트를 다시 실행하지 않고, 릴리스 SHA·의존성 설치·서비스 복원과 아래의 인증/헬스 스모크를 확인합니다.
 3. `/opt/meatbox-demo/current`를 새 릴리스로 원자적으로 교체하고 서비스를 재시작합니다.
 4. `systemctl is-active meatbox-gateway`, `/login` 200, 익명 `/` 302, `/api/session` 401, 익명 WebSocket 거부를 확인합니다.
