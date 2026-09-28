@@ -1,6 +1,6 @@
 # 시스템 아키텍처
 
-이 문서는 기준 코드 `40387756a5c02d02af6ac134d4a2d5bfa1146bef`의 현재 구현을 설명한다. 목표 구조나 배포 완료 상태를 뜻하지 않는다. 상태 전이와 식별자는 [도메인과 상태](domain-and-state.md), HTTP 계약은 [API 참조](api-reference.md)를 따른다.
+시스템 구성요소의 책임과 데이터 흐름, 저장소 경계를 설명한다. 상태 전이와 식별자는 [도메인과 상태](domain-and-state.md), HTTP 계약은 [API 참조](api-reference.md)를 따른다.
 
 ## 한눈에 보는 구조
 

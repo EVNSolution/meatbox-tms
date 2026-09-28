@@ -1,6 +1,6 @@
 # 검증 가이드
 
-이 문서는 현재 저장소에서 어떤 명령이 어떤 주장을 뒷받침하는지 정의한다. 기준 소스는 `40387756a5c02d02af6ac134d4a2d5bfa1146bef`이다. 과거 문서의 테스트 수, 서버 주소, 배포 결과를 현재 결과로 복사하지 않는다.
+이 문서는 현재 저장소에서 어떤 명령이 어떤 주장을 뒷받침하는지 정의한다. 과거 문서의 테스트 수, 서버 주소, 배포 결과를 현재 결과로 복사하지 않는다.
 
 ## 증거 단계
 
@@ -83,7 +83,7 @@ lint, typecheck, build, 브라우저 E2E, 배포 스모크용 npm 스크립트�
 5. 기존 확정 배차, 진행 상태, 계정, 체크포인트가 보존됐는지 읽기 전용으로 비교한다.
 6. 실패 시 이전 산출물과 상태를 복원하는 절차를 실제로 검증한다.
 
-현재 저장소에는 runtime SHA를 노출하는 전용 health/readiness endpoint가 없다. 서비스 프로세스가 응답한다는 사실만으로 실행 SHA를 확정할 수 없다. [`meatbox-gateway.service`](../deploy/meatbox-gateway.service)와 [`Caddyfile`](../deploy/Caddyfile)은 배포 예시 구성이고 현재 HEAD가 운영 중이라는 증거가 아니다.
+현재 저장소에는 runtime SHA를 노출하는 전용 health/readiness endpoint가 없다. 서비스 프로세스가 응답한다는 사실만으로 실행 SHA를 확정할 수 없다. [`meatbox-gateway.service`](../deploy/meatbox-gateway.service)와 [`Caddyfile`](../deploy/Caddyfile)은 배포 예시 구성이고 특정 릴리스가 운영 중이라는 증거가 아니다.
 
 ## 실기기·현장 확인
 
@@ -99,6 +99,6 @@ lint, typecheck, build, 브라우저 E2E, 배포 스모크용 npm 스크립트�
 
 ## CI 상태
 
-현재 HEAD에는 `.github/workflows` 또는 다른 저장소 CI 파이프라인 정의가 없다. 따라서 로컬 명령의 성공만 기록할 수 있으며 “CI 통과”라고 보고할 수 없다. 운영 전에는 최소한 `npm ci`와 `npm test`를 깨끗한 격리 환경에서 실행하고, 실패 시 배포를 차단하며, 결과를 commit SHA에 연결하는 자동화가 필요하다.
+저장소에는 `.github/workflows` 또는 다른 CI 파이프라인 정의가 없다. 따라서 로컬 명령의 성공만 기록할 수 있으며 “CI 통과”라고 보고할 수 없다. 운영 전에는 최소한 `npm ci`와 `npm test`를 깨끗한 격리 환경에서 실행하고, 실패 시 배포를 차단하며, 결과를 commit SHA에 연결하는 자동화가 필요하다.
 
 운영 전 미완료 게이트의 우선순위는 [운영 준비도](production-readiness.md), 실제 배포·백업 절차는 [운영 가이드](operations.md)를 따른다.
