@@ -129,7 +129,9 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   const combined = await (await get('/combined/', cookie)).text();
   assert.match(combined, /<title>미트박스 TMS<\/title>/);
   const shell = await (await get('/combined/demo-shell.mjs', cookie)).text();
-  assert.match(shell, /data-viewer="customer"/);
+  assert.match(shell, /class="demo-brand"/);
+  assert.match(shell, /class="operator-pages"/);
+  assert.doesNotMatch(shell, /data-viewer="(?:operator|customer|driver)"|viewer-source-context/);
   assert.match(combined, /data-page="orders"/);
   assert.doesNotMatch(combined, /data-page="manage"/);
   assert.match(combined, /id="vehicle-control"/);

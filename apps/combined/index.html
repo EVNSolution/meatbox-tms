@@ -34,6 +34,7 @@
       </section>
       <div id="live-pages" hidden>
         <section id="page-deliveries" class="page-view view-content" data-page="deliveries" aria-label="자원 관리">
+          <p class="control-empty panel" id="resource-empty" hidden></p>
           <div id="resource-management"></div>
           <div id="resource-destinations"></div>
         </section>
@@ -41,6 +42,8 @@
           <div id="order-planning"></div>
         </section>
         <section id="page-control" class="page-view view-content" data-page="control" aria-label="배송 관제" hidden>
+          <div class="control-date-toolbar" aria-label="관제 조회 날짜"><span>조회 날짜</span><div id="control-date-picker"></div><button type="button" class="button subtle" id="control-today">오늘</button><span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span></div>
+          <p class="control-empty panel" id="control-empty" hidden></p>
           <div id="vehicle-control"></div>
         </section>
       </div>

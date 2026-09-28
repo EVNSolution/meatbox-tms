@@ -6,21 +6,60 @@ const manifest = { schemaVersion: 1, defaultDate: '2025-09-12', dates: [{ date: 
 const response = (body, status = 200, etag = '"v1"') => ({ status, ok: status >= 200 && status < 300, json: async () => body, headers: { get: name => name.toLowerCase() === 'etag' ? etag : null } });
 const state = (date, revision = 1) => ({ boot: 'boot-1', revision, sourceData: { date, defaultVehicleId: 'G1' }, fleetDeliveries: [{ id: `O-${date}`, vehicleId: 'G1' }] });
 
-function globals(t, fetchImpl) {
+function globals(t, fetchImpl, search = '?date=2025-09-12') {
   const saved = { fetch: globalThis.fetch, location: globalThis.location, history: globalThis.history, sessionStorage: globalThis.sessionStorage, window: globalThis.window, setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout };
-  const events = new Map(); const stored = new Map(); const timers = new Set(); const cleanups = [];
-  globalThis.fetch = fetchImpl; globalThis.location = { href: 'https://demo.test/combined/?id=O-2025-09-12', search: '' };
-  globalThis.history = { replaceState() {} }; globalThis.sessionStorage = { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) };
+  const events = new Map(); const stored = new Map(); const timers = new Set(); const cleanups = []; const replaced = [];
+  globalThis.fetch = fetchImpl; globalThis.location = { href: `https://demo.test/combined/${search}`, search };
+  globalThis.history = { replaceState(_state, _title, url) { replaced.push(String(url)); } }; globalThis.sessionStorage = { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) };
   globalThis.window = { addEventListener: (name, fn) => events.set(name, fn), removeEventListener: name => events.delete(name) };
   globalThis.setTimeout = (callback, delay) => { const timer = { callback, delay }; timers.add(timer); return timer; };
   globalThis.clearTimeout = timer => timers.delete(timer);
   t.after(() => { cleanups.forEach(cleanup => cleanup()); Object.assign(globalThis, saved); });
-  return { events, stored, timers, cleanup: callback => cleanups.push(callback) };
+  return { events, stored, timers, replaced, cleanup: callback => cleanups.push(callback) };
 }
 
-test('날짜 목록은 기본 날짜로 안전하게 보정된다', () => {
-  assert.equal(sourceDate(manifest, '없는 날짜'), manifest.defaultDate);
+test('날짜 목록과 관계없이 서울의 실제 오늘을 쓰고 명시 날짜를 보존한다', () => {
+  assert.equal(sourceDate(manifest, null, () => '2026-09-27'), '2026-09-27');
+  assert.equal(sourceDate(manifest, '없는 날짜', () => '2026-09-27'), null);
   assert.equal(sourceDate(manifest, '2025-09-13'), '2025-09-13');
+});
+
+test('오늘 자료가 없어도 날짜 맥락을 제공하고 명령을 막으며 명시 날짜로 복구한다', async t => {
+  const calls = [], contexts = [], states = [], statuses = [], errors = [];
+  const { cleanup, replaced } = globals(t, async (url, options = {}) => {
+    calls.push([url, options]);
+    return response(state('2025-09-13'));
+  }, '');
+  const client = connectSourceOperations({ manifest, now: () => '2026-09-27', onDateContext: value => contexts.push(value),
+    onState: value => states.push(value), onStatus: (...args) => statuses.push(args), onError: message => errors.push(message), login() {} });
+  cleanup(() => client.close());
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(contexts.at(-1).date, '2026-09-27');
+  assert.deepEqual(states, []);
+  assert.equal(calls.length, 0);
+  assert.equal(await client.send('calculate_dispatch'), null);
+  assert.equal(calls.length, 0);
+  assert.match(statuses.at(-1)[1], /자료가 없습니다/);
+  await client.selectDate('2025-09-13');
+  assert.match(replaced.at(-1), /[?&]date=2025-09-13/);
+  assert.equal(states.at(-1).sourceData.date, '2025-09-13');
+  assert.equal(contexts.at(-1).date, '2025-09-13');
+});
+
+test('같은 날짜의 자료가 뒤에 사라지면 빈 날짜 맥락을 다시 통지하고 명령을 막는다', async t => {
+  let reads = 0, posts = 0;
+  const contexts = [];
+  const { timers, cleanup } = globals(t, async (_url, options = {}) => {
+    if (options.method === 'POST') { posts++; return response({}); }
+    return ++reads === 1 ? response(state('2025-09-12')) : response({ message: 'missing' }, 404);
+  });
+  const client = connectSourceOperations({ manifest, onDateContext: value => contexts.push(value), onState() {}, onStatus() {}, onError() {}, login() {} });
+  cleanup(() => client.close());
+  await new Promise(resolve => setImmediate(resolve));
+  await [...timers].find(timer => timer.delay === 2000).callback();
+  assert.deepEqual(contexts.at(-1), { date: '2025-09-12', dates: manifest.dates, empty: true, invalid: false });
+  assert.equal(await client.send('calculate_dispatch'), null);
+  assert.equal(posts, 0);
 });
 
 test('원본 상태를 받고 명령에 boot와 revision을 포함하며 304에서는 기존 상태를 유지한다', async t => {
@@ -33,7 +72,7 @@ test('원본 상태를 받고 명령에 boot와 revision을 포함하며 304에�
   const client = connectSourceOperations({ manifest, onState: value => states.push(value), onStatus: (...args) => statuses.push(args), onError: error => errors.push(error), login: () => errors.push('login') });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(states.length, 1);
-  assert.equal(stored.get('meatbox.dispatch.date'), '2025-09-12');
+  assert.equal(stored.get('meatbox.dispatch.date'), undefined);
   const result = await client.send('assign_orders', { stopId: 'O-2025-09-12', targetVehicleId: 'G2' });
   assert.deepEqual(result, { changedCount: 1 });
   const command = JSON.parse(calls.find(item => item[0].endsWith('/commands'))[1].body);

@@ -60,7 +60,7 @@ function domFixture() {
   return { element, nodes };
 }
 
-function installBrowserGlobals(t, search = '', storage = memoryStorage()) {
+function installBrowserGlobals(t, search = '?date=2025-09-15', storage = memoryStorage()) {
   const saved = { location: globalThis.location, history: globalThis.history, sessionStorage: globalThis.sessionStorage };
   const had = {
     location: Object.hasOwn(globalThis, 'location'),
@@ -147,10 +147,10 @@ test('날짜 주문 어댑터는 잘못된 수량, 좌표와 배차 그룹을 �
 });
 
 test('요청 날짜는 원본 기본일, 허용 날짜와 미허용 기본일 복귀를 구분한다', () => {
-  assert.equal(resolveDispatchDate(manifest), manifest.defaultDate);
+  assert.equal(resolveDispatchDate(manifest, null, () => '2026-09-27'), '2026-09-27');
   assert.equal(resolveDispatchDate(manifest, '2025-09-17'), '2025-09-17');
-  assert.equal(resolveDispatchDate(manifest, '2026-09-16'), manifest.defaultDate);
-  assert.equal(resolveDispatchDate(manifest, '../manifest'), manifest.defaultDate);
+  assert.equal(resolveDispatchDate(manifest, '2026-09-16'), '2026-09-16');
+  assert.equal(resolveDispatchDate(manifest, '../manifest'), null);
 });
 
 test('초기 갱신은 manifest, 권역, 기본일을 한 번만 읽고 미배정 주문만 렌더링한다', async t => {
@@ -182,7 +182,7 @@ test('초기 갱신은 manifest, 권역, 기본일을 한 번만 읽고 미배�
   assert.deepEqual(simulation, before);
   assert.equal(nodes.planning.hidden, false);
   assert.equal(nodes.toolbar.hidden, false);
-  assert.deepEqual(nodes.date.dates, manifest.dates);
+  assert.deepEqual(nodes.date.dates, [...manifest.dates, { date: resolveDispatchDate(manifest) }]);
   assert.equal(nodes.date.disabled, false);
   assert.doesNotMatch(element.innerHTML, /type="date"|data-dispatch-weekday|data-dispatch-date-count/);
   assert.equal(dated.summary(), source.summary);
@@ -240,13 +240,13 @@ test('준비되지 않은 날짜는 요청하지 않고 이전 지도를 숨긴�
   await tick();
   assert.equal(calls.length, before);
   assert.equal(nodes.planning.hidden, true);
-  assert.match(nodes.status.textContent, /배차가 없습니다/);
+  assert.match(nodes.status.textContent, /주문 자료가 없습니다/);
   assert.equal(nodes.retry.hidden, true);
   assert.equal(dated.summary(), null);
   dated.destroy();
 });
 
-test('manifest 404만 기존 시나리오로 명시적으로 복귀한다', async t => {
+test('manifest 404에서도 이전 시나리오를 표시하지 않는다', async t => {
   installBrowserGlobals(t);
   const { element, nodes } = domFixture();
   const planning = planningSpy();
@@ -255,14 +255,12 @@ test('manifest 404만 기존 시나리오로 명시적으로 복귀한다', asyn
   const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory, onSelect: id => selected.push(id) });
   const simulation = { fleetDeliveries: [{ id: 'S1' }] };
   dated.update(simulation, 'S1');
-  await waitFor(() => planning.mounts[0]?.updates.length === 1);
-  assert.equal(dated.usesSource(), false);
-  assert.equal(nodes.planning.hidden, false);
-  assert.match(nodes.status.textContent, /기존 시나리오/);
-  assert.equal(planning.mounts[0].options.onSelect instanceof Function, true);
-  assert.deepEqual(planning.mounts[0].updates[0], [simulation, 'S1']);
-  planning.mounts[0].options.onSelect('S2');
-  assert.deepEqual(selected, ['S2']);
+  await waitFor(() => nodes.retry.hidden === false);
+  assert.equal(dated.usesSource(), true);
+  assert.equal(nodes.planning.hidden, true);
+  assert.equal(planning.mounts.length, 0);
+  assert.match(nodes.status.textContent, /불러오지 못했습니다/);
+  assert.deepEqual(selected, []);
   dated.destroy();
 });
 
@@ -305,8 +303,8 @@ test('날짜 전환은 전달받은 시뮬레이션과 날짜 원본을 변경�
   dated.destroy();
 });
 
-test('선택 날짜는 화면을 다시 열어도 URL 쿼리 없이 복원된다', async t => {
-  const storage = memoryStorage();
+test('URL 없이 다시 열면 세션 과거 날짜 대신 실제 오늘의 빈 상태가 보이고 날짜를 다시 선택할 수 있다', async t => {
+  const storage = memoryStorage({ 'meatbox.dispatch.date': '2025-09-17' });
   installBrowserGlobals(t, '', storage);
   const days = Object.fromEntries(manifest.dates.map(item => [item.date, day(item.date)]));
   const requested = [];
@@ -316,25 +314,19 @@ test('선택 날짜는 화면을 다시 열어도 URL 쿼리 없이 복원된다
     requested.push(url.split('/').at(-1));
     return days[url.split('/').at(-1)];
   };
-  const firstDOM = domFixture();
-  const firstPlanning = planningSpy();
-  const first = mountDatedDispatch({ element: firstDOM.element, fetchJSON, planningFactory: firstPlanning.factory });
-  first.update({}, null);
-  await waitFor(() => firstPlanning.mounts[0]?.updates.length === 1);
-  firstDOM.nodes.date.value = '2025-09-17'; firstDOM.nodes.date.dispatch('change');
-  await waitFor(() => firstPlanning.mounts[0].updates.length === 2);
+  const { element, nodes } = domFixture();
+  const planning = planningSpy();
+  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory, now: () => '2026-09-27' });
+  dated.update(null, null);
+  await waitFor(() => nodes.toolbar.hidden === false && nodes.status.textContent.includes('주문 자료가 없습니다'));
+  assert.deepEqual(requested, []);
+  assert.equal(nodes.date.value, '2026-09-27');
+  assert.equal(nodes.date.disabled, false);
+  nodes.date.value = '2025-09-17'; nodes.date.dispatch('change');
+  await waitFor(() => planning.mounts[0]?.updates.length === 1);
+  assert.deepEqual(requested, ['2025-09-17']);
   assert.equal(storage.values.get('meatbox.dispatch.date'), '2025-09-17');
-  first.destroy();
-
-  const secondDOM = domFixture();
-  const secondPlanning = planningSpy();
-  const second = mountDatedDispatch({ element: secondDOM.element, fetchJSON, planningFactory: secondPlanning.factory });
-  second.update({}, null);
-  await waitFor(() => secondPlanning.mounts[0]?.updates.length === 1);
-  assert.equal(requested.at(-1), '2025-09-17');
-  assert.equal(secondDOM.nodes.date.value, '2025-09-17');
-  assert.equal(secondPlanning.mounts[0].updates[0][0].dispatchSource.date, '2025-09-17');
-  second.destroy();
+  dated.destroy();
 });
 
 test('URL 날짜는 저장된 날짜보다 우선한다', async t => {
@@ -354,11 +346,11 @@ test('URL 날짜는 저장된 날짜보다 우선한다', async t => {
   await waitFor(() => planning.mounts[0]?.updates.length === 1);
   assert.deepEqual(requested, ['2025-09-16']);
   assert.equal(nodes.date.value, '2025-09-16');
-  assert.equal(storage.values.get('meatbox.dispatch.date'), '2025-09-16');
+  assert.equal(storage.values.get('meatbox.dispatch.date'), '2025-09-17');
   dated.destroy();
 });
 
-test('준비되지 않은 저장 날짜는 원본 기본일로 복구한다', async t => {
+test('저장 날짜가 있어도 URL 없이 실제 오늘을 선택한다', async t => {
   const storage = memoryStorage({ 'meatbox.dispatch.date': '2030-01-01' });
   installBrowserGlobals(t, '', storage);
   const { element, nodes } = domFixture();
@@ -370,18 +362,18 @@ test('준비되지 않은 저장 날짜는 원본 기본일로 복구한다', as
     requested.push(url.split('/').at(-1));
     return day(url.split('/').at(-1));
   };
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
-  dated.update({}, null);
-  await waitFor(() => planning.mounts[0]?.updates.length === 1);
-  assert.deepEqual(requested, [manifest.defaultDate]);
-  assert.equal(nodes.date.value, manifest.defaultDate);
-  assert.equal(storage.values.get('meatbox.dispatch.date'), manifest.defaultDate);
+  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory, now: () => '2026-09-27' });
+  dated.update(null, null);
+  await waitFor(() => nodes.status.textContent.includes('주문 자료가 없습니다'));
+  assert.deepEqual(requested, []);
+  assert.equal(nodes.date.value, '2026-09-27');
+  assert.equal(storage.values.get('meatbox.dispatch.date'), '2030-01-01');
   dated.destroy();
 });
 
 test('세션 저장소 접근이 차단되어도 날짜 자료와 URL 갱신은 동작한다', async t => {
   const storage = memoryStorage({}, true);
-  const replaced = installBrowserGlobals(t, '', storage);
+  const replaced = installBrowserGlobals(t, '?date=2025-09-15', storage);
   const { element, nodes } = domFixture();
   const planning = planningSpy();
   const fetchJSON = async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day(manifest.defaultDate);
@@ -397,7 +389,7 @@ test('세션 저장소 접근이 차단되어도 날짜 자료와 URL 갱신은 
 
 test('운영 상태가 없으면 CSV 기사 배정과 이전 세션 배정을 복원하거나 명령을 만들지 않는다', async t => {
   const storage = memoryStorage({ 'meatbox.dispatch.assignments.v1:csv-fixture:2025-09-15': JSON.stringify({ O1: 'G2' }) });
-  installBrowserGlobals(t, '', storage);
+  installBrowserGlobals(t, '?date=2025-09-15', storage);
   const source = assignmentDay('2025-09-15');
   const before = structuredClone(source);
   const fetchJSON = async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : source;

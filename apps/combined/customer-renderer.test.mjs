@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { customerDeliveryForId, customerEtaText, customerLocationName, customerMapView, customerNoticeBody, customerOrderSummary, customerPopupState, customerViewerDeliveries, nextCustomerPopup } from './customer-renderer.mjs';
+import { customerDeliveryForId, customerEtaText, customerLocationName, customerMapView, customerNoticeBody, customerOrderSummary, customerPopupState, customerViewerDeliveries, customerViewerSummary, nextCustomerPopup } from './customer-renderer.mjs';
+
+test('고객 화면은 과거 날짜를 조회 전용 이력으로 알리고 시연 안내를 우선한다', () => {
+  const history = { sourceData: { date: '2026-09-16', operatingDate: '2026-09-27' }, dispatch: { readOnly: true } };
+  assert.equal(customerViewerSummary(history, '2026-09-27'), '2026-09-16 배송 이력 · 조회 전용');
+  assert.equal(customerViewerSummary({ sourceData: { date: '2026-09-27' } }, '2026-09-27'), '선택한 매장의 배송 현황과 고객 안내를 확인합니다.');
+  assert.equal(customerViewerSummary({ ...history, customerDemo: { active: true } }, '2026-09-27'), '고객 시연 중 · 배송 상태, 시각과 차량 위치는 예시입니다.');
+});
 
 test('고객 주문 상세는 묶음의 원 주문 번호를 보존하고 상품이 없으면 주문/박스 요약을 안내한다', () => {
   const delivery = {

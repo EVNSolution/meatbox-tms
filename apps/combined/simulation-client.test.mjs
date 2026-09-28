@@ -94,7 +94,7 @@ test('source 연결은 묶음 UI 순서를 원본 주문 명령으로 확장한 
     if (url.endsWith('/commands')) { posts.push(JSON.parse(options.body)); return response({ state: { ...sourceState, revision: 2 }, result: {} }); }
     return response({}, 404);
   };
-  globalThis.location = { protocol: 'https:', host: 'demo.test', href: 'https://demo.test/combined/?id=O1', pathname: '/combined/', search: '?id=O1', hash: '', replace() {}, reload() {} };
+  globalThis.location = { protocol: 'https:', host: 'demo.test', href: 'https://demo.test/combined/?id=O1&date=2026-09-16', pathname: '/combined/', search: '?id=O1&date=2026-09-16', hash: '', replace() {}, reload() {} };
   globalThis.history = { replaceState() {} };
   globalThis.sessionStorage = { getItem() { return null; }, setItem() {} };
   globalThis.window = { addEventListener() {}, removeEventListener() {} };

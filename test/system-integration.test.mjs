@@ -56,6 +56,7 @@ async function startDemo(paths) {
     dispatchDataDir: paths.dispatchDataDir,
     dispatchStateDir: paths.dispatchStateDir,
     origin,
+    now: () => Date.parse(`${date}T03:00:00Z`),
   });
   await new Promise(resolve => demo.server.listen(0, '127.0.0.1', resolve));
   return { demo, base: `http://127.0.0.1:${demo.server.address().port}` };

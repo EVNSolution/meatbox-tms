@@ -197,10 +197,27 @@ test('v2 초안과 확정 운행 체크포인트는 원본 전문 없이 revisio
 
   for (const changed of [
     { ...draftCheckpoint, sourceId: 'csv-b' },
-    { ...draftCheckpoint, operatingDate: '2026-09-17' },
+    { ...draftCheckpoint, operatingDate: '2026-02-30' },
     { ...draftCheckpoint, candidateIds: ['BAD'] },
     { ...draftCheckpoint, draftAssignments: { ...draftCheckpoint.draftAssignments, O1: 'G2' } },
   ]) assert.throws(() => createDispatchOperations(source, { sourceId: 'csv-a', operatingDate: '2026-09-16', calculator, checkpoint: changed }), error => error.status === 400);
+});
+
+test('저장된 운영 기준일은 출처 기록으로 보존하고 현재 날짜만 읽기 전용 여부를 바꾼다', () => {
+  let clock = Date.parse('2026-09-16T14:59:59Z');
+  const now = () => clock;
+  const operations = createDispatchOperations(day(), { sourceId: 'csv-a', calculator, now });
+  command(operations, { type: 'calculate_dispatch', vehicleIds: ['G1', 'G2'] });
+  const saved = operations.exportCheckpoint();
+  assert.equal(saved.operatingDate, '2026-09-16');
+  clock = Date.parse('2026-09-16T15:00:00Z');
+  const restored = createDispatchOperations(day(), { sourceId: 'csv-a', calculator, now, checkpoint: saved });
+  assert.equal(restored.snapshot().dispatch.today, '2026-09-17');
+  assert.equal(restored.snapshot().dispatch.readOnly, true);
+  assert.deepEqual(restored.exportCheckpoint(), saved);
+  assert.throws(() => command(restored, { type: 'publish_dispatch', draftVersion: 1 }), error => error.code === 'DATE_READ_ONLY');
+  assert.deepEqual(restored.exportCheckpoint(), saved);
+  assert.throws(() => createDispatchOperations(day(), { sourceId: 'csv-a', now, checkpoint: { ...saved, operatingDate: '2026-02-30' } }), error => error.code === 'INVALID_CHECKPOINT');
 });
 
 test('변경 이력이 있는 기존 운행 체크포인트는 확정 배차로 보존하고 과거에는 조회만 허용한다', () => {

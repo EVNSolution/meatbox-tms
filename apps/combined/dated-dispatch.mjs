@@ -3,6 +3,7 @@ import { mountOrderPlanning } from './order-planning.mjs';
 import { referenceIcon } from './reference-icons.mjs';
 import { createDispatchFleet } from './dispatch-assignment.mjs';
 import { mountDispatchWorkflow } from './dispatch-workflow.mjs';
+import { seoulToday, validOperatingDate } from './operating-date.mjs';
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -27,14 +28,14 @@ export function adaptDispatchDay(day, regions) {
   };
 }
 
-export function resolveDispatchDate(manifest, requested) {
+export function resolveDispatchDate(manifest, requested, today = seoulToday) {
   if (manifest?.schemaVersion !== 1 || !Array.isArray(manifest.dates) || !manifest.dates.length) throw new TypeError('날짜 목록이 비어 있습니다.');
   const dates = manifest.dates.map(item => item.date);
   if (dates.some(date => !datePattern.test(date)) || new Set(dates).size !== dates.length || !dates.includes(manifest.defaultDate)) throw new TypeError('날짜 목록이 올바르지 않습니다.');
-  return dates.includes(requested) ? requested : manifest.defaultDate;
+  return requested == null ? today() : validOperatingDate(requested) ? requested : null;
 }
 
-export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onDateChange, onContextChange = () => {}, fetchJSON = async (url, signal) => {
+export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onDateChange, onContextChange = () => {}, now = seoulToday, fetchJSON = async (url, signal) => {
   const response = await fetch(url, { signal });
   if (!response.ok) { const error = new Error('자료를 불러오지 못했습니다.'); error.status = response.status; throw error; }
   return response.json();
@@ -72,7 +73,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   function setNavigation(date) {
     const index = manifest.dates.findIndex(item => item.date === date);
     previous.disabled = !regions || index <= 0; next.disabled = !regions || index < 0 || index >= manifest.dates.length - 1;
-    datePicker.update({ value: date, dates: manifest.dates, disabled: !regions });
+    datePicker.update({ value: date, dates: [...manifest.dates, { date: now() }], disabled: !regions });
   }
   async function selectDate(date) {
     const ticket = ++epoch;
@@ -80,7 +81,10 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     selectedDate = date; setNavigation(date); current = null; loading = true; host.hidden = true; workflowHost.hidden = true;
     workflow.update(null, false);
     onContextChange();
-    if (!manifest.dates.some(item => item.date === date)) { message('선택한 날짜에는 배차가 없습니다.'); loading = false; return; }
+    if (!date || !manifest.dates.some(item => item.date === date)) {
+      message(date ? `${date}에 주문 자료가 없습니다. 날짜를 선택해 이력을 조회할 수 있습니다.` : '요청한 날짜가 올바르지 않습니다. 배차 날짜를 다시 선택해 주세요.');
+      loading = false; onContextChange(); return;
+    }
     message(`${date} 배차를 불러오고 있습니다.`);
     try {
       const day = cache.get(date) || await fetchJSON(`/api/dispatch-data/days/${date}`, controller.signal);
@@ -92,7 +96,8 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
       if (onDateChange) {
         const operational = await onDateChange(date);
         if (destroyed || ticket !== epoch) return;
-        if (!operational || operational.sourceData?.date !== date) throw new Error('운영 상태를 불러오지 못했습니다.');
+        if (!operational) { loading = false; message(`${date}에 운영 자료가 없습니다.`); onContextChange(); return; }
+        if (operational.sourceData?.date !== date) throw new Error('운영 상태를 불러오지 못했습니다.');
         simulationData = operational;
       }
       current = day; loading = false;
@@ -104,7 +109,6 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
       updateViews();
       message('');
       const url = new URL(location.href); url.searchParams.set('date', date); history.replaceState(null, '', url);
-      try { sessionStorage.setItem('meatbox.dispatch.date', date); } catch { /* Date remains in the URL when storage is unavailable. */ }
       onContextChange();
     } catch (error) {
       if (destroyed || ticket !== epoch || error.name === 'AbortError') return;
@@ -119,9 +123,8 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     try {
       manifest = await fetchJSON('/api/dispatch-data/manifest');
       if (destroyed) return;
-      let requested = new URLSearchParams(location.search).get('date');
-      try { requested ||= sessionStorage.getItem('meatbox.dispatch.date'); } catch { /* Use the configured default. */ }
-      const selected = resolveDispatchDate(manifest, requested);
+      const requested = new URLSearchParams(location.search).get('date');
+      const selected = resolveDispatchDate(manifest, requested, now);
       available = true; toolbar.hidden = false;
       selectedDate = selected; setNavigation(selected);
       message('권역 경계를 불러오고 있습니다.'); onContextChange();
@@ -130,12 +133,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
       await selectDate(selected);
     } catch (error) {
       if (destroyed) return;
-      if (error.status === 404 && !manifest) {
-        available = false; loading = false;
-        message('배차 정보가 준비되지 않아 기존 시나리오를 표시합니다.');
-        planning = planningFactory({ element: host, onSelect }); host.hidden = false;
-        if (simulationData) planning.update(simulationData, simulationId);
-      } else { loading = false; message('배차 자료를 불러오지 못했습니다. 다시 시도해 주세요.', true); }
+      loading = false; message('배차 자료를 불러오지 못했습니다. 다시 시도해 주세요.', true);
       onContextChange();
     }
   }
@@ -146,7 +144,6 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     update(data, selectedId) {
       simulationData = data; simulationId = selectedId;
       if (!started) start();
-      else if (available === false) planning?.update(data, selectedId);
       else if (current && data?.sourceData && !loading) {
         if (current.date !== data.sourceData.date) selectDate(data.sourceData.date);
         else updateViews();
