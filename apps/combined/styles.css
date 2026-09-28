@@ -240,10 +240,6 @@ ol {
 }
 
 .page-intro {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 20px;
-  align-items: end;
   padding: 24px 24px 20px;
   padding-inline: max(24px, calc((100% - 1600px) / 2 + 24px));
   background: var(--surface);
@@ -265,8 +261,6 @@ ol {
 }
 
 .summary-counts {
-  grid-row: 1 / span 2;
-  grid-column: 2;
   display: flex;
   align-items: center;
   gap: 0;
@@ -300,11 +294,24 @@ ol {
   font-size: 12px;
 }
 
-.page-actions {
+.date-summary-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.date-summary-actions { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
+.date-summary-toolbar .summary-counts { width: auto; max-width: 100%; margin-left: auto; }
+
+@media (max-width: 700px) {
+  .date-summary-toolbar { gap: 6px; padding: 10px; }
+  .date-summary-toolbar .summary-counts { flex: 0 1 auto; }
 }
 
 .map-preview {
@@ -1342,19 +1349,9 @@ button:disabled {
     margin-bottom: 12px;
   }
 
-  .summary-counts {
-    width: 100%;
-  }
-
   .summary-counts > * {
     min-width: 0;
     flex: 1;
-  }
-
-  .page-actions {
-    width: 100%;
-    align-items: stretch;
-    flex-direction: column;
   }
 
   .map-preview {

@@ -72,7 +72,6 @@
 .order-location-info > summary { min-height: 44px; align-content: center; cursor: pointer; }
 .order-location-info > p { margin: 0 0 14px; line-height: 1.6; }
 
-.dispatch-date-toolbar { display: flex; align-items: center; margin-bottom: 14px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
 .dispatch-date-picker { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
 .dispatch-date-picker > span { margin-right: 8px; font-weight: 600; }
 .dispatch-date-picker .button { display: inline-grid; place-items: center; width: 40px; min-width: 40px; height: 40px; padding: 0; }
@@ -114,7 +113,6 @@
 [data-order-list] > button > b { text-align: right; }
 .order-list-pages { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 12px; font-size: 12px; }
 @media (max-width: 700px) {
-  .dispatch-date-toolbar { gap: 6px; padding: 10px; }
   .dispatch-date-picker { display: grid; grid-template-columns: 32px minmax(0, 1fr) 32px; width: 100%; gap: 6px; }
   .dispatch-date-picker > span { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 11px; }
   .dispatch-date-picker .button { width: 32px; min-width: 32px; height: 44px; }

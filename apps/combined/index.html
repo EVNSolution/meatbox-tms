@@ -27,7 +27,6 @@
     <main class="page-body demo-main">
       <section class="page-intro" aria-labelledby="page-heading">
         <div><h1 id="page-heading" tabindex="-1">배차 관리</h1><p class="intro-copy" id="page-description">차량별 배정과 전체 주문 위치</p></div>
-        <div class="page-actions"><div class="summary-counts" id="summary-counts" aria-label="현재 배송 요약"></div></div>
       </section>
       <section class="connection-panel view-content" id="connection-panel" aria-live="polite">
         <div class="panel loading-state"><span class="loading-dot" aria-hidden="true"></span><div><strong id="connection-title">배송 정보를 불러오고 있습니다.</strong><p id="connection-detail">잠시만 기다려 주세요.</p></div><button type="button" class="button" id="retry-connection" hidden>다시 연결</button></div>
@@ -40,7 +39,7 @@
           <div id="order-planning"></div>
         </section>
         <section id="page-control" class="page-view view-content" data-page="control" aria-label="배송 관제" hidden>
-          <div class="control-date-toolbar" aria-label="관제 조회 날짜"><span>조회 날짜</span><div id="control-date-picker"></div><button type="button" class="button subtle" id="control-today">오늘</button><span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span></div>
+          <div id="control-date-toolbar"></div>
           <p class="control-empty panel" id="control-empty" hidden></p>
           <div id="vehicle-control"></div>
         </section>

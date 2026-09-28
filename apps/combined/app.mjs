@@ -12,6 +12,7 @@ import { mountResourceManagement } from './resource-management.mjs';
 import { sourceVehicleContext } from './source-context.mjs';
 import { mountDatePicker } from './date-picker.mjs';
 import { seoulToday, validOperatingDate } from './operating-date.mjs';
+import { dateSummaryToolbar, mountDateSummaryToolbar } from './date-summary-toolbar.mjs';
 
 const pages = {
   orders: { title: '배차 관리', description: '주문 확인, 배송원 선택과 배차 전송' },
@@ -32,6 +33,8 @@ const state = {
 };
 const byId = id => document.getElementById(id);
 document.querySelectorAll('[data-field-icon]').forEach(element => { element.innerHTML = referenceIcon(element.dataset.fieldIcon); });
+byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'control-date-actions', summaryLabel: '선택 관제일 요약', actions: '<span>조회 날짜</span><div id="control-date-picker"></div><button type="button" class="button subtle" id="control-today">오늘</button><span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span>' });
+const controlSummaryToolbar = mountDateSummaryToolbar(byId('control-date-toolbar'));
 const scenarioTools = mountDemoShell({ viewer: 'operator', onSelect: selectDelivery, onSend: (type, extra) => simulation.send(type, extra) });
 const controlDatePicker = mountDatePicker({ element: byId('control-date-picker'), label: '관제 조회 날짜', onChange: date => simulation.selectDate(date) });
 byId('control-today').addEventListener('click', () => simulation.selectDate(seoulToday()));
@@ -131,8 +134,8 @@ function render() {
   byId('vehicle-control').hidden = !state.data;
   byId('live-pages').hidden = state.page !== 'deliveries' && !state.dateContext && !state.data;
   byId('connection-panel').hidden = state.connected || state.page === 'deliveries';
-  if (state.page === 'orders') orderPlanning.update(state.data, state.selectedId);
-  if (!state.data) { byId('summary-counts').innerHTML = ''; byId('summary-counts').hidden = true; scenarioTools.update(null, false); return; }
+  if (state.page === 'orders') orderPlanning.update(state.data, state.selectedId, state.dateContext?.date);
+  if (!state.data) { controlSummaryToolbar.clear(); scenarioTools.update(null, false); return; }
   let selected = selectedDelivery();
   const controlRow = state.page === 'control' ? resolveControlVehicle(vehicleOperations(state.data), state.controlVehicleId, selected?.id) : null;
   if (state.page === 'control') {
@@ -192,18 +195,13 @@ function renderControlDate() {
 }
 
 function renderSummary() {
-  byId('summary-counts').hidden = state.page === 'deliveries';
-  if (state.page === 'deliveries') return;
-  if (state.page === 'orders' && orderPlanning.usesSource()) {
-    const summary = orderPlanning.summary();
-    byId('summary-counts').innerHTML = summary ? `<div><span>주문</span><strong>${summary.orders.toLocaleString('ko-KR')}</strong></div><div><span>박스</span><strong>${summary.boxes.toLocaleString('ko-KR')}</strong></div><div><span>후보 차량</span><strong>${summary.groups.toLocaleString('ko-KR')}</strong></div>` : '';
-    return;
-  }
+  if (state.page !== 'control' || state.dateContext && (state.dateContext.empty || state.dateContext.invalid || state.dateContext.date !== state.data.sourceData?.date)) { controlSummaryToolbar.clear(); return; }
   const deliveries = state.data.fleetDeliveries || state.data.deliveries;
-  byId('summary-counts').innerHTML = `
-    <div><span>차량</span><strong>${state.data.dispatch ? new Set(deliveries.map(item => item.vehicleId)).size : state.data.fleetVehicles?.length || (state.data.vehicle ? 1 : 0)}</strong></div>
-    <div><span>배송</span><strong>${deliveries.length}</strong></div>
-    <div><span>완료</span><strong>${deliveries.filter(item => item.status === 'done').length}</strong></div>`;
+  controlSummaryToolbar.update([
+    ['차량', state.data.dispatch ? new Set(deliveries.map(item => item.vehicleId)).size : state.data.fleetVehicles?.length || (state.data.vehicle ? 1 : 0)],
+    ['배송', deliveries.length],
+    ['완료', deliveries.filter(item => item.status === 'done').length],
+  ]);
 }
 
 function renderReview(selected) {
