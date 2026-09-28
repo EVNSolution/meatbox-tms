@@ -9,6 +9,8 @@ const { WebSocketServer } = require('ws');
 const { createAccess, AccessError } = require('./lib/access');
 const { createDispatchDataRouter } = require('./lib/dispatch-data');
 const { createSourceOperationsRouter } = require('./lib/source-operations-router');
+const { createResourceStore } = require('./lib/resource-store');
+const { createResourceRouter } = require('./lib/resource-router');
 const { calculateDispatch } = require('./lib/dispatch-calculator');
 const { arriveStop, completeStop } = require('./lib/scenario-controls');
 const { validRouteOrder, applyRouteOrder } = require('./lib/route-order');
@@ -52,9 +54,10 @@ function validCommand(msg) {
   return false;
 }
 
-function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env.PUBLIC_ORIGIN, access = createAccess({ file: accessFile }), dispatchDataDir = process.env.DISPATCH_DATA_DIR || path.join(ROOT, '.runtime/dispatch-data'), dispatchStateDir = process.env.DISPATCH_STATE_DIR || null, dispatchStateIO, dispatchCalculator = calculateDispatch, now = Date.now } = {}) {
+function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env.PUBLIC_ORIGIN, access = createAccess({ file: accessFile }), dispatchDataDir = process.env.DISPATCH_DATA_DIR || path.join(ROOT, '.runtime/dispatch-data'), dispatchStateDir = process.env.DISPATCH_STATE_DIR || null, dispatchStateIO, dispatchCalculator = calculateDispatch, resourceDatabasePath = process.env.RESOURCE_DATABASE, now = Date.now } = {}) {
   if (!origin || new URL(origin).origin !== origin) throw new Error('PUBLIC_ORIGIN must be an exact origin');
   const secure = new URL(origin).protocol === 'https:';
+  const resourceStore = resourceDatabasePath ? createResourceStore(resourceDatabasePath) : null;
   if (!secure && !['127.0.0.1', 'localhost', '[::1]'].includes(new URL(origin).hostname)) throw new Error('Public access requires HTTPS');
   const app = express();
   app.enable('strict routing');
@@ -131,6 +134,7 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
     res.redirect(`/login?next=${encodeURIComponent(safeNext(req.originalUrl))}`);
   }));
   app.get('/api/session', (req, res) => res.json({ user: req.user }));
+  app.use('/api/resources', createResourceRouter({ store: resourceStore, origin }));
   app.use('/api/dispatch-data', createSourceOperationsRouter({ directory: dispatchDataDir, stateDirectory: dispatchStateDir, stateIO: dispatchStateIO, origin, calculator: dispatchCalculator, now }));
   app.use('/api/dispatch-data', createDispatchDataRouter({ directory: dispatchDataDir }));
   for (const prefix of ['scenario', 'ui-layout', 'combined']) app.get(`/${prefix}`, (_req, res) => res.redirect(308, `/${prefix}/`));
@@ -256,6 +260,7 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
   sweep.unref();
   async function close() {
     clearInterval(sweep); clearInterval(sim.timer);
+    resourceStore?.close();
     for (const ws of wss.clients) ws.terminate();
     wss.close();
     if (server.listening) await new Promise(resolve => server.close(resolve));

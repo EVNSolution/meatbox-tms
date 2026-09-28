@@ -1,5 +1,11 @@
 # Design
 
+## Resource registry release decision (2026-09-27; predeployment)
+
+- 자원 관리는 날짜별 주문·배송지 화면과 분리된 차량 등록부다. 한 표에서 차량 표시번호와 등록된 지역 코드를 보고, 코드 선택·미지정 변경을 임시 편집한 뒤 한 번에 저장한다. 지역 코드 추가·이름 변경은 같은 페이지의 작은 관리 패널에서 한다. 하나의 지역 코드에 여러 차량을 연결할 수 있다.
+- 별도 `RESOURCE_DATABASE` SQLite에 차량 155개 기록을 보존하고 검증된 코드 표기의 활성 31개만 목록에 표시한다. 생성 표시 차량번호는 실제 차량 신원 증거가 아니다. 이 결정은 아래의 날짜별 `배송원 / 차량 / 배송지` 자원 탭 지침을 대체한다.
+- 이 브랜치는 운영 반영 후보이며 운영 배포·실제 운영 DB 전환은 아직 검증되지 않았다. 상세 계약과 로컬 근거는 [자원 분류 정리 계획](docs/resource-classification-cleanup-plan.md)에 있다.
+
 ## Current header and operating-date decision (2026-09-27; locally verified)
 
 - Remove the shared header `운영일` picker and `운영/고객/배송원 뷰어` switch. Keep the responsive header on one row. Preserve operator navigation and direct customer/driver delivery links for the appropriate roles. This decision supersedes older shared-header and two-row responsive guidance below.

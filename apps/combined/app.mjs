@@ -9,14 +9,13 @@ import { operatorRoute, resolveDeliverySelection } from './operations-model.mjs'
 import { mountVehicleControl } from './vehicle-control.mjs';
 import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from './vehicle-operations-model.mjs';
 import { mountResourceManagement } from './resource-management.mjs';
-import { mountDestinationDirectory } from './destination-directory.mjs';
 import { sourceVehicleContext } from './source-context.mjs';
 import { mountDatePicker } from './date-picker.mjs';
 import { seoulToday, validOperatingDate } from './operating-date.mjs';
 
 const pages = {
   orders: { title: '배차 관리', description: '주문 확인, 배송원 선택과 배차 전송' },
-  deliveries: { title: '자원 관리', description: '배송원, 차량과 배송지 정보' },
+  deliveries: { title: '자원 관리', description: '차량별 지역 코드 관리' },
   control: { title: '배송 관제', description: '차량별 남은 업무와 현재 운행, 배송지별 처리 이력' },
 };
 const state = {
@@ -61,10 +60,7 @@ const orderPlanning = mountDatedDispatch({ element: byId('order-planning'), onSe
     if (!result) throw new Error('배정을 변경하지 못했습니다. 현재 주문 상태를 확인해 주세요.');
     return { ...result, shared: true };
   }, onContextChange: () => { if (state.data) { renderSummary(); syncDispatchContext(); } } });
-const destinationDirectory = mountDestinationDirectory({ element: byId('resource-destinations') });
-const resourceManagement = mountResourceManagement({ element: byId('resource-management'), destinationElement: byId('resource-destinations'),
-  onSelectDelivery: id => { selectDelivery(id); location.hash = '#/control/manage'; },
-});
+mountResourceManagement({ element: byId('resource-management') });
 function selectDelivery(id) {
   state.selectedId = id;
   const selected = (state.data?.fleetDeliveries || state.data?.deliveries || []).find(item => item.id === id);
@@ -109,8 +105,8 @@ const simulation = connectSimulation({
     if (!connected && state.pendingNotice) {
       state.pendingNotice = null; state.noticeMessage = '연결이 끊겨 안내를 전달하지 못했습니다.'; state.noticeError = true;
     }
-    byId('connection-panel').hidden = connected;
-    byId('live-pages').hidden = !state.dateContext && !state.data;
+    byId('connection-panel').hidden = connected || state.page === 'deliveries';
+    byId('live-pages').hidden = state.page !== 'deliveries' && !state.dateContext && !state.data;
     byId('connection-title').textContent = message;
     byId('connection-detail').textContent = connected ? '' : '연결이 복구되면 같은 진행 상태를 이어갑니다.';
     scenarioTools.update(state.data, connected);
@@ -133,10 +129,8 @@ function render() {
   renderPage();
   renderControlDate();
   byId('vehicle-control').hidden = !state.data;
-  byId('resource-management').hidden = !state.data;
-  byId('resource-destinations').hidden = !state.data;
-  byId('resource-empty').hidden = Boolean(state.data) || !state.dateContext?.empty;
-  byId('resource-empty').textContent = state.dateContext?.invalid ? '요청한 날짜가 올바르지 않습니다. 배차 관리에서 날짜를 다시 선택해 주세요.' : `${state.dateContext?.date || '선택한 날짜'}에 조회할 자원 자료가 없습니다.`;
+  byId('live-pages').hidden = state.page !== 'deliveries' && !state.dateContext && !state.data;
+  byId('connection-panel').hidden = state.connected || state.page === 'deliveries';
   if (state.page === 'orders') orderPlanning.update(state.data, state.selectedId);
   if (!state.data) { byId('summary-counts').innerHTML = ''; byId('summary-counts').hidden = true; scenarioTools.update(null, false); return; }
   let selected = selectedDelivery();
@@ -150,10 +144,6 @@ function render() {
   state.data = sourceVehicleContext(state.data, state.selectedId);
   renderSummary();
   renderReview(selected);
-  if (state.page === 'deliveries') {
-    resourceManagement.update(state.data, state.selectedId);
-    destinationDirectory.update(state.data.sourceData?.date);
-  }
   if (state.page === 'control') {
     const row = controlRow;
     vehicleControl.update({ ...state.data, connected: state.connected }, state.controlVehicleId, selected?.id);
@@ -170,7 +160,7 @@ function render() {
 
 function syncDispatchContext() {
   const ordersPage = state.page === 'orders';
-  byId('scenario-tools').hidden = ordersPage;
+  byId('scenario-tools').hidden = ordersPage || state.page === 'deliveries';
   if (ordersPage && orderPlanning.usesSource()) byId('page-description').textContent = '주문 확인 → 배송원 선택 → 배차 계산 → 전체 배차 전송';
 }
 

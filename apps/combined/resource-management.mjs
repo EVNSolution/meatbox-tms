@@ -1,272 +1,171 @@
-import { referenceIcon } from './reference-icons.mjs';
-import { bundleDeliveries } from './delivery-bundles.mjs';
+import { createResourceClient } from './resource-client.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
+const codePattern = /^[A-Za-z][A-Za-z0-9]{0,39}$/;
 
-const sourceDeliveries = data => {
-  const deliveries = Array.isArray(data?.fleetDeliveries) ? data.fleetDeliveries
-    : Array.isArray(data?.deliveries) ? data.deliveries : null;
-  return deliveries && data?.sourceData ? bundleDeliveries(deliveries) : deliveries;
-};
-
-const displayText = value => String(value ?? '').trim() || '미등록';
-
-function boxTotal(deliveries) {
-  if (!deliveries) return null;
-  if (deliveries.some(delivery => !Number.isFinite(delivery.boxes) || delivery.boxes < 0)) return null;
-  return deliveries.reduce((sum, delivery) => sum + delivery.boxes, 0);
-}
-
-function assignedSummary(deliveries) {
-  return {
-    destinationCount: deliveries ? deliveries.length : null,
-    boxCount: boxTotal(deliveries),
-  };
-}
-
-function progressSummary(deliveries) {
-  if (deliveries === null) return { completed: assignedSummary(null), remaining: assignedSummary(null), held: assignedSummary(null) };
-  const completed = deliveries.filter(delivery => delivery.status === 'done');
-  const remaining = deliveries.filter(delivery => delivery.status !== 'done');
-  const held = deliveries.filter(delivery => delivery.status === 'skipped');
-  return {
-    completed: assignedSummary(completed),
-    remaining: assignedSummary(remaining),
-    held: assignedSummary(held),
-  };
-}
-
-export function resourceManagementModel(data, query = '') {
-  const vehicles = Array.isArray(data?.fleetVehicles) ? data.fleetVehicles.filter(vehicle => vehicle?.id) : [];
-  const deliveries = sourceDeliveries(data);
-  const deliveriesByVehicle = new Map(vehicles.map(vehicle => [vehicle.id, []]));
-  for (const delivery of deliveries || []) {
-    if (deliveriesByVehicle.has(delivery.vehicleId)) deliveriesByVehicle.get(delivery.vehicleId).push(delivery);
-  }
+export function resourceManagementModel(snapshot, { query = '', statusFilter = '', drafts = new Map() } = {}) {
+  const vehicles = (Array.isArray(snapshot?.vehicles) ? snapshot.vehicles : []).map(vehicle => ({
+    ...vehicle, effectiveRegionCode: drafts.has(vehicle.id) ? drafts.get(vehicle.id) : vehicle.regionCode,
+    changed: drafts.has(vehicle.id),
+  }));
+  const counts = new Map();
+  for (const vehicle of vehicles) if (vehicle.regionCode) counts.set(vehicle.regionCode, (counts.get(vehicle.regionCode) || 0) + 1);
+  const regionCodes = (Array.isArray(snapshot?.regionCodes) ? snapshot.regionCodes : []).map(item => ({ code: item.code, vehicleCount: counts.get(item.code) || 0 }));
+  const allowed = new Set(regionCodes.map(item => item.code));
+  const invalidIds = new Set(vehicles.filter(vehicle => vehicle.effectiveRegionCode && !allowed.has(vehicle.effectiveRegionCode)).map(vehicle => vehicle.id));
   const needle = String(query).trim().toLocaleLowerCase('ko-KR');
-  const sourceDate = data?.sourceData?.date ?? null;
-  const resources = vehicles.map(vehicle => {
-    const assigned = deliveries === null ? null : deliveriesByVehicle.get(vehicle.id);
-    const originRegions = [...new Set((assigned || []).flatMap(delivery => (delivery.orders || [delivery]).map(order => order.regionName)).filter(Boolean))];
-    if (!originRegions.length && String(vehicle.region ?? '').trim()) originRegions.push(String(vehicle.region).trim());
-    return {
-      id: vehicle.id,
-      vehicle,
-      deliveries: assigned,
-      summary: assignedSummary(assigned),
-      progress: progressSummary(assigned),
-      sourceDate,
-      sourceMode: Boolean(data?.sourceData),
-      originRegions,
-      searchText: [vehicle.id, vehicle.plate, vehicle.driver, vehicle.region, ...originRegions, ...(assigned || []).flatMap(delivery => (delivery.orders || [delivery]).flatMap(order => [order.id, order.name, order.address, order.orderNumber]))]
-        .map(value => String(value ?? '').toLocaleLowerCase('ko-KR')).join(' '),
-    };
+  const visibleVehicles = vehicles.filter(vehicle => {
+    if (statusFilter === 'unassigned' && vehicle.regionCode) return false;
+    if (statusFilter === 'assigned' && !vehicle.regionCode) return false;
+    return !needle || [vehicle.id, vehicle.plate, vehicle.regionCode, vehicle.effectiveRegionCode].some(value => String(value ?? '').toLocaleLowerCase('ko-KR').includes(needle));
   });
-  return {
-    resources,
-    visible: needle ? resources.filter(resource => resource.searchText.includes(needle)) : resources,
-    summary: assignedSummary(deliveries),
-  };
+  return { vehicles, visibleVehicles, regionCodes, invalidIds };
 }
 
-function formatCount(value, unit) {
-  return value === null ? '미등록' : `${value.toLocaleString('ko-KR')}${unit}`;
-}
+const options = (regionCodes, value) => `<option value="" ${value == null ? 'selected' : ''}>미지정</option>${regionCodes.map(item => `<option value="${escapeHtml(item.code)}" ${item.code === value ? 'selected' : ''}>${escapeHtml(item.code)}</option>`).join('')}`;
 
-function resourceList(resources, selectedVehicleId, kind) {
-  if (!resources.length) return '<li class="resource-empty">조회할 자원이 없습니다.</li>';
-  return resources.map(resource => {
-    const vehicle = resource.vehicle;
-    const title = kind === 'drivers' ? displayText(vehicle.driver) : displayText(vehicle.plate);
-    const meta = kind === 'drivers'
-      ? `${displayText(vehicle.plate)} 차량 배정`
-      : `배송원 ${displayText(vehicle.driver)}`;
-    return `<li><button type="button" class="resource-row" data-resource-select="${escapeHtml(vehicle.id)}" aria-pressed="${vehicle.id === selectedVehicleId}">
-      <span class="resource-row-icon">${referenceIcon(kind === 'drivers' ? 'user' : 'truck')}</span>
-      <span class="resource-row-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(meta)}</small></span>
-      <span class="resource-row-count">${escapeHtml(formatCount(resource.summary.destinationCount, '곳'))}</span>
-      ${referenceIcon('next')}
-    </button></li>`;
-  }).join('');
-}
+export function mountResourceManagement({ element, client = createResourceClient() }) {
+  if (!element) throw new TypeError('자원 관리 영역이 필요합니다.');
+  let query = '';
+  let statusFilter = '';
+  let regionsOpen = false;
+  let regionInputDraft = null;
+  let loading = false;
+  let saving = false;
+  let stale = false;
+  let error = '';
+  let confirmDiscard = false;
+  const drafts = new Map();
+  const draftBaselines = new Map();
 
-function assignmentList(resource) {
-  if (resource.deliveries === null) return '<p class="resource-empty">배정 배송지 데이터가 연결되지 않았습니다.</p>';
-  if (!resource.deliveries.length) return '<p class="resource-empty">배정된 배송지가 없습니다.</p>';
-  return `<ul class="resource-assignment-list">${resource.deliveries.map(delivery => `
-    <li><button type="button" data-resource-delivery="${escapeHtml(delivery.id)}" aria-label="${escapeHtml(displayText(delivery.name))} 배송 관리">
-      <span><strong title="${escapeHtml(displayText(delivery.name))}">${escapeHtml(displayText(delivery.name))}</strong><small title="${escapeHtml(displayText(delivery.address))}">${escapeHtml(displayText(delivery.address))}</small></span>
-      <span>${escapeHtml(Number.isFinite(delivery.boxes) && delivery.boxes >= 0 ? `${delivery.boxes}박스` : '박스 미등록')}</span>
-      ${referenceIcon('next')}
-    </button></li>`).join('')}</ul>`;
-}
-
-function resourceDetail(resource, kind) {
-  if (!resource) return '<div class="resource-empty resource-detail-empty"><strong>선택할 자원이 없습니다.</strong><p>검색 조건이나 연결 데이터를 확인해 주세요.</p></div>';
-  const vehicle = resource.vehicle;
-  const title = kind === 'drivers' ? displayText(vehicle.driver) : displayText(vehicle.plate);
-  const eyebrow = kind === 'drivers' ? '차량별 배정 배송원' : '차량';
-  const sourceRegions = resource.originRegions.length ? resource.originRegions.join(', ') : '미등록';
-  const locationText = String(vehicle.location?.label ?? '').trim();
-  const operationLocationText = locationText.replace(/\s*예시\s*/g, ' ').replace(/\s+/g, ' ').trim() || '미등록';
-  const unknownFields = kind === 'drivers' ? `
-    <div><dt>성향</dt><dd>${escapeHtml(displayText(vehicle.personality))}</dd></div>
-    <div><dt>${resource.sourceMode && !vehicle.mainRegion ? '기록 권역' : '메인 권역'}</dt><dd>${escapeHtml(displayText(vehicle.mainRegion || (resource.sourceMode ? vehicle.region : null)))}</dd></div>
-    <div><dt>배송 권역</dt><dd>${escapeHtml(sourceRegions)}</dd></div>` : `
-    <div><dt>배송 권역</dt><dd>${escapeHtml(sourceRegions)}</dd></div>
-    <div><dt>운영 상태</dt><dd>${resource.sourceMode ? resource.summary.destinationCount ? '배차 운영' : '배정 대기' : escapeHtml(displayText(vehicle.status))}</dd></div>
-    <div><dt>차량 위치</dt><dd>${resource.sourceMode ? escapeHtml(operationLocationText) : '미등록'}</dd></div>`;
-  const metricTitle = resource.sourceDate ? `${resource.sourceDate} 배송 지표` : '당일 배송 지표';
-  return `<div class="resource-detail-body">
-    <p class="eyebrow">${eyebrow}</p>
-    <div class="resource-detail-heading"><div><h3>${escapeHtml(title)}</h3><p>${kind === 'drivers' ? `${escapeHtml(displayText(vehicle.plate))} 차량 배정` : `배송원 ${escapeHtml(displayText(vehicle.driver))}`}</p></div><span class="resource-detail-icon">${referenceIcon(kind === 'drivers' ? 'user' : 'truck')}</span></div>
-    <dl class="resource-facts">
-      <div><dt>배정 배송지</dt><dd>${escapeHtml(formatCount(resource.summary.destinationCount, '곳'))}</dd></div>
-      <div><dt>배정 박스</dt><dd>${escapeHtml(formatCount(resource.summary.boxCount, '박스'))}</dd></div>
-      ${unknownFields}
-    </dl>
-    <section class="resource-progress" aria-label="${escapeHtml(metricTitle)}">
-      <h4>${escapeHtml(metricTitle)}</h4>
-      <dl>
-        <div><dt>완료</dt><dd><strong>${escapeHtml(formatCount(resource.progress.completed.destinationCount, '곳'))}</strong><span>${escapeHtml(formatCount(resource.progress.completed.boxCount, '박스'))}</span></dd></div>
-        <div><dt>잔여</dt><dd><strong>${escapeHtml(formatCount(resource.progress.remaining.destinationCount, '곳'))}</strong><span>${escapeHtml(formatCount(resource.progress.remaining.boxCount, '박스'))}</span></dd></div>
-        <div><dt>보류</dt><dd><strong>${escapeHtml(formatCount(resource.progress.held.destinationCount, '곳'))}</strong><span>${escapeHtml(formatCount(resource.progress.held.boxCount, '박스'))}</span></dd></div>
-      </dl>
-      <p>보류 배송은 잔여에 포함됩니다.</p>
-    </section>
-    <section class="resource-assignments" aria-label="${escapeHtml(title)} 배정 배송지"><h4>당일 배정 배송지</h4><p class="resource-assignment-hint">배송지를 선택하면 배송 관제로 이동합니다.</p>${assignmentList(resource)}</section>
-  </div>`;
-}
-
-export function mountResourceManagement({ element, destinationElement, onSelectDelivery = () => {}, onSelectVehicle = () => {} }) {
-  if (!element || !destinationElement) throw new TypeError('자원 관리와 배송지 영역이 필요합니다.');
-  const destinationId = destinationElement.id || 'resource-destinations-panel';
-  destinationElement.id = destinationId;
-  element.innerHTML = `<section class="resource-management" aria-label="자원 관리">
-    <div class="resource-tabs" role="tablist" aria-label="자원 종류">
-      <button type="button" role="tab" id="resource-tab-drivers" aria-selected="false" aria-controls="resource-panel-drivers" tabindex="-1" data-resource-tab="drivers">${referenceIcon('user')}<span>배송원</span></button>
-      <button type="button" role="tab" id="resource-tab-vehicles" aria-selected="false" aria-controls="resource-panel-vehicles" tabindex="-1" data-resource-tab="vehicles">${referenceIcon('truck')}<span>차량</span></button>
-      <button type="button" role="tab" id="resource-tab-destinations" aria-selected="true" aria-controls="${escapeHtml(destinationId)}" data-resource-tab="destinations">${referenceIcon('location')}<span>배송지</span></button>
-    </div>
-    <section class="resource-panel" id="resource-panel-drivers" role="tabpanel" aria-labelledby="resource-tab-drivers" hidden>
-      <div class="resource-panel-heading"><div><h2>배송원</h2><p>배송원별 차량과 당일 배정 내역을 확인합니다.</p></div><span data-resource-driver-count></span></div>
-      <label class="resource-search"><span class="sr-only">배송원 검색</span>${referenceIcon('search')}<input type="search" data-resource-search="drivers" placeholder="배송원, 차량, 배송지 검색" autocomplete="off"></label>
-      <div class="resource-split"><ul class="resource-list" data-resource-list="drivers"></ul><aside class="resource-detail" data-resource-detail="drivers"></aside></div>
-    </section>
-    <section class="resource-panel" id="resource-panel-vehicles" role="tabpanel" aria-labelledby="resource-tab-vehicles" hidden>
-      <div class="resource-panel-heading"><div><h2>차량</h2><p>차량별 배정 물량과 운행 정보를 확인합니다.</p></div><span data-resource-vehicle-count></span></div>
-      <label class="resource-search"><span class="sr-only">차량 검색</span>${referenceIcon('search')}<input type="search" data-resource-search="vehicles" placeholder="차량, 배송원, 배송지 검색" autocomplete="off"></label>
-      <div class="resource-split"><ul class="resource-list" data-resource-list="vehicles"></ul><aside class="resource-detail" data-resource-detail="vehicles"></aside></div>
-    </section>
-  </section>`;
-
-  destinationElement.setAttribute('role', 'tabpanel');
-  destinationElement.setAttribute('aria-labelledby', 'resource-tab-destinations');
-
-  const tabs = [...element.querySelectorAll('[data-resource-tab]')];
-  const panels = {
-    drivers: element.querySelector('#resource-panel-drivers'),
-    vehicles: element.querySelector('#resource-panel-vehicles'),
-    destinations: destinationElement,
-  };
-  const lists = {
-    drivers: element.querySelector('[data-resource-list="drivers"]'),
-    vehicles: element.querySelector('[data-resource-list="vehicles"]'),
-  };
-  const details = {
-    drivers: element.querySelector('[data-resource-detail="drivers"]'),
-    vehicles: element.querySelector('[data-resource-detail="vehicles"]'),
-  };
-  const counts = {
-    drivers: element.querySelector('[data-resource-driver-count]'),
-    vehicles: element.querySelector('[data-resource-vehicle-count]'),
-  };
-  let activeTab = 'destinations';
-  let data = null;
-  let selectedVehicleId = null;
-  let lastDeliveryId = null;
-  const queries = { drivers: '', vehicles: '' };
-
-  function selectTab(tab, focus = false) {
-    activeTab = panels[tab] ? tab : 'destinations';
-    for (const button of tabs) {
-      const selected = button.dataset.resourceTab === activeTab;
-      button.setAttribute('aria-selected', String(selected));
-      button.tabIndex = selected ? 0 : -1;
-      if (selected && focus) button.focus();
+  function render(focusId, caret) {
+    const scrollTop = element.querySelector?.('.resource-table-scroll')?.scrollTop || 0;
+    const model = resourceManagementModel(client.snapshot, { query, statusFilter, drafts });
+    const editable = Boolean(client.snapshot) && !loading && !saving;
+    const disabled = editable ? '' : 'disabled';
+    const locked = !editable || drafts.size > 0;
+    const validation = model.invalidIds.size ? '선택한 지역 코드가 등록부에 없습니다. 다시 불러오거나 변경을 취소해 주세요.' : '';
+    element.innerHTML = `<section class="resource-management" aria-label="자원 관리">
+      <div class="resource-toolbar">
+        <label>검색<input type="search" data-resource-search value="${escapeHtml(query)}" placeholder="차량번호 또는 지역 코드" ${disabled}></label>
+        <label>지역 지정 상태<select data-resource-status-filter ${disabled}><option value="">전체</option><option value="assigned" ${statusFilter === 'assigned' ? 'selected' : ''}>지정</option><option value="unassigned" ${statusFilter === 'unassigned' ? 'selected' : ''}>미지정</option></select></label>
+        <span class="resource-count">표시 ${model.visibleVehicles.length} / 전체 ${model.vehicles.length}대 · 미지정 ${model.vehicles.filter(vehicle => !vehicle.regionCode).length}대</span>
+        <button type="button" class="button subtle" data-resource-action="regions" aria-expanded="${regionsOpen}" aria-controls="resource-region-panel">지역 코드 관리</button>
+      </div>
+      <p class="resource-message" role="status" aria-live="polite">${escapeHtml(error || validation || (loading ? '자원 자료를 불러오고 있습니다.' : saving ? '저장하고 있습니다.' : ''))}</p>
+      ${error ? '<button type="button" class="button subtle resource-reload" data-resource-action="refresh">다시 불러오기</button>' : ''}
+      ${client.snapshot ? `<div class="resource-table-scroll"><table class="resource-table"><thead><tr><th scope="col">지역 코드</th><th scope="col">차량번호</th><th scope="col">지정 상태</th><th scope="col">변경</th></tr></thead><tbody>${model.visibleVehicles.length ? model.visibleVehicles.map(vehicle => `<tr data-resource-row="${escapeHtml(vehicle.id)}" ${vehicle.changed ? 'data-changed="true"' : ''} ${model.invalidIds.has(vehicle.id) ? 'data-invalid="true"' : ''}><td><select data-resource-region-select="${escapeHtml(vehicle.id)}" aria-label="${escapeHtml(vehicle.plate)} 지역 코드" aria-invalid="${model.invalidIds.has(vehicle.id)}" ${disabled}>${options(model.regionCodes, vehicle.effectiveRegionCode)}</select></td><th scope="row">${escapeHtml(vehicle.plate)}</th><td>${vehicle.effectiveRegionCode ? '지정' : '미지정'}</td><td class="resource-row-state">${model.invalidIds.has(vehicle.id) ? '코드 확인' : vehicle.changed ? '변경' : ''}</td></tr>`).join('') : '<tr><td class="resource-empty" colspan="4">조회할 차량이 없습니다.</td></tr>'}</tbody></table></div>
+      <div class="resource-actionbar"><span>변경 ${drafts.size}건</span><div><button type="button" class="button subtle" data-resource-action="discard" ${drafts.size && editable ? '' : 'disabled'}>변경 취소</button><button type="button" class="button primary" data-resource-action="save" ${drafts.size && editable && !stale && !validation ? '' : 'disabled'}>변경 ${drafts.size}건 저장</button></div></div>` : '<p class="resource-empty">자원 자료를 불러온 후 차량을 표시합니다.</p>'}
+      ${confirmDiscard ? `<div class="resource-confirm" role="group" aria-label="변경 취소 확인"><span>임시 변경 ${drafts.size}건을 취소하시겠습니까?</span><button type="button" class="button" data-resource-action="confirm-discard">변경 취소 확인</button><button type="button" class="button subtle" data-resource-action="keep-drafts">계속 편집</button></div>` : ''}
+      ${regionsOpen ? `<section id="resource-region-panel" class="resource-region-panel" data-resource-region-panel aria-label="지역 코드 관리"><div class="resource-region-heading"><h2 tabindex="-1">지역 코드 관리</h2><button type="button" class="button subtle" data-resource-action="regions">닫기</button></div><p id="resource-code-hint">영문·숫자 지역 코드</p>${drafts.size ? '<p class="resource-region-lock">차량 변경을 저장하거나 취소한 후 지역 코드를 편집할 수 있습니다.</p>' : ''}<form data-resource-form="create"><label>새 코드<input name="code" value="${escapeHtml(regionInputDraft?.action === 'create' ? regionInputDraft.value : '')}" required maxlength="40" pattern="[A-Za-z][A-Za-z0-9]{0,39}" aria-describedby="resource-code-hint" ${locked ? 'disabled' : ''}></label><button type="submit" class="button" ${locked ? 'disabled' : ''}>추가</button></form><div class="resource-region-list">${model.regionCodes.map(item => `<form data-resource-form="rename" data-code="${escapeHtml(item.code)}"><label><span class="sr-only">${escapeHtml(item.code)} 코드 변경</span><input name="code" value="${escapeHtml(regionInputDraft?.action === 'rename' && regionInputDraft.oldCode === item.code ? regionInputDraft.value : item.code)}" required maxlength="40" pattern="[A-Za-z][A-Za-z0-9]{0,39}" ${locked ? 'disabled' : ''}></label><span>${item.vehicleCount}대</span><button type="submit" class="button subtle" aria-label="${escapeHtml(item.code)} 코드 변경 저장" ${locked ? 'disabled' : ''}>변경</button></form>`).join('')}</div></section>` : ''}
+    </section>`;
+    const scroller = element.querySelector?.('.resource-table-scroll');
+    if (scroller) scroller.scrollTop = scrollTop;
+    if (focusId === 'filter') element.querySelector?.('[data-resource-status-filter]')?.focus();
+    else if (focusId === 'search') {
+      const search = element.querySelector?.('[data-resource-search]');
+      search?.focus();
+      if (Number.isInteger(caret)) search?.setSelectionRange(caret, caret);
+    } else if (focusId) {
+      [...(element.querySelectorAll?.('[data-resource-region-select]') || [])].find(item => item.dataset.resourceRegionSelect === focusId)?.focus();
     }
-    for (const [name, panel] of Object.entries(panels)) panel.hidden = name !== activeTab;
-    if (activeTab !== 'destinations') renderResources(activeTab);
   }
 
-  function renderResources(kind) {
-    const model = resourceManagementModel(data, queries[kind]);
-    if (!model.resources.some(resource => resource.id === selectedVehicleId)) {
-      selectedVehicleId = model.resources.find(resource => resource.id === data?.sourceData?.defaultVehicleId)?.id
-        ?? model.resources[0]?.id ?? null;
-    }
-    const selected = model.resources.find(resource => resource.id === selectedVehicleId) || null;
-    const listMarkup = resourceList(model.visible, selectedVehicleId, kind);
-    const detailMarkup = resourceDetail(selected, kind);
-    if (lists[kind].innerHTML !== listMarkup) lists[kind].innerHTML = listMarkup;
-    if (details[kind].innerHTML !== detailMarkup) details[kind].innerHTML = detailMarkup;
-    const unit = kind === 'vehicles' ? '대' : '건 배정';
-    counts[kind].textContent = `${model.visible.length.toLocaleString('ko-KR')} / ${model.resources.length.toLocaleString('ko-KR')}${unit}`;
+  function setDraft(id, code) {
+    const vehicle = client.snapshot?.vehicles.find(item => item.id === id);
+    if (!vehicle) return;
+    if (code && !client.snapshot.regionCodes.some(item => item.code === code)) return;
+    if (vehicle.regionCode === code) { drafts.delete(id); draftBaselines.delete(id); }
+    else { drafts.set(id, code); if (!draftBaselines.has(id)) draftBaselines.set(id, vehicle.regionCode); }
+    confirmDiscard = false;
+    if (!stale) error = '';
   }
 
-  function handleClick(event) {
-    const tab = event.target.closest?.('[data-resource-tab]');
-    if (tab) return selectTab(tab.dataset.resourceTab, true);
-    const selected = event.target.closest?.('[data-resource-select]');
-    if (selected) {
-      selectedVehicleId = selected.dataset.resourceSelect;
-      onSelectVehicle(selectedVehicleId);
-      renderResources(activeTab);
+  async function load() {
+    if (loading || saving) return;
+    loading = true; error = ''; render();
+    try {
+      await client.load();
+      stale = [...drafts].some(([id, code]) => {
+        const vehicle = client.snapshot.vehicles.find(item => item.id === id);
+        return !vehicle || vehicle.regionCode !== draftBaselines.get(id) || code && !client.snapshot.regionCodes.some(item => item.code === code);
+      });
+      if (stale) error = '다른 변경과 겹치는 임시 변경이 있습니다. 변경을 취소한 뒤 다시 편집해 주세요.';
+    } catch (cause) { error = cause.message || '자원 자료를 불러오지 못했습니다.'; }
+    finally { loading = false; render(); }
+  }
+
+  async function save() {
+    const model = resourceManagementModel(client.snapshot, { drafts });
+    if (saving || loading || stale || !drafts.size || model.invalidIds.size) return;
+    saving = true; confirmDiscard = false; error = ''; render();
+    try {
+      await client.assignVehicles([...drafts].map(([id, regionCode]) => ({ id, regionCode })));
+      drafts.clear(); draftBaselines.clear(); stale = false;
+    } catch (cause) {
+      error = cause.message || '저장하지 못했습니다.';
+      if (cause.code === 'RESOURCE_REVISION_CONFLICT') stale = true;
+    } finally { saving = false; render(); }
+  }
+
+  async function onSubmit(event) {
+    const form = event.target.closest?.('[data-resource-form]');
+    if (!form) return;
+    event.preventDefault();
+    if (loading || saving || drafts.size) return;
+    regionInputDraft = { action: form.dataset.resourceForm, oldCode: form.dataset.code, value: form.elements.code.value };
+    const code = form.elements.code.value.trim().toUpperCase();
+    if (!codePattern.test(code)) { error = '영문자로 시작하는 영문·숫자 지역 코드만 입력해 주세요.'; render(); return; }
+    saving = true; error = ''; render();
+    try {
+      if (form.dataset.resourceForm === 'create') await client.createRegionCode(code);
+      else await client.renameRegionCode(form.dataset.code, code);
+      regionInputDraft = null;
+    } catch (cause) { error = cause.message || '지역 코드를 저장하지 못했습니다.'; }
+    finally { saving = false; render(); }
+  }
+
+  function onInput(event) {
+    if (loading || saving || event.target.dataset.resourceSearch === undefined) return;
+    query = event.target.value;
+    render('search', event.target.selectionStart);
+  }
+
+  function onChange(event) {
+    if (loading || saving) return;
+    const target = event.target;
+    if (target.dataset.resourceRegionSelect !== undefined) {
+      setDraft(target.dataset.resourceRegionSelect, target.value || null);
+      render(target.dataset.resourceRegionSelect);
+    } else if (target.dataset.resourceStatusFilter !== undefined) {
+      statusFilter = target.value;
+      render('filter');
+    }
+  }
+
+  function onClick(event) {
+    const action = event.target.closest?.('[data-resource-action]')?.dataset.resourceAction;
+    if (!action) return;
+    if (action === 'refresh') return load();
+    if (action === 'save') return save();
+    if (action === 'regions') {
+      regionsOpen = !regionsOpen; render();
+      element.querySelector?.(regionsOpen ? '#resource-region-panel input:not(:disabled), #resource-region-panel h2' : '[data-resource-action="regions"]')?.focus();
       return;
     }
-    const delivery = event.target.closest?.('[data-resource-delivery]');
-    if (delivery) {
-      onSelectDelivery(delivery.dataset.resourceDelivery);
-    }
+    if (loading || saving) return;
+    if (action === 'discard' && drafts.size) { confirmDiscard = true; render(); }
+    else if (action === 'keep-drafts') { confirmDiscard = false; render(); }
+    else if (action === 'confirm-discard') { drafts.clear(); draftBaselines.clear(); confirmDiscard = false; stale = false; error = ''; render(); }
   }
 
-  function handleInput(event) {
-    const kind = event.target.dataset.resourceSearch;
-    if (!['drivers', 'vehicles'].includes(kind)) return;
-    queries[kind] = event.target.value;
-    renderResources(kind);
-  }
-
-  function handleKeydown(event) {
-    const tab = event.target.closest?.('[data-resource-tab]');
-    if (!tab || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-    event.preventDefault();
-    const offset = event.key === 'ArrowRight' ? 1 : -1;
-    const next = tabs[(tabs.indexOf(tab) + offset + tabs.length) % tabs.length];
-    selectTab(next.dataset.resourceTab, true);
-  }
-
-  element.addEventListener('click', handleClick);
-  element.addEventListener('input', handleInput);
-  element.addEventListener('keydown', handleKeydown);
-
-  return {
-    update(nextData, selectedDeliveryId) {
-      data = nextData;
-      const deliveries = sourceDeliveries(data) || [];
-      if (selectedDeliveryId && selectedDeliveryId !== lastDeliveryId) {
-        selectedVehicleId = deliveries.find(delivery => delivery.id === selectedDeliveryId)?.vehicleId || selectedVehicleId;
-      }
-      lastDeliveryId = selectedDeliveryId;
-      if (activeTab !== 'destinations') renderResources(activeTab);
-    },
-    destroy() {
-      element.removeEventListener('click', handleClick);
-      element.removeEventListener('input', handleInput);
-      element.removeEventListener('keydown', handleKeydown);
-      destinationElement.hidden = false;
-    },
-  };
+  element.addEventListener('submit', onSubmit);
+  element.addEventListener('input', onInput);
+  element.addEventListener('change', onChange);
+  element.addEventListener('click', onClick);
+  render();
+  void load();
+  return { refresh: load, destroy() { element.removeEventListener('submit', onSubmit); element.removeEventListener('input', onInput); element.removeEventListener('change', onChange); element.removeEventListener('click', onClick); } };
 }
