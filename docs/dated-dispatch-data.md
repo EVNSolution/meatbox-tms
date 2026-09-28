@@ -1,116 +1,77 @@
-# 날짜별 원본 배차 자료
+# 날짜별 원본 자료와 데이터 준비
 
-운영·배송원·고객 뷰어에서 `MP_ADM_KMEANS` 원본 주문을 사용한다. 운영 기준일은 **2026-09-16 수요일**로 고정한다. 원자료 2025-09-17 수요일을 대응시키고 전체 날짜를 364일 이동했다. 원래 날짜는 내부 `sourceDate`로 보존한다. 공통 운영일 달력과 배차 관리의 배차일 달력·이전/다음 버튼으로 준비된 운영 날짜를 전환한다. URL의 `date`가 우선하고, 같은 탭에서는 마지막 성공 날짜를 기억한다. 자료 없는 날짜는 달력에서 선택할 수 없다.
+이 문서는 **원본 파일 → 조회용 산출물**의 책임을 설명합니다. 배차 상태 전이는 [도메인](domain-and-state.md), 배포·백업은 [운영 절차](operations.md), 원본의 과거 수량·성능 측정은 [초기 기록](history/dated-dispatch-data-2026-09-16.md)으로 분리합니다.
 
-날짜 버튼은 `2026.09.17 목`처럼 요일까지 함께 표시한다. 배차 도구에는 전체 날짜 수와 기간을 표시하지 않는다. 공통 달력은 선택일 강조·월 이동·키보드 날짜 이동·Escape 및 바깥 클릭 닫기를 지원하며, 월 탐색만으로 운영일을 변경하지 않는다. 주기적인 상태 갱신 중에도 탐색 중인 달을 유지한다. 배송원 폰 내부의 근무 이력 조회는 별도 기능이다.
+## 자료의 종류
 
-## 자료와 집계
+| 자료 | 생산·사용 코드 | 의미 |
+|---|---|---|
+| 원본 CSV·SHP | [prepare-dispatch-data.py](../scripts/prepare-dispatch-data.py) 입력 | 개인정보와 위치가 포함된 비공개 원본 |
+| `manifest.json`, `days/*.json`, gzip, `regions.geojson` | 위 스크립트 → [dispatch-data.js](../lib/dispatch-data.js) | 날짜별 주문·후보 그룹·공통 경계의 조회 자료 |
+| `destinations.json` | [prepare-destination-data.py](../scripts/prepare-destination-data.py) | 날짜 누적 배송처 집계. 일별 운행·현재 자원 등록부와 다름 |
+| 날짜별 체크포인트 | [source-operations-router.js](../lib/source-operations-router.js) | 계산안·확정 배차·진행 상태. 원본 산출물과 별도 저장 |
+| 자원 SQLite | [import-resource-catalog.mjs](../scripts/import-resource-catalog.mjs) | 명시적으로 가져온 차량·지역 코드 등록부. 일별 주문 DB가 아님 |
 
-| 항목 | 확인 결과 |
-|---|---|
-| 전체 원본 | 1,339,531행, 1,369,745박스, 335일 |
-| 운영 기준일 | 4,680행, 4,680박스, 주문 마커 2,552개, 기사 표기 155개 |
-| 전체 날짜 주문 | 765,763개, 좌표 미등록·권역 미포함·다중 포함 각 0개 |
-| SHP | 2,426구역, Polygon 2,401개, MultiPolygon 25개, 구멍이 있는 폴리곤 2개, 무효 geometry 0개 |
-| 원본 품질 | GOOD 568, KEEP 196, REVIEW 1,662 |
-| SHP 기준일 | 20250630, 날짜별 권역 변경 이력은 미제공 |
+`DISPATCH_DATA_DIR` 기본값은 저장소 아래 `.runtime/dispatch-data`입니다. 원본·산출물·체크포인트·계정 파일·자원 DB를 한 종류의 ‘데이터’로 묶어 교체하지 않습니다. `.runtime/`는 Git 제외 대상이지만 접근 통제·보존 기간을 대신하지 않습니다.
 
-기준일은 사용자가 정한 2026-09-16과 같은 요일의 자료를 사용한다. 기본 배송원은 36건·74박스인 `(Z051)이승주` 그룹이며 주문명과 좌표가 읽기 좋은 실제 주문을 선택했다. 전체 기간의 통계적 대표일이라는 의미는 없다. 언제든 다른 날짜로 바꿀 수 있다.
+## 날짜와 식별자
 
-사용자 결정대로 **완전히 동일한 원본 행도 제거하지 않고 순수량을 합산**한다. 주문 키는 날짜·결제번호·구매자·주소·상세주소·기사 표기·원본 좌표·권역코드의 조합이다. 같은 결제라도 위치나 기사 등이 다르면 별도 주문이며 같은 위치의 여러 결제도 각각 유지한다. 정렬은 원본에서 처음 등장한 행 순서다. 회원 번호는 그룹 계산에만 쓰고 브라우저 자료에 내보내지 않는다.
+**현재 운영일은 서울의 실제 달력 날짜**입니다. `manifest.defaultDate`와 `source.dateShift`는 자료 선택·출처 메타데이터이며 현재 날짜를 고정하는 설정이 아닙니다. 과거는 조회만 가능하고 오늘 자료가 없으면 빈 상태를 표시합니다. [날짜 해석 코드](../apps/combined/operating-date.mjs), [조회 날짜 선택](../apps/combined/dated-dispatch.mjs)
 
-주문은 가구 수로 환산하지 않는다. 기사 표기에는 공용 로그인 등이 있어 실제 기사/차량 대수로 주장하지 않는다. 차량 ID·차량번호·고정 출발·완료 시각·이동/하차 시간이 없어 소요 시간은 미확인이다. 주문 시나리오의 80~120%는 원본 박스 합계 미리보기만 변경한다.
+과거 준비 작업에서는 원본 날짜를 발표일에 맞춰 이동한 적이 있습니다. 이런 변환은 원래 날짜를 `sourceDate`와 manifest 변환 정보에 보존합니다. 새 자료에 날짜 이동을 관행적으로 적용하지 않습니다. 이력이 실제 당일 주문이나 실제 배송완료 증거가 되는 것도 아닙니다.
 
-고객/배송원 뷰어는 사용자가 위임한 운영 계획으로 예상 시간을 표시한다. `source-viewer-plan.mjs`가06:30 계획 출발·최초20분 이동·이후 좌표 거리×1.3/시속30km·정차당4분 하차를 사용한다. 같은 위치는 이동0분이며, 순서가 바뀌면 재계산한다. 고객은 도착±30분 범위, 배송원은 계획 출발과 최종 완료 예상을 본다. KST 기준으로 자정을 처리하며 보류·좌표 결측·완료 시각 일부 누락은 완료 시각을 단정하지 않는다. 제공 ETA와 실제 도착/완료가 우선하고, 계산된 예상은 서버 주문이나 사건 이력에 저장하지 않는다. 운송 조건은 제공값→상품 명시→`보냉 운송 / 포장 상태 확인` 순서이며, 기본값에는 `transportConditionSource: operating-default`를 남긴다. 외부 경로/GPS/상품 온도 정보가 연결된 것은 아니다.
+CSV 기사 표기는 후보 그룹의 출처입니다. `grp_` 식별자는 기사 표기로부터 생성되며 정식 직원·차량 신원 증명이 아닙니다. 주문 키는 날짜·결제·구매자·주소·상세주소·기사·좌표·권역 조합에서 만들어집니다. 완전히 같은 원본 행도 임의 제거하지 않고 순수량을 합산하는 현재 정책을 유지합니다. 회원 번호는 해시 계산에 사용하며 브라우저 응답에 원문을 노출하지 않습니다.
 
-새 고유 배송지 요구는 `vehicle-operations-redesign-plan.md`30절에 기록했다. 같은 이름+주소의 누적 배송지를 하나로 하고 배차 순서도 배송지 묶음당 하나로 부여한다. 상세주소 및 복수 차량의 처리 기준 답변 전에는 기존 누적 키와 배정을 변경하지 않는다.
+배차의 배송지 묶음은 정규화된 이름·주소 기준입니다. 누적 배송처 자료의 키와 같다고 가정하지 않습니다. 자세한 식별자 구분은 [도메인과 상태](domain-and-state.md)에 있습니다.
 
-## 누적 배송지 대장
+## 좌표와 권역
 
-자원 관리의 배송지는 선택 운영일까지 누적된 배송처다. 당일 배송 순서·진행 상태·ETA 목록과 분리한다. 기존 일별 `sites`와 같은 구매자/주소/상세주소/좌표 키를 날짜 간 재사용하며, 이름이나 주소 하나만으로 서로 다른 고객을 합치지 않는다. 회원 번호는 해시 생성에만 사용한다. 동일 행도 박스 합산에 포함하고 주문은 기존 주문 키로 집계한다.
+준비 코드의 CSV 기본 좌표계는 `EPSG:5179`이며 `--csv-crs`로 지정할 수 있습니다. SHP는 `.prj`를 읽어 변환합니다. 기존 자료는 별도의 SHP 좌표계를 사용했으므로 CSV와 같다고 단정하지 않습니다. WGS84 경도·위도로 변환하고 좌표·수량·권역 형식을 검증합니다.
 
-```sh
-.runtime/dispatch-source/venv/bin/python scripts/prepare-destination-data.py \
-  --source /Users/jiin/Downloads/MP_ADM_KMEANS/analysis_dataset.csv \
-  --manifest .runtime/dispatch-data/manifest.json \
-  --output .runtime/dispatch-data/destinations.json
-```
+CSV 권역코드와 SHP `ZONE_ID`는 동일 체계라고 가정하지 않습니다. 원본 폴리곤의 점 포함 결과로 연결하며 경계·구멍·다중 폴리곤을 임의로 새로 그리지 않습니다. 자료에 없는 실제 GPS·주행 경로·상품 온도·근무 시간은 만들어 내지 않습니다. 고객·배송원 예상 시간의 계획값은 실제 관측값과 별개입니다.
 
-- 날짜 자료를 새로 준비/교체하면 위 명령으로 대장도 다시 준비한다. CSV 해시와 매니페스트 날짜 매핑을 검증하고 카탈로그만 원자적으로 교체한다. 기존 주문·배정 파일은 수정하지 않는다.
-- 인증 API: `GET /api/dispatch-data/destinations?date=2026-09-17&q=송파&page=1&pageSize=20`. `date`는 매니페스트의 운영일이어야 하며 검색100자·페이지100곳까지 허용한다. 대장 미연결은404, 잘못된 질의는400, 매니페스트와 대장 불일치는500이다.
-- 서버는 카탈로그1개와 최근 운영일의 집계1개만 보관한다. 응답에는 검색된 페이지, 전체 누적 합계와 기간을 담고, 회원 번호·주문 ID·내부 검색/정렬 값은 포함하지 않는다. 카탈로그 파일과 매니페스트 서명 변경을 확인해 낡은 자료를 재사용하지 않는다.
-- 전체29,589곳;9/17까지16,985곳·159,581주문·280,207박스. `최초/최근 주문일`은 제공 주문이 존재한 날짜이며 별도 고객 등록일이나 현재 배송 완료 상태가 아니다. 등록된 배송팁 자료는 아직 없다.
+## 로컬 자료 준비
 
-## 지도 좌표와 권역
+다음은 **승인된 원본을 별도 로컬 후보 디렉터리로 가공하는 예시**입니다. 운영 경로에 직접 실행하지 않습니다. 입력 경로와 실제 원본에 존재하는 날짜를 먼저 정해야 합니다.
 
-- CSV x/y는 **EPSG:5179**, SHP `.prj`는 **EPSG:5186**이다. 각각 WGS84 경도/위도로 변환한다. 모든 좌표의 유한값·국내 범위를 검사했고 용인 수지, 서울 강남, 수원 영통 주소 표본과 대조했다.
-- CSV 권역코드와 SHP ZONE_ID는 별도 체계다. 실제 원본 폴리곤의 점 포함 관계(`covers`)로 연결하며 코드가 같다고 결합하지 않는다.
-- 경계 형상, MultiPolygon, 구멍과 품질 표기를 보존한다. 토폴로지 자동 보정이나 단순화는 하지 않는다. 지도에서 경계를 클릭하면 해당 날짜의 내부 주문/박스 합계를 표시한다.
-- 모든 유효 좌표를 한 GeoJSON source에 넣는다. `생략 보기`(기본)는 배율별 표시 대상을 좌표의 고정 격자로 정해 이동 중 깜빡임을 줄인다. 지도 상단 스위치를 `전체 핀 보기`로 켜면 배율·밀도 생략 없이 모든 주문 핀을 표시하고 클릭할 수 있다. 모드 전환으로 카메라나 주문 자료는 바뀌지 않으며 선택 차량 강조와 다른 차량50% 투명도를 유지한다. 확대 시 추가 핀은 모두 선명하게 표시하며 줌 14 이상에서는 모든 개별 핀을 표시한다. 숫자 묶음과 클러스터는 사용하지 않는다. 주문 제거·마커 상한·좌표 이동은 없다. 기사 선택은 별도 전면 레이어로 강조하고 전체 주문 source는 유지한다. 겹친 핀은 클릭 목록에서 각각 조회할 수 있다. 주문 검색 목록만 50개씩 나눈다.
-- 실제 경계는 조회만 제공한다. 배송 가능 후보 선택 → 배차 계산안 → 전체 배차 전송으로 확정한다. 핀배차는 계산안의 같은 이름·주소 주문을 함께 옮긴다. 확정 후 배정 변경 규칙과 자동 계산 기준은 결정 대기 중이며, 현재·완료 주문을 임의로 이동하지 않는다.
-
-## 로컬 준비 및 변경
-
-Node 실행에는 기존 Express/ws만 사용한다. Python GIS 패키지는 오프라인 자료 준비용이며 런타임 의존성이 아니다. 확인 버전: pyproj 3.8.0, pyshp 3.1.6, shapely 2.1.2.
-
-저장소 루트에서 실행한다.
+GIS 변환에는 `pyproj`, `pyshp`, `shapely`가 필요합니다. 현재 저장소에는 Python 잠금 파일이 없습니다. [초기 기록](history/dated-dispatch-data-2026-09-16.md)의 당시 확인 버전을 재현 기준으로 참고하되, 새 환경의 설치 결과·버전·회귀 결과를 함께 기록합니다. Node 서비스 런타임에 GIS 패키지를 설치하는 구조는 아닙니다.
 
 ```sh
-python3 -m venv .runtime/dispatch-source/venv
-.runtime/dispatch-source/venv/bin/python -m pip install pyproj==3.8.0 pyshp==3.1.6 shapely==2.1.2
-.runtime/dispatch-source/venv/bin/python scripts/prepare-dispatch-data.py \
-  --source /Users/jiin/Downloads/MP_ADM_KMEANS \
-  --output .runtime/dispatch-data \
-  --default-date 2026-09-16 \
-  --source-date 2025-09-17 \
-  --operating-date 2026-09-16
+# 저장소 루트. 아래 세 값은 예시이며 실제 승인된 입력으로 바꿉니다.
+export TMS_SOURCE_DIR=/absolute/path/to/approved-source
+export TMS_CANDIDATE_DIR="$PWD/.runtime/dispatch-candidate"
+export TMS_SOURCE_DAY=2025-09-17
+
+python3 -m venv .runtime/data-prep-venv
+.runtime/data-prep-venv/bin/python -m pip install pyproj==3.8.0 pyshp==3.1.6 shapely==2.1.2
+.runtime/data-prep-venv/bin/python scripts/prepare-dispatch-data.py \
+  --source "$TMS_SOURCE_DIR" \
+  --output "$TMS_CANDIDATE_DIR" \
+  --default-date "$TMS_SOURCE_DAY"
+.runtime/data-prep-venv/bin/python scripts/prepare-destination-data.py \
+  --source "$TMS_SOURCE_DIR/analysis_dataset.csv" \
+  --manifest "$TMS_CANDIDATE_DIR/manifest.json" \
+  --output "$TMS_CANDIDATE_DIR/destinations.json"
 ```
 
-입력은 `analysis_dataset.csv`, `MP_ADM_KMEANS.shp/.shx/.dbf/.prj/.cpg`다. 기존 산출물을 갱신할 때만 `--replace`를 추가한다. 검증이 끝난 임시 디렉터리로 교체하며 원본은 수정하지 않는다. 다른 운영일을 시작점으로 사용하려면 `--source-date`와 `--operating-date`를 같은 요일로 지정하고 `--default-date`에 이동 후 운영 날짜를 지정한다. 두 날짜 이동 옵션을 생략하면 기존 원본 날짜 생성 방식이다. 일상적인 화면 날짜 전환에는 다시 생성할 필요가 없다.
+필수 입력은 `analysis_dataset.csv`, `MP_ADM_KMEANS.shp/.shx/.dbf/.prj/.cpg`입니다. `--source-date`와 `--operating-date`는 명시적 날짜 이동에만 함께 사용하며 같은 요일 조건을 확인합니다. 보통의 화면 날짜 선택에는 산출물을 다시 만들 필요가 없습니다.
 
-서버는 기본 `.runtime/dispatch-data`를 사용하며 `DISPATCH_DATA_DIR`로 변경할 수 있다. 모든 API는 기존 인증 뒤에서 제공한다.
+`prepare-dispatch-data.py`는 기본적으로 기존 출력 덮어쓰기를 거부합니다. `--replace`는 기존 산출물을 교체하며 성공 후 작업용 이전 디렉터리를 제거합니다. **영구 백업을 만드는 옵션이 아닙니다.** 운영 전환용 백업은 별도로 보존해야 합니다. 누적 배송처 스크립트도 출력 카탈로그를 교체하므로 위 후보 경로에서 검증합니다.
 
-| 경로 | 내용 |
-|---|---|
-| `/api/dispatch-data/manifest` | 날짜 목록·기본일·원본 기준·합계 |
-| `/api/dispatch-data/days/YYYY-MM-DD` | 선택 날짜의 기사 표기와 주문 |
-| `/api/dispatch-data/regions` | 공통 권역 GeoJSON |
-| `GET /api/dispatch-data/days/YYYY-MM-DD/state` | 원본 주문과 날짜별 로컬 운영 상태, revision/boot |
-| `POST /api/dispatch-data/days/YYYY-MM-DD/commands` | 같은 Origin의 인증된 로컬 진행·순서·배정·알림 변경 |
+## 준비 완료 판단
 
-허용 날짜만 읽고 경로 탐색을 거부한다. 준비된 gzip을 협상 전송한다. 최초에는 목록·공통 경계·선택 하루를 읽고 이후 날짜별 자료만 읽는다. 클라이언트 하루 캐시는 최대 2개다. 빠른 날짜 변경에서 취소되거나 늦게 도착한 이전 응답을 버린다.
+1. 입력 파일 지문과 변환 옵션·도구 버전을 기록합니다.
+2. 원본 행·박스 합계가 날짜별 산출물과 일치하는지 검증합니다. 고정된 과거 수량을 정답으로 사용하지 않습니다.
+3. 모든 주문의 그룹 참조·식별자·좌표·수량이 유효한지, 미등록 값이 숨겨지지 않았는지 확인합니다.
+4. 날짜 이동이 있다면 원본 날짜·요일·주문 ID·수량·좌표·순서가 보존되는지 확인합니다.
+5. 누적 카탈로그의 manifest 지문이 해당 후보와 일치하는지 확인합니다.
+6. 기존 체크포인트의 `sourceId`와 새 원본의 호환성을 확인합니다. 불일치를 파일 삭제나 재계산으로 해결하지 않습니다.
+7. 격리 환경에서 후보 조회와 기존 초안·확정 상태 복원을 확인한 뒤 [릴리스 기록](templates/release-record.md)에 근거를 남깁니다.
 
-자료 디렉터리는 약 349MiB(JSON/gzip 모두 포함)다. 최초 원본 기본일(2025-09-12) JSON 908,129바이트/gzip 192,955바이트, 공통 경계 JSON 28,972,171바이트다. 전체 재생성은 로컬 관측 약 33초이며 반복 생성한 674개 자료 파일의 해시가 일치했다. 실제 외부망이나 동시 접속 성능 보증은 아니다.
+관련 회귀: [원본 준비](../scripts/test_prepare_dispatch_data.py), [누적 배송처](../scripts/test_prepare_destination_data.py), [조회 API](../test/dispatch-data.test.js), [배차 상태](../test/dispatch-operations.test.mjs). 전체 실행 방법은 [검증 가이드](verification.md)를 따릅니다.
 
-## 공통 로컬 운영 상태
+## 자원 등록부와의 관계
 
-CSV 주문 ID와 수량은 보존하고 기사 그룹은 후보 배송원으로 사용한다. 새 날짜는 미배차로 시작한다. 운영자만 계산안을 조회하며 전체 배차 전송 후 배송원·관제에 확정 배차가 보인다. 고객은 전송 전에도 주문을 배차 대기로 조회한다. 선택 링크는 날짜와 실제 주문 ID를 유지한다. `S1`처럼 기존 시연 ID가 남아 있으면 원본의 기본 배송을 선택한다. 기존 V1 엔진과 보존 원본은 별도이며 CSV 명령이 V1로 전달되지 않는다.
+가져오기 도구는 하루 자료의 모든 그룹 ID와 표시 차량번호를 보존하고, 코드 형식·용차 제외 조건에 맞는 행을 활성화합니다. 과거 ‘155개 보존·31개 활성’은 특정 입력의 결과이며 고정 수량 계약이 아닙니다. 등록 코드와 표시 차량번호는 실제 신원 확인이 아닙니다.
 
-실시간 GPS·도착 이력·상품 상세·고객 요청·ETA 입력은 원본에 없다. 차량번호·수도권 위치는 승인된 생성값을 사용하고 내부 출처를 유지한다. 사용자 결정에 따라 운영 화면에서는 원본/로컬/시연/데모 배지를 표시하지 않는다. 값이 실시간 GPS가 되는 것은 아니다. 폰 지도는 실제 주문 좌표를 사용하고 도로 경로를 임의 생성하지 않는다. 근무 이력은 선택한 날짜의 원본 기사별 배정 자료이며 근무 시작·종료 시각이나 과거 실제 이동을 추정하지 않는다.
-
-진행·완료·보류·순서·배송 팁·고객 알림은 **서버 프로세스 메모리의 로컬 운영 시연**이다. 사건 시각은 실제로 버튼을 누른 시각이며 원본 배송완료일자의 과거 시각으로 바꾸지 않는다. 일반 서버 재시작 시 프로세스 메모리 상태는 사라지며 새 미배차 상태로 시작한다. 개발 중 기존 변경 상태의 schema1 체크포인트를 전달하면 사건과 완료 상태를 확정 배차로 복원하고 schema2로 보존한다. 이는 영구 이력 저장 기능이 아니다. 사진 필수 확인은 브라우저에서 수행하며 사진 업로드·영구 저장·외부 알림 전송은 없다.
-
-상태는 2초 간격으로 확인하되 ETag/304와 gzip을 사용한다. 명령은 boot/revision을 확인해 재시작 이전 또는 오래된 상태의 변경을 거부한다. 날짜를 바꾸는 동안 도착한 이전 응답은 버린다. manifest 404인 설치만 기존 시연으로 돌아가며 손상/통신 오류는 오류로 표시한다.
-
-원본과 생성물은 개인정보가 포함된 로컬 자료이며 `.runtime/`는 Git에서 제외한다. 이번 작업은 로컬 구현과 검증이다. 새 자료의 외부 업로드와 배포는 포함하지 않는다.
-
-```sh
-.runtime/dispatch-source/venv/bin/python -m unittest discover -s scripts -p 'test_prepare_dispatch_data.py'
-node --test apps/combined/dated-dispatch.test.mjs apps/combined/dispatch-map-layer.test.mjs apps/combined/order-planning.test.mjs test/dispatch-data.test.js
-npm test
-npm run check:capacity
-npm run check:capacity:stream
-```
-
-## 운영 날짜 적용 및 검증
-
-- 원본 날짜 산출물은 `.runtime/dispatch-data-source-dates`에 보존하고 검증한 운영 날짜 산출물을 `.runtime/dispatch-data`에 적용했다.
-- 전체 335일을 대조해 `date`/`sourceDate` 외 주문 ID·기사·좌표·수량·순서·요일·권역·요약이 모두 같음을 확인했다. 날짜 없는 일요일은 배차 없음으로 처리한다.
-- 전체 날짜의 운영 변경은 최근 8개 엔진과 작은 메모리 체크포인트로 관리한다. 바뀐 날짜를 다시 열어도 같은 프로세스에서는 변경 상태가 유지된다. 서버 재시작은 영구 저장이 아니므로 초기화된다.
-- 최종 검증 결과는 `vehicle-operations-redesign-plan.md` 19–20절을 따른다. 130개 WebSocket 동시 연결 버스트는 현재 macOS backlog 128 경계에서 실패했으므로 이 환경에서 130 동시 접속 통과로 주장하지 않는다. 128개 버스트와 신규 HTTP 상태 조회 130회는 별도 통과했다.
-
-## 배차 실행 계약 (2026-09-16)
-
-`dispatch.phase`는 `unplanned` → `draft` → `published`다. 운영자 지도는 `dispatchOrders`를 사용하고 운행 화면은 확정된 `fleetDeliveries`만 사용한다. `calculate_dispatch`는 선택한 `vehicleIds`를 입력으로 완전한 주문→차량 배정을 검증한다. 같은 이름·주소를 NFC/앞뒤 공백 정리 후 같은 배송지로 판단하며 유사 주소를 합치지 않는다. `publish_dispatch`는 최신 `draftVersion`과 전체 주문/수량을 검증한 다음 기존 운행 엔진으로 한 번에 전환한다. 요청에는 기존 `expectedBoot`/`expectedRevision`이 필요하다.
-
-`manifest.source.dateShift.operatingDate`(없으면 `defaultDate`)가 오늘 기준이며 선택일과 분리한다. 과거는 모든 변경 명령이 `DATE_READ_ONLY`다. 계산기 미연결은 `CALCULATION_UNAVAILABLE`, 전송 후 배정 변경은 `DISPATCH_ALREADY_PUBLISHED`다. 아직 외부 계산 엔진·기사 앱 전송/수신 응답은 연결하지 않았다. 테스트에서는 순수 계산기를 주입해 확정 단계의 원자성과 상태 분리를 검증한다.
+신규 자원 DB 생성은 명시적 가져오기 작업입니다. 기존 v1 자원 DB는 최초 열기에서 v2로 이행할 수 있어 단순 API 조회에도 쓰기가 생길 수 있습니다. 파일 지문·백업·권한·스키마 확인과 rollback은 [운영 절차](operations.md)를 따릅니다. 차량·지역 코드 등록부와 주문 공급용 DB는 별도 책임입니다.
