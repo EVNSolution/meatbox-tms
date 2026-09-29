@@ -1,7 +1,8 @@
 .dispatch-workflow,
 .dispatch-workflow * { box-sizing: border-box; }
-.dispatch-workflow { border-bottom: 1px solid #dde2df; background: #fff; }
-.dispatch-workflow-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding: 10px 16px; }
+.dispatch-workflow { margin-bottom: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+.dispatch-workflow-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 10px 14px; }
+.dispatch-workflow-overview { min-width: 0; flex: 1; }
 .dispatch-workflow-phase { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .dispatch-workflow-phase span { color: #77817c; font-size: 11px; }
 .dispatch-workflow-phase strong { color: var(--meatbox-ink, #212322); font-size: 15px; }
@@ -9,8 +10,8 @@
 .dispatch-workflow-actions > div { display: flex; gap: 8px; }
 .dispatch-workflow-actions small { color: #77817c; font-size: 10px; }
 .dispatch-workflow-actions .button { min-height: 44px; white-space: nowrap; }
-.dispatch-workflow-volume { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0 16px 12px; color: #68736d; font-size: 12px; }
-.dispatch-workflow-summary { padding: 0 16px 12px; }
+.dispatch-workflow-volume { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 10px 0 0; color: #68736d; font-size: 12px; }
+.dispatch-workflow-summary { margin-top: 10px; }
 .dispatch-workflow-summary summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 12px; border: 1px solid #e0e5e2; border-radius: 8px; color: #56625c; background: #f7f9f8; cursor: pointer; font-size: 12px; }
 .dispatch-workflow-summary summary strong { color: #27322c; font-size: 13px; }
 .dispatch-workflow-summary-counts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; }
@@ -63,14 +64,13 @@
 .dispatch-workflow button:focus-visible,
 .dispatch-workflow input:focus-visible { outline: 2px solid var(--meatbox-red, #e60028); outline-offset: 2px; }
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .dispatch-workflow-toolbar { align-items: stretch; flex-direction: column; gap: 8px; padding: 10px 12px; }
-  .dispatch-workflow-phase { flex-direction: row; align-items: center; justify-content: space-between; }
+  .dispatch-workflow-overview { flex: auto; }
   .dispatch-workflow-actions { align-items: stretch; }
   .dispatch-workflow-actions > div { display: grid; grid-template-columns: 1fr 1fr; }
   .dispatch-workflow-actions small { text-align: right; }
   .dispatch-workflow-actions .button { min-width: 0; padding-inline: 8px; font-size: 11px; }
-  .dispatch-workflow-summary { padding-inline: 12px; }
   .dispatch-workflow-notice { align-items: flex-start; flex-direction: column; margin-inline: 12px; }
   .dispatch-workflow-summary summary { align-items: flex-start; flex-direction: column; gap: 3px; }
   .dispatch-workflow-summary-counts { justify-content: flex-start; }
