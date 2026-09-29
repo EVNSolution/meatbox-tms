@@ -11,7 +11,7 @@ test('근무 달력은 월말과 윤년, 연도 경계를 넘겨도 유효한 �
 
 test('페이지 달력은 요일별 월 전체와 선택일, 오늘, 원본 자료 표시를 구분한다', () => {
   const html = renderDriverHistoryCalendar('2026-09-14', [{ date: '2026-09-14' }, { date: '2026-09-16' }], '2026-09-16', true);
-  assert.match(html, /<table aria-label="2026년 9월 근무 이력">/);
+  assert.match(html, /<table aria-label="2026년 9월 과거 배차">/);
   assert.equal((html.match(/data-history-date=/g) || []).length, 30);
   assert.match(html, /data-history-date="2026-09-14"[^>]*aria-pressed="true"/);
   assert.match(html, /data-history-date="2026-09-16"[^>]*aria-pressed="false"[^>]*aria-current="date"/);
@@ -23,8 +23,8 @@ test('페이지 달력은 요일별 월 전체와 선택일, 오늘, 원본 자�
 
 test('예시 이력은 별도로 표시하고 기록 없는 날짜도 선택해 빈 상태를 조회한다', () => {
   const html = renderDriverHistoryCalendar('2026-09-13', ['2026-09-12', '2026-09-14'], '2026-09-16');
-  assert.match(html, /2026.09.12 토요일, 예시 근무 이력 있음/);
+  assert.match(html, /2026.09.12 토요일, 예시 배차 있음/);
   assert.match(html, /data-history-date="2026-09-13"[^>]*aria-pressed="true"/);
-  assert.doesNotMatch(html, /2026.09.13 일요일, 예시 근무 이력 있음/);
-  assert.match(html, /예시 근무 이력이 있는 날/);
+  assert.doesNotMatch(html, /2026.09.13 일요일, 예시 배차 있음/);
+  assert.match(html, /예시 배차가 있는 날/);
 });

@@ -10,6 +10,7 @@
 | [API 명세](api-reference.md) | API 경로, 요청·응답 형식, 오류 처리 |
 | [날짜별 원본 자료](dated-dispatch-data.md) | 원본 데이터 형식과 변환·적재 절차 |
 | [UI 설계](../DESIGN.md) | 화면 구성, 조작 방식, 로딩·오류·빈 상태 처리 |
+| [모바일 화면 운영 범위](mobile-surface-policy.md) | 운영 관제와 고객·배송원 검토 화면의 경계, 실제 사용자 화면 전환 조건 |
 | [화면 계층·정렬 일치 계획](layout-consistency-plan-2026-09-29.md) | 전체 화면 점검의 규칙, 수정 순서, 배포 판단 기준 |
 | [업무 가이드](operator-guide.md) | 배차·관제·자원 관리 화면 사용법 |
 | [테스트 및 검증](verification.md) | 테스트 실행, API·화면 검증, 결과 기록 |

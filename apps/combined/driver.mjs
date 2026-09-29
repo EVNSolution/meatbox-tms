@@ -301,12 +301,12 @@ function renderHistory() {
     ? (latest.sourceData.dates || []).filter(value => (typeof value === 'string' ? value : value?.date) < operatingDate)
     : exampleHistoryDates;
   const calendar = renderDriverHistoryCalendar(historyDate, availableDates, today, Boolean(latest.sourceData));
-  const heading = `<header class="dv-delivery-heading"><div><h2>근무 이력</h2><p>달력에서 날짜를 선택해 주세요.</p></div></header>`;
-  const selectedHeading = `<h3 class="dv-history-selected">${escapeHtml(historyDate.replaceAll('-', '.'))} 이력</h3>`;
+  const heading = `<header class="dv-delivery-heading"><div><h2>과거 배차</h2><p>달력에서 날짜를 선택해 주세요. ${latest.sourceData ? '원본 배정 자료는 실제 근무 이력이 아닙니다.' : '예시 배차이며 실제 근무 이력이 아닙니다.'}</p></div></header>`;
+  const selectedHeading = `<h3 class="dv-history-selected">${escapeHtml(historyDate.replaceAll('-', '.'))} 배차</h3>`;
   if (latest.sourceData) {
     const layout = heading + calendar + selectedHeading;
     if (historyDate === operatingDate) { patch('dv-history', `${layout}<div class="dv-empty">금일 배차에서 진행 상황을 확인해 주세요.</div>`); return; }
-    if (historyDate > operatingDate) { patch('dv-history', `${layout}<div class="dv-empty">아직 근무 이력이 없습니다.</div>`); return; }
+    if (historyDate > operatingDate) { patch('dv-history', `${layout}<div class="dv-empty">아직 과거 배차 자료가 없습니다.</div>`); return; }
     const model = view();
     const vehicle = selectedHistoryVehicle(latest.fleetVehicles || [], viewerVehicleId, model.vehicle);
     const identity = { driver: vehicle?.driver, plate: vehicleDisplay(vehicle), originalGroupId: vehicle?.id, operatingDate };
@@ -330,7 +330,7 @@ function renderHistory() {
     return;
   }
   const history = driverHistoryForDate(historyDate);
-  const records = history.map(item => `<article class="dv-history-card"><header><div><span class="dv-demo-badge">예시</span><h3>${escapeHtml(item.label)}</h3></div><strong>${escapeHtml(item.vehicle)}</strong></header><dl class="dv-key-values"><div><dt>근무 시간</dt><dd>${item.startedAt}–${item.endedAt}</dd></div><div><dt>배송 규모</dt><dd>${item.destinations}곳 / ${item.boxes}박스</dd></div></dl></article>`).join('');
+  const records = history.map(item => `<article class="dv-history-card"><header><div><span class="dv-demo-badge">예시</span><h3>${escapeHtml(item.label)}</h3></div><strong>${escapeHtml(item.vehicle)}</strong></header><dl class="dv-key-values"><div><dt>예시 시간</dt><dd>${item.startedAt}–${item.endedAt}</dd></div><div><dt>배송 규모</dt><dd>${item.destinations}곳 / ${item.boxes}박스</dd></div></dl></article>`).join('');
   patch('dv-history', heading + calendar + selectedHeading + (records || '<div class="dv-empty">선택한 날짜의 예시 기록이 없습니다.</div>'));
 }
 function renderMapDetail() {
@@ -522,7 +522,7 @@ byId('dv-settings').innerHTML = icon('settings'); byId('dv-logout').innerHTML = 
 byId('dv-sheet-close').innerHTML = icon('close'); byId('dv-sheet-back').innerHTML = icon('back');
 byId('dv-tab-delivery').innerHTML = `${icon('package')}배송`; byId('dv-tab-map').innerHTML = `${icon('map')}지도`;
 byId('dv-settings').addEventListener('click', () => openDriverSettings(showSheet));
-byId('dv-logout').addEventListener('click', () => showSheet({ title: '로그아웃', body: `<p class="dv-muted">${latest?.sourceData ? '계정 로그아웃은 포털에서 할 수 있습니다.' : '배송원 뷰어는 현재 데모 계정으로 열려 있습니다. 계정 로그아웃은 포털에서 할 수 있습니다.'}</p><a class="dv-button" href="/">포털로 이동</a>` }));
+byId('dv-logout').addEventListener('click', () => showSheet({ title: '로그아웃', body: '<p class="dv-muted">이 검토 화면은 로그인 계정의 배송원 권한을 확인하지 않습니다. 계정 로그아웃은 포털에서 할 수 있습니다.</p><a class="dv-button" href="/">포털로 이동</a>' }));
 byId('dv-sheet-close').addEventListener('click', closeSheet);
 byId('dv-sheet-back').addEventListener('click', () => { if (!pending) sheet?.back?.(); });
 byId('dv-sheet-layer').addEventListener('click', event => { if (event.target === byId('dv-sheet-layer')) closeSheet(); });

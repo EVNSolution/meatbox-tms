@@ -4,6 +4,7 @@
 .app-viewer-intro { min-height: 108px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 24px 20px; background: #fff; border-bottom: 1px solid #dce0e6; }
 .app-viewer-intro h1 { margin: 0; color: #232221; font-size: 28px; line-height: 1.3; letter-spacing: -.035em; }
 .app-viewer-intro p { margin: 6px 0 0; color: #667085; font-size: 14px; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
+.app-viewer-intro .app-viewer-scope { max-width: 780px; margin-top: 12px; padding: 8px 12px; border: 1px solid #e6d2a7; border-radius: 6px; background: #fff8e9; color: #67451b; font-size: 13px; }
 .app-viewer-workspace { display: grid; grid-template-columns: 390px minmax(260px, 420px); justify-content: center; align-items: start; gap: 32px; padding: 32px 24px 80px; }
 .app-viewer-device { position: relative; box-sizing: border-box; width: 390px; height: 780px; padding: 8px; border-radius: 38px; background: #24262b; box-shadow: 0 12px 32px #17203320; }
 .app-viewer-screen { box-sizing: border-box; height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-radius: 30px; background: #f3f4f6; scrollbar-width: thin; }

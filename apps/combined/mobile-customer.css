@@ -73,7 +73,8 @@ body:has(#account-picker:not([hidden])) .mobile-shell { visibility: hidden; }
 .picker-date { margin: 4px 0 0; color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; }
 .back-link { color: var(--ink-3); font-size: 13px; margin-bottom: 32px; }
 .picker-content h1 { font-size: 32px; }
-.picker-description { color: var(--ink-3); font-size: 14px; margin-bottom: 28px; }
+.picker-description { color: var(--ink-3); font-size: 14px; margin-bottom: 12px; }
+.picker-scope { margin: 0 0 24px; padding: 10px 12px; border: 1px solid #e6d2a7; border-radius: 6px; background: #fff8e9; color: #67451b; font-size: 13px; line-height: 1.5; }
 .account-search-tools { margin-bottom: 16px; }
 .account-search-tools > label { display: block; margin-bottom: 6px; color: var(--ink-2); font-size: 13px; font-weight: 600; }
 .account-search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }

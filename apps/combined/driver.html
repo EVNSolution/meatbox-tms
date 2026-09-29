@@ -23,7 +23,7 @@
   <div class="demo-layout app-viewer-layout">
     <main class="demo-main driver-page app-viewer-page">
       <section class="app-viewer-intro">
-        <div><h1>배송원 뷰어</h1><p>배차와 배송 순서를 확인하고, 현장에서 배송을 완료합니다.</p></div>
+        <div><h1>배송원 흐름 검토</h1><p>배차·지도·완료 흐름을 내부에서 확인합니다.</p><p class="app-viewer-scope">배송원별 접근 권한은 아직 분리되지 않았습니다. 도착·완료 등 일부 조작은 서버 상태를 바꿉니다.</p></div>
       </section>
       <p class="demo-connection" id="driver-connection" role="status">배송 정보를 불러오고 있습니다.</p>
       <div class="app-viewer-workspace" id="driver-workspace" hidden>
@@ -37,14 +37,14 @@
                 <div class="dv-inline"><button class="dv-icon" id="dv-settings" aria-label="환경설정"></button><button class="dv-icon" id="dv-logout" aria-label="로그아웃"></button></div>
               </header>
               <section class="dv-route-selector" id="dv-route-selector" aria-label="배차 선택">
-                <div class="dv-segments" role="group" aria-label="배차 구분"><button data-group="today" aria-pressed="true">금일 배차</button><button data-group="history" aria-pressed="false">근무 이력</button></div>
+                <div class="dv-segments" role="group" aria-label="배차 구분"><button data-group="today" aria-pressed="true">금일 배차</button><button data-group="history" aria-pressed="false">과거 배차</button></div>
                 <details id="dv-route-choice"><summary><span>배송일 <strong>오늘</strong><em id="dv-route-mode" hidden>조회 전용</em></span><span id="dv-route-label">배차 확인 중</span></summary><button id="dv-select-today" class="dv-link-row"><span>오늘 배송</span><span id="dv-route-status"></span></button></details>
               </section>
               <p id="dv-feedback" class="dv-feedback" role="status" hidden></p>
               <div class="dv-content" id="dv-content">
                 <section id="dv-delivery" class="dv-scroll" role="tabpanel" aria-labelledby="dv-tab-delivery" tabindex="0"></section>
                 <section id="dv-map-panel" class="dv-map-panel" role="tabpanel" aria-labelledby="dv-tab-map" hidden><div id="dv-map" class="dv-map" aria-label="배송 경로 지도"></div><div id="dv-map-detail" class="dv-map-detail"></div></section>
-                <section id="dv-history" class="dv-scroll" aria-label="날짜별 근무 이력" tabindex="0" hidden></section>
+                <section id="dv-history" class="dv-scroll" aria-label="날짜별 과거 배차" tabindex="0" hidden></section>
                 <section id="dv-orders" class="dv-scroll" aria-label="주문 목록" tabindex="0" hidden></section>
                 <section id="dv-editor" class="dv-editor" aria-label="배송지 순서 편집" hidden><header class="dv-subheader"><button class="dv-text-button" data-action="cancel-edit">취소</button><h2>배송지 순서 편집</h2><button class="dv-text-button" id="dv-save-order" data-action="save-edit">완료</button></header><p class="dv-edit-hint">같은 배송지의 주문을 함께 이동합니다.</p><button class="dv-map-toggle dv-text-button" id="dv-edit-map-toggle" aria-expanded="true">지도 접기</button><div id="dv-edit-map" class="dv-edit-map" aria-label="편집 중인 배송 경로 지도"></div><ol class="dv-edit-list" id="dv-edit-list" tabindex="0" aria-label="배송 순서 이동"></ol></section>
               </div>
@@ -61,6 +61,6 @@
       </div>
     </main>
   </div>
-  <noscript><p class="driver-noscript">배송원 뷰어를 이용하려면 JavaScript를 활성화해 주세요.</p></noscript>
+  <noscript><p class="driver-noscript">배송원 검토 화면을 이용하려면 JavaScript를 활성화해 주세요.</p></noscript>
 </body>
 </html>
