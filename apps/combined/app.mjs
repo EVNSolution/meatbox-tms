@@ -19,6 +19,7 @@ const pages = {
   deliveries: { title: '자원 관리', description: '차량별 지역 코드 관리' },
   control: { title: '배송 관제', description: '차량별 남은 업무와 현재 운행, 배송지별 처리 이력' },
 };
+let pointerRouteTarget = null;
 const state = {
   ...operatorRoute(location.hash),
   data: null,
@@ -226,11 +227,21 @@ function renderTabs() {
 
 }
 
+byId('demo-navigation').addEventListener('click', event => {
+  const link = event.target.closest('[data-page-link]');
+  if (link && event.detail > 0) {
+    const target = new URL(link.href).hash;
+    if (target !== location.hash) pointerRouteTarget = target;
+  }
+});
 window.addEventListener('hashchange', () => {
   Object.assign(state, operatorRoute(location.hash));
   normalizeRoute();
   render();
-  byId('page-heading').focus({ preventScroll: true });
+  const fromPointerMenu = pointerRouteTarget === location.hash;
+  pointerRouteTarget = null;
+  // Pointer users keep focus on the selected menu; keyboard users enter the new page.
+  if (!fromPointerMenu) byId('page-heading').focus({ preventScroll: true });
   window.scrollTo(0, 0);
 });
 byId('retry-connection').addEventListener('click', () => location.reload());
