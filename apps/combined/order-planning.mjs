@@ -53,6 +53,20 @@ export function orderMapModel(deliveries, routeData) {
   return { mapped, unknownCount: Math.max(0, (deliveries?.length || 0) - mapped.length) };
 }
 
+export function regionOrderCounts(regions, deliveries) {
+  if (regions?.type !== 'FeatureCollection' || !Array.isArray(regions.features)) return null;
+  const counts = new Map();
+  for (const delivery of deliveries || []) {
+    for (const zoneId of new Set(Array.isArray(delivery?.zoneIds) ? delivery.zoneIds : [])) {
+      if (typeof zoneId === 'string' && zoneId) counts.set(zoneId, (counts.get(zoneId) || 0) + 1);
+    }
+  }
+  return { ...regions, features: regions.features.map(feature => ({
+    ...feature,
+    properties: { ...feature.properties, orderCount: counts.get(feature.properties?.zoneId) || 0 },
+  })) };
+}
+
 export function createOrderMap(element) {
   maplibregl.setWorkerUrl(new URL('./assets/vendor/maplibre/maplibre-gl-csp-worker.js', import.meta.url).href);
   const map = new maplibregl.Map({
@@ -113,7 +127,7 @@ export function mountOrderPlanning({
       <p class="order-region-note" data-order-region-note><strong>권역 기능 준비 중</strong> 실제 권역 데이터가 연결되면 경계와 권역 내 배송지 정보를 제공합니다.</p>
     </aside>
     <section class="order-map-panel" aria-labelledby="order-map-heading">
-      <div class="order-map-heading"><div><h2 id="order-map-heading">주문 배차 지도</h2><p data-order-map-description>전체 등록 주문과 선택 차량 배정</p></div><div class="order-map-controls"><label class="order-pin-visibility" data-order-pin-control hidden><span>생략 보기</span><input type="checkbox" role="switch" aria-label="전체 핀 보기" data-order-show-all-pins><span>전체 핀 보기</span></label><label class="order-region-toggle" data-order-region-control hidden><input type="checkbox" data-order-show-regions checked>권역 경계</label></div></div>
+      <div class="order-map-heading"><div><h2 id="order-map-heading">주문 배차 지도</h2><p data-order-map-description>전체 등록 주문과 선택 차량 배정</p></div><div class="order-map-controls"><fieldset class="order-map-mode" data-order-map-mode-control hidden><legend class="sr-only">지도 표시 단위</legend><label><input type="radio" name="order-map-mode" value="regions" data-order-map-mode checked><span>권역 단위</span></label><label><input type="radio" name="order-map-mode" value="orders" data-order-map-mode><span>주문 단위</span></label></fieldset></div></div>
       <div class="order-map-canvas" data-order-map-canvas aria-label="주문 위치">
         <div class="order-map-layer" data-order-map-layer></div>
         <div class="order-map-status" data-order-map-status role="status"><span data-order-map-status-text>지도 준비 중</span><button type="button" class="button subtle" data-order-map-retry hidden>다시 시도</button></div>
@@ -144,7 +158,7 @@ export function mountOrderPlanning({
   const selection = query('[data-order-selection]');
   const summary = query('[data-order-map-summary]');
   let data = null;
-  let showAllPins = false;
+  let mapMode = 'regions';
   let selectedVehicleId = 'V1';
   let selectedDeliveryId = null;
   let lastExternalSelectedId = null;
@@ -165,6 +179,7 @@ export function mountOrderPlanning({
   let mapFailure = '';
   let pointLayer = null;
   let sourcePoints = null;
+  let sourceRegions = null;
   let sourceModel = null;
   let sourceData = null;
   let overlapIds = [];
@@ -182,18 +197,18 @@ export function mountOrderPlanning({
     const actions = query('[data-order-dispatch-actions]');
     if (actions) actions.hidden = !isSource;
     element.dataset.sourceKind = isSource ? 'file' : 'simulation';
-    const pinControl = query('[data-order-pin-control]');
-    if (pinControl) pinControl.hidden = !isSource;
+    const modeControl = query('[data-order-map-mode-control]');
+    if (modeControl) modeControl.hidden = !isSource;
     setText('[data-order-group-heading]', isSource ? data?.dispatch?.phase === 'unplanned' ? '후보 배송원' : '차량별 배정' : '배차 차량');
     setText('[data-order-group-note]', isSource ? '주문 수신 순서' : '수신 순서');
-    setText('[data-order-map-description]', isSource ? showAllPins ? '모든 주문 위치를 표시합니다.' : '확대하면 모든 주문 위치를 표시합니다.' : '전체 등록 주문과 선택 차량 배정');
-    const regionControl = query('[data-order-region-control]');
-    if (regionControl) regionControl.hidden = !isSource;
+    setText('[data-order-map-description]', isSource
+      ? mapMode === 'regions' ? '지도를 확대하면 권역 중앙에 주문 수가 표시됩니다.' : '모든 주문 핀을 표시합니다.'
+      : '전체 등록 주문과 선택 차량 배정');
     const listPanel = query('[data-order-list-panel]');
     if (listPanel) listPanel.hidden = !isSource;
     const regionNote = query('[data-order-region-note]');
     if (regionNote) regionNote.innerHTML = isSource
-      ? '<strong>배송 권역</strong>제공된 배송 권역 경계를 표시합니다.'
+      ? '<strong>배송 권역</strong>제공된 권역 경계와 주문의 권역 소속으로 수량을 집계합니다.'
       : '<strong>권역 기능 준비 중</strong> 실제 권역 데이터가 연결되면 경계와 권역 내 배송지 정보를 제공합니다.';
   }
   function syncSummary() {
@@ -274,6 +289,7 @@ export function mountOrderPlanning({
 
   function updateSelection() {
     syncDispatchActions();
+    selection.hidden = imported() && mapMode === 'regions';
     const delivery = visibleDeliveries.find(item => item.id === selectedDeliveryId);
     if (!delivery) { selection.innerHTML = '<span>선택 주문</span><strong>지도에서 주문을 선택해 주세요.</strong>'; return; }
     const fallbackVehicleId = visibleDeliveries === data?.deliveries ? data?.vehicle?.id : null;
@@ -333,7 +349,7 @@ export function mountOrderPlanning({
       const zones = selectedDeliveryId
         ? source.find(item => item.id === selectedDeliveryId)?.zoneIds || []
         : selectedVehicleId === 'all' ? [] : [...new Set(vehicleDeliveries.flatMap(item => item.zoneIds || []))];
-      pointLayer.update({ points: sourcePoints, regions: data.dispatchRegions, selectedGroupId: selectedVehicleId === 'all' ? null : selectedVehicleId, selectedOrderId: selectedDeliveryId, selectedZoneIds: zones, showRegions: query('[data-order-show-regions]')?.checked !== false, showAllPins });
+      pointLayer.update({ points: sourcePoints, regions: sourceRegions, selectedGroupId: selectedVehicleId === 'all' ? null : selectedVehicleId, selectedOrderId: selectedDeliveryId, selectedZoneIds: zones, mode: mapMode });
       if (mapFailure) return;
     } else if (map && nextMarkerSignature !== markerSignature) {
       markerSignature = nextMarkerSignature;
@@ -357,7 +373,7 @@ export function mountOrderPlanning({
       }
     }
     count.textContent = `지도 ${model.mapped.length.toLocaleString('ko-KR')}곳 / 전체 위치 미등록 ${model.unknownCount.toLocaleString('ko-KR')}곳 / 선택 차량 미등록 ${selectedModel.unknownCount.toLocaleString('ko-KR')}곳`;
-    if (imported()) count.textContent = `전체 주문 ${source.length.toLocaleString('ko-KR')}건 / 위치 등록 ${model.mapped.length.toLocaleString('ko-KR')}건 / 위치 미등록 ${model.unknownCount.toLocaleString('ko-KR')}건 / 권역 ${data.dispatchRegions?.features.length.toLocaleString('ko-KR') || '미연결'}구역. 겹친 위치의 주문도 그대로 포함합니다.`;
+    if (imported()) count.textContent = `전체 주문 ${source.length.toLocaleString('ko-KR')}건 / 위치 등록 ${model.mapped.length.toLocaleString('ko-KR')}건 / 위치 미등록 ${model.unknownCount.toLocaleString('ko-KR')}건 / 주문이 있는 권역 ${sourceRegions?.features.filter(feature => feature.properties.orderCount > 0).length.toLocaleString('ko-KR') || '0'}구역. 겹친 위치의 주문도 그대로 포함합니다.`;
     canvas.dataset.orderPointCount = String(model.mapped.length);
     canvas.dataset.orderDate = data?.dispatchSource?.date || '';
     mapStatus.hidden = Boolean(model.mapped.length);
@@ -391,6 +407,7 @@ export function mountOrderPlanning({
         routeData = { points: deliveriesFor(data).filter(item => item.coordinates).map(item => ({ id: item.id, lng: item.coordinates[0], lat: item.coordinates[1] })) };
         sourceModel = orderMapModel(deliveriesFor(data), routeData);
         sourcePoints = { type: 'FeatureCollection', features: sourceModel.mapped.map(({ delivery, coordinates }) => ({ type: 'Feature', id: delivery.id, properties: { orderId: delivery.id, groupId: delivery.vehicleId, label: delivery.orderNumber }, geometry: { type: 'Point', coordinates } })) };
+        sourceRegions = regionOrderCounts(data.dispatchRegions, deliveriesFor(data));
       }
       routeState = 'ready';
       return;
@@ -468,9 +485,11 @@ export function mountOrderPlanning({
     renderScene();
   });
   listen(canvas, 'click', event => { const marker = event.target.closest('[data-order-marker]'); if (!marker) return; selectedDeliveryId = marker.dataset.orderMarker; renderScene(); onSelect(selectedDeliveryId); });
-  listen(query('[data-order-show-regions]'), 'change', renderScene);
-  listen(query('[data-order-show-all-pins]'), 'change', event => {
-    showAllPins = event.target.checked;
+  listen(query('[data-order-map-mode-control]'), 'change', event => {
+    if (!event.target.matches?.('[data-order-map-mode]')) return;
+    if (!['regions', 'orders'].includes(event.target.value)) return;
+    mapMode = event.target.value;
+    if (mapMode === 'regions') { selectedDeliveryId = null; overlapIds = []; }
     syncSourceLabels();
     renderScene();
   });

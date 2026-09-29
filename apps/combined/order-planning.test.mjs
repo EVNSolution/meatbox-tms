@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-import { totalBoxes, orderMapModel, mountOrderPlanning } from './order-planning.mjs';
+import { totalBoxes, orderMapModel, regionOrderCounts, mountOrderPlanning } from './order-planning.mjs';
 
 class FakeNode {
   constructor() { this.innerHTML = ''; this.value = ''; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.open = false; this.focused = false; }
@@ -21,17 +21,16 @@ function fixture() {
     'vehicle', 'map-canvas', 'map-layer', 'map-status', 'map-status-text', 'map-retry', 'map-count', 'selection', 'map-summary',
     'dispatch-actions',
     'dispatch-all', 'dispatch-pin', 'dispatch-context', 'dispatch-result', 'region-note', 'group-heading', 'group-note', 'map-description',
-    'region-control', 'list-panel', 'show-regions', 'reassign-dialog', 'reassign-title',
+    'map-mode-control', 'list-panel', 'reassign-dialog', 'reassign-title',
     'reassign-close', 'reassign-from', 'reassign-target', 'reassign-preview', 'reassign-error', 'reassign-cancel', 'reassign-confirm',
-    'search', 'list', 'list-total', 'page', 'previous', 'next', 'pin-control', 'show-all-pins',
+    'search', 'list', 'list-total', 'page', 'previous', 'next',
   ];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
   nodes['dispatch-actions'].hidden = true;
   nodes['dispatch-result'].hidden = true;
   nodes['reassign-error'].hidden = true;
   nodes['list-panel'].hidden = true;
-  nodes['region-control'].hidden = true;
-  nodes['show-regions'].checked = true;
+  nodes['map-mode-control'].hidden = true;
   const element = new FakeNode();
   element.querySelector = selector => nodes[selector.match(/data-order-([^\]]+)/)?.[1]];
   return { element, nodes };
@@ -98,6 +97,20 @@ test('등록 좌표만 지도에 표시하고 여덟 곳을 넘겨도 자르지 
     legs: { 'MFC>S1': { coords: [[37.4, 127], [37.45, 127.01], [37.5, 127.02], [37.55, 127.03], [37.6, 127.04]] } },
   });
   assert.deepEqual(withRoad, { mapped: [{ delivery: many[0], coordinates: [127, 37.5] }], unknownCount: 0 });
+});
+
+test('권역 수량은 해당 날짜 주문의 권역 소속으로 세고 원본 경계를 바꾸지 않는다', () => {
+  const regions = { type: 'FeatureCollection', features: [
+    { type: 'Feature', properties: { zoneId: 'Z1', label: '첫 권역' }, geometry: { type: 'Polygon', coordinates: [] } },
+    { type: 'Feature', properties: { zoneId: 'Z2', label: '둘째 권역' }, geometry: { type: 'Polygon', coordinates: [] } },
+    { type: 'Feature', properties: { zoneId: 'Z3', label: '빈 권역' }, geometry: { type: 'Polygon', coordinates: [] } },
+  ] };
+  const orders = [{ zoneIds: ['Z1', 'Z1', 'Z2'] }, { zoneIds: ['Z1'] }, { zoneIds: [] }];
+  const before = structuredClone(regions);
+  const result = regionOrderCounts(regions, orders);
+  assert.deepEqual(result.features.map(feature => feature.properties.orderCount), [2, 1, 0]);
+  assert.deepEqual(regions, before);
+  assert.equal(regionOrderCounts(null, orders), null);
 });
 
 test('주문 화면이 열릴 때만 지도를 만들고 등록된 모든 좌표에 마커를 둔다', async () => {
@@ -574,7 +587,7 @@ test('첫 클릭은 선택만 하고 선택 차량 재클릭에만 줌을 맞추
   planning.destroy();
 });
 
-test('전체 핀 스위치는 지도와 주문을 유지하고 날짜/차량 변경 뒤에도 선택 모드를 보존한다', () => {
+test('권역·주문 보기는 주문 원본과 카메라를 유지하며 날짜/차량 변경 뒤에도 선택 모드를 보존한다', () => {
   const { element, nodes } = fixture();
   const updates = [], cameras = [];
   const planning = mount({ element }, {
@@ -585,25 +598,29 @@ test('전체 핀 스위치는 지도와 주문을 유지하고 날짜/차량 변
   const before = structuredClone(input);
   planning.update(input, null);
   const points = updates.at(-1).points;
-  assert.equal(updates.at(-1).showAllPins, false);
-  assert.equal(nodes['pin-control'].hidden, false);
+  assert.equal(updates.at(-1).mode, 'regions');
+  assert.equal(updates.at(-1).regions.features[0].properties.orderCount, 3);
+  assert.equal(nodes['map-mode-control'].hidden, false);
+  assert.equal(nodes.selection.hidden, true);
   cameras.length = 0;
-  nodes['show-all-pins'].listeners.change({ target: { checked: true } });
-  assert.equal(updates.at(-1).showAllPins, true);
+  nodes['map-mode-control'].listeners.change({ target: { matches: () => true, value: 'orders' } });
+  assert.equal(updates.at(-1).mode, 'orders');
   assert.equal(updates.at(-1).points, points);
   assert.equal(cameras.length, 0);
-  assert.equal(nodes['map-description'].textContent, '모든 주문 위치를 표시합니다.');
+  assert.equal(nodes.selection.hidden, false);
+  assert.equal(nodes['map-description'].textContent, '모든 주문 핀을 표시합니다.');
   selectVehicle(nodes, 'G1');
-  assert.equal(updates.at(-1).showAllPins, true);
+  assert.equal(updates.at(-1).mode, 'orders');
   assert.equal(updates.at(-1).selectedGroupId, 'G1');
   assert.equal(cameras.length, 0);
   planning.update(importedPlanningData('2025-09-16'), null);
-  assert.equal(updates.at(-1).showAllPins, true);
+  assert.equal(updates.at(-1).mode, 'orders');
   cameras.length = 0;
-  nodes['show-all-pins'].listeners.change({ target: { checked: false } });
-  assert.equal(updates.at(-1).showAllPins, false);
+  nodes['map-mode-control'].listeners.change({ target: { matches: () => true, value: 'regions' } });
+  assert.equal(updates.at(-1).mode, 'regions');
   assert.equal(cameras.length, 0);
   assert.match(nodes['map-description'].textContent, /확대하면/);
+  assert.equal(nodes.selection.hidden, true);
   assert.deepEqual(input, before);
   planning.destroy();
 });

@@ -5,6 +5,7 @@ const ids = {
   regionFill: 'dispatch-regions-fill',
   regionLine: 'dispatch-regions-line',
   selectedRegion: 'dispatch-regions-selected',
+  regionCounts: 'dispatch-regions-counts',
   allPoints: 'dispatch-orders-all',
   groupPoints: 'dispatch-orders-group',
   orderPoint: 'dispatch-order-selected',
@@ -12,42 +13,13 @@ const ids = {
 
 const emptyCollection = () => ({ type: 'FeatureCollection', features: [] });
 const nothing = ['==', ['literal', 1], ['literal', 0]];
+const hasOrders = ['>', ['get', 'orderCount'], 0];
 const equals = (property, value) => typeof value === 'string' && value
   ? ['==', ['get', property], value]
   : nothing;
 const includes = (property, values) => Array.isArray(values) && values.length
   ? ['in', ['get', property], ['literal', values]]
   : nothing;
-
-// Choose once in geographic space so panning cannot swap visible orders.
-export function stableMarkerVisibility(data) {
-  const entries = data.features.map(feature => {
-    const [lng, lat] = feature.geometry.coordinates;
-    const sin = Math.sin(Math.max(-85.051129, Math.min(85.051129, lat)) * Math.PI / 180);
-    return { feature, x: (lng + 180) / 360, y: 0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI), zoom: 14 };
-  });
-  const ordered = [...entries].sort((a, b) => String(a.feature.properties.orderId).localeCompare(String(b.feature.properties.orderId)));
-  for (let zoom = 5; zoom < 14; zoom++) {
-    const scale = 512 * 2 ** zoom / 48;
-    const cell = entry => `${Math.floor(entry.x * scale)},${Math.floor(entry.y * scale)}`;
-    const occupied = new Set(ordered.filter(entry => entry.zoom < zoom).map(cell));
-    for (const entry of ordered) {
-      if (entry.zoom < zoom || occupied.has(cell(entry))) continue;
-      occupied.add(cell(entry));
-      entry.zoom = zoom;
-    }
-  }
-  return { ...data, features: entries.map(({ feature, zoom }) => ({ ...feature, properties: { ...feature.properties, visibleFromZoom: zoom } })) };
-}
-
-function markerOpacity(opacity) {
-  const visibleAt = zoom => ['case', ['<=', ['get', 'visibleFromZoom'], zoom], opacity, 0];
-  const expression = ['step', ['zoom'], visibleAt(5)];
-  for (let zoom = 6; zoom <= 14; zoom++) expression.push(zoom, visibleAt(zoom));
-  return expression;
-}
-const normalOpacity = markerOpacity(1);
-const subduedOpacity = markerOpacity(0.5);
 
 function loadMarkerImage() {
   return new Promise((resolve, reject) => {
@@ -78,9 +50,19 @@ function addLayers(map, markerImage, ownedLayers, ownedSources) {
   };
   if (!map.hasImage(ids.marker)) map.addImage(ids.marker, markerImage);
   addSource(ids.regions, { type: 'geojson', data: emptyCollection() });
-  addLayer({ id: ids.regionFill, type: 'fill', source: ids.regions, paint: { 'fill-color': '#697d74', 'fill-opacity': 0.09 } });
-  addLayer({ id: ids.regionLine, type: 'line', source: ids.regions, paint: { 'line-color': '#65736d', 'line-opacity': 0.58, 'line-width': 1.2 } });
-  addLayer({ id: ids.selectedRegion, type: 'line', source: ids.regions, filter: nothing, paint: { 'line-color': '#1e5142', 'line-opacity': 0.95, 'line-width': 3 } });
+  addLayer({ id: ids.regionFill, type: 'fill', source: ids.regions, filter: hasOrders, paint: { 'fill-color': '#218662', 'fill-opacity': 0.18 } });
+  addLayer({ id: ids.regionLine, type: 'line', source: ids.regions, minzoom: 11, filter: hasOrders, paint: { 'line-color': '#3c705a', 'line-opacity': 0.7, 'line-width': 1.2 } });
+  addLayer({ id: ids.selectedRegion, type: 'line', source: ids.regions, minzoom: 11, filter: nothing, paint: { 'line-color': '#1e5142', 'line-opacity': 0.95, 'line-width': 3 } });
+  addLayer({
+    id: ids.regionCounts, type: 'symbol', source: ids.regions, minzoom: 11,
+    filter: hasOrders,
+    layout: {
+      'symbol-placement': 'point', 'text-field': ['to-string', ['get', 'orderCount']],
+      'text-font': ['Noto Sans Bold'], 'text-size': 13,
+      'text-allow-overlap': true, 'text-ignore-placement': true,
+    },
+    paint: { 'text-color': '#174c3b', 'text-halo-color': '#fff', 'text-halo-width': 3 },
+  });
 
   addSource(ids.points, { type: 'geojson', data: emptyCollection() });
   addLayer({
@@ -89,7 +71,7 @@ function addLayers(map, markerImage, ownedLayers, ownedSources) {
       'icon-image': ids.marker, 'icon-size': 0.42, 'icon-anchor': 'bottom',
       'icon-allow-overlap': true, 'icon-ignore-placement': true,
     },
-    paint: { 'icon-opacity': normalOpacity, 'icon-opacity-transition': { duration: 0, delay: 0 } },
+    paint: { 'icon-opacity': 1, 'icon-opacity-transition': { duration: 0, delay: 0 } },
   });
   addLayer({
     id: ids.groupPoints, type: 'symbol', source: ids.points, filter: nothing,
@@ -118,11 +100,11 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
   let regionData = null;
   let latest = {
     points: emptyCollection(), regions: null, selectedGroupId: null,
-    selectedOrderId: null, selectedZoneIds: [], showRegions: false, showAllPins: false,
+    selectedOrderId: null, selectedZoneIds: [], mode: 'regions',
   };
 
   const removeResources = () => {
-    const layerIds = [ids.orderPoint, ids.groupPoints, ids.allPoints, ids.selectedRegion, ids.regionLine, ids.regionFill];
+    const layerIds = [ids.orderPoint, ids.groupPoints, ids.allPoints, ids.regionCounts, ids.selectedRegion, ids.regionLine, ids.regionFill];
     for (const id of layerIds) if (ownedLayers.has(id) && map.getLayer(id)) map.removeLayer(id);
     for (const id of [ids.points, ids.regions]) if (ownedSources.has(id) && map.getSource(id)) map.removeSource(id);
     ownedLayers.clear();
@@ -134,7 +116,7 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
     if (!ready || destroyed) return;
     if (pointData !== latest.points) {
       pointData = latest.points;
-      map.getSource(ids.points).setData(stableMarkerVisibility(pointData || emptyCollection()));
+      map.getSource(ids.points).setData(pointData || emptyCollection());
     }
     if (regionData !== latest.regions) {
       regionData = latest.regions;
@@ -144,13 +126,12 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
     const orderFilter = equals('orderId', latest.selectedOrderId);
     map.setFilter(ids.groupPoints, groupFilter);
     map.setFilter(ids.orderPoint, orderFilter);
-    const opacity = latest.showAllPins
-      ? latest.selectedGroupId ? 0.5 : 1
-      : latest.selectedGroupId ? subduedOpacity : normalOpacity;
-    map.setPaintProperty(ids.allPoints, 'icon-opacity', opacity);
+    map.setPaintProperty(ids.allPoints, 'icon-opacity', latest.selectedGroupId ? 0.5 : 1);
     map.setFilter(ids.selectedRegion, includes('zoneId', latest.selectedZoneIds));
-    const visibility = latest.showRegions ? 'visible' : 'none';
-    for (const id of [ids.regionFill, ids.regionLine, ids.selectedRegion]) map.setLayoutProperty(id, 'visibility', visibility);
+    const regionVisibility = latest.mode === 'regions' ? 'visible' : 'none';
+    const pointVisibility = latest.mode === 'orders' ? 'visible' : 'none';
+    for (const id of [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.regionCounts]) map.setLayoutProperty(id, 'visibility', regionVisibility);
+    for (const id of [ids.allPoints, ids.groupPoints, ids.orderPoint]) map.setLayoutProperty(id, 'visibility', pointVisibility);
   };
 
   const start = () => {
@@ -167,7 +148,7 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
       } finally {
         map.off('error', captureSetupError);
       }
-      const requiredLayers = [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.allPoints, ids.groupPoints, ids.orderPoint];
+      const requiredLayers = [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.regionCounts, ids.allPoints, ids.groupPoints, ids.orderPoint];
       if (setupErrors.length || requiredLayers.some(id => !map.getLayer(id))) {
         removeResources();
         throw setupErrors[0] || new Error('배차 지도 레이어를 생성하지 못했습니다.');
@@ -181,13 +162,10 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
 
   const pointLayers = [ids.orderPoint, ids.groupPoints, ids.allPoints];
   const click = event => {
-    if (!ready || destroyed) return;
+    if (!ready || destroyed || latest.mode !== 'orders') return;
     const point = event?.point || { x: 0, y: 0 };
     const box = [[point.x - 12, point.y - 12], [point.x + 12, point.y + 12]];
-    const features = map.queryRenderedFeatures(box, { layers: pointLayers }).filter(feature => {
-      const visibleFrom = Number(feature.properties?.visibleFromZoom ?? 5);
-      return latest.showAllPins || feature.layer?.id !== ids.allPoints || visibleFrom === 5 || map.getZoom() >= visibleFrom;
-    });
+    const features = map.queryRenderedFeatures(box, { layers: pointLayers });
     const orderIds = [...new Set(features.map(feature => feature?.properties?.orderId).filter(value => typeof value === 'string' && value))]
       .sort((left, right) => {
         const rank = id => id === latest.selectedOrderId ? 0

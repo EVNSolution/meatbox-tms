@@ -6,13 +6,12 @@
 .order-vehicle-heading p, .order-map-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
 .order-map-heading { flex-wrap: wrap; gap: 8px 16px; }
 .order-map-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 16px; }
-.order-pin-visibility { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--muted); font-size: 12px; white-space: nowrap; cursor: pointer; }
-.order-pin-visibility input { appearance: none; position: relative; flex: 0 0 36px; width: 36px; height: 22px; margin: 0; border: 1px solid var(--border-strong); border-radius: 12px; background: #e5e7eb; cursor: pointer; }
-.order-pin-visibility input::before { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0002; content: ''; }
-.order-pin-visibility input:checked { border-color: #1e5142; background: #1e5142; }
-.order-pin-visibility input:checked::before { left: 16px; }
-.order-pin-visibility input:focus-visible { outline: 2px solid var(--action); outline-offset: 3px; }
-.order-pin-visibility:has(input:not(:checked)) > span:first-child, .order-pin-visibility:has(input:checked) > span:last-child { color: var(--text); font-weight: 600; }
+.order-map-mode { display: inline-flex; margin: 0; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius); background: #f3f4f6; }
+.order-map-mode label { position: relative; cursor: pointer; }
+.order-map-mode input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.order-map-mode span { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 12px; border-radius: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.order-map-mode input:checked + span { color: var(--text); background: #fff; box-shadow: 0 1px 3px #17203320; font-weight: 600; }
+.order-map-mode input:focus-visible + span { outline: 2px solid var(--action); outline-offset: -2px; }
 .order-vehicle-list { max-height: min(608px, calc(100vh - 328px)); min-height: 280px; overflow: auto; }
 .order-vehicle-list > button { display: grid; width: 100%; min-height: 104px; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--border); background: #fff; color: var(--text); text-align: left; cursor: pointer; }
 .order-vehicle-list > button:hover { background: #f7f8fa; }
@@ -85,8 +84,6 @@
 .dispatch-source-info p:last-child { margin: 0; }
 .dispatch-data-message { padding: 14px 16px; border: 1px solid var(--border); background: #fff; border-radius: 6px; font-size: 13px; }
 .dispatch-data-message[data-error="true"] { border-color: #e0b478; background: #fff8ed; }
-.order-region-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; cursor: pointer; min-height: 40px; }
-.order-region-toggle input { accent-color: #1e5142; }
 [data-source-kind="file"] .order-vehicle-heading { min-height: 44px; padding: 8px 12px; }
 [data-source-kind="file"] .order-vehicle-heading > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
 [data-source-kind="file"] .order-vehicle-heading h2 { font-size: 16px; }
@@ -121,7 +118,9 @@
   .dispatch-source-info > div { top: 36px; }
   .order-map-heading { gap: 10px; padding: 12px; }
   .order-map-heading h2 { font-size: 16px; }
-  .order-region-toggle { font-size: 11px; }
+  .order-map-controls, .order-map-mode { width: 100%; }
+  .order-map-mode label { flex: 1; }
+  .order-map-mode span { width: 100%; padding-inline: 6px; }
   [data-source-kind="file"] .order-map-selection { width: 100%; max-width: none; max-height: 190px; }
   [data-order-list] > button { grid-template-columns: minmax(0, 1fr) 65px; gap: 5px; }
   [data-order-list] > button > span:nth-child(2) { grid-column: 1; grid-row: 2; }
