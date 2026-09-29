@@ -53,6 +53,12 @@ export function driverOperatingDate(sourceData, today) {
   return today;
 }
 
+export function driverRouteContext(sourceData, dispatch, today) {
+  const date = validDate(sourceData?.date) ? sourceData.date : null;
+  const operatingDate = driverOperatingDate(sourceData, today);
+  return { label: date || '오늘', readOnly: Boolean(date && (date < operatingDate || dispatch?.readOnly)) };
+}
+
 export function latestPastHistoryDate(dates, operatingDate, fallback) {
   return (dates || []).map(dateValue).filter(date => validDate(date) && date < operatingDate).sort().at(-1) || fallback;
 }

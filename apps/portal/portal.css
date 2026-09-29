@@ -30,3 +30,26 @@
   .demo-entry { align-items: stretch; flex-direction: column; padding: 24px; gap: 24px; }
   .review-originals { grid-template-columns: 1fr; gap: 18px; }
 }
+
+/* Current product shell and form controls. */
+@font-face {
+  font-family: "Meatbox Pretendard";
+  src: url("/portal-font.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+:root {
+  font-family: "Meatbox Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color: #212322;
+  --brand: #e60028;
+}
+header { height: 56px; }
+.brand { display: inline-flex; align-items: center; gap: 12px; color: #61656e; font-size: 13px; font-weight: 500; }
+.brand img { display: block; width: 126px; height: 30px; }
+.auth-form input, .auth-form .primary { height: 44px; min-height: 44px; }
+.auth-form input { padding: 0 12px; color: #212322; }
+.auth-form .primary { width: 100%; padding: 0 14px; background: #212322; border-color: #212322; }
+.auth-form .primary:hover { background: #413f3d; }
+.auth-message p { margin-top: 12px; color: #61656e; }
+.auth-message a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 20px; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-weight: 600; }

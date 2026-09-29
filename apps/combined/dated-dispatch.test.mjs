@@ -50,7 +50,7 @@ function assignmentDay(date) {
 }
 
 function domFixture() {
-  const names = ['toolbar', 'date', 'summary', 'status', 'retry', 'planning', 'workflow', 'prev', 'next', 'source-info'];
+  const names = ['toolbar', 'date', 'summary', 'status', 'retry', 'planning', 'workflow', 'prev', 'next', 'readonly', 'source-info'];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
   nodes.toolbar.hidden = true;
   nodes.summary.hidden = true;
@@ -191,6 +191,26 @@ test('초기 갱신은 manifest, 권역, 기본일을 한 번만 읽고 미배�
   assert.equal(nodes.summary.hidden, false);
   assert.match(nodes.summary.innerHTML, /주문.*1.*박스.*2.*후보 차량.*1/);
   assert.match(replaced.at(-1), /\?date=2025-09-15$/);
+  dated.destroy();
+});
+
+test('과거 배차 조회는 날짜 툴바에 읽기 전용 상태를 표시한다', async t => {
+  installBrowserGlobals(t, '?date=2025-09-15');
+  const { element, nodes } = domFixture();
+  const dated = mountDatedDispatch({ element, fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day('2025-09-15'), planningFactory: planningSpy().factory, now: () => '2025-09-16' });
+  dated.update({}, null);
+  await waitFor(() => nodes.summary.hidden === false);
+  assert.equal(nodes.readonly.hidden, false);
+  dated.destroy();
+});
+
+test('오늘 배차 조회는 읽기 전용 상태를 표시하지 않는다', async t => {
+  installBrowserGlobals(t, '?date=2025-09-15');
+  const { element, nodes } = domFixture();
+  const dated = mountDatedDispatch({ element, fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day('2025-09-15'), planningFactory: planningSpy().factory, now: () => '2025-09-15' });
+  dated.update({}, null);
+  await waitFor(() => nodes.summary.hidden === false);
+  assert.equal(nodes.readonly.hidden, true);
   dated.destroy();
 });
 

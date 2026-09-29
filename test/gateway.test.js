@@ -30,6 +30,8 @@ test('auth forms expose native constraints and accessible inline validation targ
   assert.match(login, /portal-validation\.js/);
   assert.match(login, /<h1>로그인<\/h1>/);
   assert.doesNotMatch(login, /데모 로그인|시연을 시작|팀 회의용 데모/);
+  assert.match(login, /<img src="\/portal-logo\.svg"[^>]*alt="미트박스"/);
+  assert.match(require('../apps/portal/pages').page('오류', '<h1>오류</h1><p>다시 시도해 주세요.</p>'), /class="auth-card auth-message"/);
 });
 
 test('all branches, APIs and WebSocket require the same authenticated session', async t => {
@@ -50,6 +52,8 @@ test('all branches, APIs and WebSocket require the same authenticated session', 
   const validator = await get('/portal-validation.js');
   assert.equal(validator.status, 200);
   assert.match(validator.headers.get('content-type'), /javascript/);
+  assert.equal((await get('/portal-logo.svg')).status, 200);
+  assert.equal((await get('/portal-font.ttf')).status, 200);
   const invalidSignup = await post('/dev/register', {});
   assert.equal(invalidSignup.status, 400);
   const invalidSignupHtml = await invalidSignup.text();

@@ -74,9 +74,10 @@
 
 .dispatch-date-picker { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
 .dispatch-date-picker > span { margin-right: 8px; font-weight: 600; }
-.dispatch-date-picker .button { display: inline-grid; place-items: center; width: 40px; min-width: 40px; height: 40px; padding: 0; }
+.dispatch-date-picker .button { display: inline-grid; place-items: center; width: 44px; min-width: 44px; height: 44px; padding: 0; }
 .dispatch-date-picker [data-dispatch-prev] svg { transform: rotate(180deg); }
 .dispatch-date-picker [data-dispatch-date] { min-width: 0; }
+.dispatch-readonly { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: #7a4e11; background: #fffaf0; border-left: 2px solid #d6a443; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .dispatch-source-info { position: relative; margin-left: auto; font-size: 12px; }
 .dispatch-source-info > summary { padding: 12px 0; cursor: pointer; }
 .dispatch-source-info > div { position: absolute; z-index: 9; right: 0; top: 40px; width: min(360px, calc(100vw - 130px)); padding: 12px 16px; border: 1px solid var(--border); border-radius: 6px; background: #fff; box-shadow: 0 4px 16px #17203316; line-height: 1.7; }

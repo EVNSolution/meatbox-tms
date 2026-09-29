@@ -33,7 +33,7 @@ const state = {
 };
 const byId = id => document.getElementById(id);
 document.querySelectorAll('[data-field-icon]').forEach(element => { element.innerHTML = referenceIcon(element.dataset.fieldIcon); });
-byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'control-date-actions', summaryLabel: '선택 관제일 요약', actions: '<span>조회 날짜</span><div id="control-date-picker"></div><button type="button" class="button subtle" id="control-today">오늘</button><span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span>' });
+byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'control-date-actions', summaryLabel: '선택 관제일 요약', actions: '<span>조회 날짜</span><div id="control-date-picker"></div><button type="button" class="button subtle" id="control-today">오늘</button>', context: '<span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span>' });
 const controlSummaryToolbar = mountDateSummaryToolbar(byId('control-date-toolbar'));
 const scenarioTools = mountDemoShell({ viewer: 'operator', onSelect: selectDelivery, onSend: (type, extra) => simulation.send(type, extra) });
 const controlDatePicker = mountDatePicker({ element: byId('control-date-picker'), label: '관제 조회 날짜', onChange: date => simulation.selectDate(date) });

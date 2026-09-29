@@ -41,7 +41,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   if (!response.ok) { const error = new Error('자료를 불러오지 못했습니다.'); error.status = response.status; throw error; }
   return response.json();
 }, planningFactory = mountOrderPlanning, datePickerFactory = mountDatePicker, workflowFactory = mountDispatchWorkflow }) {
-  element.innerHTML = `${dateSummaryToolbar({ label: '배차 날짜', actionsClass: 'dispatch-date-picker', attributes: 'data-dispatch-toolbar hidden', summaryLabel: '선택 배차일 요약', actions: `<span>배차일</span><button type="button" class="button subtle" data-dispatch-prev aria-label="이전 배차일">${referenceIcon('next')}</button><div data-dispatch-date></div><button type="button" class="button subtle" data-dispatch-next aria-label="다음 배차일">${referenceIcon('next')}</button>` })}<p class="dispatch-data-message" data-dispatch-status role="status">배차 정보를 확인하고 있습니다.</p><button type="button" class="button" data-dispatch-retry hidden>다시 불러오기</button><div data-dispatch-workflow hidden></div><div data-dispatch-planning hidden></div>`;
+  element.innerHTML = `${dateSummaryToolbar({ label: '배차 날짜', actionsClass: 'dispatch-date-picker', attributes: 'data-dispatch-toolbar hidden', summaryLabel: '선택 배차일 요약', actions: `<span>배차일</span><button type="button" class="button subtle" data-dispatch-prev aria-label="이전 배차일">${referenceIcon('next')}</button><div data-dispatch-date></div><button type="button" class="button subtle" data-dispatch-next aria-label="다음 배차일">${referenceIcon('next')}</button>`, context: '<span class="dispatch-readonly" data-dispatch-readonly hidden>이력 조회 · 읽기 전용</span>' })}<p class="dispatch-data-message" data-dispatch-status role="status">배차 정보를 확인하고 있습니다.</p><button type="button" class="button" data-dispatch-retry hidden>다시 불러오기</button><div data-dispatch-workflow hidden></div><div data-dispatch-planning hidden></div>`;
   const query = selector => element.querySelector(selector);
   const toolbar = query('[data-dispatch-toolbar]');
   const toolbarSummary = mountDateSummaryToolbar(toolbar);
@@ -51,6 +51,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   const retry = query('[data-dispatch-retry]');
   const host = query('[data-dispatch-planning]');
   const workflowHost = query('[data-dispatch-workflow]');
+  const readOnly = query('[data-dispatch-readonly]');
   const workflow = workflowFactory({ element: workflowHost, onCommand });
   const previous = query('[data-dispatch-prev]');
   const next = query('[data-dispatch-next]');
@@ -79,9 +80,11 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     toolbarSummary.update([['주문', orders], ['박스', boxes], ['후보 차량', groups]]);
   }
   function setNavigation(date) {
+    const today = now();
     const index = manifest.dates.findIndex(item => item.date === date);
     previous.disabled = !regions || index <= 0; next.disabled = !regions || index < 0 || index >= manifest.dates.length - 1;
-    datePicker.update({ value: date, dates: [...manifest.dates, { date: now() }], disabled: !regions });
+    datePicker.update({ value: date, dates: [...manifest.dates, { date: today }], disabled: !regions });
+    readOnly.hidden = !(validOperatingDate(date) && date < today);
   }
   async function selectDate(date) {
     const ticket = ++epoch;

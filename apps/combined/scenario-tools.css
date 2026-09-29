@@ -116,6 +116,8 @@
   .scenario-buttons button,
   .scenario-toggle,
   .scenario-palette[data-expanded="false"] .scenario-toggle { min-height: 44px; }
+  body[data-viewer="operator"] .scenario-palette { position: relative; right: auto; bottom: auto; width: calc(100% - 88px); max-height: none; margin: 8px 8px 8px 80px; }
+  body[data-viewer="operator"] .scenario-body { max-height: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { dateSummaryToolbar, mountDateSummaryToolbar } from './date-summary-toolbar.mjs';
 
 test('두 운영 화면은 같은 날짜 툴바 구조에 날짜 동작과 집계를 배치한다', () => {
-  const html = dateSummaryToolbar({ label: '관제 조회 날짜', actions: '<button id="today">오늘</button>', summaryLabel: '선택 관제일 요약', actionsClass: 'control-date-actions' });
+  const html = dateSummaryToolbar({ label: '관제 조회 날짜', actions: '<button id="today">오늘</button>', context: '<span id="readonly">읽기 전용</span>', summaryLabel: '선택 관제일 요약', actionsClass: 'control-date-actions' });
   assert.match(html, /class="date-summary-toolbar"/);
   assert.match(html, /class="date-summary-actions control-date-actions"/);
   assert.match(html, /id="today"/);
+  assert.match(html, /class="date-summary-meta"><span id="readonly">읽기 전용<\/span><div class="summary-counts"/);
   assert.match(html, /class="summary-counts" data-date-summary hidden aria-label="선택 관제일 요약"/);
 });
 

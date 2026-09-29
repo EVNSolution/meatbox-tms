@@ -35,6 +35,7 @@ test('default UI is one compact table with row selects and no free-text region e
   assert.match(element.innerHTML, /<select data-resource-region-select/);
   assert.doesNotMatch(element.innerHTML, /data-resource-region-input|resource-category-panel|배송지|주문|박스/);
   assert.match(element.innerHTML, /지역 코드 관리/);
+  assert.match(element.innerHTML, /resource-toolbar-actions[\s\S]*resource-toolbar-meta/);
 });
 
 test('same region on two vehicles is a valid draft and one save includes hidden rows', async () => {
@@ -67,6 +68,7 @@ test('category panel opens on demand, focuses, and locks mutations while vehicle
   assert.doesNotMatch(element.innerHTML, /data-resource-region-panel/);
   click('regions');
   assert.match(element.innerHTML, /data-resource-region-panel/);
+  assert.match(element.innerHTML, /resource-region-action[\s\S]*data-resource-region-panel/);
   change({ resourceRegionSelect: 'G1' }, 'A01');
   assert.match(element.innerHTML, /차량 변경을 저장하거나 취소/);
   assert.match(element.innerHTML, /data-resource-form="create"/);

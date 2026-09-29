@@ -12,6 +12,7 @@ export function customerViewerSummary(state, today = seoulToday()) {
   if (state?.customerDemo?.active) return '고객 시연 중 · 배송 상태, 시각과 차량 위치는 예시입니다.';
   const date = state?.sourceData?.date;
   if (date && (date < (state.sourceData.operatingDate || today) || state.dispatch?.readOnly)) return `${date} 배송 이력 · 조회 전용`;
+  if (date) return `${date} 배송 현황 · 선택한 매장과 고객 안내를 확인합니다.`;
   return '선택한 매장의 배송 현황과 고객 안내를 확인합니다.';
 }
 
@@ -146,6 +147,7 @@ export function mountCustomerRenderer({ mb, onSelect }) {
   function renderPicker() {
     const result = customerPickerPage(currentDeliveries(), pickerState);
     pickerState.page = result.page;
+    byId('account-picker-date').textContent = latest?.sourceData?.date ? `${latest.sourceData.date} 배송 조회` : '오늘 배송 조회';
     const search = byId('account-search');
     if (search.value !== pickerState.query) search.value = pickerState.query;
     byId('account-search-reset').disabled = !pickerState.query;

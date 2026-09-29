@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { driverHistoryForDate, driverOperatingDate, exampleHistoryDates, latestPastHistoryDate, selectedHistoryVehicle, sourceDriverHistoryForDate } from './driver-history.mjs';
+import { driverHistoryForDate, driverOperatingDate, driverRouteContext, exampleHistoryDates, latestPastHistoryDate, selectedHistoryVehicle, sourceDriverHistoryForDate } from './driver-history.mjs';
 
 test('근무 이력 운영일은 명시값을 우선하고 첫 진입 날짜는 운영일 이전 최신 기록을 고른다', () => {
   const dates = [{ date: '2026-09-14' }, { date: '2026-09-15' }, { date: '2026-09-16' }, { date: '2026-09-17' }];
@@ -8,6 +8,13 @@ test('근무 이력 운영일은 명시값을 우선하고 첫 진입 날짜는 
   assert.equal(driverOperatingDate({ dates }, '2026-09-18'), '2026-09-18');
   assert.equal(driverOperatingDate({ dates: [{ date: '2025-09-12' }] }, '2026-09-18'), '2026-09-18');
   assert.equal(latestPastHistoryDate(dates, '2026-09-16', '2026-09-16'), '2026-09-15');
+});
+
+test('배송원 날짜 문맥은 선택 날짜를 표시하고 과거 배차를 조회 전용으로 구분한다', () => {
+  assert.deepEqual(driverRouteContext({ date: '2026-09-16', operatingDate: '2026-09-17' }, {}, '2026-09-17'), { label: '2026-09-16', readOnly: true });
+  assert.deepEqual(driverRouteContext({ date: '2026-09-17', operatingDate: '2026-09-17' }, {}, '2026-09-17'), { label: '2026-09-17', readOnly: false });
+  assert.deepEqual(driverRouteContext({ date: '2026-09-17' }, { readOnly: true }, '2026-09-17'), { label: '2026-09-17', readOnly: true });
+  assert.deepEqual(driverRouteContext(null, {}, '2026-09-17'), { label: '오늘', readOnly: false });
 });
 
 test('근무 이력은 외부에서 고른 배송원을 사용하고 해제하거나 찾을 수 없으면 다른 배송원으로 대체하지 않는다', () => {

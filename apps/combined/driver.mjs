@@ -22,7 +22,7 @@ import {
 import { movePendingOrder } from './route-editor.mjs';
 import { mountDriverMap } from './driver-map.mjs';
 import { openDriverSettings } from './driver-settings.mjs';
-import { driverHistoryForDate, driverOperatingDate, exampleHistoryDates, latestPastHistoryDate, selectedHistoryVehicle, sourceDriverHistoryForDate } from './driver-history.mjs';
+import { driverHistoryForDate, driverOperatingDate, driverRouteContext, exampleHistoryDates, latestPastHistoryDate, selectedHistoryVehicle, sourceDriverHistoryForDate } from './driver-history.mjs';
 import { renderDriverHistoryCalendar, shiftHistoryMonth } from './driver-history-calendar.mjs';
 import { referenceIcon } from './reference-icons.mjs';
 import { renderCustomerRequests } from './customer-requests.mjs';
@@ -61,7 +61,11 @@ const simulation = connectSimulation({
     emptyDate = context.empty;
     latest = null; fullLatest = null;
     shell.setDate(context.date);
+    byId('driver-workspace').hidden = true;
     byId('dv-app').hidden = true;
+    for (const id of ['driver-vehicle', 'driver-region', 'driver-done', 'driver-left', 'driver-finish']) byId(id).textContent = '—';
+    const select = byId('driver-vehicle-select');
+    select.innerHTML = '<option value="">배송원을 선택해 주세요</option>'; select._html = select.innerHTML; select.disabled = true;
   },
   onState(raw) {
     fullLatest = adaptSimulation(raw);
@@ -166,6 +170,7 @@ function render() {
   }
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
   const operatingDate = latest.sourceData ? driverOperatingDate(latest.sourceData, today) : null;
+  const routeContext = driverRouteContext(latest.sourceData, latest.dispatch, today);
   byId('dv-app').querySelector('[data-group="today"]').textContent = latest.sourceData && latest.sourceData.date !== today ? '배차 조회' : '금일 배차';
   if (operatingDate !== historySourceDate) {
     historySourceDate = operatingDate;
@@ -202,7 +207,8 @@ function render() {
   byId('dv-route-label').textContent = vehicleLabel;
   byId('dv-route-status').textContent = routeAvailable ? model.status : '배차 없음';
   const routeDate = byId('dv-route-choice').querySelector('summary strong');
-  if (routeDate) routeDate.textContent = latest.sourceData?.date || '오늘';
+  if (routeDate) routeDate.textContent = routeContext.label;
+  byId('dv-route-mode').hidden = !routeContext.readOnly;
   const routeChoice = byId('dv-select-today').querySelector('span');
   if (routeChoice) routeChoice.textContent = latest.sourceData ? `${latest.sourceData.date} 배송` : '오늘 배송';
   byId('dv-select-today').disabled = !activeRoute();

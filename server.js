@@ -86,6 +86,8 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
   }
   const cookieOptions = { secure, httpOnly: true, sameSite: 'strict', path: '/' };
   app.get('/portal.css', (_req, res) => res.sendFile(path.join(ROOT, 'apps/portal/portal.css')));
+  app.get('/portal-logo.svg', (_req, res) => res.sendFile(path.join(ROOT, 'apps/combined/assets/meatbox-logo.svg')));
+  app.get('/portal-font.ttf', (_req, res) => res.sendFile(path.join(ROOT, 'apps/combined/assets/PretendardVariable.ttf')));
   app.get('/portal-validation.js', (_req, res) => res.sendFile(path.join(ROOT, 'apps/portal/validation.js')));
   app.get('/login', asyncRoute(async (req, res) => {
     if (await access.session(tokenFrom(req))) return res.redirect(safeNext(req.query.next));
