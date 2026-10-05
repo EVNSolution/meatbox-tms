@@ -1,0 +1,35 @@
+server:
+  address: 127.0.0.1
+  port: ${SERVER_PORT:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+meatbox:
+  auth:
+    enabled: ${MEATBOX_AUTH_ENABLED:false}
+    access-file: ${MEATBOX_AUTH_ACCESS_FILE:}
+    public-origin: ${MEATBOX_PUBLIC_ORIGIN:}
+    admin-command: ${MEATBOX_AUTH_ADMIN_COMMAND:}
+    admin-output: ${MEATBOX_AUTH_ADMIN_OUTPUT:}
+    admin-username: ${MEATBOX_AUTH_ADMIN_USERNAME:}
+    admin-expires-in-millis: ${MEATBOX_AUTH_ADMIN_EXPIRES_IN_MILLIS:86400000}
+  compat:
+    enabled: ${MEATBOX_COMPAT_ENABLED:false}
+    legacy-api-origin: ${MEATBOX_LEGACY_API_ORIGIN:}
+    dispatch-data-dir: ${MEATBOX_DISPATCH_DATA_DIR:}
+  resources:
+    enabled: ${MEATBOX_RESOURCES_ENABLED:false}
+    database: ${MEATBOX_RESOURCE_DATABASE:}
+    public-origin: ${MEATBOX_PUBLIC_ORIGIN:}
+
+  dispatch:
+    enabled: ${MEATBOX_DISPATCH_ENABLED:false}
+    state-dir: ${MEATBOX_DISPATCH_STATE_DIR:}
+    public-origin: ${MEATBOX_PUBLIC_ORIGIN:}

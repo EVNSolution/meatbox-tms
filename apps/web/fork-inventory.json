@@ -1,0 +1,3066 @@
+{
+  "schemaVersion": 3,
+  "sourceRevision": "c1f29a6",
+  "sourceCommit": "c1f29a657678b51af888d6be2574103d89c1562f",
+  "sourceRoots": [
+    "apps/combined",
+    "apps/portal",
+    "workspaces/jiin-ui",
+    "workspaces/sanghyun-scenario/public"
+  ],
+  "sourceFileCount": 142,
+  "initialForkTargetFileCount": 145,
+  "targetFileCount": 106,
+  "authoredFileCount": 19,
+  "records": [
+    {
+      "source": "apps/combined/app-viewer.css",
+      "sourceSha256": "b5bf42108ca202f2f5f35d859dba4681d75ef637c170ca94ef2edb04adeecd29",
+      "target": "apps/web/combined/app-viewer.css",
+      "targetSha256": "b5bf42108ca202f2f5f35d859dba4681d75ef637c170ca94ef2edb04adeecd29",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/app.mjs",
+      "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
+      "target": "apps/web/combined/app.mjs",
+      "targetSha256": "f4d599001c54c9366ee4481af23b98b6ad2f04f216c28e05b4a3711d619df323",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/OFL-1.1.txt",
+      "sourceSha256": "82e9c8a4b203261f10ddba1296422d64914ff3d4b7bd8a12896d03f0f088d70a",
+      "target": "apps/web/public/combined/assets/OFL-1.1.txt",
+      "targetSha256": "82e9c8a4b203261f10ddba1296422d64914ff3d4b7bd8a12896d03f0f088d70a",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/PretendardVariable.ttf",
+      "sourceSha256": "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22",
+      "target": "apps/web/public/combined/assets/PretendardVariable.ttf",
+      "targetSha256": "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/PretendardVariable.ttf",
+      "sourceSha256": "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22",
+      "target": "apps/web/public/portal-font.ttf",
+      "targetSha256": "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22",
+      "reason": "Duplicate the existing font/logo bytes at the fixed public portal URL formerly served by the Node gateway.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/SOURCES.md",
+      "sourceSha256": "6ffa9631265e05a66936bb0ec72b1c1ca29773066e6177c371377199f1be8e1d",
+      "target": "apps/web/public/combined/assets/SOURCES.md",
+      "targetSha256": "2f96999c3d6a479cda1f27140888fb94219cfcb8762537e10e9e21b01d3d8dba",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Record the current official-page logo URL observation and distinguish eight official-site SVG icons from five local control geometries; retain preserved asset bytes and hashes"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/delivery-proof-example.jpg",
+      "sourceSha256": "7f21a25e02cf13f6e812d61eddfa020f588c81a594650b4fc9106a2bec0e7796",
+      "target": "apps/web/public/combined/assets/delivery-proof-example.jpg",
+      "targetSha256": "7f21a25e02cf13f6e812d61eddfa020f588c81a594650b4fc9106a2bec0e7796",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/assets/maps/README.md",
+      "sourceSha256": "428bbdf31ddcf0bf131d472bca0c1741485c1410e2df162bfec34574e591ccf1",
+      "target": "apps/web/public/combined/assets/maps/README.md",
+      "targetSha256": "428bbdf31ddcf0bf131d472bca0c1741485c1410e2df162bfec34574e591ccf1",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/maps/driver-depot-pin.svg",
+      "sourceSha256": "e177a827adddac41f5ba01dede0d7c1e387365f2edd410bcf510d32b4b88c7fa",
+      "target": "apps/web/public/combined/assets/maps/driver-depot-pin.svg",
+      "targetSha256": "e177a827adddac41f5ba01dede0d7c1e387365f2edd410bcf510d32b4b88c7fa",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/assets/maps/dsv-destination-marker.svg",
+      "sourceSha256": "5f0ef8bc2ee43180de43101b26c4abd8d13cdfead5c31cf032e59554df870a46",
+      "target": "apps/web/public/combined/assets/maps/dsv-destination-marker.svg",
+      "targetSha256": "5f0ef8bc2ee43180de43101b26c4abd8d13cdfead5c31cf032e59554df870a46",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/maps/dsv-korea-v1.json",
+      "sourceSha256": "0acdfb023997c18119ea41cdb3e86affc7e7cdbf5d0b2f33c4f00daa575b9449",
+      "target": "apps/web/public/combined/assets/maps/dsv-korea-v1.json",
+      "targetSha256": "0acdfb023997c18119ea41cdb3e86affc7e7cdbf5d0b2f33c4f00daa575b9449",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/maps/dsv-vehicle-marker.svg",
+      "sourceSha256": "dac8f0b0bc172d8fecdfce13c306ea53ec9395655f2c84896b5b0a48bc3ea7ad",
+      "target": "apps/web/public/combined/assets/maps/dsv-vehicle-marker.svg",
+      "targetSha256": "dac8f0b0bc172d8fecdfce13c306ea53ec9395655f2c84896b5b0a48bc3ea7ad",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/meatbox-app.webp",
+      "sourceSha256": "9e15812f416651aa6e9a2152c989adb3b4b69130d70db882f37c5a75a8cdeb2c",
+      "target": "apps/web/public/combined/assets/meatbox-app.webp",
+      "targetSha256": "9e15812f416651aa6e9a2152c989adb3b4b69130d70db882f37c5a75a8cdeb2c",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/meatbox-logo.svg",
+      "sourceSha256": "2231ec7d8b06a067285c554be3a9d11d16e302f64480f36e0079bd72cf71c088",
+      "target": "apps/web/public/combined/assets/meatbox-logo.svg",
+      "targetSha256": "2231ec7d8b06a067285c554be3a9d11d16e302f64480f36e0079bd72cf71c088",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/meatbox-logo.svg",
+      "sourceSha256": "2231ec7d8b06a067285c554be3a9d11d16e302f64480f36e0079bd72cf71c088",
+      "target": "apps/web/public/portal-logo.svg",
+      "targetSha256": "2231ec7d8b06a067285c554be3a9d11d16e302f64480f36e0079bd72cf71c088",
+      "reason": "Duplicate the existing font/logo bytes at the fixed public portal URL formerly served by the Node gateway.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/vendor/maplibre/LICENSE.txt",
+      "sourceSha256": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2",
+      "target": "apps/web/public/combined/assets/vendor/maplibre/LICENSE.txt",
+      "targetSha256": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/vendor/maplibre/maplibre-gl-csp-worker.js",
+      "sourceSha256": "f950e7b15c49c8b9c7bb52136df2a2df2f6f03b83b8927774573fc98b067f7f0",
+      "target": "apps/web/public/combined/assets/vendor/maplibre/maplibre-gl-csp-worker.js",
+      "targetSha256": "f950e7b15c49c8b9c7bb52136df2a2df2f6f03b83b8927774573fc98b067f7f0",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/vendor/maplibre/maplibre-gl-csp.js",
+      "sourceSha256": "a1f1847bac64aa00acbf80fbb79b2c5af24d8eecaaa5e2ad14080fab81f1de95",
+      "target": "apps/web/public/combined/assets/vendor/maplibre/maplibre-gl-csp.js",
+      "targetSha256": "a1f1847bac64aa00acbf80fbb79b2c5af24d8eecaaa5e2ad14080fab81f1de95",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/assets/vendor/maplibre/maplibre-gl.css",
+      "sourceSha256": "ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732",
+      "target": "apps/web/public/combined/assets/vendor/maplibre/maplibre-gl.css",
+      "targetSha256": "ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732",
+      "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/brand.css",
+      "sourceSha256": "e4d1a54e279495b190e88e340ecf7c257d11a758a3500c2ba1329a422e5b3e30",
+      "target": "apps/web/combined/brand.css",
+      "targetSha256": "77e8c6fca902d5a51f5b5e7a5d2b131c0a964efb3a83f57f477a772e52e82bbf",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Preserve fixed public asset URLs",
+        "Move duplicated font and brand/radius tokens into the authored public theme; retain surface font application rules"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/customer-demo-route.mjs",
+      "sourceSha256": "c0ebaf11c57ba47084d6f8edc91496f75a02b91997dbbf843c6853b4c1f9714c",
+      "target": "apps/web/combined/customer-demo-route.mjs",
+      "targetSha256": "c0ebaf11c57ba47084d6f8edc91496f75a02b91997dbbf843c6853b4c1f9714c",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/customer-demo-route.test.mjs",
+      "sourceSha256": "3053be1cd456070039559369c5507335b091eeda0629e5aa613c5602a8008929",
+      "target": "test/web-fork-legacy/customer-demo-route.test.mjs",
+      "targetSha256": "64c6411b35f1ec602919e33862d07369082996976396f2c627839ef6c232ee12",
+      "reason": "Keep writer/scenario-dependent regression tests at repository level and point UI imports at the frontend fork; server imports remain repository-owned.",
+      "changes": [
+        "Retarget sibling UI model imports to ../../apps/web/combined; preserve existing Node writer/scenario imports"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/customer-inbox.mjs",
+      "sourceSha256": "df5935562bf9506cdf30510156cfc53d772fa7e5f1ef50bf80c460040f859170",
+      "target": "apps/web/combined/customer-inbox.mjs",
+      "targetSha256": "df5935562bf9506cdf30510156cfc53d772fa7e5f1ef50bf80c460040f859170",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/customer-inbox.test.mjs",
+      "sourceSha256": "a26ca0210c84b4f05890c0ef77853145ccc16358159b0bf4ce153dcb26194683",
+      "target": "apps/web/combined/customer-inbox.test.mjs",
+      "targetSha256": "a26ca0210c84b4f05890c0ef77853145ccc16358159b0bf4ce153dcb26194683",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/customer-picker-model.mjs",
+      "sourceSha256": "e9182c73a2e96ef28c51514e1d211cbd63e39a7e54d219fca108961fde19d41b",
+      "target": "apps/web/combined/customer-picker-model.mjs",
+      "targetSha256": "e9182c73a2e96ef28c51514e1d211cbd63e39a7e54d219fca108961fde19d41b",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/customer-picker-model.test.mjs",
+      "sourceSha256": "7996d03e6d5612902299d3652bcede1451aaa362aaf127079edd923ac21156b1",
+      "target": "apps/web/combined/customer-picker-model.test.mjs",
+      "targetSha256": "7996d03e6d5612902299d3652bcede1451aaa362aaf127079edd923ac21156b1",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/customer-renderer.mjs",
+      "sourceSha256": "0b8db425757bc6549b3def45f2aa80dfa484a571e7b59975da3c83858b20f253",
+      "target": "apps/web/combined/customer-renderer.mjs",
+      "targetSha256": "691d484ffbd8e2fa1b456d295f5aa6dede54b9d4bff698a37d2fd013bab76347",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Preserve fixed public asset URLs"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/customer-renderer.test.mjs",
+      "sourceSha256": "5a95f7b3aeba9e6049b481effc50cf0a35fdb41557b06178c8bdf63367607c2e",
+      "target": "apps/web/combined/customer-renderer.test.mjs",
+      "targetSha256": "5a95f7b3aeba9e6049b481effc50cf0a35fdb41557b06178c8bdf63367607c2e",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/customer-requests.css",
+      "sourceSha256": "ff0b5b153d8242395dcd2d89081721a0ba3781220089c84b33faff28f50a2a9d",
+      "target": "apps/web/combined/customer-requests.css",
+      "targetSha256": "ff0b5b153d8242395dcd2d89081721a0ba3781220089c84b33faff28f50a2a9d",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/customer-requests.mjs",
+      "sourceSha256": "45117fbb2a187b39b78c24e7c7221921e0ca63918470f43aa65cd34c99458306",
+      "target": "apps/web/combined/customer-requests.mjs",
+      "targetSha256": "45117fbb2a187b39b78c24e7c7221921e0ca63918470f43aa65cd34c99458306",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/customer-requests.test.mjs",
+      "sourceSha256": "aaf12a65a6af51136d1d7491f198756adbbade262564da2656d661fe5c6fc15e",
+      "target": "apps/web/combined/customer-requests.test.mjs",
+      "targetSha256": "aaf12a65a6af51136d1d7491f198756adbbade262564da2656d661fe5c6fc15e",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/customer-scenarios.mjs",
+      "sourceSha256": "272e17320793a161802c7d9859ab2191fe32889629d8bd178ef694d1a07a183e",
+      "target": "apps/web/combined/customer-scenarios.mjs",
+      "targetSha256": "272e17320793a161802c7d9859ab2191fe32889629d8bd178ef694d1a07a183e",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/customer-scenarios.test.mjs",
+      "sourceSha256": "75202de094bc85fc9cbf49737204b9059959b235126b05bc8774085ef906dddf",
+      "target": "apps/web/combined/customer-scenarios.test.mjs",
+      "targetSha256": "75202de094bc85fc9cbf49737204b9059959b235126b05bc8774085ef906dddf",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/date-picker.css",
+      "sourceSha256": "42ae92908366916e1055b017c7962dcc62b1c08c1e7470e99d69f9aa5437c36a",
+      "target": "apps/web/combined/date-picker.css",
+      "targetSha256": "df8101d49923f100d7b82426e5f979aba2f641eaa7f64c34c5841826a4d66a80",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Use the shared 6px control-radius token while retaining the 44px date trigger height"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/date-picker.mjs",
+      "sourceSha256": "dd01276feb79196c02b11aaa569d38b4785fbe8e21e86dfbcc52b811f0f6adcd",
+      "target": "apps/web/combined/date-picker.mjs",
+      "targetSha256": "dd01276feb79196c02b11aaa569d38b4785fbe8e21e86dfbcc52b811f0f6adcd",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/date-picker.test.mjs",
+      "sourceSha256": "cddb0c83f730b7bc590c1952873d8cfde18f12e59db4420cff9e40ca4bda3d12",
+      "target": "apps/web/combined/date-picker.test.mjs",
+      "targetSha256": "cddb0c83f730b7bc590c1952873d8cfde18f12e59db4420cff9e40ca4bda3d12",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/date-summary-toolbar.mjs",
+      "sourceSha256": "a37923e8f65437be1808ce9b5d011c8b444bef7694e161dd195ab9a7d2e9caff",
+      "target": "apps/web/combined/date-summary-toolbar.mjs",
+      "targetSha256": "a37923e8f65437be1808ce9b5d011c8b444bef7694e161dd195ab9a7d2e9caff",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/date-summary-toolbar.test.mjs",
+      "sourceSha256": "55bd07b865d77cbc6713ad464054aaacb880863c507f5be5fc2039a985100b4a",
+      "target": "apps/web/combined/date-summary-toolbar.test.mjs",
+      "targetSha256": "55bd07b865d77cbc6713ad464054aaacb880863c507f5be5fc2039a985100b4a",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/dated-dispatch.mjs",
+      "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
+      "target": "apps/web/combined/dated-dispatch.mjs",
+      "targetSha256": "ff150744641287e0f70b8313f47c5881a7344e30edeef6964d954836304ec38e",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Remove unused escaping helper, selection value and catch binding; retain update argument position"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/dated-dispatch.test.mjs",
+      "sourceSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c",
+      "target": "apps/web/combined/dated-dispatch.test.mjs",
+      "targetSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/delivery-bundles.mjs",
+      "sourceSha256": "5b0d7cd655ab96f7d8a6f158635d6c99d8ba1bf2b18889714c84a5691864e5dd",
+      "target": "apps/web/combined/delivery-bundles.mjs",
+      "targetSha256": "5b0d7cd655ab96f7d8a6f158635d6c99d8ba1bf2b18889714c84a5691864e5dd",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/delivery-bundles.test.mjs",
+      "sourceSha256": "5c428aae10542c9dad27bc7bd08219567dc1649a133fed09825347880cb4b0a8",
+      "target": "apps/web/combined/delivery-bundles.test.mjs",
+      "targetSha256": "5c428aae10542c9dad27bc7bd08219567dc1649a133fed09825347880cb4b0a8",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/delivery-review.mjs",
+      "sourceSha256": "f80b2df8ee4b5b1d009009c9d47bfce94ca6a7635f38f65af9caa8fb6a780d65",
+      "target": "apps/web/combined/delivery-review.mjs",
+      "targetSha256": "9bbc6a353229590125f2e0d16e8db34b4147b71f527c7b2ab40d50a2e1b09109",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/delivery-review.test.mjs",
+      "sourceSha256": "53024d07740e75bf5732d219368be95863ef6db848d354d46267bf741f771bb0",
+      "target": "test/web-fork-legacy/delivery-review.test.mjs",
+      "targetSha256": "09907df4a62569e8bd7bb059ca03fb998378815d1807bda5ee1093e2bd72870a",
+      "reason": "Keep writer/scenario-dependent regression tests at repository level and point UI imports at the frontend fork; server imports remain repository-owned.",
+      "changes": [
+        "Retarget sibling UI model imports to ../../apps/web/combined; preserve existing Node writer/scenario imports"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/demo-shell.css",
+      "sourceSha256": "383859293707aeda3972737e65303a8bea36ac540b955ccc58e89afd6c5d40a9",
+      "target": "apps/web/combined/demo-shell.css",
+      "targetSha256": "383859293707aeda3972737e65303a8bea36ac540b955ccc58e89afd6c5d40a9",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/demo-shell.mjs",
+      "sourceSha256": "99d9ee46030ed0964eda609db8a657737e2fde42d37771be18e3d7885ccf0e48",
+      "target": "apps/web/combined/demo-shell.mjs",
+      "targetSha256": "99d9ee46030ed0964eda609db8a657737e2fde42d37771be18e3d7885ccf0e48",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/destination-directory.mjs",
+      "sourceSha256": "8448e916376c2119558583082e9905b283dc862ae11f78fe347a11e7d4409ffb",
+      "target": "apps/web/combined/destination-directory.mjs",
+      "targetSha256": "8448e916376c2119558583082e9905b283dc862ae11f78fe347a11e7d4409ffb",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/destination-directory.test.mjs",
+      "sourceSha256": "77e300a08b8f39baf6c4a0e743a6ac9113ac807cf8374b72cf0e0067556f9c9c",
+      "target": "apps/web/combined/destination-directory.test.mjs",
+      "targetSha256": "77e300a08b8f39baf6c4a0e743a6ac9113ac807cf8374b72cf0e0067556f9c9c",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/dispatch-assignment.mjs",
+      "sourceSha256": "85da0244a3ae9a72ba56dd49084ac0dda9d629860879e847fdba078a4dc41299",
+      "target": "apps/web/combined/dispatch-assignment.mjs",
+      "targetSha256": "85da0244a3ae9a72ba56dd49084ac0dda9d629860879e847fdba078a4dc41299",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/dispatch-assignment.test.mjs",
+      "sourceSha256": "595c7f66b6edb70818df1a8280a5cbfa7c1e133b05ed28fdc81ea62dab3cab09",
+      "target": "apps/web/combined/dispatch-assignment.test.mjs",
+      "targetSha256": "595c7f66b6edb70818df1a8280a5cbfa7c1e133b05ed28fdc81ea62dab3cab09",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/dispatch-map-layer.mjs",
+      "sourceSha256": "944304bc83934f094fa317494e7d5ed047ba0b0f432cae91d247fd7a71dcf56d",
+      "target": "apps/web/combined/dispatch-map-layer.mjs",
+      "targetSha256": "3a414e430f1e97ca3c51d4b01c09f7b67fb0c0927aab3286709753c0046f2ec7",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Preserve fixed public asset URLs"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/dispatch-map-layer.test.mjs",
+      "sourceSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7",
+      "target": "apps/web/combined/dispatch-map-layer.test.mjs",
+      "targetSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/dispatch-presentation.mjs",
+      "sourceSha256": "b7d05ff12247461d1a15fcda270612486f03248eab0ec7fb7a1fd69b2a69cacd",
+      "target": "apps/web/combined/dispatch-presentation.mjs",
+      "targetSha256": "b7d05ff12247461d1a15fcda270612486f03248eab0ec7fb7a1fd69b2a69cacd",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/dispatch-workflow.css",
+      "sourceSha256": "d3c042a43e3ae08a4eac46590b3bc9f662d90ba11a909fb5a4c4b5b99ea00a13",
+      "target": "apps/web/combined/dispatch-workflow.css",
+      "targetSha256": "d3c042a43e3ae08a4eac46590b3bc9f662d90ba11a909fb5a4c4b5b99ea00a13",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/dispatch-workflow.mjs",
+      "sourceSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59",
+      "target": "apps/web/combined/dispatch-workflow.mjs",
+      "targetSha256": "ad71e21b9e23c69de51c7ee7664d870a716116e010f1615ec8d9ae7af8d27a6e",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/dispatch-workflow.test.mjs",
+      "sourceSha256": "1e721931eec18bce6266d669083e65ab096947ca61a4bf9c3637bf549156f0f2",
+      "target": "apps/web/combined/dispatch-workflow.test.mjs",
+      "targetSha256": "aa9eaf681014440bf21b09445287ebb44bef736fc603314e8696c3716d6edeaa",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/driver-history-calendar.mjs",
+      "sourceSha256": "c097a37e1d31ddf19aa9bebc2083ddae07257828d9451612b9bfed18238229cf",
+      "target": "apps/web/combined/driver-history-calendar.mjs",
+      "targetSha256": "c097a37e1d31ddf19aa9bebc2083ddae07257828d9451612b9bfed18238229cf",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver-history-calendar.test.mjs",
+      "sourceSha256": "03526c046b116035d3ef5d3b3a732296625a541ac9fceea52a117578cdc3188a",
+      "target": "apps/web/combined/driver-history-calendar.test.mjs",
+      "targetSha256": "03526c046b116035d3ef5d3b3a732296625a541ac9fceea52a117578cdc3188a",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver-history.mjs",
+      "sourceSha256": "33387d656e501b4eab441be3ab43c71b60a2742c067f49a55326f01aba6f691a",
+      "target": "apps/web/combined/driver-history.mjs",
+      "targetSha256": "33387d656e501b4eab441be3ab43c71b60a2742c067f49a55326f01aba6f691a",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver-history.test.mjs",
+      "sourceSha256": "c71edadc44052eb806a6df7fb6c9357d36b66c6fda279fa785ffbc74178d36d2",
+      "target": "apps/web/combined/driver-history.test.mjs",
+      "targetSha256": "c71edadc44052eb806a6df7fb6c9357d36b66c6fda279fa785ffbc74178d36d2",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver-map-model.mjs",
+      "sourceSha256": "5fce54d456c274ad3f3a828b1133c04416ad80b036714ae4f93a423f68c2e411",
+      "target": "apps/web/combined/driver-map-model.mjs",
+      "targetSha256": "5fce54d456c274ad3f3a828b1133c04416ad80b036714ae4f93a423f68c2e411",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver-map-model.test.mjs",
+      "sourceSha256": "504bafb6f8ce4e02f839177b234adf92342e74dd8bb02f0a3398d0e6b0a1a82c",
+      "target": "test/web-fork-legacy/driver-map-model.test.mjs",
+      "targetSha256": "97e8224aeb38faf74a3df57a43f30a50474e1f343527489e9473481b16bde098",
+      "reason": "Keep writer/scenario-dependent regression tests at repository level and point UI imports at the frontend fork; server imports remain repository-owned.",
+      "changes": [
+        "Retarget sibling UI model imports to ../../apps/web/combined; preserve existing Node writer/scenario imports"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver-map.mjs",
+      "sourceSha256": "dce5b43bab1d9cbf1b6b7dc5cfeb37e86aaa45634aeb1ca39486923b6de19141",
+      "target": "apps/web/combined/driver-map.mjs",
+      "targetSha256": "a42f7e5ace908c7345b28654f036145ed3195c2a2551fa4a66b9de9b6018fdf5",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Preserve fixed public asset URLs",
+        "Use explicit if/else for map-control side effects"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver-map.test.mjs",
+      "sourceSha256": "259cb0b1e8c642e07b0213ae605e41b160f2e86d6c4f35a5f8fe2e0bf3a044ee",
+      "target": "apps/web/combined/driver-map.test.mjs",
+      "targetSha256": "259cb0b1e8c642e07b0213ae605e41b160f2e86d6c4f35a5f8fe2e0bf3a044ee",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver-settings.mjs",
+      "sourceSha256": "11e073f7923a1f783a5d71f62da8d8e406072a758ce71489f8b67d82c7b535ed",
+      "target": "apps/web/combined/driver-settings.mjs",
+      "targetSha256": "11e073f7923a1f783a5d71f62da8d8e406072a758ce71489f8b67d82c7b535ed",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver-view-model.mjs",
+      "sourceSha256": "32802901efce8012577c5937df6be8dcd386886972e5d951e4280021a964c5f0",
+      "target": "apps/web/combined/driver-view-model.mjs",
+      "targetSha256": "32802901efce8012577c5937df6be8dcd386886972e5d951e4280021a964c5f0",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver-view-model.test.mjs",
+      "sourceSha256": "b6c3f320241c8480f5afec1470f54a71f2fd77bdb83447a3061924b7ed832a7a",
+      "target": "apps/web/combined/driver-view-model.test.mjs",
+      "targetSha256": "b6c3f320241c8480f5afec1470f54a71f2fd77bdb83447a3061924b7ed832a7a",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver.css",
+      "sourceSha256": "5502e9fe5b9dbf4b43ea66ff289e5899cf3729cdf97e1f2a3fac3ebb9d149c53",
+      "target": "apps/web/combined/driver.css",
+      "targetSha256": "90daab73532ea252be79801a51c2eb4882184d74206e3b50fc5b219962c6de63",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Preserve fixed public asset URLs"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver.html",
+      "sourceSha256": "844acf381f77714f6c96333cd7bdf315cb1cc6eab02f0db1c34c341d8045f2bd",
+      "target": "apps/web/combined/driver.html",
+      "targetSha256": "08850acde91a76bcec8b41982c0eb46e0f227d46a2049b0a4f6f5a070a05836d",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Preserve fixed public asset URLs",
+        "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/driver.mjs",
+      "sourceSha256": "779f1aaa79680cb6c919a5b07e1f7339504d096f6d9bf1f7c3ccbf55faee611e",
+      "target": "apps/web/combined/driver.mjs",
+      "targetSha256": "563e6f40651ed149d9339a507d5a9fae0204fc2b75d974cfce1bc843b11b41ae",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Preserve fixed public asset URLs",
+        "Use explicit if/else for customer-request confirmation side effects"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/index.html",
+      "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
+      "target": "apps/web/combined/index.html",
+      "targetSha256": "ab9f336bf6e122154397050c955fa6c2359c27fc65cc33df56b93ecf27e3bbff",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Preserve fixed public asset URLs",
+        "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions",
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/map-preview.css",
+      "sourceSha256": "83e16a5d0e67fee06e09f2ecf0189266e33bb3e1af1c32f6a57b95ddc7237a3c",
+      "target": "apps/web/combined/map-preview.css",
+      "targetSha256": "83e16a5d0e67fee06e09f2ecf0189266e33bb3e1af1c32f6a57b95ddc7237a3c",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/map-wheel-zoom.mjs",
+      "sourceSha256": "6c095e031975ac80e1e443c1fa95ed1d02d8776acb5a3f18fd94cdab2d780b77",
+      "target": "apps/web/combined/map-wheel-zoom.mjs",
+      "targetSha256": "6c095e031975ac80e1e443c1fa95ed1d02d8776acb5a3f18fd94cdab2d780b77",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/map-wheel-zoom.test.mjs",
+      "sourceSha256": "0fb048418eb21f7e36b4ff8a492435840ecf7bd82c8fa07d5a294d47ff8dcc4e",
+      "target": "apps/web/combined/map-wheel-zoom.test.mjs",
+      "targetSha256": "0fb048418eb21f7e36b4ff8a492435840ecf7bd82c8fa07d5a294d47ff8dcc4e",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/mobile-customer-links.mjs",
+      "sourceSha256": "79acbcaf12d7674650ae6df085f2562c47c911eae1eef892f16c36907052f56e",
+      "target": "apps/web/combined/mobile-customer-links.mjs",
+      "targetSha256": "79acbcaf12d7674650ae6df085f2562c47c911eae1eef892f16c36907052f56e",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/mobile-customer.css",
+      "sourceSha256": "8f6cb89ee52e7a153f142eebe42db0b94d207e6689afc24c2410dc9fdd018233",
+      "target": "apps/web/combined/mobile-customer.css",
+      "targetSha256": "9c4e3b7ffb2f0867b438c4bd1e8a6bbca603af895635f719893c7c2a5309ed4b",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Preserve fixed public asset URLs"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/mobile-customer.html",
+      "sourceSha256": "9ba6b85ef694ca0186615c2bcb1a11ac658f99fcf84a46ad3ffb9470ac97d12b",
+      "target": "apps/web/combined/mobile-customer.html",
+      "targetSha256": "55065984b431af64a1b0618758321923ec51944f7d5c746e6080bb315fe2b36f",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Preserve fixed public asset URLs",
+        "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/operating-date.mjs",
+      "sourceSha256": "b77d29fe79539d8809ae9d121b2152163c71bb70368d2614369cdc594eb7370f",
+      "target": "apps/web/combined/operating-date.mjs",
+      "targetSha256": "b77d29fe79539d8809ae9d121b2152163c71bb70368d2614369cdc594eb7370f",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/operations-model.mjs",
+      "sourceSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
+      "target": "apps/web/combined/operations-model.mjs",
+      "targetSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/operations-model.test.mjs",
+      "sourceSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732",
+      "target": "apps/web/combined/operations-model.test.mjs",
+      "targetSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/operations.css",
+      "sourceSha256": "97acc70d352b0fe56833669611ef10b4ffbdab2f56a79e3f891ac9af4dc86b4b",
+      "target": "apps/web/combined/operations.css",
+      "targetSha256": "3388c9f8af7f3f26b9f3e640f6faf00ae00cf8b4630ddef843e25c518ac116dc",
+      "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
+      "changes": [
+        "Use the shared 6px --radius for the customer-notice textarea instead of 4px; retain dense row and utility control dimensions"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/order-planning.css",
+      "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
+      "target": "apps/web/combined/order-planning.css",
+      "targetSha256": "8f77a2bda1094044286b6cf65b17f26d66a1c897b0a610d18f727cfc1169c67d",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Preserve fixed public asset URLs"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/order-planning.mjs",
+      "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
+      "target": "apps/web/combined/order-planning.mjs",
+      "targetSha256": "0678bfbdac4030b8e8a582f64cef1139b086e643e5df2ac841f013cb7057c88e",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Preserve fixed public asset URLs",
+        "Remove unread promise binding and use endsWith for the fixed suffix",
+        "Import and re-export the exact shared map model/factory functions instead of defining them inside the planning view",
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/order-planning.mjs",
+      "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
+      "target": "apps/web/src/shared/maps/order-map.mjs",
+      "targetSha256": "b14c89e6878385be6732907fb0d07be186ff6eb7c96ffc0fb5dfc24955a26e43",
+      "reason": "Extract the original map model, factories and box-label formatter exactly into a shared browser module; retain the previously established fixed worker/style asset URLs.",
+      "changes": [
+        "Extract boxesText, orderMapModel, createOrderMap and createOrderMarker without changing their function bodies apart from the existing fixed asset URL substitutions"
+      ],
+      "derivation": {
+        "kind": "map-function-extraction",
+        "functions": [
+          "boxesText",
+          "orderMapModel",
+          "createOrderMap",
+          "createOrderMarker"
+        ],
+        "extractedSha256": "b14c89e6878385be6732907fb0d07be186ff6eb7c96ffc0fb5dfc24955a26e43",
+        "evidence": "apps/web/.runtime/design-proof/map-extraction-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/order-planning.test.mjs",
+      "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
+      "target": "apps/web/combined/order-planning.test.mjs",
+      "targetSha256": "4940d41cd4b023cee32d56619a6b2599e4c55059c06aa0d72d78e48a9c3cc090",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/pagination-model.mjs",
+      "sourceSha256": "f6f85d5b296b27daafd9ad932f64b1c6f4608e2b66c6fa141d02c3013b4bc476",
+      "target": "apps/web/combined/pagination-model.mjs",
+      "targetSha256": "f6f85d5b296b27daafd9ad932f64b1c6f4608e2b66c6fa141d02c3013b4bc476",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/pagination-model.test.mjs",
+      "sourceSha256": "1302bcf42732d9b25f973063f62f0f486858f216db8d5870ceaa4d27bb31936b",
+      "target": "apps/web/combined/pagination-model.test.mjs",
+      "targetSha256": "1302bcf42732d9b25f973063f62f0f486858f216db8d5870ceaa4d27bb31936b",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/reference-icons.mjs",
+      "sourceSha256": "f58dd54e94dc91a9f9c8e90a48820c8fe5b48a39a3e605971ac629b09267e2ba",
+      "target": "apps/web/combined/reference-icons.mjs",
+      "targetSha256": "f58dd54e94dc91a9f9c8e90a48820c8fe5b48a39a3e605971ac629b09267e2ba",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/resource-client.mjs",
+      "sourceSha256": "d4d51b50f7fb8c55961f33c5bc9b2e3c4511b38bb98574e4725394ef31a9f9f2",
+      "target": "apps/web/combined/resource-client.mjs",
+      "targetSha256": "d4d51b50f7fb8c55961f33c5bc9b2e3c4511b38bb98574e4725394ef31a9f9f2",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/resource-client.test.mjs",
+      "sourceSha256": "dfa9f6cc94bbb00822863cf0f86924ef9d3e0352f2948f8d9abeecc3ab1b31a7",
+      "target": "apps/web/combined/resource-client.test.mjs",
+      "targetSha256": "dfa9f6cc94bbb00822863cf0f86924ef9d3e0352f2948f8d9abeecc3ab1b31a7",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/resource-management.css",
+      "sourceSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
+      "target": "apps/web/combined/resource-management.css",
+      "targetSha256": "13db364820617af8b222f9797060983c2e398588ac42f5a9a875b446c832da82",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/resource-management.mjs",
+      "sourceSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
+      "target": "apps/web/combined/resource-management.mjs",
+      "targetSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/resource-management.test.mjs",
+      "sourceSha256": "44615c6e7c1e03176b84950823376125d3913f946b27b745932d83f5de7b54f5",
+      "target": "apps/web/combined/resource-management.test.mjs",
+      "targetSha256": "44615c6e7c1e03176b84950823376125d3913f946b27b745932d83f5de7b54f5",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/route-editor.mjs",
+      "sourceSha256": "19e20fbbb0c48b070d4a9e289bbbd1ee5557f0e20c57aa6a050a54f3644764d3",
+      "target": "apps/web/combined/route-editor.mjs",
+      "targetSha256": "19e20fbbb0c48b070d4a9e289bbbd1ee5557f0e20c57aa6a050a54f3644764d3",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/route-editor.test.mjs",
+      "sourceSha256": "a1e90e8412edb90cf341b7bf8487abac5629f45f204d84893b7ee1d41e28556f",
+      "target": "apps/web/combined/route-editor.test.mjs",
+      "targetSha256": "a1e90e8412edb90cf341b7bf8487abac5629f45f204d84893b7ee1d41e28556f",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/scenario-guide.mjs",
+      "sourceSha256": "129cbbffec628cb96cc3b3c62854ba24c663e9f888654a99a8286678b5d4b99e",
+      "target": "apps/web/combined/scenario-guide.mjs",
+      "targetSha256": "129cbbffec628cb96cc3b3c62854ba24c663e9f888654a99a8286678b5d4b99e",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/scenario-guide.test.mjs",
+      "sourceSha256": "b790e25acd564de42c7d74bd8f5b323efd942ac85fae83a541ee215535008afd",
+      "target": "apps/web/combined/scenario-guide.test.mjs",
+      "targetSha256": "b790e25acd564de42c7d74bd8f5b323efd942ac85fae83a541ee215535008afd",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/scenario-tools.css",
+      "sourceSha256": "1334b3c8d4cf4e817ad1fe376f0a1677a4e9672bf37929c05e86eda48517e539",
+      "target": "apps/web/combined/scenario-tools.css",
+      "targetSha256": "710cb4d2715973bf97fa99b7dc26a4a933ab7d7a84298726c53ddc4bcdce9d22",
+      "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
+      "changes": [
+        "Use the loaded shared --meatbox-font in the synthetic scenario widget instead of its unloaded Pretendard family name; preserve widget and utility dimensions"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/scenario-tools.mjs",
+      "sourceSha256": "202b0959705cceb66fb120200a1d21830d6421d3b5eb131e90f8c6e7801751d9",
+      "target": "apps/web/combined/scenario-tools.mjs",
+      "targetSha256": "202b0959705cceb66fb120200a1d21830d6421d3b5eb131e90f8c6e7801751d9",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/scenario-tools.test.mjs",
+      "sourceSha256": "0d943e9d72b442c712980ee33e1b66e481452d87600e0db11c3c5c890ea6f604",
+      "target": "apps/web/combined/scenario-tools.test.mjs",
+      "targetSha256": "0d943e9d72b442c712980ee33e1b66e481452d87600e0db11c3c5c890ea6f604",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/simulation-adapter.mjs",
+      "sourceSha256": "5eefd43b37e1984de1009b0537a22b753610bc292db82416965b22c940e1ccd1",
+      "target": "apps/web/combined/simulation-adapter.mjs",
+      "targetSha256": "5eefd43b37e1984de1009b0537a22b753610bc292db82416965b22c940e1ccd1",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/simulation-adapter.test.mjs",
+      "sourceSha256": "054905457874fb971973ac92e7e0fd6b3638858bfe2c4ce1448e290906aae212",
+      "target": "test/web-fork-legacy/simulation-adapter.test.mjs",
+      "targetSha256": "c90fc66ab85ef29285b6f855b29464ff89488cd2ddaa9e3ea544a1845c234812",
+      "reason": "Keep writer/scenario-dependent regression tests at repository level and point UI imports at the frontend fork; server imports remain repository-owned.",
+      "changes": [
+        "Retarget sibling UI model imports to ../../apps/web/combined; preserve existing Node writer/scenario imports"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/simulation-client.mjs",
+      "sourceSha256": "9eb1950a8a75eb67e57a28e0da770b6497602c62024eb09958f77aea808ea8d0",
+      "target": "apps/web/combined/simulation-client.mjs",
+      "targetSha256": "de440b53f01e48b692c7e4127dafb0be6b3589ebff92ed38860fcf44d895c4e4",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [
+        "Preserve the legacy headerless-manifest 404 simulation branch while an explicit Kotlin reader error stays failed; import the strict TypeScript reader contract.",
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/simulation-client.test.mjs",
+      "sourceSha256": "802909c4d14874f7f57840b9f2c06f107c4db7a2c61e265114ba6ce585c6339c",
+      "target": "apps/web/combined/simulation-client.test.mjs",
+      "targetSha256": "191f298070b306ddd9ae60fbfde107270ebcbefece54a21763e2f05456d51b4a",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/source-client.mjs",
+      "sourceSha256": "00c7cfb02120fc13b6ca0d43f1e54a5c93c6af59401bad0785b0bd69edd8c8c9",
+      "target": "apps/web/combined/source-client.mjs",
+      "targetSha256": "00c7cfb02120fc13b6ca0d43f1e54a5c93c6af59401bad0785b0bd69edd8c8c9",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/source-client.test.mjs",
+      "sourceSha256": "916b9829e26c5dceb234b08bb6a3f1b2c9f00b092abbc21a88a61d1f0ec7ab21",
+      "target": "apps/web/combined/source-client.test.mjs",
+      "targetSha256": "916b9829e26c5dceb234b08bb6a3f1b2c9f00b092abbc21a88a61d1f0ec7ab21",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/source-context.mjs",
+      "sourceSha256": "a747d4a9a5270f4a973863166b16290eece7faaf978f70a00dfd6eb2afde64aa",
+      "target": "apps/web/combined/source-context.mjs",
+      "targetSha256": "a747d4a9a5270f4a973863166b16290eece7faaf978f70a00dfd6eb2afde64aa",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/source-context.test.mjs",
+      "sourceSha256": "e2c2a68eda625b2c3bbb08983a62a6e97500ecf22fe5721ac491645057e661ad",
+      "target": "apps/web/combined/source-context.test.mjs",
+      "targetSha256": "e2c2a68eda625b2c3bbb08983a62a6e97500ecf22fe5721ac491645057e661ad",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/source-viewer-plan.mjs",
+      "sourceSha256": "7bf25e4b6de82d5a7c5f3126e57d991917784598c70d800b2e19fbf8be62d61d",
+      "target": "apps/web/combined/source-viewer-plan.mjs",
+      "targetSha256": "7bf25e4b6de82d5a7c5f3126e57d991917784598c70d800b2e19fbf8be62d61d",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/source-viewer-plan.test.mjs",
+      "sourceSha256": "60b0bccae66c73ee5f207b784ec63ba729ca6eaadc7eab996c127b8e45fc8b7e",
+      "target": "apps/web/combined/source-viewer-plan.test.mjs",
+      "targetSha256": "60b0bccae66c73ee5f207b784ec63ba729ca6eaadc7eab996c127b8e45fc8b7e",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/state-frames.mjs",
+      "sourceSha256": "79fbac705124888bd4ba8babc8643dd33652be61411815f1d7c5d748404e161c",
+      "target": "apps/web/combined/state-frames.mjs",
+      "targetSha256": "79fbac705124888bd4ba8babc8643dd33652be61411815f1d7c5d748404e161c",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/styles.css",
+      "targetSha256": "40f70e587adcc55a68671fd3236c1cbf9d7b214204791c255fb18525957010e3",
+      "reason": "Replace the monolithic CSS entry with explicit original-order imports; fragments preserve complete original line-range provenance and reviewed shared-theme/date-toolbar changes.",
+      "changes": [
+        "Split the original complete CSS cascade into explicit responsibility fragments while preserving their import order"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/styles/foundation.css",
+      "targetSha256": "0c10155fc887bacb927d762937903b3e9ecbea869df5a419fedf5907b9aa79e2",
+      "reason": "Derive the foundation stylesheet from original lines 1-56; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 1-56 into a dedicated stylesheet",
+        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 1,
+        "lastOriginalLine": 56,
+        "extractedSha256": "3f6dab2da8e829980b2dcb29f8991db76507dcddb78d5374c3dab33eab024988",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/styles/shell.css",
+      "targetSha256": "5c84d47c3c8e26e691506ac6842833c88bb0b4ea6c4a6e595e19c3b27b5e987f",
+      "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 57-344 into a dedicated stylesheet",
+        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 57,
+        "lastOriginalLine": 344,
+        "extractedSha256": "bd6e66617f41ddc36f7cdffb26d92dbb2e44c83f517dbb5750a98965eefd3124",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/styles/workspace.css",
+      "targetSha256": "0a14e2c9e6d60f9ea5523c3c700f2b31cb937583d8c32f09219f349b7137a2d7",
+      "reason": "Derive the workspace stylesheet from original lines 345-948; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 345-948 into a dedicated stylesheet"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 345,
+        "lastOriginalLine": 948,
+        "extractedSha256": "0a14e2c9e6d60f9ea5523c3c700f2b31cb937583d8c32f09219f349b7137a2d7",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/styles/preview.css",
+      "targetSha256": "92dd7e6612e945d06c8e93fc3d14746275e44a9405bb40b367078560c36cfe8b",
+      "reason": "Derive the preview stylesheet from original lines 949-1179; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 949-1179 into a dedicated stylesheet"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 949,
+        "lastOriginalLine": 1179,
+        "extractedSha256": "92dd7e6612e945d06c8e93fc3d14746275e44a9405bb40b367078560c36cfe8b",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/styles/controls.css",
+      "targetSha256": "37ea9fcb839a315629378b546e64242cb102e684bc34d279b50e8bce61a2b3d9",
+      "reason": "Derive the controls stylesheet from original lines 1180-1305; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 1180-1305 into a dedicated stylesheet",
+        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 1180,
+        "lastOriginalLine": 1305,
+        "extractedSha256": "fa0d77ddd5d57858abfb41465345f4e7c032d4b4ae99eb785175022f6fb3906f",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/styles/responsive.css",
+      "targetSha256": "261628f5fef7fb69c98f5bc617ae6fd7e4188a9ae5346d6e364135c947a3aa57",
+      "reason": "Derive the responsive stylesheet from original lines 1306-1449; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 1306-1449 into a dedicated stylesheet"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 1306,
+        "lastOriginalLine": 1449,
+        "extractedSha256": "261628f5fef7fb69c98f5bc617ae6fd7e4188a9ae5346d6e364135c947a3aa57",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/styles/live.css",
+      "targetSha256": "b2e39051b3caba138c58d9c85437300f7e88723f2f7df57ec445fae78af59282",
+      "reason": "Derive the live stylesheet from original lines 1450-1525; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 1450-1525 into a dedicated stylesheet"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 1450,
+        "lastOriginalLine": 1525,
+        "extractedSha256": "b2e39051b3caba138c58d9c85437300f7e88723f2f7df57ec445fae78af59282",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/styles/responsive-small.css",
+      "targetSha256": "98c28ceaa730cd6bf991ef90f3f8a508c68c9b4b8611bdb1f695bda3580f5330",
+      "reason": "Derive the responsive-small stylesheet from original lines 1526-1573; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 1526-1573 into a dedicated stylesheet"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 1526,
+        "lastOriginalLine": 1573,
+        "extractedSha256": "98c28ceaa730cd6bf991ef90f3f8a508c68c9b4b8611bdb1f695bda3580f5330",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/styles/composition.css",
+      "targetSha256": "8f86e2b2709e1947cbec5172a7eda5f59ad85cd4ae8ffe1317ff924b3d3bc27b",
+      "reason": "Derive the composition stylesheet from original lines 1574-1843; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 1574-1843 into a dedicated stylesheet"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 1574,
+        "lastOriginalLine": 1843,
+        "extractedSha256": "8f86e2b2709e1947cbec5172a7eda5f59ad85cd4ae8ffe1317ff924b3d3bc27b",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/styles.css",
+      "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "target": "apps/web/combined/date-summary-toolbar.css",
+      "targetSha256": "80faa13d20917447ae56cca34d186ee9ab6d89a88b132684cb98036d2184e6ef",
+      "reason": "Derive the date-summary-toolbar stylesheet from original lines 268-323; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 268-323 into a dedicated stylesheet"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 268,
+        "lastOriginalLine": 323,
+        "extractedSha256": "80faa13d20917447ae56cca34d186ee9ab6d89a88b132684cb98036d2184e6ef",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/vehicle-control.css",
+      "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
+      "target": "apps/web/combined/vehicle-control.css",
+      "targetSha256": "f2e70238327d5d0d7216774a445aed357813fd9a39cae18fc98423f685335fb7",
+      "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
+      "changes": [
+        "Preserve fixed public asset URLs",
+        "Use the shared 44px --control-height for the management target selector instead of 42px; retain dense row and utility control dimensions"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/vehicle-control.mjs",
+      "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
+      "target": "apps/web/combined/vehicle-control.mjs",
+      "targetSha256": "add44010a1c6093fb751f8f5381a2330f7b1d9ca9dc811690dc935599e4bfdda",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Import the shared map model/factory functions directly without depending on the order-planning view",
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/vehicle-control.test.mjs",
+      "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
+      "target": "apps/web/combined/vehicle-control.test.mjs",
+      "targetSha256": "3a0c7b8d18c1f371f118558f28a2e8301dbfa2402fe5eeadf7c37a9618407c25",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/vehicle-operations-model.mjs",
+      "sourceSha256": "28d5db33286cfadf7d95c78892d3bdb2a6fe045c2369bc4e60290e2709b31c1e",
+      "target": "apps/web/combined/vehicle-operations-model.mjs",
+      "targetSha256": "28d5db33286cfadf7d95c78892d3bdb2a6fe045c2369bc4e60290e2709b31c1e",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/vehicle-operations-model.test.mjs",
+      "sourceSha256": "87c1362b55540f97db6670bf65922289f6a70068e54dd7f243bf805333c5ab7a",
+      "target": "test/web-fork-legacy/vehicle-operations-model.test.mjs",
+      "targetSha256": "7f97037fe99d11f8acc0f8dec5a77fa563b3284b6e937f355b6d4a9542881653",
+      "reason": "Keep writer/scenario-dependent regression tests at repository level and point UI imports at the frontend fork; server imports remain repository-owned.",
+      "changes": [
+        "Retarget sibling UI model imports to ../../apps/web/combined; preserve existing Node writer/scenario imports"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/portal/auth-check.js",
+      "sourceSha256": "670270c99d8538e2e458981c204c5b3b5755860d17972aa47e29a38cb2e66acc",
+      "target": "apps/web/public/auth-check.js",
+      "targetSha256": "670270c99d8538e2e458981c204c5b3b5755860d17972aa47e29a38cb2e66acc",
+      "reason": "Copy browser-only portal validation, styling or session-check bytes to the fixed URL formerly served by the Node gateway.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "apps/portal/pages.js",
+      "sourceSha256": "282476702f5db4d6e47ac87506176130b36a9538964caf49cb8175c931c0207a",
+      "target": "apps/web/login/index.html",
+      "targetSha256": "7736911a4059f37bc8a9b42eb9ab41d9942465c79b010a132a479830d66bbec0",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Materialize login markup and frontend-managed next, registered and authentication feedback",
+        "Load the standalone portal authentication entry; keep authentication and session writes on the existing API",
+        "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions",
+        "Remove the redundant direct theme link; receive the shared public foundation through portal.css, matching native API authentication error pages"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/portal/pages.js",
+      "sourceSha256": "282476702f5db4d6e47ac87506176130b36a9538964caf49cb8175c931c0207a",
+      "target": "apps/web/dev/register/index.html",
+      "targetSha256": "3790df21f1fa93fd3673a971a57b717288221fb0c79a45481d1d52ae6cb3fa50",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Materialize invited registration markup and frontend-managed field/authentication feedback",
+        "Load the standalone portal authentication entry; keep authentication and session writes on the existing API",
+        "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions",
+        "Remove the redundant direct theme link; receive the shared public foundation through portal.css, matching native API authentication error pages"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/portal/portal.css",
+      "sourceSha256": "f60b1133cba63152770ed6a6df3db8dbc648beb6680bfb0609c4ca60be8ea01c",
+      "target": "apps/web/public/portal.css",
+      "targetSha256": "256932a607384ad22c92a2d78ceabfca9fb822ef49010f8f8e7a9fb69b8724a6",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Remove unused landing/workspace styles and duplicate overrides; retain authentication layout and feedback using the shared theme tokens",
+        "Import /theme.css from the public portal stylesheet so native API POST error HTML that links only portal.css retains the same authentication colors, font and dimensions"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/portal/validation.js",
+      "sourceSha256": "f05ca1c26f4c300fafe7eee80b90c3e2fbcc54970be0110682d97ff07c2f7366",
+      "target": "apps/web/public/portal-validation.js",
+      "targetSha256": "f05ca1c26f4c300fafe7eee80b90c3e2fbcc54970be0110682d97ff07c2f7366",
+      "reason": "Copy browser-only portal validation, styling or session-check bytes to the fixed URL formerly served by the Node gateway.",
+      "changes": [],
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/app.mjs",
+      "sourceSha256": "9e316941d088e79e69f526cc8be08e2cd548ef7f9966a93c0f2117059cdab412",
+      "target": "apps/web/ui-layout/app.mjs",
+      "targetSha256": "9ddefac01df6d695ef289bb192cc8909a620bbb27144c427b14721688cd37987",
+      "reason": "Preserve the reference sample controls and existing writer/API behavior while applying the listed guide-only visibility and focus improvements.",
+      "changes": [
+        "Preserve the gateway title",
+        "Remove the unused range import",
+        "Keep pointer navigation focus on the activated guide link; move keyboard/history/hash navigation focus to the requested heading",
+        "Clear the pointer-navigation marker before every rail click and consume it only for the matching changed route; keep keyboard/hash navigation focus on the heading",
+        "Hide the floating synthetic scenario panel only on the design-guide page so it cannot cover narrow-screen guide navigation/content; retain it on the sample views without changing business state",
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/design-guide.css",
+      "sourceSha256": "77d00d6a3386e87c79bf80a4cc8c2856f88948d291d31705d1a2b644bec4b293",
+      "target": "apps/web/ui-layout/design-guide.css",
+      "targetSha256": "c3c462c1655e71843c88b10ecd8da3185de33feb56147ba2ba069035ade79968",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Align guide tokens and control dimensions with the product theme; load the actual date-picker and extracted date/summary-toolbar styles",
+        "Apply the shared 44px control-height minimum only to design-guide tab specimens; preserve the existing 42px tabs in the synthetic sample views"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/design-guide.mjs",
+      "sourceSha256": "aa45a9f4886cdf4ce604aa4fd5e80a3ddbb48de49751441f35a3a36737545a21",
+      "target": "apps/web/ui-layout/design-guide.mjs",
+      "targetSha256": "86a0655ae39fccbc01fc3f1453953f2ba9a05df3504411dcc65696c5d755df42",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Compose the approved local guide from the preserved terminal specimens, a read-only previews/terminal-view reference and the actual combined date-picker/date-summary-toolbar/icon components; retain synthetic provenance and local-only sample interactions",
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "references": [
+        {
+          "path": "../previews/terminal-view/design-guide.mjs",
+          "role": "read-only design reference; not a copied legacy source"
+        },
+        {
+          "path": "DESIGN.md",
+          "role": "canonical product design decisions"
+        },
+        {
+          "path": "apps/web/combined/date-picker.mjs",
+          "role": "actual product date-picker component"
+        },
+        {
+          "path": "apps/web/combined/date-summary-toolbar.mjs",
+          "role": "actual product date/summary-toolbar component"
+        },
+        {
+          "path": "apps/web/combined/reference-icons.mjs",
+          "role": "actual product icon component"
+        }
+      ],
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/index.html",
+      "sourceSha256": "4df117e6bd50b42b96719d7fc6b77e2f34abd7b2d3d388e53e4a1329725ee7a9",
+      "target": "apps/web/ui-layout/index.html",
+      "targetSha256": "9b68bd29080f2bdf2948c59d933cd4a7fbfb5131cc5d54dcce889d26e4c79d77",
+      "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
+      "changes": [
+        "Materialize title, map CSS and session-check injection",
+        "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions",
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/sample-data.mjs",
+      "sourceSha256": "e088dead8d9328e7e811687f741014958a38682b0d55f67b8b3c09992f60cafa",
+      "target": "apps/web/ui-layout/sample-data.mjs",
+      "targetSha256": "e088dead8d9328e7e811687f741014958a38682b0d55f67b8b3c09992f60cafa",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/jiin-ui/sample-data.test.mjs",
+      "sourceSha256": "e9fad4a3dd9d0bb44eebca7a0207e29550bdee84a629540b68367dcf0e6aadb2",
+      "target": "apps/web/ui-layout/sample-data.test.mjs",
+      "targetSha256": "e9fad4a3dd9d0bb44eebca7a0207e29550bdee84a629540b68367dcf0e6aadb2",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/jiin-ui/scenario-tools.css",
+      "sourceSha256": "cfb0838e64e1e9b3ce9c83158ff9f04190796d0510f183c59464ac2ed9380c94",
+      "target": "apps/web/ui-layout/scenario-tools.css",
+      "targetSha256": "a5f2facc7c383afb750523db0e96907a3352635b37977cd29f5c453f0b67fc5f",
+      "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
+      "changes": [
+        "Use the loaded shared --meatbox-font in the reference scenario widget instead of its unloaded Pretendard family name; preserve widget and utility dimensions"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/jiin-ui/scenario-tools.mjs",
+      "sourceSha256": "729889b365b4221356b7dd35aa6e8516746acd2e05693d38caeecba5f11d6360",
+      "target": "apps/web/ui-layout/scenario-tools.mjs",
+      "targetSha256": "dee1a222668e487b6dcc5fa6e7c5355ab02944745a463197a6315c960c2f937f",
+      "reason": "Preserve the reference sample controls and existing writer/API behavior while applying the listed guide-only visibility and focus improvements.",
+      "changes": [
+        "Add explicit panel visibility control, skip resize positioning while hidden and reapply the existing viewport clamp when the sample panel is shown again; preserve scenario controls and stored position"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/jiin-ui/scenario-tools.test.mjs",
+      "sourceSha256": "9e7f88d36cff235c983705f9a0337aab58e27cf27cc85ac2299aac097eaad99f",
+      "target": "apps/web/ui-layout/scenario-tools.test.mjs",
+      "targetSha256": "9e7f88d36cff235c983705f9a0337aab58e27cf27cc85ac2299aac097eaad99f",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/jiin-ui/styles.css",
+      "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
+      "target": "apps/web/ui-layout/styles.css",
+      "targetSha256": "276bed5c5e4b1a34d3504bb79c1efdc7a70430cd90cd09508399212beb5a3034",
+      "reason": "Replace the monolithic CSS entry with explicit original-order imports; fragments preserve complete original line-range provenance and reviewed shared-theme/date-toolbar changes.",
+      "changes": [
+        "Split the original complete CSS cascade into explicit responsibility fragments while preserving their import order"
+      ],
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/styles.css",
+      "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
+      "target": "apps/web/ui-layout/styles/foundation.css",
+      "targetSha256": "0c10155fc887bacb927d762937903b3e9ecbea869df5a419fedf5907b9aa79e2",
+      "reason": "Derive the foundation stylesheet from original lines 1-55; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 1-55 into a dedicated stylesheet",
+        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 1,
+        "lastOriginalLine": 55,
+        "extractedSha256": "3d9259789a5a996c14ab9bbeeec1bc67d1479491e8e3d695368a942135ab7870",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/styles.css",
+      "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
+      "target": "apps/web/ui-layout/styles/shell.css",
+      "targetSha256": "8a8da14334c85bc2e41627ef50a128e20b887ab11d57a48e2596e3c06c51374d",
+      "reason": "Derive the shell stylesheet from original lines 56-345; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 56-345 into a dedicated stylesheet",
+        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 56,
+        "lastOriginalLine": 345,
+        "extractedSha256": "7676112f9e9af7e7ca9e928b371d574d61f9b9c64fabf27887d78239adb1fc17",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/styles.css",
+      "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
+      "target": "apps/web/ui-layout/styles/workspace.css",
+      "targetSha256": "005419175657f36e33c789816753c025dcefbc19d4b0376eafa2cb65a43f68ab",
+      "reason": "Derive the workspace stylesheet from original lines 346-967; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 346-967 into a dedicated stylesheet"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 346,
+        "lastOriginalLine": 967,
+        "extractedSha256": "005419175657f36e33c789816753c025dcefbc19d4b0376eafa2cb65a43f68ab",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/styles.css",
+      "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
+      "target": "apps/web/ui-layout/styles/preview.css",
+      "targetSha256": "fa759193fa32dcd51b7ecf97ef78698fefcfb416ac60770be4f9c3845cb0bc35",
+      "reason": "Derive the preview stylesheet from original lines 968-1200; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 968-1200 into a dedicated stylesheet"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 968,
+        "lastOriginalLine": 1200,
+        "extractedSha256": "fa759193fa32dcd51b7ecf97ef78698fefcfb416ac60770be4f9c3845cb0bc35",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/styles.css",
+      "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
+      "target": "apps/web/ui-layout/styles/controls.css",
+      "targetSha256": "375da3f2b9d0e1df2839238556cedf6fd2b0d257916f29c79639be86beda83bf",
+      "reason": "Derive the controls stylesheet from original lines 1201-1332; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 1201-1332 into a dedicated stylesheet",
+        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 1201,
+        "lastOriginalLine": 1332,
+        "extractedSha256": "176f65944d5eba19fed61bb2417660eb263508cade657d38166965e21df37327",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/styles.css",
+      "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
+      "target": "apps/web/ui-layout/styles/responsive.css",
+      "targetSha256": "59d50c942d5bd462b3442db9a1cf998b1860226d07f32987d73f3b204fbc2db9",
+      "reason": "Derive the responsive stylesheet from original lines 1333-1540; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 1333-1540 into a dedicated stylesheet",
+        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 1333,
+        "lastOriginalLine": 1540,
+        "extractedSha256": "0da36e9ffb06aaecb423252e656ee4b028daf48a498ffcfc3dd4d7609fe71627",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/styles.css",
+      "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
+      "target": "apps/web/ui-layout/styles/composition.css",
+      "targetSha256": "073ed60e5a20fdddca8b56d7dc0ca2c1acc79c0664c8423906beff3446f97011",
+      "reason": "Derive the composition stylesheet from original lines 1541-1782; keep the initial extraction hash separate from the reviewed current target hash.",
+      "changes": [
+        "Extract original CSS lines 1541-1782 into a dedicated stylesheet"
+      ],
+      "derivation": {
+        "kind": "css-line-range",
+        "firstOriginalLine": 1541,
+        "lastOriginalLine": 1782,
+        "extractedSha256": "073ed60e5a20fdddca8b56d7dc0ca2c1acc79c0664c8423906beff3446f97011",
+        "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
+      },
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/view-components.mjs",
+      "sourceSha256": "0e381f10b2c4a063e5d9a440a60bdb0a32449e9c4063aac5cbe0c21b8be3a8a0",
+      "target": "apps/web/ui-layout/view-components.mjs",
+      "targetSha256": "8a1c85e7fd6c9181adf168dbc68359e92c5975e87ea90e3738c3747f39bda998",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [
+        "Removed retired demo behavior while preserving operational regression coverage."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "workspaces/jiin-ui/view-model.mjs",
+      "sourceSha256": "18ac4fda9d1f3c5a1e85af2edb58bfc40b79248afb4a8179fb9fb883d325ddf3",
+      "target": "apps/web/ui-layout/view-model.mjs",
+      "targetSha256": "18ac4fda9d1f3c5a1e85af2edb58bfc40b79248afb4a8179fb9fb883d325ddf3",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/jiin-ui/view-model.test.mjs",
+      "sourceSha256": "3731e9995072ab08ab9e38c7afd97406eb74b829b9017a44154c2ee3b65c0643",
+      "target": "apps/web/ui-layout/view-model.test.mjs",
+      "targetSha256": "3731e9995072ab08ab9e38c7afd97406eb74b829b9017a44154c2ee3b65c0643",
+      "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/common.js",
+      "sourceSha256": "208e5b4cfe50adbc9bfc11933413b0975e4a3024685cc2d525dcc45ed9e84f2b",
+      "target": "apps/web/public/scenario/common.js",
+      "targetSha256": "3a373ce574041cd88539bf0e472e6ed50e368c679de7428ed49e369b6f72b466",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Preserve WS/data URL and expired-session handling",
+        "Mark the unused showAll destructured argument without changing its option key"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/control.html",
+      "sourceSha256": "d04883563638aa6a9ff5027db48b6111304a23f7dc005d6792a25b63c2a87da1",
+      "target": "apps/web/scenario/control.html",
+      "targetSha256": "3978fe85d4a4abf70ed9a1c203429451b668a9ffec88350c8e9f026117c9d802",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Materialize path/title/SRI/style/session injection"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/control.js",
+      "sourceSha256": "3fe754b00d3d1a5f3168d1f818886afce7ea63046a0e8c1a8b6151616a2f4cc0",
+      "target": "apps/web/public/scenario/control.js",
+      "targetSha256": "3fe754b00d3d1a5f3168d1f818886afce7ea63046a0e8c1a8b6151616a2f4cc0",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/customer.html",
+      "sourceSha256": "4e08c208049417925552f6eb67ae71c81307853ded10c32ea2a88ca4e39a5a8f",
+      "target": "apps/web/scenario/customer.html",
+      "targetSha256": "bded179444edc4f5518de6dece1c609308e98216029edf66c47b5f1f63a04b7d",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Materialize path/title/SRI/style/session injection"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/customer.js",
+      "sourceSha256": "d1d74a6808758606a3f4573defb50f0b0d2eac23ca047f933ff210a390b8ee71",
+      "target": "apps/web/public/scenario/customer.js",
+      "targetSha256": "d1d74a6808758606a3f4573defb50f0b0d2eac23ca047f933ff210a390b8ee71",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/driver.html",
+      "sourceSha256": "b955e51c1f62a387c51a90c51c18e51bb015a48bc46c1c377c0c0140e2a557df",
+      "target": "apps/web/scenario/driver.html",
+      "targetSha256": "4ff8c9d2ce052eaef0cb2010b1eb050e5cbcd465b0ddac45877aac44597ba588",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Materialize path/title/SRI/style/session injection"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/driver.js",
+      "sourceSha256": "4152285d6b9cd87fd161d5866d684f8f335904e5181c5b811395c220618ae540",
+      "target": "apps/web/public/scenario/driver.js",
+      "targetSha256": "b713c92ce8c4219fb70aa6d83f85253050cd4e2b76fcc581a38c60e2c293cec7",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Preserve delivery-proof screen handoff"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/index.html",
+      "sourceSha256": "c7627beed01281536fb0672f43b97eafdaa7a3ddd6720e97652b5cc8826b69dd",
+      "target": "apps/web/scenario/reference.html",
+      "targetSha256": "43814838dd3bc3c5b1ced2624071259973192f8da074f7fb0ec335a54ce6538e",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Materialize path/title/SRI/style/session injection",
+        "Preserve original menu as reference; gateway retains scenario index redirect"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/present.html",
+      "sourceSha256": "8a400c0f1fd64d93d58a7f8f6fa3973862529312bfea01a2fc72215cc316a91c",
+      "target": "apps/web/scenario/present.html",
+      "targetSha256": "83ff30c647b98df7705012fc0234e41219d147b4d57a08eb0dd2a6bb187e9be2",
+      "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
+      "changes": [
+        "Materialize path/title/SRI/style/session injection"
+      ],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/present.js",
+      "sourceSha256": "cd927c2070563bac8b8331a4e8019d7f16897f57f80236ea8054165fa0b04220",
+      "target": "apps/web/public/scenario/present.js",
+      "targetSha256": "cd927c2070563bac8b8331a4e8019d7f16897f57f80236ea8054165fa0b04220",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "source": "workspaces/sanghyun-scenario/public/shared.css",
+      "sourceSha256": "0f6304f06e9c36be4393cf8d6ec0ec42337789a9ddb459c4484c3ffae10c2ee7",
+      "target": "apps/web/public/scenario/shared.css",
+      "targetSha256": "0f6304f06e9c36be4393cf8d6ec0ec42337789a9ddb459c4484c3ffae10c2ee7",
+      "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
+      "changes": [],
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    }
+  ],
+  "authoredFiles": [
+    {
+      "path": "apps/web/.gitignore",
+      "origin": "authored",
+      "sha256": "01eac943c846940d6a989697e4eb0bdb332a1c7d6f82843182401368954e03b6",
+      "reason": "Exclude installed dependencies and local build/proof artifacts from the frontend source package.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/.oxlintrc.json",
+      "origin": "authored",
+      "sha256": "831183483f67cdf1591dfc437a838b334e7376948cf11aae893c5323392597fb",
+      "reason": "Apply the selected correctness, browser/Node-boundary and Anti Slop checks to authored and forked frontend code.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/README.md",
+      "origin": "authored",
+      "sha256": "c259f9c4fdd9ce5394539027c21595f918feb6708bb05374fecdfb9563434c94",
+      "reason": "Describe the current complete frontend fork, original API writer, shared design theme, local commands and verification boundaries. Document actual Kotlin reader connection, single-writer ownership, fixture and integration commands. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Document the verified native TEST Kotlin authentication and dispatch ownership, Node API shutdown, supported rollback fixtures, offline account administration, and demo deletion scope.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/package-lock.json",
+      "origin": "authored",
+      "sha256": "257f2ef2c89d4c451ed2e5f4ae92ab1adb8313bda96c60b3f7e4c677a2b94ee2",
+      "reason": "Lock the independently owned frontend build and validation dependency tree for reproducible installation.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/package.json",
+      "origin": "authored",
+      "sha256": "eb0c48c89e04dfd35a217a6f34bca7258d860d067ccbbb780bebe1e2085c5f35",
+      "reason": "Own one frontend package with pinned toolchain and explicit build, recursive regression and artifact verification commands.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/public/theme.css",
+      "origin": "authored",
+      "sha256": "94ef6256c3a7342d07cab9b09051989857707dc5f26a52fd4d37d182b42ac72f",
+      "reason": "Author the shared public font, brand and dimension foundation using approved DESIGN.md decisions without exposing protected UI code or business data.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/scripts/api-routing.mjs",
+      "origin": "authored",
+      "sha256": "b3de7777466b7702f3f2771e852ca12d5f8f031f2f27d77ca2c3e691d73016dc",
+      "reason": "Share exact optional Kotlin GET/HEAD routing for gateway and Vite, preserve all legacy writer paths, and force reader/failure headers without automatic fallback. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/scripts/legacy-gateway.mjs",
+      "origin": "authored",
+      "sha256": "c7c2c6f14040c172946e13ecbe43857e93cd2f631ccc7f48bb6cbf6db4c93bdc",
+      "reason": "Serve only allowed built frontend paths, preserve legacy routes and forward cookie/origin/API/WebSocket contracts while the existing Node service remains the writer. Add opt-in exact Kotlin read routing while Node remains the authentication and single business writer. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/scripts/serve-legacy.mjs",
+      "origin": "authored",
+      "sha256": "b67cac9e7b5632b3e9cf2cd53b1fb0dc24bb16cffbe1ce7fa38b609914a6940f",
+      "reason": "Provide the loopback-only local entry for the built frontend and existing API gateway without importing server implementation. Add opt-in exact Kotlin read routing while Node remains the authentication and single business writer. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/scripts/test.mjs",
+      "origin": "authored",
+      "sha256": "988768d83f5de13baf6954f3ef51d3be337f9ec88133e964003fc4f54d99a9ad",
+      "reason": "Discover frontend regression files recursively under combined, ui-layout, src and test so extracted-module tests remain in the default check.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/src/api/dispatch-contract.test.mjs",
+      "origin": "authored",
+      "sha256": "e102ee3956de66d11cc695c1b7dc4b3644acbc0384e677c1e87c21a4d1753a45",
+      "reason": "Exercise the actual simulation connection to prove explicit-reader input/errors never open WebSocket while the original headerless legacy mode does.",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/web/src/api/dispatch-contract.ts",
+      "origin": "authored",
+      "sha256": "72fcbec116b4fc582cf5cbd37ce72d48639b8e1d4b787c72fff419235f94b05e",
+      "reason": "Define the explicit reader contract so missing Kotlin source never selects historical simulation while headerless legacy behavior stays intact.",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/web/src/auth-contract.ts",
+      "origin": "authored",
+      "sha256": "4210e4e1c3b99a4e62ee683e9972ff25b12db568a84e2e02acff6db19678b288",
+      "reason": "Define the frontend authentication response and input contract without importing Node account/session implementation.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/src/auth.ts",
+      "origin": "authored",
+      "sha256": "329264def311646eb056372b0c19c91b8911337337dff46340c7da20eee76dd1",
+      "reason": "Handle frontend-owned login/registration feedback and safe redirect behavior while authentication/session writes remain on the API.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/src/shared/maps/order-map.test.mjs",
+      "origin": "authored",
+      "sha256": "1da554a8e35d01739c0410e7af6153cf59b9e788188d56e2e724fd0f50fef093",
+      "reason": "Lock map settings, coordinate/model behavior, marker identity and attribution observer cleanup before extracting the shared map functions.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/test/api-routing.test.mjs",
+      "origin": "authored",
+      "sha256": "042835fa7c312c0f5ec174f2559f8783fe4aab71e471d307f90f91bb6e425519",
+      "reason": "Verify real HTTP routing, error/no-fallback boundaries, direct writer methods, query/body/headers and Vite middleware behavior. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Verify native owner routing and trusted client-address forwarding, including rejection of spoofed headers and exact loopback boundaries.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/test/auth-contract.test.mjs",
+      "origin": "authored",
+      "sha256": "a7e15725e5700b6d99b466cc67bb072f121cd94f101d3553593bc257fabbf2ae",
+      "reason": "Verify authentication response status, safe feedback extraction, field behavior and redirect/error boundaries.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/test/fork-artifact.check.mjs",
+      "origin": "authored",
+      "sha256": "867333b0c9e430359c201a1f298fd97ad14175981ba67fe471b21cb45cb65c3c",
+      "reason": "Check real built pages, independent public authentication/theme assets, gateway response transformations and protected-source isolation. Verify the built public portal stylesheet imports the independently served shared theme.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/test/legacy-gateway.test.mjs",
+      "origin": "authored",
+      "sha256": "d59ff7fe74b2a0fcf3917ac73ec0eacab251ace17cfe138ad49a76bbfc8908e8",
+      "reason": "Verify existing API/session/origin/WebSocket forwarding, exact public allowlists and fail-closed protected asset serving. Verify native incorrect-login 401 and invalid-registration 400 HTML responses retain the public portal stylesheet contract. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "origin": "authored",
+      "sha256": "2fdbfaa9ddb7a2e1a0204a90587611d34b745a24aa4a8dcbff89c956b9b9f0a1",
+      "reason": "Apply strict checking to new TypeScript and keep forked legacy JavaScript outside an unsupported whole-codebase typecheck claim.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/vite.config.mjs",
+      "origin": "authored",
+      "sha256": "df3c26d041a1dd7c9a7314106d44f7d8cb128b2c37b979a202dfcf3405bfd33e",
+      "reason": "Build all frontend HTML entries and public assets from the standalone package with independent authentication output and local proxies. Add opt-in exact Kotlin read routing while Node remains the authentication and single business writer. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection.",
+      "status": "active"
+    }
+  ],
+  "historicalTargetFileCount": 163,
+  "historicalAuthoredFileCount": 21,
+  "originalSources": [
+    {
+      "path": "apps/combined/app-viewer.css",
+      "baselineSha256": "b5bf42108ca202f2f5f35d859dba4681d75ef637c170ca94ef2edb04adeecd29",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/app.mjs",
+      "baselineSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/OFL-1.1.txt",
+      "baselineSha256": "82e9c8a4b203261f10ddba1296422d64914ff3d4b7bd8a12896d03f0f088d70a",
+      "status": "active",
+      "currentSha256": "82e9c8a4b203261f10ddba1296422d64914ff3d4b7bd8a12896d03f0f088d70a"
+    },
+    {
+      "path": "apps/combined/assets/PretendardVariable.ttf",
+      "baselineSha256": "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22",
+      "status": "active",
+      "currentSha256": "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22"
+    },
+    {
+      "path": "apps/combined/assets/SOURCES.md",
+      "baselineSha256": "6ffa9631265e05a66936bb0ec72b1c1ca29773066e6177c371377199f1be8e1d",
+      "status": "active",
+      "currentSha256": "44317f9bc4b9e47580e5634eaf3bdc6bc73d07df1535482609d235f39698ab1f"
+    },
+    {
+      "path": "apps/combined/assets/delivery-proof-example.jpg",
+      "baselineSha256": "7f21a25e02cf13f6e812d61eddfa020f588c81a594650b4fc9106a2bec0e7796",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/maps/README.md",
+      "baselineSha256": "428bbdf31ddcf0bf131d472bca0c1741485c1410e2df162bfec34574e591ccf1",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/maps/driver-depot-pin.svg",
+      "baselineSha256": "e177a827adddac41f5ba01dede0d7c1e387365f2edd410bcf510d32b4b88c7fa",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/maps/dsv-destination-marker.svg",
+      "baselineSha256": "5f0ef8bc2ee43180de43101b26c4abd8d13cdfead5c31cf032e59554df870a46",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/maps/dsv-korea-v1.json",
+      "baselineSha256": "0acdfb023997c18119ea41cdb3e86affc7e7cdbf5d0b2f33c4f00daa575b9449",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/maps/dsv-vehicle-marker.svg",
+      "baselineSha256": "dac8f0b0bc172d8fecdfce13c306ea53ec9395655f2c84896b5b0a48bc3ea7ad",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/meatbox-app.webp",
+      "baselineSha256": "9e15812f416651aa6e9a2152c989adb3b4b69130d70db882f37c5a75a8cdeb2c",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/meatbox-logo.svg",
+      "baselineSha256": "2231ec7d8b06a067285c554be3a9d11d16e302f64480f36e0079bd72cf71c088",
+      "status": "active",
+      "currentSha256": "2231ec7d8b06a067285c554be3a9d11d16e302f64480f36e0079bd72cf71c088"
+    },
+    {
+      "path": "apps/combined/assets/vendor/maplibre/LICENSE.txt",
+      "baselineSha256": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/vendor/maplibre/maplibre-gl-csp-worker.js",
+      "baselineSha256": "f950e7b15c49c8b9c7bb52136df2a2df2f6f03b83b8927774573fc98b067f7f0",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/vendor/maplibre/maplibre-gl-csp.js",
+      "baselineSha256": "a1f1847bac64aa00acbf80fbb79b2c5af24d8eecaaa5e2ad14080fab81f1de95",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/assets/vendor/maplibre/maplibre-gl.css",
+      "baselineSha256": "ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/brand.css",
+      "baselineSha256": "e4d1a54e279495b190e88e340ecf7c257d11a758a3500c2ba1329a422e5b3e30",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-demo-route.mjs",
+      "baselineSha256": "c0ebaf11c57ba47084d6f8edc91496f75a02b91997dbbf843c6853b4c1f9714c",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-demo-route.test.mjs",
+      "baselineSha256": "3053be1cd456070039559369c5507335b091eeda0629e5aa613c5602a8008929",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-inbox.mjs",
+      "baselineSha256": "df5935562bf9506cdf30510156cfc53d772fa7e5f1ef50bf80c460040f859170",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-inbox.test.mjs",
+      "baselineSha256": "a26ca0210c84b4f05890c0ef77853145ccc16358159b0bf4ce153dcb26194683",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-picker-model.mjs",
+      "baselineSha256": "e9182c73a2e96ef28c51514e1d211cbd63e39a7e54d219fca108961fde19d41b",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-picker-model.test.mjs",
+      "baselineSha256": "7996d03e6d5612902299d3652bcede1451aaa362aaf127079edd923ac21156b1",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-renderer.mjs",
+      "baselineSha256": "0b8db425757bc6549b3def45f2aa80dfa484a571e7b59975da3c83858b20f253",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-renderer.test.mjs",
+      "baselineSha256": "5a95f7b3aeba9e6049b481effc50cf0a35fdb41557b06178c8bdf63367607c2e",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-requests.css",
+      "baselineSha256": "ff0b5b153d8242395dcd2d89081721a0ba3781220089c84b33faff28f50a2a9d",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-requests.mjs",
+      "baselineSha256": "45117fbb2a187b39b78c24e7c7221921e0ca63918470f43aa65cd34c99458306",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-requests.test.mjs",
+      "baselineSha256": "aaf12a65a6af51136d1d7491f198756adbbade262564da2656d661fe5c6fc15e",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-scenarios.mjs",
+      "baselineSha256": "272e17320793a161802c7d9859ab2191fe32889629d8bd178ef694d1a07a183e",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/customer-scenarios.test.mjs",
+      "baselineSha256": "75202de094bc85fc9cbf49737204b9059959b235126b05bc8774085ef906dddf",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/date-picker.css",
+      "baselineSha256": "42ae92908366916e1055b017c7962dcc62b1c08c1e7470e99d69f9aa5437c36a",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/date-picker.mjs",
+      "baselineSha256": "dd01276feb79196c02b11aaa569d38b4785fbe8e21e86dfbcc52b811f0f6adcd",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/date-picker.test.mjs",
+      "baselineSha256": "cddb0c83f730b7bc590c1952873d8cfde18f12e59db4420cff9e40ca4bda3d12",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/date-summary-toolbar.mjs",
+      "baselineSha256": "a37923e8f65437be1808ce9b5d011c8b444bef7694e161dd195ab9a7d2e9caff",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/date-summary-toolbar.test.mjs",
+      "baselineSha256": "55bd07b865d77cbc6713ad464054aaacb880863c507f5be5fc2039a985100b4a",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/dated-dispatch.mjs",
+      "baselineSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/dated-dispatch.test.mjs",
+      "baselineSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/delivery-bundles.mjs",
+      "baselineSha256": "5b0d7cd655ab96f7d8a6f158635d6c99d8ba1bf2b18889714c84a5691864e5dd",
+      "status": "active",
+      "currentSha256": "5b0d7cd655ab96f7d8a6f158635d6c99d8ba1bf2b18889714c84a5691864e5dd"
+    },
+    {
+      "path": "apps/combined/delivery-bundles.test.mjs",
+      "baselineSha256": "5c428aae10542c9dad27bc7bd08219567dc1649a133fed09825347880cb4b0a8",
+      "status": "active",
+      "currentSha256": "5c428aae10542c9dad27bc7bd08219567dc1649a133fed09825347880cb4b0a8"
+    },
+    {
+      "path": "apps/combined/delivery-review.mjs",
+      "baselineSha256": "f80b2df8ee4b5b1d009009c9d47bfce94ca6a7635f38f65af9caa8fb6a780d65",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/delivery-review.test.mjs",
+      "baselineSha256": "53024d07740e75bf5732d219368be95863ef6db848d354d46267bf741f771bb0",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/demo-shell.css",
+      "baselineSha256": "383859293707aeda3972737e65303a8bea36ac540b955ccc58e89afd6c5d40a9",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/demo-shell.mjs",
+      "baselineSha256": "99d9ee46030ed0964eda609db8a657737e2fde42d37771be18e3d7885ccf0e48",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/destination-directory.mjs",
+      "baselineSha256": "8448e916376c2119558583082e9905b283dc862ae11f78fe347a11e7d4409ffb",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/destination-directory.test.mjs",
+      "baselineSha256": "77e300a08b8f39baf6c4a0e743a6ac9113ac807cf8374b72cf0e0067556f9c9c",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/dispatch-assignment.mjs",
+      "baselineSha256": "85da0244a3ae9a72ba56dd49084ac0dda9d629860879e847fdba078a4dc41299",
+      "status": "active",
+      "currentSha256": "85da0244a3ae9a72ba56dd49084ac0dda9d629860879e847fdba078a4dc41299"
+    },
+    {
+      "path": "apps/combined/dispatch-assignment.test.mjs",
+      "baselineSha256": "595c7f66b6edb70818df1a8280a5cbfa7c1e133b05ed28fdc81ea62dab3cab09",
+      "status": "active",
+      "currentSha256": "595c7f66b6edb70818df1a8280a5cbfa7c1e133b05ed28fdc81ea62dab3cab09"
+    },
+    {
+      "path": "apps/combined/dispatch-map-layer.mjs",
+      "baselineSha256": "944304bc83934f094fa317494e7d5ed047ba0b0f432cae91d247fd7a71dcf56d",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/dispatch-map-layer.test.mjs",
+      "baselineSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/dispatch-presentation.mjs",
+      "baselineSha256": "b7d05ff12247461d1a15fcda270612486f03248eab0ec7fb7a1fd69b2a69cacd",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/dispatch-workflow.css",
+      "baselineSha256": "d3c042a43e3ae08a4eac46590b3bc9f662d90ba11a909fb5a4c4b5b99ea00a13",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/dispatch-workflow.mjs",
+      "baselineSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/dispatch-workflow.test.mjs",
+      "baselineSha256": "1e721931eec18bce6266d669083e65ab096947ca61a4bf9c3637bf549156f0f2",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-history-calendar.mjs",
+      "baselineSha256": "c097a37e1d31ddf19aa9bebc2083ddae07257828d9451612b9bfed18238229cf",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-history-calendar.test.mjs",
+      "baselineSha256": "03526c046b116035d3ef5d3b3a732296625a541ac9fceea52a117578cdc3188a",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-history.mjs",
+      "baselineSha256": "33387d656e501b4eab441be3ab43c71b60a2742c067f49a55326f01aba6f691a",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-history.test.mjs",
+      "baselineSha256": "c71edadc44052eb806a6df7fb6c9357d36b66c6fda279fa785ffbc74178d36d2",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-map-model.mjs",
+      "baselineSha256": "5fce54d456c274ad3f3a828b1133c04416ad80b036714ae4f93a423f68c2e411",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-map-model.test.mjs",
+      "baselineSha256": "504bafb6f8ce4e02f839177b234adf92342e74dd8bb02f0a3398d0e6b0a1a82c",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-map.mjs",
+      "baselineSha256": "dce5b43bab1d9cbf1b6b7dc5cfeb37e86aaa45634aeb1ca39486923b6de19141",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-map.test.mjs",
+      "baselineSha256": "259cb0b1e8c642e07b0213ae605e41b160f2e86d6c4f35a5f8fe2e0bf3a044ee",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-settings.mjs",
+      "baselineSha256": "11e073f7923a1f783a5d71f62da8d8e406072a758ce71489f8b67d82c7b535ed",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-view-model.mjs",
+      "baselineSha256": "32802901efce8012577c5937df6be8dcd386886972e5d951e4280021a964c5f0",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver-view-model.test.mjs",
+      "baselineSha256": "b6c3f320241c8480f5afec1470f54a71f2fd77bdb83447a3061924b7ed832a7a",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver.css",
+      "baselineSha256": "5502e9fe5b9dbf4b43ea66ff289e5899cf3729cdf97e1f2a3fac3ebb9d149c53",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver.html",
+      "baselineSha256": "844acf381f77714f6c96333cd7bdf315cb1cc6eab02f0db1c34c341d8045f2bd",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/driver.mjs",
+      "baselineSha256": "779f1aaa79680cb6c919a5b07e1f7339504d096f6d9bf1f7c3ccbf55faee611e",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/index.html",
+      "baselineSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/map-preview.css",
+      "baselineSha256": "83e16a5d0e67fee06e09f2ecf0189266e33bb3e1af1c32f6a57b95ddc7237a3c",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/map-wheel-zoom.mjs",
+      "baselineSha256": "6c095e031975ac80e1e443c1fa95ed1d02d8776acb5a3f18fd94cdab2d780b77",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/map-wheel-zoom.test.mjs",
+      "baselineSha256": "0fb048418eb21f7e36b4ff8a492435840ecf7bd82c8fa07d5a294d47ff8dcc4e",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/mobile-customer-links.mjs",
+      "baselineSha256": "79acbcaf12d7674650ae6df085f2562c47c911eae1eef892f16c36907052f56e",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/mobile-customer.css",
+      "baselineSha256": "8f6cb89ee52e7a153f142eebe42db0b94d207e6689afc24c2410dc9fdd018233",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/mobile-customer.html",
+      "baselineSha256": "9ba6b85ef694ca0186615c2bcb1a11ac658f99fcf84a46ad3ffb9470ac97d12b",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/operating-date.mjs",
+      "baselineSha256": "b77d29fe79539d8809ae9d121b2152163c71bb70368d2614369cdc594eb7370f",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/operations-model.mjs",
+      "baselineSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/operations-model.test.mjs",
+      "baselineSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/operations.css",
+      "baselineSha256": "97acc70d352b0fe56833669611ef10b4ffbdab2f56a79e3f891ac9af4dc86b4b",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/order-planning.css",
+      "baselineSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/order-planning.mjs",
+      "baselineSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/order-planning.test.mjs",
+      "baselineSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/pagination-model.mjs",
+      "baselineSha256": "f6f85d5b296b27daafd9ad932f64b1c6f4608e2b66c6fa141d02c3013b4bc476",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/pagination-model.test.mjs",
+      "baselineSha256": "1302bcf42732d9b25f973063f62f0f486858f216db8d5870ceaa4d27bb31936b",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/reference-icons.mjs",
+      "baselineSha256": "f58dd54e94dc91a9f9c8e90a48820c8fe5b48a39a3e605971ac629b09267e2ba",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/resource-client.mjs",
+      "baselineSha256": "d4d51b50f7fb8c55961f33c5bc9b2e3c4511b38bb98574e4725394ef31a9f9f2",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/resource-client.test.mjs",
+      "baselineSha256": "dfa9f6cc94bbb00822863cf0f86924ef9d3e0352f2948f8d9abeecc3ab1b31a7",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/resource-management.css",
+      "baselineSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/resource-management.mjs",
+      "baselineSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/resource-management.test.mjs",
+      "baselineSha256": "44615c6e7c1e03176b84950823376125d3913f946b27b745932d83f5de7b54f5",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/route-editor.mjs",
+      "baselineSha256": "19e20fbbb0c48b070d4a9e289bbbd1ee5557f0e20c57aa6a050a54f3644764d3",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/route-editor.test.mjs",
+      "baselineSha256": "a1e90e8412edb90cf341b7bf8487abac5629f45f204d84893b7ee1d41e28556f",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/scenario-guide.mjs",
+      "baselineSha256": "129cbbffec628cb96cc3b3c62854ba24c663e9f888654a99a8286678b5d4b99e",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/scenario-guide.test.mjs",
+      "baselineSha256": "b790e25acd564de42c7d74bd8f5b323efd942ac85fae83a541ee215535008afd",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/scenario-tools.css",
+      "baselineSha256": "1334b3c8d4cf4e817ad1fe376f0a1677a4e9672bf37929c05e86eda48517e539",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/scenario-tools.mjs",
+      "baselineSha256": "202b0959705cceb66fb120200a1d21830d6421d3b5eb131e90f8c6e7801751d9",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/scenario-tools.test.mjs",
+      "baselineSha256": "0d943e9d72b442c712980ee33e1b66e481452d87600e0db11c3c5c890ea6f604",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/simulation-adapter.mjs",
+      "baselineSha256": "5eefd43b37e1984de1009b0537a22b753610bc292db82416965b22c940e1ccd1",
+      "status": "active",
+      "currentSha256": "5eefd43b37e1984de1009b0537a22b753610bc292db82416965b22c940e1ccd1"
+    },
+    {
+      "path": "apps/combined/simulation-adapter.test.mjs",
+      "baselineSha256": "054905457874fb971973ac92e7e0fd6b3638858bfe2c4ce1448e290906aae212",
+      "status": "active",
+      "currentSha256": "054905457874fb971973ac92e7e0fd6b3638858bfe2c4ce1448e290906aae212"
+    },
+    {
+      "path": "apps/combined/simulation-client.mjs",
+      "baselineSha256": "9eb1950a8a75eb67e57a28e0da770b6497602c62024eb09958f77aea808ea8d0",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/simulation-client.test.mjs",
+      "baselineSha256": "802909c4d14874f7f57840b9f2c06f107c4db7a2c61e265114ba6ce585c6339c",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/source-client.mjs",
+      "baselineSha256": "00c7cfb02120fc13b6ca0d43f1e54a5c93c6af59401bad0785b0bd69edd8c8c9",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/source-client.test.mjs",
+      "baselineSha256": "916b9829e26c5dceb234b08bb6a3f1b2c9f00b092abbc21a88a61d1f0ec7ab21",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/source-context.mjs",
+      "baselineSha256": "a747d4a9a5270f4a973863166b16290eece7faaf978f70a00dfd6eb2afde64aa",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/source-context.test.mjs",
+      "baselineSha256": "e2c2a68eda625b2c3bbb08983a62a6e97500ecf22fe5721ac491645057e661ad",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/source-viewer-plan.mjs",
+      "baselineSha256": "7bf25e4b6de82d5a7c5f3126e57d991917784598c70d800b2e19fbf8be62d61d",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/source-viewer-plan.test.mjs",
+      "baselineSha256": "60b0bccae66c73ee5f207b784ec63ba729ca6eaadc7eab996c127b8e45fc8b7e",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/state-frames.mjs",
+      "baselineSha256": "79fbac705124888bd4ba8babc8643dd33652be61411815f1d7c5d748404e161c",
+      "status": "active",
+      "currentSha256": "79fbac705124888bd4ba8babc8643dd33652be61411815f1d7c5d748404e161c"
+    },
+    {
+      "path": "apps/combined/styles.css",
+      "baselineSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/vehicle-control.css",
+      "baselineSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/vehicle-control.mjs",
+      "baselineSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/vehicle-control.test.mjs",
+      "baselineSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/vehicle-operations-model.mjs",
+      "baselineSha256": "28d5db33286cfadf7d95c78892d3bdb2a6fe045c2369bc4e60290e2709b31c1e",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/combined/vehicle-operations-model.test.mjs",
+      "baselineSha256": "87c1362b55540f97db6670bf65922289f6a70068e54dd7f243bf805333c5ab7a",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "apps/portal/auth-check.js",
+      "baselineSha256": "670270c99d8538e2e458981c204c5b3b5755860d17972aa47e29a38cb2e66acc",
+      "status": "active",
+      "currentSha256": "670270c99d8538e2e458981c204c5b3b5755860d17972aa47e29a38cb2e66acc"
+    },
+    {
+      "path": "apps/portal/pages.js",
+      "baselineSha256": "282476702f5db4d6e47ac87506176130b36a9538964caf49cb8175c931c0207a",
+      "status": "active",
+      "currentSha256": "282476702f5db4d6e47ac87506176130b36a9538964caf49cb8175c931c0207a"
+    },
+    {
+      "path": "apps/portal/portal.css",
+      "baselineSha256": "f60b1133cba63152770ed6a6df3db8dbc648beb6680bfb0609c4ca60be8ea01c",
+      "status": "active",
+      "currentSha256": "f60b1133cba63152770ed6a6df3db8dbc648beb6680bfb0609c4ca60be8ea01c"
+    },
+    {
+      "path": "apps/portal/validation.js",
+      "baselineSha256": "f05ca1c26f4c300fafe7eee80b90c3e2fbcc54970be0110682d97ff07c2f7366",
+      "status": "active",
+      "currentSha256": "f05ca1c26f4c300fafe7eee80b90c3e2fbcc54970be0110682d97ff07c2f7366"
+    },
+    {
+      "path": "workspaces/jiin-ui/app.mjs",
+      "baselineSha256": "9e316941d088e79e69f526cc8be08e2cd548ef7f9966a93c0f2117059cdab412",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/design-guide.css",
+      "baselineSha256": "77d00d6a3386e87c79bf80a4cc8c2856f88948d291d31705d1a2b644bec4b293",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/design-guide.mjs",
+      "baselineSha256": "aa45a9f4886cdf4ce604aa4fd5e80a3ddbb48de49751441f35a3a36737545a21",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/index.html",
+      "baselineSha256": "4df117e6bd50b42b96719d7fc6b77e2f34abd7b2d3d388e53e4a1329725ee7a9",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/sample-data.mjs",
+      "baselineSha256": "e088dead8d9328e7e811687f741014958a38682b0d55f67b8b3c09992f60cafa",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/sample-data.test.mjs",
+      "baselineSha256": "e9fad4a3dd9d0bb44eebca7a0207e29550bdee84a629540b68367dcf0e6aadb2",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/scenario-tools.css",
+      "baselineSha256": "cfb0838e64e1e9b3ce9c83158ff9f04190796d0510f183c59464ac2ed9380c94",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/scenario-tools.mjs",
+      "baselineSha256": "729889b365b4221356b7dd35aa6e8516746acd2e05693d38caeecba5f11d6360",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/scenario-tools.test.mjs",
+      "baselineSha256": "9e7f88d36cff235c983705f9a0337aab58e27cf27cc85ac2299aac097eaad99f",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/styles.css",
+      "baselineSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/view-components.mjs",
+      "baselineSha256": "0e381f10b2c4a063e5d9a440a60bdb0a32449e9c4063aac5cbe0c21b8be3a8a0",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/view-model.mjs",
+      "baselineSha256": "18ac4fda9d1f3c5a1e85af2edb58bfc40b79248afb4a8179fb9fb883d325ddf3",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/jiin-ui/view-model.test.mjs",
+      "baselineSha256": "3731e9995072ab08ab9e38c7afd97406eb74b829b9017a44154c2ee3b65c0643",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/common.js",
+      "baselineSha256": "208e5b4cfe50adbc9bfc11933413b0975e4a3024685cc2d525dcc45ed9e84f2b",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/control.html",
+      "baselineSha256": "d04883563638aa6a9ff5027db48b6111304a23f7dc005d6792a25b63c2a87da1",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/control.js",
+      "baselineSha256": "3fe754b00d3d1a5f3168d1f818886afce7ea63046a0e8c1a8b6151616a2f4cc0",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/customer.html",
+      "baselineSha256": "4e08c208049417925552f6eb67ae71c81307853ded10c32ea2a88ca4e39a5a8f",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/customer.js",
+      "baselineSha256": "d1d74a6808758606a3f4573defb50f0b0d2eac23ca047f933ff210a390b8ee71",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/driver.html",
+      "baselineSha256": "b955e51c1f62a387c51a90c51c18e51bb015a48bc46c1c377c0c0140e2a557df",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/driver.js",
+      "baselineSha256": "4152285d6b9cd87fd161d5866d684f8f335904e5181c5b811395c220618ae540",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/index.html",
+      "baselineSha256": "c7627beed01281536fb0672f43b97eafdaa7a3ddd6720e97652b5cc8826b69dd",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/present.html",
+      "baselineSha256": "8a400c0f1fd64d93d58a7f8f6fa3973862529312bfea01a2fc72215cc316a91c",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/present.js",
+      "baselineSha256": "cd927c2070563bac8b8331a4e8019d7f16897f57f80236ea8054165fa0b04220",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/shared.css",
+      "baselineSha256": "0f6304f06e9c36be4393cf8d6ec0ec42337789a9ddb459c4484c3ffae10c2ee7",
+      "status": "removed",
+      "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
+      "removedOn": "2026-10-05"
+    }
+  ]
+}

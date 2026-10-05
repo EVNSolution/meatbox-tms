@@ -1,12 +1,12 @@
 const express = require('express');
 const http = require('node:http');
 const path = require('node:path');
-const fs = require('node:fs/promises');
 const { randomUUID } = require('node:crypto');
 const { createStateFrames } = require('./lib/state-frames');
 const { createStateSender } = require('./lib/state-broadcast');
 const { WebSocketServer } = require('ws');
 const { createAccess, AccessError } = require('./lib/access');
+const { createKotlinAccess } = require('./lib/kotlin-access');
 const { createDispatchDataRouter } = require('./lib/dispatch-data');
 const { createSourceOperationsRouter } = require('./lib/source-operations-router');
 const { createResourceStore } = require('./lib/resource-store');
@@ -16,12 +16,10 @@ const { arriveStop, completeStop } = require('./lib/scenario-controls');
 const { validRouteOrder, applyRouteOrder } = require('./lib/route-order');
 const { page, loginPage, registerPage } = require('./apps/portal/pages');
 const { OperatingSimulation, validPlainText } = require('./lib/operating-simulation');
-const routeData = require('./workspaces/sanghyun-scenario/src/route-data');
 
 const COOKIE = 'meatbox_session';
 const ROOT = __dirname;
 const asyncRoute = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
-const withProductTitle = html => html.replace(/<title\b[^>]*>[\s\S]*?<\/title>/i, '<title>미트박스 TMS</title>');
 function tokenFrom(req) {
   const matches = (req.headers.cookie || '').split(';').map(v => v.trim()).filter(v => v.startsWith(`${COOKIE}=`));
   return matches.length === 1 ? matches[0].slice(COOKIE.length + 1) : '';
@@ -30,7 +28,7 @@ function safeNext(value) {
   if (typeof value !== 'string' || /[\\\r\n]/.test(value)) return '/';
   try {
     const target = new URL(value, 'https://local.invalid');
-    return target.origin === 'https://local.invalid' && /^\/(?:$|(?:scenario|ui-layout|combined)(?:\/|$))/.test(target.pathname)
+    return target.origin === 'https://local.invalid' && /^\/(?:$|combined(?:\/|$))/.test(target.pathname)
       ? `${target.pathname}${target.search}${target.hash}` : '/';
   } catch { return '/'; }
 }
@@ -54,11 +52,14 @@ function validCommand(msg) {
   return false;
 }
 
-function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env.PUBLIC_ORIGIN, access = createAccess({ file: accessFile }), dispatchDataDir = process.env.DISPATCH_DATA_DIR || path.join(ROOT, '.runtime/dispatch-data'), dispatchStateDir = process.env.DISPATCH_STATE_DIR || null, dispatchStateIO, dispatchCalculator = calculateDispatch, resourceDatabasePath = process.env.RESOURCE_DATABASE, now = Date.now } = {}) {
+function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env.PUBLIC_ORIGIN, access = null, dispatchDataDir = process.env.DISPATCH_DATA_DIR || path.join(ROOT, '.runtime/dispatch-data'), dispatchStateDir = process.env.DISPATCH_STATE_DIR || null, dispatchStateIO, dispatchCalculator = calculateDispatch, resourceDatabasePath = process.env.RESOURCE_DATABASE, resourceOwner = process.env.MEATBOX_RESOURCES_OWNER || 'node', authOwner = process.env.MEATBOX_AUTH_OWNER || 'node', dispatchOwner = process.env.MEATBOX_DISPATCH_OWNER || 'node', kotlinApiOrigin = process.env.MEATBOX_KOTLIN_API_ORIGIN, now = Date.now } = {}) {
   if (!origin || new URL(origin).origin !== origin) throw new Error('PUBLIC_ORIGIN must be an exact origin');
   const secure = new URL(origin).protocol === 'https:';
-  const resourceStore = resourceDatabasePath ? createResourceStore(resourceDatabasePath) : null;
+  if (!['node', 'kotlin'].includes(resourceOwner)) throw new TypeError('MEATBOX_RESOURCES_OWNER must be node or kotlin');
+  const resourceStore = resourceOwner === 'node' && resourceDatabasePath ? createResourceStore(resourceDatabasePath) : null;
   if (!secure && !['127.0.0.1', 'localhost', '[::1]'].includes(new URL(origin).hostname)) throw new Error('Public access requires HTTPS');
+  if (![authOwner, dispatchOwner].every(owner => ['node', 'kotlin'].includes(owner))) throw new TypeError('Invalid authentication or dispatch owner');
+  access ||= authOwner === 'kotlin' ? createKotlinAccess(kotlinApiOrigin) : createAccess({file: accessFile});
   const app = express();
   app.enable('strict routing');
   app.set('query parser', 'simple');
@@ -68,6 +69,12 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
     // OSM tiles require a valid web Referer; cross-origin requests receive only our origin.
     res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin' });
     res.set('Content-Security-Policy', `default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self'; img-src 'self' data: blob: https://tiles.openfreemap.org https://tile.openstreetmap.org https://cdnjs.cloudflare.com; connect-src 'self' https://tiles.openfreemap.org ${origin.replace(/^http/, 'ws')}; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`);
+    next();
+  });
+  app.use((req, res, next) => {
+    if (authOwner === 'kotlin' && ((req.method === 'POST' && ['/login', '/dev/register', '/logout'].includes(req.path)) || req.path === '/api/session')) {
+      return res.status(503).set('X-Meatbox-Auth-Owner', 'kotlin').json({error: 'AUTH_OWNER_MOVED'});
+    }
     next();
   });
   app.use(express.urlencoded({ extended: false, limit: '4kb' }));
@@ -136,61 +143,25 @@ function createDemo({ accessFile = process.env.ACCESS_FILE, origin = process.env
     res.redirect(`/login?next=${encodeURIComponent(safeNext(req.originalUrl))}`);
   }));
   app.get('/api/session', (req, res) => res.json({ user: req.user }));
-  app.use('/api/resources', createResourceRouter({ store: resourceStore, origin }));
-  app.use('/api/dispatch-data', createSourceOperationsRouter({ directory: dispatchDataDir, stateDirectory: dispatchStateDir, stateIO: dispatchStateIO, origin, calculator: dispatchCalculator, now }));
-  app.use('/api/dispatch-data', createDispatchDataRouter({ directory: dispatchDataDir }));
-  for (const prefix of ['scenario', 'ui-layout', 'combined']) app.get(`/${prefix}`, (_req, res) => res.redirect(308, `/${prefix}/`));
-  app.get('/', (_req, res) => res.redirect(308, '/combined/'));
-  app.get('/auth-check.js', (_req, res) => res.sendFile(path.join(ROOT, 'apps/portal/auth-check.js')));
-  app.get('/scenario/api/route-data', (_req, res) => res.json(routeData));
-  const scenarioDir = path.join(ROOT, 'workspaces/sanghyun-scenario/public');
-  app.get(['/scenario/', '/scenario/index.html'], (req, res) => res.redirect(308, `/scenario/customer${new URL(req.url, origin).search}`));
-  for (const view of ['customer', 'driver', 'control', 'present']) {
-    app.get(`/scenario/${view}.html`, (req, res) => res.redirect(308, `/scenario/${view}${new URL(req.url, origin).search}`));
-    app.get(`/scenario/${view}`, asyncRoute(async (_req, res) => {
-      const html = await fs.readFile(path.join(scenarioDir, `${view}.html`), 'utf8');
-      res.type('html').send(withProductTitle(html)
-        .replace(/(href|src)="\/(?!\/)/g, '$1="/scenario/')
-        .replace('src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"', 'src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"')
-        .replace('href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"', 'href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous"')
-        .replace('</head>', '<style>#traffic,#dwell{display:none!important}</style></head>')
-        .replace('</body>', '<script src="/auth-check.js" defer></script></body>'));
-    }));
+  if (resourceOwner === 'kotlin') {
+    app.use('/api/resources', (_req, res) => res.status(503).set('X-Meatbox-Resource-Owner', 'kotlin').json({error:'RESOURCE_OWNER_MOVED'}));
+  } else {
+    app.use('/api/resources', createResourceRouter({ store: resourceStore, origin }));
   }
-  app.get('/scenario/common.js', asyncRoute(async (_req, res) => {
-    const js = await fs.readFile(path.join(scenarioDir, 'common.js'), 'utf8');
-    res.type('js').send(js.replace('${location.host}`', '${location.host}/ws/simulation`').replace("fetch('/api/route-data')", "fetch('/scenario/api/route-data')").replace('ws.onclose = () => setTimeout(open, 1500);', "ws.onclose = async () => { try { const res = await fetch('/api/session'); if (res.status === 401) { location.assign('/login?next=' + encodeURIComponent(location.pathname + location.search)); return; } } catch {} setTimeout(open, 1500); };"));
-  }));
-  app.get('/scenario/driver.js', asyncRoute(async (_req, res) => {
-    const js = await fs.readFile(path.join(scenarioDir, 'driver.js'), 'utf8');
-    // Keep the reference source intact while routing completion through required proof.
-    res.type('js').send(js
-      .replace("const $ = (id) => document.getElementById(id);", "const $ = (id) => document.getElementById(id); let currentStopId = null;")
-      .replace("MB.send('complete_stop')", "location.assign('/combined/driver.html?id=' + encodeURIComponent(currentStopId || 'S1'))")
-      .replace("const current = s.order.find((o) => o.status === 'current');", "const current = s.order.find((o) => o.status === 'current'); currentStopId = current?.id; $('scan').textContent = '사진 확인 후 배송 완료';"));
-  }));
-  app.use('/scenario', express.static(scenarioDir, { index: false, dotfiles: 'deny' }));
-  app.get(['/ui-layout/', '/ui-layout/index.html'], asyncRoute(async (_req, res) => {
-    const html = await fs.readFile(path.join(ROOT, 'workspaces/jiin-ui/index.html'), 'utf8');
-    res.type('html').send(withProductTitle(html)
-      .replace('</head>', '<link rel="stylesheet" href="/combined/map-preview.css"></head>')
-      .replace('</body>', '<script src="/auth-check.js" defer></script></body>'));
-  }));
-  app.get('/ui-layout/app.mjs', asyncRoute(async (_req, res) => {
-    const js = await fs.readFile(path.join(ROOT, 'workspaces/jiin-ui/app.mjs'), 'utf8');
-    res.type('js').send(js.replace('document.title = `${page.title} · 미트박스 TMS`;', "document.title = '미트박스 TMS';"));
-  }));
-  app.use('/ui-layout', express.static(path.join(ROOT, 'workspaces/jiin-ui'), { index: false, dotfiles: 'deny' }));
-  app.use('/combined', express.static(path.join(ROOT, 'apps/combined'), { dotfiles: 'deny' }));
-  for (const view of ['customer', 'driver', 'control', 'present']) app.get(`/${view}`, (req, res) => {
-    const search = new URL(req.url, origin).search;
-    const target = view === 'customer' ? `/combined/mobile-customer.html${search}`
-      : view === 'driver' ? `/combined/driver.html${search}`
-        : view === 'control' ? '/combined/#/control'
-          : '/combined/';
-    res.redirect(308, target);
-  });
-  app.use((_req, res) => res.status(404).send(page('페이지 없음', '<h1>페이지를 찾을 수 없습니다.</h1><a href="/combined/">운영 화면으로</a>')));
+  if (dispatchOwner === 'node') {
+  app.use('/api/dispatch-data', createSourceOperationsRouter({ directory: dispatchDataDir, stateDirectory: dispatchStateDir, stateIO: dispatchStateIO, origin, calculator: dispatchCalculator, now }));
+  } else {
+    app.use('/api/dispatch-data/days/:date/:boundary', (req, res, next) => {
+      if (!['state', 'commands'].includes(req.params.boundary)) return next();
+      return res.status(503).set('X-Meatbox-Dispatch-Owner', 'kotlin').json({error: 'DISPATCH_OWNER_MOVED'});
+    });
+  }
+  app.use('/api/dispatch-data', createDispatchDataRouter({ directory: dispatchDataDir }));
+  app.get('/auth-check.js', (_req, res) => res.sendFile(path.join(ROOT, 'apps/portal/auth-check.js')));
+  const removedUi = (_req, res) => res.status(410).json({ error: 'UI_REMOVED' });
+  app.get('/', removedUi);
+  app.use(['/customer', '/driver', '/control', '/present', '/scenario', '/ui-layout', '/combined'], removedUi);
+  app.use((_req, res) => res.status(404).send(page('페이지 없음', '<h1>페이지를 찾을 수 없습니다.</h1>')));
   app.use((error, _req, res, _next) => {
     console.error('Request failed:', error.name);
     res.status(error.status === 413 ? 413 : 500).send(page('요청 오류', '<h1>요청을 처리하지 못했습니다.</h1><a href="/">다시 시작하기</a>'));

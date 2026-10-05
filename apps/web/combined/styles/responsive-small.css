@@ -1,0 +1,48 @@
+@media (max-width: 520px) {
+  .app-shell {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .app-nav-links {
+    padding: 16px 5px;
+  }
+
+  .app-nav-links a {
+    padding: 10px 6px;
+  }
+}
+
+@media (max-width: 420px) {
+  .demo-tag {
+    order: 2;
+  }
+
+  .clock {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .header-meta {
+    width: 100%;
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+
+  .eta-value,
+  .terminal-eta > strong,
+  .customer-eta {
+    font-size: 27px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+

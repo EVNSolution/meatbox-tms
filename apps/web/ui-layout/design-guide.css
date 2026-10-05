@@ -1,0 +1,398 @@
+@import "../combined/date-picker.css";
+@import "../combined/date-summary-toolbar.css";
+
+.design-guide .detail-tabs [role="tab"] {
+  min-height: var(--control-height);
+}
+
+.design-guide {
+  display: grid;
+  gap: 20px;
+}
+
+.design-guide .inline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.design-guide h2.inline-meta {
+  gap: 6px;
+}
+
+.design-guide .meta-separator {
+  display: none;
+}
+
+.design-guide .panel-heading {
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.design-guide .eta-secondary .key-values > div {
+  border: 0;
+}
+
+.design-guide .eta-secondary .key-values > div + div {
+  border-top: 1px solid var(--border);
+}
+
+.design-guide .design-guide-section {
+  min-width: 0;
+}
+
+.design-guide .panel-heading > div,
+.design-guide .design-guide-section-heading > div {
+  min-width: 0;
+}
+
+.design-guide .panel-heading .eyebrow,
+.design-guide .design-guide-section-heading .eyebrow {
+  margin-bottom: 1px;
+}
+
+.design-guide .design-guide-foundations,
+.design-guide .design-guide-controls,
+.design-guide .design-guide-panel-body {
+  padding: 14px;
+}
+
+.design-guide .design-guide-foundations {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: 20px;
+}
+
+.design-guide .design-guide-tokens {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.design-guide .design-guide-tokens li {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.design-guide .design-guide-tokens strong,
+.design-guide .design-guide-tokens small {
+  display: block;
+}
+
+.design-guide .design-guide-tokens small {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.design-guide .design-guide-token-swatch {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.design-guide .design-guide-token-swatch.is-action {
+  background: var(--action);
+}
+
+.design-guide .design-guide-token-swatch.is-brand {
+  background: var(--brand);
+}
+
+.design-guide .design-guide-token-swatch.is-accent {
+  background: var(--accent);
+}
+
+.design-guide .design-guide-token-swatch.is-workspace {
+  background: var(--workspace);
+}
+
+.design-guide .design-guide-token-swatch.is-border {
+  background: var(--border);
+}
+
+.design-guide .design-guide-type {
+  padding-left: 20px;
+  border-left: 1px solid var(--border);
+}
+
+.design-guide .design-guide-title-sample {
+  margin-bottom: 8px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.design-guide .design-guide-body-sample {
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.design-guide .design-guide-body-sample span,
+.design-guide .design-guide-caption-sample span {
+  display: block;
+}
+
+.design-guide .design-guide-spacing {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  min-height: 30px;
+  margin-top: 16px;
+}
+
+.design-guide .design-guide-spacing i {
+  width: 4px;
+  height: 4px;
+  background: var(--action);
+}
+
+.design-guide .design-guide-spacing i:nth-child(2) {
+  width: 8px;
+  height: 8px;
+}
+
+.design-guide .design-guide-spacing i:nth-child(3) {
+  width: 12px;
+  height: 12px;
+}
+
+.design-guide .design-guide-spacing i:nth-child(4) {
+  width: 16px;
+  height: 16px;
+}
+
+.design-guide .design-guide-spacing i:nth-child(5) {
+  width: 24px;
+  height: 24px;
+}
+
+.design-guide .design-guide-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
+
+.design-guide .design-guide-control-group h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.design-guide .design-guide-control-wide {
+  grid-column: 1 / -1;
+}
+
+.design-guide .design-guide-inline,
+.design-guide .design-guide-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.design-guide .design-guide-field-row label {
+  min-width: 180px;
+  flex: 1 1 220px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.design-guide .design-guide-field-row input,
+.design-guide .design-guide-field-row select {
+  width: 100%;
+  height: var(--control-height);
+  display: block;
+  margin-top: 5px;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.design-guide .design-guide-tab-panel {
+  min-height: 46px;
+  padding: 12px 14px;
+  color: var(--muted);
+  background: #f8fafc;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+
+.design-guide .design-guide-tab-panel[hidden] {
+  display: none;
+}
+
+.design-guide .design-guide-badges {
+  margin-top: 10px;
+}
+
+.design-guide .design-guide-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.design-guide .design-guide-section-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.design-guide .design-guide-section-heading p:last-child {
+  margin: 0;
+  font-size: 12px;
+}
+
+.design-guide .design-guide-eta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.design-guide .design-guide-eta-sample {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.design-guide .design-guide-sample-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.design-guide .design-guide-eta-sample .panel {
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.design-guide .eta-panel-foot {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.design-guide .eta-panel-foot > * {
+  margin: 0;
+}
+
+.design-guide .design-guide-domain-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.design-guide .design-guide-domain-grid > .panel {
+  min-width: 0;
+}
+
+.design-guide .design-guide-customer {
+  grid-column: 1 / -1;
+}
+
+.design-guide .design-guide-customer .customer-card {
+  max-width: 440px;
+  margin: 0;
+}
+
+.design-guide .design-guide-panel-body > .footer-note {
+  padding: 0;
+}
+
+.design-guide .design-guide-review-note {
+  margin: 0;
+}
+
+.design-guide .design-guide-review-note strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.design-guide .design-guide-review-note p {
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .design-guide .design-guide-eta-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .design-guide .design-guide-foundations,
+  .design-guide .design-guide-controls,
+  .design-guide .design-guide-eta-grid,
+  .design-guide .design-guide-domain-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .design-guide .design-guide-control-wide,
+  .design-guide .design-guide-customer {
+    grid-column: auto;
+  }
+
+  .design-guide .design-guide-type {
+    padding-top: 16px;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .design-guide .design-guide-tokens {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .design-guide .design-guide-section-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+/* Guide specimens use shared components; these wrappers only arrange the samples. */
+.design-guide .design-guide-navigation { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 20px; }
+.guide-product-navigation { display: grid; align-content: start; background: var(--surface); border: 1px solid var(--border); }
+.guide-product-navigation a { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 8px; color: var(--muted); text-align: center; text-decoration: none; font-size: 12px; }
+.guide-product-navigation a:hover { color: var(--brand); background: var(--selected); }
+.design-guide .design-guide-brand-assets { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; }
+.guide-brand-lockup { display: inline-flex; align-items: center; gap: 8px; color: var(--brand); font-size: 15px; font-weight: 700; }
+.guide-brand-lockup img { display: block; }
+.guide-app-icon { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.design-guide-brand-assets > p { flex-basis: 100%; margin: 0; }
+.guide-icon-samples { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 8px; width: 100%; padding: 0; margin: 0; list-style: none; }
+.guide-icon-samples li { display: grid; justify-items: center; gap: 8px; padding: 12px 4px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; }
+.guide-icon-samples .reference-icon { display: block; width: 20px; height: 20px; }
+.guide-toolbar-sample { min-width: 0; container-type: inline-size; }
+.guide-toolbar-sample .date-summary-actions { flex-wrap: wrap; }
+.guide-toolbar-sample [data-guide-datepicker] { min-width: 168px; }
+.guide-toolbar-sample [data-guide-today] { white-space: nowrap; }
+@media (max-width: 860px) {
+  .design-guide .design-guide-navigation { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+@container (max-width: 480px) {
+  .guide-toolbar-sample .date-summary-actions,
+  .guide-toolbar-sample .date-summary-meta { width: 100%; }
+  .guide-toolbar-sample .date-summary-actions > span:first-child { width: 100%; }
+  .guide-toolbar-sample [data-guide-datepicker] { flex: 1 1 140px; min-width: 0; }
+  .guide-toolbar-sample .summary-counts { flex: 1; }
+  .guide-toolbar-sample .summary-counts > div { flex: 1; min-width: 0; padding-inline: 8px; }
+}

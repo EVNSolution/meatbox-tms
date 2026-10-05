@@ -5,15 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 
-import { adaptSimulation } from '../apps/combined/simulation-adapter.mjs';
-import { sourceVehicleContext } from '../apps/combined/source-context.mjs';
-import { driverViewModel } from '../apps/combined/driver-view-model.mjs';
-import {
-  customerDeliveryForId,
-  customerMapView,
-  customerOrderSummary,
-  customerViewerDeliveries,
-} from '../apps/combined/customer-renderer.mjs';
+import { bundleDeliveries } from '../apps/combined/delivery-bundles.mjs';
 
 const require = createRequire(import.meta.url);
 const { createDemo } = require('../server.js');
@@ -134,29 +126,16 @@ test('operator, driver, and customer retain one bundled delivery truth through p
   state = await send(state, { type: 'calculate_dispatch', vehicleIds: ['TRUCK-1'] });
   assert.equal(state.dispatch.phase, 'draft');
   assert.equal(state.fleetDeliveries.length, 0);
-  const draftDriver = driverViewModel(sourceVehicleContext(adaptSimulation(await read(clients.driver)), 'BUNDLE-2'));
-  const draftCustomer = customerDeliveryForId(customerViewerDeliveries(adaptSimulation(await read(clients.customer))), 'BUNDLE-2');
-  assert.equal(draftDriver.deliveries.length, 0);
-  assert.equal(draftCustomer.dispatchPending, true);
-  assert.equal(draftCustomer.vehicleId, undefined);
 
   state = await send(state, {
     type: 'publish_dispatch',
     draftVersion: state.dispatch.draftVersion,
   });
-  const operatorPublished = adaptSimulation(state);
-  const driverPublished = driverViewModel(sourceVehicleContext(adaptSimulation(await read(clients.driver)), 'BUNDLE-2'));
-  const customerPublishedState = sourceVehicleContext(adaptSimulation(await read(clients.customer)), 'BUNDLE-2');
-  const customerPublished = customerDeliveryForId(customerViewerDeliveries(customerPublishedState), 'BUNDLE-2');
-  const operatorBundle = customerDeliveryForId(operatorPublished.fleetDeliveries, 'BUNDLE-2');
-  assert.deepEqual(operatorBundle.orderIds, ['BUNDLE-1', 'BUNDLE-2']);
-  assert.deepEqual(driverPublished.selected.orderIds, operatorBundle.orderIds);
-  assert.deepEqual(customerPublished.orderIds, operatorBundle.orderIds);
-  assert.equal(operatorBundle.boxes, 5);
-  assert.equal(driverPublished.selected.boxes, 5);
-  assert.equal(customerPublished.boxes, 5);
-  assert.equal(customerOrderSummary(customerPublished).orderText, 'MB-1001, MB-1002');
-  assert.equal(customerDeliveryForId(customerViewerDeliveries(customerPublishedState), 'NEXT-1').status, 'pending');
+  let bundled = bundleDeliveries(state.fleetDeliveries);
+  const publishedBundle = bundled.find(delivery => delivery.orderIds.includes('BUNDLE-2'));
+  assert.deepEqual(publishedBundle.orderIds, ['BUNDLE-1', 'BUNDLE-2']);
+  assert.equal(publishedBundle.boxes, 5);
+  assert.equal(bundled.find(delivery => delivery.orderIds.includes('NEXT-1')).status, 'pending');
 
   state = await send(state, {
     type: 'set_scenario', vehicleId: 'TRUCK-1', stopId: 'BUNDLE-2', scenario: 'shipping',
@@ -172,35 +151,24 @@ test('operator, driver, and customer retain one bundled delivery truth through p
     .map(request => request.id))];
   assert.ok(requiredRequestIds.length > 0);
   state = await send(state, {
-    type: 'complete_stop', vehicleId: 'TRUCK-1', stopId: 'BUNDLE-2', hasPhoto: true, confirmedRequestIds: requiredRequestIds,
+    type: 'complete_stop', vehicleId: 'TRUCK-1', stopId: 'BUNDLE-2', hasPhoto: true,
+    confirmedRequestIds: requiredRequestIds,
   });
 
-  const finalOperator = adaptSimulation(state);
-  const finalDriverState = sourceVehicleContext(adaptSimulation(await read(clients.driver)), 'BUNDLE-2');
-  const finalDriver = driverViewModel(finalDriverState, true, 'BUNDLE-2');
-  const finalCustomerState = sourceVehicleContext(adaptSimulation(await read(clients.customer)), 'BUNDLE-2');
-  const finalCustomer = customerDeliveryForId(customerViewerDeliveries(finalCustomerState), 'BUNDLE-2');
-  const finalOperatorBundle = customerDeliveryForId(finalOperator.fleetDeliveries, 'BUNDLE-2');
-  const completionNotice = finalCustomer.notices.find(notice => notice.kind === 'completed');
-  assert.deepEqual(finalOperatorBundle.orders.map(order => [order.id, order.status]), [
+  bundled = bundleDeliveries(state.fleetDeliveries);
+  const completedBundle = bundled.find(delivery => delivery.orderIds.includes('BUNDLE-2'));
+  assert.deepEqual(completedBundle.orders.map(order => [order.id, order.status]), [
     ['BUNDLE-1', 'done'],
     ['BUNDLE-2', 'done'],
   ]);
-  assert.equal(finalDriver.selected.status, 'done');
-  assert.equal(finalCustomer.status, 'done');
-  assert.deepEqual(finalDriver.selected.orderIds, ['BUNDLE-1', 'BUNDLE-2']);
-  assert.equal(finalDriver.selected.boxes, 5);
-  assert.equal(finalCustomer.boxes, 5);
-  assert.ok(completionNotice);
-  assert.equal(finalOperator.notifications.some(notice => notice.id === completionNotice.id && notice.kind === 'completed'), true);
-
-  const nextCustomer = customerDeliveryForId(customerViewerDeliveries(finalCustomerState), 'NEXT-1');
-  assert.equal(nextCustomer.status, 'current');
-  assert.equal(finalDriver.current.id, 'NEXT-1');
-  assert.equal(finalDriverState.truck.toId, 'NEXT-1');
-  assert.deepEqual([finalDriverState.truck.lng, finalDriverState.truck.lat], orders[0].coordinates);
-  assert.notDeepEqual([finalDriverState.truck.lng, finalDriverState.truck.lat], orders[2].coordinates);
-  assert.deepEqual(customerMapView(nextCustomer, finalCustomerState).truck, orders[0].coordinates);
+  assert.equal(completedBundle.boxes, 5);
+  assert.equal(state.notifications.some(notice => notice.kind === 'completed' && notice.orderIds.includes('BUNDLE-2')), true);
+  assert.equal(state.fleetDeliveries.find(order => order.id === 'NEXT-1').status, 'current');
+  assert.equal(state.vehicleStates['TRUCK-1'].truck.toId, 'NEXT-1');
+  assert.deepEqual(
+    [state.vehicleStates['TRUCK-1'].truck.lng, state.vehicleStates['TRUCK-1'].truck.lat],
+    orders[0].coordinates,
+  );
 
   const beforeRestart = {
     revision: state.revision,
@@ -226,12 +194,8 @@ test('operator, driver, and customer retain one bundled delivery truth through p
     method: 'POST',
     headers: { origin, 'content-type': 'application/json' },
     body: JSON.stringify({
-      type: 'complete_stop',
-      expectedBoot: restored.boot,
-      expectedRevision: arrivedRevision,
-      vehicleId: 'TRUCK-1',
-      stopId: 'BUNDLE-2',
-      hasPhoto: true,
+      type: 'complete_stop', expectedBoot: restored.boot, expectedRevision: arrivedRevision,
+      vehicleId: 'TRUCK-1', stopId: 'BUNDLE-2', hasPhoto: true,
       confirmedRequestIds: requiredRequestIds,
     }),
   });

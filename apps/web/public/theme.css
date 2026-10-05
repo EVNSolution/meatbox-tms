@@ -1,0 +1,44 @@
+/* Shared product foundation. Surface layouts remain with each screen. */
+@font-face {
+  font-family: "Meatbox Pretendard";
+  src: url("/portal-font.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --meatbox-red: #e60028;
+  --meatbox-pink: #db0e64;
+  --meatbox-ink: #212322;
+  --meatbox-font: "Meatbox Pretendard", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
+  --meatbox-radius-field: 4px;
+  --meatbox-radius-control: 6px;
+  --meatbox-radius-card: 8px;
+  --meatbox-radius-panel: 12px;
+  --action: #263345;
+  --brand: var(--meatbox-red);
+  --accent: var(--meatbox-pink);
+  --text: var(--meatbox-ink);
+  --muted: #61656e;
+  --surface: #ffffff;
+  --workspace: #f3f4f6;
+  --selected: #fff5f6;
+  --border: #dce0e6;
+  --border-strong: #aeb5bf;
+  --blue: #1d4ed8;
+  --green: #15803d;
+  --amber: #a15c00;
+  --red: #b42318;
+  --radius: var(--meatbox-radius-control);
+  --shadow: 0 6px 18px rgb(35 34 33 / 7%);
+  --control-height: 44px;
+  --header-height: 56px;
+  font-family: var(--meatbox-font);
+  color: var(--text);
+  background: var(--workspace);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
