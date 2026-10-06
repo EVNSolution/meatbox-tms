@@ -60,7 +60,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   let data = null, rows = [], row = null, selectedId = null, sort = 'received', search = '';
   let previousVehicleId = null, previousSelectedId = null, recordFilter = 'all';
   let opened = new Set(), routeData = null, routePromise = null, map = null, markers = [], signature = '';
-  let mapError = '', wheel, observer, destroyed = false;
+  let mapError = '', wheel, observer, destroyed = false, routeEpoch = 0;
   const mapElement = find('[data-control-map]');
   const list = find('[data-control-vehicles]');
   const stopList = find('[data-control-stops]');
@@ -88,6 +88,12 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     find('[data-control-detail-title]').textContent = row ? `${row.vehicle.plate || row.vehicle.id} 상세` : '차량 상세';
   }
 
+  function renderEmptySummary(empty, message) {
+    const quantity = empty ? 0 : null;
+    find('[data-control-summary]').innerHTML = `<div class="panel-heading"><div><h2>운행 정보</h2><p>${esc(message)}</p></div><span class="badge">${empty ? '배차 대기' : '자료 확인 중'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(quantity, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(quantity, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>미확인</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${empty ? '확정된 배차 없음' : '미확인'}</dd></div><div><dt>현재 도착 ETA</dt><dd>미확인</dd></div><div><dt>고정 출발 기준</dt><dd>미확인</dd></div><div><dt>마지막 도착 ETA</dt><dd>미확인</dd></div><div><dt>전체 인도 완료</dt><dd>미확인</dd></div><div><dt>보류 배송지</dt><dd>${count(quantity, '곳')}</dd></div></dl>`;
+    find('[data-control-detail-title]').textContent = '차량 상세';
+  }
+
   function stopContents(stop) {
     return `<div class="control-stop-body"><p class="muted">${esc(stop.address || '주소 미등록')}</p><dl class="control-stop-facts"><div><dt>배정 박스</dt><dd>${count(stop.boxes, '박스')}</dd></div><div><dt>도착 ETA</dt><dd>${esc(stop.preciseTimeText || stop.calculatedEta || '미확인')}</dd></div></dl><section class="control-request">${renderCustomerRequests(stop)}</section><section class="control-tip"><h4>배송원 팁</h4><p>${esc(stop.tip?.body || '등록된 배송팁이 없습니다.')}</p>${stop.tip ? `<small>${esc(stop.tip.author)}${stop.tip.updatedAt ? ` (${esc(stop.tip.updatedAt)})` : ''}</small>` : ''}</section><button type="button" class="button control-open-records" data-control-manage="${esc(stop.id)}">이력·알림 보기</button></div>`;
   }
@@ -110,8 +116,8 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     if (selector.innerHTML !== options) selector.innerHTML = options;
     selector.value = stop?.id || '';
     selector.disabled = !stop;
-    find('[data-control-compose]').disabled = !stop || data.connected === false || data.dispatch?.readOnly;
-    find('[data-control-route]').disabled = !row?.deliveries.length || data.dispatch?.readOnly;
+    find('[data-control-compose]').disabled = !stop || data?.connected === false || Boolean(data?.dispatch?.readOnly);
+    find('[data-control-route]').disabled = !row?.deliveries.length || Boolean(data?.dispatch?.readOnly);
     find('[data-control-common]').hidden = recordFilter === 'notice';
     element.querySelectorAll('[data-control-record-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.controlRecordFilter === recordFilter)));
     const expanded = [...recordList.querySelectorAll('[data-control-record-id][open]')].map(item => item.dataset.controlRecordId);
@@ -182,23 +188,74 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       renderMap();
       return;
     }
-    if (!routeData && !routePromise) routePromise = Promise.resolve().then(loadRouteData).then(value => {
-      if (destroyed) return;
-      if (!Array.isArray(value?.points)) throw new Error('배송지 위치 데이터 형식 오류');
-      routeData = value; mapError = ''; renderMap();
-    }).catch(() => {
-      if (destroyed) return;
-      mapError = '배송지 위치를 불러오지 못했습니다. 위치 미등록 여부를 확인할 수 없습니다. 새로고침해 다시 시도해 주세요.'; renderMap();
-    }).finally(() => { routePromise = null; });
+    if (!routeData && !routePromise) {
+      const requestEpoch = routeEpoch;
+      const request = Promise.resolve().then(loadRouteData).then(value => {
+        if (destroyed || requestEpoch !== routeEpoch) return;
+        if (!Array.isArray(value?.points)) throw new Error('배송지 위치 데이터 형식 오류');
+        routeData = value; mapError = ''; renderMap();
+      }).catch(() => {
+        if (destroyed || requestEpoch !== routeEpoch) return;
+        mapError = '배송지 위치를 불러오지 못했습니다. 위치 미등록 여부를 확인할 수 없습니다. 새로고침해 다시 시도해 주세요.'; renderMap();
+      }).finally(() => { if (routePromise === request) routePromise = null; });
+      routePromise = request;
+    }
   }
 
-  find('[data-control-search]').addEventListener('input', event => { search = event.target.value.trim().toLocaleLowerCase('ko-KR'); renderVehicles(); });
-  find('[data-control-sort]').addEventListener('change', event => { sort = event.target.value; renderVehicles(); });
+  function removeMap() {
+    routeEpoch += 1;
+    observer?.disconnect();
+    wheel?.remove();
+    markers.splice(0).forEach(marker => marker.remove());
+    map?.remove();
+    observer = undefined; wheel = undefined; map = null; signature = '';
+  }
+
+  function setControlsDisabled(disabled) {
+    find('[data-control-search]').disabled = disabled;
+    find('[data-control-sort]').disabled = disabled;
+    find('[data-control-support]').disabled = disabled || !row;
+    find('[data-control-record-stop]').disabled = disabled || !row;
+    find('[data-control-compose]').disabled = disabled || !row;
+    find('[data-control-route]').disabled = disabled || !row?.deliveries.length;
+    element.querySelectorAll('[data-control-record-filter]').forEach(button => { button.disabled = disabled; });
+  }
+
+  function clear({ empty = false, message = '배송 자료를 확인하고 있습니다.' } = {}) {
+    data = null; rows = []; row = null; selectedId = null;
+    previousVehicleId = null; previousSelectedId = null;
+    search = ''; sort = 'received'; opened = new Set(); recordFilter = 'all';
+    routeData = null; routePromise = null; mapError = '';
+    find('[data-control-search]').value = '';
+    find('[data-control-sort]').value = 'received';
+    if (support.open) support.close();
+    showRecords();
+    removeMap();
+    find('[data-control-count]').textContent = empty ? '0대' : '미확인';
+    list.innerHTML = `<p class="empty-state">${esc(message)}</p>`;
+    renderEmptySummary(empty, message);
+    stopList.innerHTML = `<p class="empty-state">${empty ? '배정된 배송지가 없습니다.' : esc(message)}</p>`;
+    find('[data-control-record-stop]').innerHTML = `<option value="">${empty ? '배정된 배송지 없음' : '배송 자료 미확인'}</option>`;
+    find('[data-control-record-stop]').value = '';
+    recordList.innerHTML = `<li class="empty-state">${empty ? '표시할 기록이 없습니다.' : esc(message)}</li>`;
+    find('[data-control-events]').innerHTML = empty ? factRows([]) : `<li class="muted">${esc(message)}</li>`;
+    find('[data-support-data]').innerHTML = '';
+    find('[data-control-common]').hidden = false;
+    element.querySelectorAll('[data-control-record-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.controlRecordFilter === 'all')));
+    mapElement.innerHTML = `<div class="control-map-empty" role="status">${esc(message)}</div>`;
+    find('[data-control-map-note]').textContent = message;
+    setControlsDisabled(true);
+  }
+
+  find('[data-control-search]').addEventListener('input', event => { if (!data) return; search = event.target.value.trim().toLocaleLowerCase('ko-KR'); renderVehicles(); });
+  find('[data-control-sort]').addEventListener('change', event => { if (!data) return; sort = event.target.value; renderVehicles(); });
   list.addEventListener('click', event => {
+    if (!data) return;
     const button = event.target.closest('[data-control-vehicle]');
     if (button) onSelectVehicle(button.dataset.controlVehicle);
   });
   stopList.addEventListener('toggle', event => {
+    if (!data) return;
     if (!event.target.matches('[data-control-stop]') || !event.target.isConnected) return;
     const id = event.target.dataset.controlStop;
     if (event.target.open === opened.has(id)) return;
@@ -206,12 +263,14 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     else { opened.delete(id); renderStops(); }
   }, true);
   stopList.addEventListener('click', event => {
+    if (!data) return;
     const button = event.target.closest('[data-control-manage]');
     if (button) { showRecords(); onOpenManagement(button.dataset.controlManage); }
   });
-  find('[data-control-record-stop]').addEventListener('change', event => onSelectDelivery(event.target.value));
-  find('[data-control-compose]').addEventListener('click', () => onOpenNotice(find('[data-control-record-stop]').value));
+  find('[data-control-record-stop]').addEventListener('change', event => { if (data && event.target.value) onSelectDelivery(event.target.value); });
+  find('[data-control-compose]').addEventListener('click', () => { if (data && row) onOpenNotice(find('[data-control-record-stop]').value); });
   find('[data-control-route]').addEventListener('click', () => {
+    if (!data || !row?.deliveries.length) return;
     find('[data-control-records-view]').hidden = true;
     find('[data-control-route-view]').hidden = false;
     onOpenRoute();
@@ -219,25 +278,30 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   });
   find('.control-record-filters').addEventListener('click', event => {
     const button = event.target.closest('[data-control-record-filter]');
-    if (!button) return;
+    if (!button || !data) return;
     recordFilter = button.dataset.controlRecordFilter;
     renderRecords();
   });
   mapElement.addEventListener('click', event => {
+    if (!data) return;
     const marker = event.target.closest('[data-order-marker]');
     if (marker) onSelectDelivery(marker.dataset.orderMarker);
   });
-  find('[data-control-support]').addEventListener('click', () => { renderSupport(); support.showModal(); });
+  find('[data-control-support]').addEventListener('click', () => { if (!data || !row) return; renderSupport(); support.showModal(); });
   find('[data-support-close]').addEventListener('click', () => support.close());
   support.addEventListener('close', () => find('[data-control-support]').focus());
 
   return {
     showRecords,
+    clear,
     update(nextData, vehicleId, deliveryId) {
+      if (!nextData) { clear(); return null; }
       data = nextData; rows = vehicleOperations(data).filter(item => !data.dispatch || item.deliveries.length);
+      if (!rows.length) { clear({ empty: true, message: '확정된 배차가 없습니다.' }); return null; }
       const preferredDeliveryId = deliveryId ?? data?.sourceData?.defaultStopId;
       row = resolveDefaultControlVehicle(data, rows, vehicleId, preferredDeliveryId); selectedId = preferredDeliveryId;
-      find('[data-control-support]').disabled = !row;
+      if (!map) mapElement.innerHTML = '';
+      setControlsDisabled(false);
       if (previousVehicleId !== row?.vehicle.id) { opened = new Set(); recordFilter = 'all'; showRecords(); }
       if (previousSelectedId !== deliveryId && row?.deliveries.some(stop => stop.id === deliveryId)) opened.add(deliveryId);
       const changedTarget = previousSelectedId !== deliveryId;
@@ -247,6 +311,6 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       if (support.open) renderSupport();
       return row;
     },
-    destroy() { destroyed = true; observer?.disconnect(); wheel?.remove(); markers.forEach(marker => marker.remove()); map?.remove(); },
+    destroy() { destroyed = true; if (support.open) support.close(); removeMap(); },
   };
 }

@@ -4,6 +4,12 @@ export function operatorRoute(hash = '') {
   return { page, controlTab: path === 'manage' || (page === 'control' && section === 'manage') ? 'management' : 'monitor' };
 }
 
+export function controlDataPresentation(context, message = '배송 자료를 확인하고 있습니다.') {
+  if (context?.invalid) return { empty: false, message: '요청한 날짜가 올바르지 않습니다. 조회 날짜를 다시 선택해 주세요.' };
+  if (context?.empty) return { empty: true, message: `${context.date || '선택한 날짜'}에 배송 자료가 없습니다. 배차가 확정되면 관제에 표시됩니다.` };
+  return { empty: false, message: message || '배송 자료를 확인하고 있습니다.' };
+}
+
 export function filterFleetDeliveries(deliveries, { query = '', status = 'all', vehicleId = 'all' } = {}) {
   const needle = query.trim().toLocaleLowerCase('ko-KR');
   return deliveries.filter(delivery =>

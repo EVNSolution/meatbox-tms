@@ -61,6 +61,159 @@ test('운영 관제는 삭제한 시나리오 API를 기본 위치 공급자로 
   assert.match(source, /loadRouteData = null/);
 });
 
+test('자료가 없거나 확인 중이어도 관제 카드와 운행 정보 구조를 유지한다', () => {
+  const { element, node } = fixture();
+  let mapCreates = 0;
+  const control = mountVehicleControl({
+    element,
+    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    mapFactory() { mapCreates += 1; return mapFactory(); },
+  });
+
+  assert.equal(control.update(null), null);
+  assert.equal(node('[data-control-count]').textContent, '미확인');
+  assert.match(node('[data-control-summary]').innerHTML, /남은 배송지<\/span><strong>미확인/);
+  assert.equal([...node('[data-control-summary]').innerHTML.matchAll(/<div><span>/g)].length, 3);
+  assert.equal([...node('[data-control-summary]').innerHTML.matchAll(/<div><dt>/g)].length, 6);
+  assert.equal(node('[data-control-search]').disabled, true);
+  assert.match(node('[data-control-record-stop]').innerHTML, /배송 자료 미확인/);
+  assert.match(node('[data-control-records]').innerHTML, /배송 자료를 확인하고 있습니다/);
+  assert.match(node('[data-control-events]').innerHTML, /배송 자료를 확인하고 있습니다/);
+  assert.doesNotMatch(node('[data-control-records]').innerHTML, /기록이 없습니다/);
+  assert.equal(mapCreates, 0);
+
+  node('[data-support-data]').innerHTML = '<table><tr><td>이전 지원배차</td></tr></table>';
+  control.clear({ message: '배송 자료를 불러오지 못했습니다.' });
+  assert.match(node('[data-control-map]').innerHTML, /배송 자료를 불러오지 못했습니다/);
+  assert.match(node('[data-control-summary]').innerHTML, /남은 박스<\/span><strong>미확인/);
+  assert.match(node('[data-control-records]').innerHTML, /배송 자료를 불러오지 못했습니다/);
+  assert.match(node('[data-control-events]').innerHTML, /배송 자료를 불러오지 못했습니다/);
+  assert.equal(node('[data-support-data]').innerHTML, '');
+
+  assert.equal(control.update({ fleetVehicles: [], fleetDeliveries: [], events: [] }), null);
+  assert.equal(node('[data-control-count]').textContent, '0대');
+  assert.match(node('[data-control-summary]').innerHTML, /남은 배송지<\/span><strong>0곳/);
+  assert.match(node('[data-control-summary]').innerHTML, /남은 박스<\/span><strong>0박스/);
+  assert.match(node('[data-control-summary]').innerHTML, /보류 배송지<\/dt><dd>0곳/);
+  assert.match(node('[data-control-summary]').innerHTML, /현재 도착 ETA<\/dt><dd>미확인/);
+  assert.match(node('[data-control-record-stop]').innerHTML, /배정된 배송지 없음/);
+  assert.match(node('[data-control-records]').innerHTML, /표시할 기록이 없습니다/);
+  assert.match(node('[data-control-events]').innerHTML, /기록된 사건이 없습니다/);
+  assert.equal(mapCreates, 0);
+  control.destroy();
+});
+
+test('운영 자료가 사라졌다가 돌아오면 초기화한 관제 기능과 지도를 복구한다', () => {
+  const { element, node } = fixture();
+  let mapCreates = 0;
+  let mapRemoves = 0;
+  const control = mountVehicleControl({
+    element,
+    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    mapFactory() {
+      mapCreates += 1;
+      return { resize() {}, jumpTo() {}, fitBounds() {}, remove() { mapRemoves += 1; } };
+    },
+  });
+
+  control.update(data, 'V2', 'V2-S1');
+  assert.equal(mapCreates, 1);
+  assert.equal(node('[data-control-search]').disabled, false);
+  node('[data-control-search]').listeners.input({ target: { value: '없는 차량' } });
+  assert.match(node('[data-control-vehicles]').innerHTML, /조회 결과가 없습니다/);
+
+  control.clear({ empty: true, message: '확정된 배차가 없습니다.' });
+  assert.equal(mapRemoves, 1);
+  assert.equal(node('[data-control-search]').value, '');
+  assert.equal(node('[data-control-sort]').value, 'received');
+  assert.equal(node('[data-control-records-view]').hidden, false);
+  assert.equal(node('[data-control-route-view]').hidden, true);
+  assert.doesNotThrow(() => node('.control-record-filters').listeners.click({ target: { closest: () => ({ dataset: { controlRecordFilter: 'notice' } }) } }));
+
+  control.update(data, 'V2', 'V2-S1');
+  assert.equal(mapCreates, 2);
+  assert.equal(node('[data-control-search]').disabled, false);
+  assert.equal(node('[data-control-sort]').disabled, false);
+  assert.equal(node('[data-control-support]').disabled, false);
+  assert.equal(node('[data-control-route]').disabled, false);
+  assert.match(node('[data-control-vehicles]').innerHTML, /예시 차량 002/);
+  assert.doesNotMatch(node('[data-control-map]').innerHTML, /확정된 배차가 없습니다/);
+  control.destroy();
+});
+
+test('빈 상태로 바뀌면 열린 지원배차를 닫고 비활성 동작을 무시한다', () => {
+  const { element, node } = fixture();
+  let notices = 0;
+  const control = mountVehicleControl({
+    element, mapFactory,
+    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() { notices += 1; },
+  });
+  control.update(data, 'V2', 'V2-S1');
+  node('[data-control-support]').listeners.click();
+  assert.equal(node('[data-support-dialog]').open, true);
+
+  control.clear({ empty: true, message: '확정된 배차가 없습니다.' });
+  assert.equal(node('[data-support-dialog]').open, false);
+  node('[data-control-support]').listeners.click();
+  node('[data-control-compose]').listeners.click();
+  assert.equal(node('[data-support-dialog]').open, false);
+  assert.equal(notices, 0);
+  control.destroy();
+});
+
+test('이전 위치 응답은 clear 이후 빈 지도 안내를 덮지 않는다', async () => {
+  const { element, node } = fixture();
+  let resolveFirst;
+  let loads = 0;
+  let markers = 0;
+  const control = mountVehicleControl({
+    element, mapFactory,
+    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    markerFactory() { markers += 1; return { element: new FakeNode(), remove() {} }; },
+    loadRouteData() {
+      loads += 1;
+      if (loads === 1) return new Promise(resolve => { resolveFirst = resolve; });
+      return Promise.resolve({ points: [] });
+    },
+  });
+
+  control.update(data, 'V2', 'V2-S1');
+  await Promise.resolve();
+  control.clear({ empty: true, message: '확정된 배차가 없습니다.' });
+  resolveFirst({ points: [{ id: 'V2-S1', lng: 127.1, lat: 37.5 }] });
+  await flush();
+  assert.equal(markers, 0);
+  assert.match(node('[data-control-map]').innerHTML, /확정된 배차가 없습니다/);
+  assert.equal(node('[data-control-map-note]').textContent, '확정된 배차가 없습니다.');
+
+  control.update(data, 'V2', 'V2-S1');
+  await flush();
+  assert.equal(loads, 2);
+  assert.doesNotMatch(node('[data-control-map]').innerHTML, /확정된 배차가 없습니다/);
+  control.destroy();
+});
+
+test('destroy 이후 도착한 위치 응답은 제거한 지도를 다시 그리지 않는다', async () => {
+  const { element, node } = fixture();
+  let resolveLoad;
+  let markers = 0;
+  const control = mountVehicleControl({
+    element, mapFactory,
+    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    markerFactory() { markers += 1; return { element: new FakeNode(), remove() {} }; },
+    loadRouteData: () => new Promise(resolve => { resolveLoad = resolve; }),
+  });
+
+  control.update(data, 'V2', 'V2-S1');
+  await Promise.resolve();
+  const note = node('[data-control-map-note]').textContent;
+  control.destroy();
+  resolveLoad({ points: [{ id: 'V2-S1', lng: 127.1, lat: 37.5 }] });
+  await flush();
+  assert.equal(markers, 0);
+  assert.equal(node('[data-control-map-note]').textContent, note);
+});
+
 test('위치 데이터 실패는 update로 재요청하지 않고 같은 오류를 유지한다', async () => {
   const { element, node } = fixture();
   let attempts = 0;
