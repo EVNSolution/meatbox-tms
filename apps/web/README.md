@@ -36,7 +36,7 @@ The gateway serves `/combined/`, `/ui-layout/`, `/login`, and `/dev/register`. R
 | Reused date and workflow controls | `combined/date-picker.mjs`, `combined/date-summary-toolbar.mjs`, `combined/dispatch-workflow.mjs` |
 | Reference-only design guide | `ui-layout/app.mjs`, `ui-layout/design-guide.mjs`, `ui-layout/design-guide.css` |
 | Authentication boundary | `src/auth.ts`, `src/auth-contract.ts`, login/registration HTML, `public/portal.css` |
-| Shared visual foundation | [`public/theme.css`](public/theme.css) |
+| Shared visual foundation | [`public/theme.css`](public/theme.css) tokens and [`public/components.css`](public/components.css) component rules |
 
 Keep pure calculations beside their consumers with colocated `.test.mjs` files. Browser clients use HTTP APIs only. Missing or invalid manifests must produce a visible error; they must not open a simulation channel or manufacture demo state. Maps use coordinates already present in the selected source. If the source has no usable coordinates, show the no-data state rather than fetching `/scenario/api` or inventing locations.
 

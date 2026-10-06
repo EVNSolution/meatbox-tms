@@ -1,10 +1,6 @@
 @import "../combined/date-picker.css";
 @import "../combined/date-summary-toolbar.css";
 
-.design-guide .detail-tabs [role="tab"] {
-  min-height: var(--control-height);
-}
-
 .design-guide {
   display: grid;
   gap: 20px;
@@ -209,31 +205,9 @@
 }
 
 .design-guide .design-guide-field-row input,
-.design-guide .design-guide-field-row select {
-  width: 100%;
-  height: var(--control-height);
-  display: block;
-  margin-top: 5px;
-  padding: 0 10px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-}
+.design-guide .design-guide-field-row select { display: block; margin-top: 5px; }
 
-.design-guide .design-guide-tab-panel {
-  min-height: 46px;
-  padding: 12px 14px;
-  color: var(--muted);
-  background: #f8fafc;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  border-left: 1px solid var(--border);
-}
-
-.design-guide .design-guide-tab-panel[hidden] {
-  display: none;
-}
+.design-guide .design-guide-tab-panel { min-height: 46px; }
 
 .design-guide .design-guide-badges {
   margin-top: 10px;
@@ -396,3 +370,9 @@
   .guide-toolbar-sample .summary-counts { flex: 1; }
   .guide-toolbar-sample .summary-counts > div { flex: 1; min-width: 0; padding-inline: 8px; }
 }
+
+.design-guide .guide-state-samples { display: grid; gap: 8px; margin-top: 10px; }
+.design-guide .guide-inline-empty { margin: 0; color: var(--muted); font-size: 13px; }
+.component-dialog { width: min(460px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto; padding: 20px; }
+.component-dialog h3 { margin-top: 0; }
+.component-dialog form { display: grid; gap: 12px; }

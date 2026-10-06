@@ -24,6 +24,8 @@
   --text: var(--meatbox-ink);
   --muted: #61656e;
   --surface: #ffffff;
+  --surface-hover: #f5f6f8;
+  --surface-muted: #f8f9fb;
   --workspace: #f3f4f6;
   --selected: #fff5f6;
   --border: #dce0e6;
@@ -32,6 +34,10 @@
   --green: #15803d;
   --amber: #a15c00;
   --red: #b42318;
+  --action-hover: #343638;
+  --focus: var(--brand);
+  --dialog-shadow: 0 14px 36px rgb(35 34 33 / 20%);
+  --dialog-backdrop: rgb(15 23 42 / 35%);
   --radius: var(--meatbox-radius-control);
   --shadow: 0 6px 18px rgb(35 34 33 / 7%);
   --control-height: 44px;
