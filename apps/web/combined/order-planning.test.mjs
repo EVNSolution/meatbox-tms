@@ -51,6 +51,52 @@ const deliveries = [
   { id: 'V2-S1', vehicleId: 'V2', name: '주문 3', boxes: 20 },
 ];
 const data = { vehicle: vehicles[0], fleetVehicles: vehicles, fleetDeliveries: deliveries };
+
+test('빈 배차 영역은 가짜 주문이나 지도를 만들지 않고 컨테이너와 비활성 조작을 유지한다', () => {
+  const { element, nodes } = fixture();
+  let maps = 0;
+  const planning = mount({ element }, { mapFactory: () => { maps++; throw new Error('빈 화면에서 지도 생성 금지'); } });
+  planning.clear({ empty: true, message: '등록된 주문이 없습니다.' });
+  assert.equal(maps, 0);
+  assert.equal(element.dataset.sourceKind, 'unavailable');
+  assert.equal(nodes['group-heading'].textContent, '후보 배송원');
+  assert.equal(nodes['map-summary'].textContent, '주문 0건 · 총 0박스');
+  assert.equal(nodes['map-status-text'].textContent, '등록된 주문이 없습니다.');
+  assert.equal(nodes['list-panel'].hidden, false);
+  assert.equal(nodes['list-panel'].open, true);
+  for (const name of ['dispatch-pin', 'search', 'previous', 'next']) assert.equal(nodes[name].disabled, true);
+  assert.equal(nodes['dispatch-actions'].hidden, false);
+  assert.equal(nodes['map-mode-control'].hidden, false);
+  planning.clear({ message: '주문 자료를 불러오지 못했습니다.' });
+  assert.equal(nodes['map-summary'].textContent, '주문 수량 확인 전');
+  assert.equal(nodes['list-total'].textContent, '확인 전');
+  planning.destroy();
+});
+
+test('자료 날짜에서 빈 날짜로 이동하면 지도와 이전 주문을 제거하고 재조회 때 복원한다', () => {
+  const { element, nodes } = fixture();
+  let maps = 0, removed = 0, layersRemoved = 0;
+  const planning = mount({ element }, {
+    mapFactory: () => { maps++; return { resize() {}, fitBounds() {}, remove() { removed++; } }; },
+    layerFactory: () => ({ update() {}, destroy() { layersRemoved++; } }),
+  });
+  planning.update(importedPlanningData());
+  assert.match(nodes.vehicle.innerHTML, /기사 1/);
+  planning.clear({ empty: true, message: '등록된 주문이 없습니다.' });
+  assert.equal(removed, 1);
+  assert.equal(layersRemoved, 1);
+  assert.doesNotMatch(nodes.vehicle.innerHTML, /기사 1/);
+  assert.doesNotMatch(nodes.list.innerHTML, /1001/);
+  assert.equal(nodes['map-canvas'].dataset.orderDate, undefined);
+  assert.equal(nodes['dispatch-pin'].disabled, true);
+  planning.update(importedPlanningData('2025-09-16'));
+  assert.equal(maps, 2);
+  assert.equal(nodes['map-canvas'].dataset.orderDate, '2025-09-16');
+  assert.equal(nodes.search.disabled, false);
+  assert.equal(nodes['list-panel'].open, false);
+  assert.match(nodes.list.innerHTML, /1001/);
+  planning.destroy();
+});
 const selectVehicle = (nodes, id) => nodes.vehicle.listeners.click({ target: { closest: () => ({ dataset: { orderVehicleId: id } }) } });
 function importedPlanningData(date = '2025-09-15') {
   const sourceGroups = [{ id: 'G1', label: '기사 1' }, { id: 'G2', label: '기사 2' }];

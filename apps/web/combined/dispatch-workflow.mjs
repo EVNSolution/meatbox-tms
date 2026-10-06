@@ -151,7 +151,9 @@ export function mountDispatchWorkflow({ element, onCommand = () => {} } = {}) {
     publish.textContent = busy === 'publish' ? `${publishLabel} 중…` : publishLabel;
     calculate.textContent = busy === 'calculate' ? '배차 계산 중…' : calculationReady ? '계산 결과 보기' : '배차 계산';
     calculate.disabled = !calculationReady && (!model.connected || model.readOnly || ['published', 'amending'].includes(model.phase) || busy !== '' || !model.canCalculate || !selected.size);
-    help.textContent = !model.connected
+    help.textContent = model.empty
+      ? '주문이 등록되면 배송원 선택과 배차 계산을 진행할 수 있습니다.'
+      : !model.connected
       ? '운영 서버 연결을 확인하고 있습니다.'
       : model.phase === 'published'
         ? model.amendmentBlockedReason || '확정된 배차입니다'
@@ -297,8 +299,14 @@ export function mountDispatchWorkflow({ element, onCommand = () => {} } = {}) {
   dialog.addEventListener('close', restoreFocus);
 
   return {
-    update(data, connected = true) {
+    update(data, connected = true, { date = '', empty = false } = {}) {
       const next = dispatchWorkflowModel(data, connected);
+      if (!data) {
+        next.date = date;
+        next.empty = empty;
+        next.phaseLabel = empty ? '주문 대기' : '자료 확인 중';
+        if (empty) next.summary = { orders: 0, destinations: 0, boxes: 0 };
+      }
       const nextIdentity = `${next.date}|${candidateKey(next.candidates)}`;
       if (nextIdentity !== identity) {
         identity = nextIdentity;
@@ -321,7 +329,7 @@ export function mountDispatchWorkflow({ element, onCommand = () => {} } = {}) {
       model = next;
       next.candidates.filter(candidate => candidate.locked).forEach(candidate => selected.add(candidate.id));
       if (['published', 'amending'].includes(model.phase)) calculationReady = false;
-      if ((model.readOnly || model.phase === 'published') && dialog.open) closeDialog();
+      if ((!data || model.readOnly || model.phase === 'published') && dialog.open) closeDialog();
       renderPreview();
       renderControls();
     },

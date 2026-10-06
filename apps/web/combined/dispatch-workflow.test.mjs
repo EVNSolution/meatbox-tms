@@ -39,6 +39,30 @@ function checkbox(id, checked, disabled = false) {
   return { closest: () => ({ dataset: { dispatchCandidate: id }, checked, disabled }) };
 }
 
+test('주문 없음은 대기와 0 집계를 표시하고 로딩·오류는 미확인으로 구분한다', () => {
+  const { element, nodes } = fixture();
+  const commands = [];
+  const workflow = mountDispatchWorkflow({ element, onCommand: (...args) => commands.push(args) });
+  workflow.update(data({ dispatch: { ...data().dispatch, phase: 'draft', draftVersion: 4, canPublish: true } }));
+  nodes.open.listeners.click();
+  assert.equal(nodes.dialog.open, true);
+  workflow.update(null, false, { date: '2026-10-06', empty: true });
+  assert.equal(nodes.dialog.open, false);
+  assert.equal(nodes.phase.textContent, '주문 대기');
+  assert.match(nodes.summary.innerHTML, /주문 0.*배송지 0.*0박스/);
+  for (const name of ['open', 'calculate', 'publish']) {
+    assert.equal(nodes[name].disabled, true);
+    nodes[name].listeners.click();
+  }
+  assert.deepEqual(commands, []);
+  assert.match(nodes.help.textContent, /주문이 등록되면/);
+  workflow.update(null, false, { date: '2026-10-07' });
+  assert.equal(nodes.phase.textContent, '자료 확인 중');
+  assert.match(nodes.summary.innerHTML, /미등록/);
+  assert.doesNotMatch(nodes.summary.innerHTML, /주문 0/);
+  workflow.destroy();
+});
+
 test('단계와 계산안, 전체 전송 가능 조건을 실제 상태에서만 만든다', () => {
   const draft = dispatchWorkflowModel(data({
     dispatch: { ...data().dispatch, phase: 'draft', draftVersion: 4, canPublish: true, hasChanges: true },

@@ -28,10 +28,11 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "f4d599001c54c9366ee4481af23b98b6ad2f04f216c28e05b4a3711d619df323",
+      "targetSha256": "fe1b38c39d6d186d47df4bcf5f22dffe0e48c7651c0090e61ab42e62e6941aab",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
       ],
       "status": "active"
     },
@@ -398,10 +399,11 @@
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "ff150744641287e0f70b8313f47c5881a7344e30edeef6964d954836304ec38e",
+      "targetSha256": "9674de8db4b2583367067b1f5a71ce961bed9b9f65b6eb2c56ee71d463814b18",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
-        "Remove unused escaping helper, selection value and catch binding; retain update argument position"
+        "Remove unused escaping helper, selection value and catch binding; retain update argument position",
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
       ],
       "status": "active"
     },
@@ -409,9 +411,11 @@
       "source": "apps/combined/dated-dispatch.test.mjs",
       "sourceSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c",
       "target": "apps/web/combined/dated-dispatch.test.mjs",
-      "targetSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c",
+      "targetSha256": "f9c210f324712c3fe3a8a74ddf8272998283edbbd080aefc793b809f76855c2f",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
-      "changes": [],
+      "changes": [
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+      ],
       "status": "active"
     },
     {
@@ -556,10 +560,11 @@
       "source": "apps/combined/dispatch-workflow.mjs",
       "sourceSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59",
       "target": "apps/web/combined/dispatch-workflow.mjs",
-      "targetSha256": "ad71e21b9e23c69de51c7ee7664d870a716116e010f1615ec8d9ae7af8d27a6e",
+      "targetSha256": "5978aa41811989fd6d931c645f77f8553e784d6099d9e0277fed20d043a270e9",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
       ],
       "status": "active"
     },
@@ -567,10 +572,11 @@
       "source": "apps/combined/dispatch-workflow.test.mjs",
       "sourceSha256": "1e721931eec18bce6266d669083e65ab096947ca61a4bf9c3637bf549156f0f2",
       "target": "apps/web/combined/dispatch-workflow.test.mjs",
-      "targetSha256": "aa9eaf681014440bf21b09445287ebb44bef736fc603314e8696c3716d6edeaa",
+      "targetSha256": "308975d3c8fde9b9723baee28565de4eb306c98fd078da74b509f9de07bf783f",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
       ],
       "status": "active"
     },
@@ -833,18 +839,22 @@
       "source": "apps/combined/operations-model.mjs",
       "sourceSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
       "target": "apps/web/combined/operations-model.mjs",
-      "targetSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
+      "targetSha256": "acdad5080bd1f2c3f5a1e3ba588922ffc9bc759467dc047d808a6bd05a15b23e",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
-      "changes": [],
+      "changes": [
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+      ],
       "status": "active"
     },
     {
       "source": "apps/combined/operations-model.test.mjs",
       "sourceSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732",
       "target": "apps/web/combined/operations-model.test.mjs",
-      "targetSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732",
+      "targetSha256": "89c4ccb95ffe1ff5f1d9ed13e984c6d698600cd8e6ee10e6c2de4b88889e183e",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
-      "changes": [],
+      "changes": [
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+      ],
       "status": "active"
     },
     {
@@ -862,10 +872,11 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "8f77a2bda1094044286b6cf65b17f26d66a1c897b0a610d18f727cfc1169c67d",
+      "targetSha256": "fe54526547070baa3c9ea8a99ed45a8dc25ba4eccfbd862b8a074a67565d03c9",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
-        "Preserve fixed public asset URLs"
+        "Preserve fixed public asset URLs",
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
       ],
       "status": "active"
     },
@@ -873,13 +884,14 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "0678bfbdac4030b8e8a582f64cef1139b086e643e5df2ac841f013cb7057c88e",
+      "targetSha256": "27e7494847654d2ac0401ae5034549a8a10de828d7ed909c45a11c55204e6b54",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Remove unread promise binding and use endsWith for the fixed suffix",
         "Import and re-export the exact shared map model/factory functions instead of defining them inside the planning view",
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
       ],
       "status": "active"
     },
@@ -909,10 +921,11 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "4940d41cd4b023cee32d56619a6b2599e4c55059c06aa0d72d78e48a9c3cc090",
+      "targetSha256": "ceb483292310c9a8d746c15eaf5892ce8df0f4deecd6fe85258f6a97a1605fcf",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
       ],
       "status": "active"
     },

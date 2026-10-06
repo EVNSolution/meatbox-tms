@@ -471,7 +471,46 @@ export function mountOrderPlanning({
 
   syncSummary();
   return {
+    clear({ empty = false, message = '주문 자료를 확인하고 있습니다.' } = {}) {
+      data = null;
+      reassignDialog.close();
+      resizeObserver?.disconnect(); resizeObserver = null;
+      mapMarkers.splice(0).forEach(marker => marker.remove());
+      wheelZoom?.remove(); wheelZoom = null;
+      pointLayer?.destroy(); pointLayer = null;
+      map?.remove?.(); map = null;
+      sourceData = null; routeData = null; routeState = 'idle'; mapFailure = '';
+      vehicleSignature = ''; markerSignature = ''; geometrySignature = '';
+      selectedDeliveryId = null; visibleDeliveries = []; overlapIds = []; listQuery = ''; listPage = 1;
+      element.dataset.sourceKind = 'unavailable';
+      setText('[data-order-group-heading]', '후보 배송원');
+      setText('[data-order-group-note]', empty ? '0명' : '자료 확인 전');
+      vehicleSelect.innerHTML = '<p class="order-vehicle-empty">주문 자료가 등록되면 후보 배송원을 표시합니다.</p>';
+      query('[data-order-dispatch-actions]').hidden = false;
+      query('[data-order-dispatch-pin]').disabled = true;
+      setText('[data-order-dispatch-context]', '주문과 계산안이 준비되면 핀배차를 사용할 수 있습니다.');
+      query('[data-order-dispatch-result]').hidden = true;
+      query('[data-order-map-mode-control]').hidden = false;
+      query('[data-order-map-mode-control]').querySelectorAll('input').forEach(input => { input.disabled = true; });
+      setText('[data-order-map-description]', '주문 위치와 배송 권역을 표시하는 영역입니다.');
+      query('[data-order-region-note]').innerHTML = '<strong>배송 권역</strong>주문 자료가 등록되면 권역별 수량을 표시합니다.';
+      mapStatus.hidden = false; mapRetry.hidden = true; mapStatusText.textContent = message;
+      count.textContent = empty ? '등록된 주문 위치가 없습니다.' : '주문 위치를 아직 확인하지 못했습니다.';
+      selection.innerHTML = '<span>선택 주문</span><strong>주문이 등록되면 지도에서 선택할 수 있습니다.</strong>';
+      summary.textContent = empty ? '주문 0건 · 총 0박스' : '주문 수량 확인 전';
+      delete canvas.dataset.orderPointCount; delete canvas.dataset.orderDate;
+      const listPanel = query('[data-order-list-panel]');
+      listPanel.hidden = false; listPanel.open = true;
+      query('[data-order-search]').value = ''; query('[data-order-search]').disabled = true;
+      setText('[data-order-list-total]', empty ? '0건' : '확인 전');
+      query('[data-order-list]').innerHTML = `<p class="order-vehicle-empty">${escapeHtml(message)}</p>`;
+      setText('[data-order-page]', empty ? '0건' : '확인 전');
+      query('[data-order-previous]').disabled = true; query('[data-order-next]').disabled = true;
+    },
     update(nextData, nextSelectedId) {
+      if (element.dataset.sourceKind === 'unavailable') query('[data-order-list-panel]').open = false;
+      query('[data-order-search]').disabled = false;
+      query('[data-order-map-mode-control]').querySelectorAll('input').forEach(input => { input.disabled = false; });
       const dateChanged = data?.dispatchSource?.date !== nextData?.dispatchSource?.date;
       data = nextData || null;
       if (dateChanged) {
