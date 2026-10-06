@@ -12,29 +12,6 @@
   }
 }
 
-@media (max-width: 420px) {
-  .demo-tag {
-    order: 2;
-  }
-
-  .clock {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  .header-meta {
-    width: 100%;
-    flex-wrap: wrap;
-    margin-left: 0;
-  }
-
-  .eta-value,
-  .terminal-eta > strong,
-  .customer-eta {
-    font-size: 27px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -45,4 +22,3 @@
     animation-iteration-count: 1 !important;
   }
 }
-

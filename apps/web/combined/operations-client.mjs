@@ -34,7 +34,7 @@ export function expandSourceCommand(type, extra = {}, state) {
 }
 
 // The operator reads dated source data; missing input remains a visible error.
-export function connectSimulation({ onState, onStatus, onError, onDateContext = () => {} }) {
+export function connectOperations({ onState, onStatus, onError, onDateContext = () => {} }) {
   let timer;
   let reconnectAttempt = 0;
   let stopped = false;

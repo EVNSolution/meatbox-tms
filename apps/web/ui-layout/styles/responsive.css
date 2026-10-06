@@ -1,35 +1,16 @@
-@media (max-width: 1242px) {
-  .workspace {
-    grid-template-columns: minmax(240px, 270px) minmax(0, 1fr);
-  }
-
-  .preview-sidebar {
-    position: static;
-    grid-column: 2;
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .terminal-sidebar {
-    grid-row: 1 / span 2;
-  }
-}
-
 @media (max-width: 860px) {
   body {
     font-size: 14px;
   }
 
   .app-header { gap: 10px; padding: 0 12px; }
+
   .brand img { width: 105px; height: 25px; }
+
   .app-title { display: none; }
-  .app-shell { grid-template-columns: 72px minmax(0, 1fr); }
 
   .header-meta {
     margin-left: auto;
-  }
-
-  .clock {
-    font-size: 12px;
   }
 
   .page-intro {
@@ -48,60 +29,6 @@
   .summary-counts > * {
     min-width: 0;
     flex: 1;
-  }
-
-  .page-actions {
-    width: 100%;
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .map-preview {
-    width: auto;
-    min-height: 200px;
-    margin: 10px 12px 0;
-  }
-
-  .map-preview > div {
-    min-height: 198px;
-    padding: 16px;
-  }
-
-  .workspace {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .terminal-sidebar,
-  .preview-sidebar {
-    position: static;
-    grid-column: auto;
-  }
-
-  .terminal-sidebar {
-    grid-row: auto;
-    max-height: none;
-  }
-
-  #terminal-list {
-    max-height: 390px;
-  }
-
-  .preview-sidebar {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .selected-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .status-meta {
-    justify-items: start;
-    text-align: left;
   }
 
   .eta-grid,
@@ -127,14 +54,6 @@
     grid-column: 2;
   }
 
-  .history-table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-
-  .search-field input,
-  .filter-field select,
   .button {
     font-size: 16px;
   }
@@ -142,32 +61,14 @@
   .footer-note {
     padding: 0 12px 18px;
   }
-
-  .sidebar-note {
-    padding: 9px 12px 10px;
-  }
-}
-
-@media (max-width: 520px) {
-  .app-shell {
-    grid-template-columns: 72px minmax(0, 1fr);
-  }
-
-  .app-nav-links {
-    padding: 16px 5px;
-  }
-
-  .app-nav-links a {
-    padding: 10px 6px;
-  }
 }
 
 @media (max-width: 420px) {
   .header-meta { min-width: 0; gap: 0; }
+
   .reference-tag { padding: 3px 5px; font-size: 10px; white-space: nowrap; }
 
   .eta-value,
-  .terminal-eta > strong,
   .customer-eta {
     font-size: 27px;
   }

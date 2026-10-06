@@ -1,6 +1,6 @@
 .dispatch-workflow,
 .dispatch-workflow * { box-sizing: border-box; }
-.dispatch-workflow { margin-bottom: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+.dispatch-workflow { margin-bottom: 12px; }
 .dispatch-workflow-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 10px 14px; }
 .dispatch-workflow-overview { min-width: 0; flex: 1; }
 .dispatch-workflow-phase { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

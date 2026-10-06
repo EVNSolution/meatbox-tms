@@ -66,7 +66,7 @@ test('자료가 없거나 확인 중이어도 관제 카드와 운행 정보 구
   let mapCreates = 0;
   const control = mountVehicleControl({
     element,
-    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    onSelectVehicle() {}, onSelectDelivery() {},
     mapFactory() { mapCreates += 1; return mapFactory(); },
   });
 
@@ -113,7 +113,7 @@ test('운영 자료가 사라졌다가 돌아오면 초기화한 관제 기능�
   let mapRemoves = 0;
   const control = mountVehicleControl({
     element,
-    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    onSelectVehicle() {}, onSelectDelivery() {},
     mapFactory() {
       mapCreates += 1;
       return { resize() {}, jumpTo() {}, fitBounds() {}, remove() { mapRemoves += 1; } };
@@ -147,10 +147,9 @@ test('운영 자료가 사라졌다가 돌아오면 초기화한 관제 기능�
 
 test('빈 상태로 바뀌면 열린 지원배차를 닫고 비활성 동작을 무시한다', () => {
   const { element, node } = fixture();
-  let notices = 0;
   const control = mountVehicleControl({
     element, mapFactory,
-    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() { notices += 1; },
+    onSelectVehicle() {}, onSelectDelivery() {},
   });
   control.update(data, 'V2', 'V2-S1');
   node('[data-control-support]').listeners.click();
@@ -159,9 +158,8 @@ test('빈 상태로 바뀌면 열린 지원배차를 닫고 비활성 동작을 
   control.clear({ empty: true, message: '확정된 배차가 없습니다.' });
   assert.equal(node('[data-support-dialog]').open, false);
   node('[data-control-support]').listeners.click();
-  node('[data-control-compose]').listeners.click();
   assert.equal(node('[data-support-dialog]').open, false);
-  assert.equal(notices, 0);
+  assert.doesNotMatch(element.innerHTML, /data-control-compose|notice-send-status/);
   control.destroy();
 });
 
@@ -172,7 +170,7 @@ test('이전 위치 응답은 clear 이후 빈 지도 안내를 덮지 않는다
   let markers = 0;
   const control = mountVehicleControl({
     element, mapFactory,
-    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    onSelectVehicle() {}, onSelectDelivery() {},
     markerFactory() { markers += 1; return { element: new FakeNode(), remove() {} }; },
     loadRouteData() {
       loads += 1;
@@ -203,7 +201,7 @@ test('destroy 이후 도착한 위치 응답은 제거한 지도를 다시 그�
   let markers = 0;
   const control = mountVehicleControl({
     element, mapFactory,
-    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    onSelectVehicle() {}, onSelectDelivery() {},
     markerFactory() { markers += 1; return { element: new FakeNode(), remove() {} }; },
     loadRouteData: () => new Promise(resolve => { resolveLoad = resolve; }),
   });
@@ -224,7 +222,7 @@ test('위치 데이터 실패는 update로 재요청하지 않고 같은 오류�
   let rejectLoad;
   const control = mountVehicleControl({
     element,
-    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    onSelectVehicle() {}, onSelectDelivery() {},
     mapFactory,
     loadRouteData: () => {
       attempts += 1;
@@ -253,7 +251,7 @@ test('정상 위치 수신 뒤에만 미등록 수를 확정하고 잘못된 좌
   const marked = [];
   const control = mountVehicleControl({
     element,
-    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    onSelectVehicle() {}, onSelectDelivery() {},
     mapFactory,
     markerFactory: (_map, delivery, coordinates) => {
       marked.push([delivery.id, coordinates]);
@@ -300,7 +298,7 @@ test('운영 주문 좌표를 직접 쓰고 기본 차량을 선택하며 GPS �
       marked.push([delivery.id, coordinates]);
       return { element: new FakeNode(), remove() {} };
     },
-    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    onSelectVehicle() {}, onSelectDelivery() {},
   });
   const selected = control.update(source, null, null);
   assert.equal(selected.vehicle.id, 'real-b');
@@ -337,7 +335,7 @@ test('지원배차는 승인 계획과 수신된 실제 처리 구간을 보여�
   };
   const control = mountVehicleControl({
     element, mapFactory, loadRouteData: () => Promise.reject(new Error('must not load')),
-    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {},
+    onSelectVehicle() {}, onSelectDelivery() {},
   });
   control.update(source, null, null);
   assert.match(node('[data-control-summary]').innerHTML, /고정 출발 기준<\/dt><dd>06:30/);
@@ -354,9 +352,9 @@ test('지원배차는 승인 계획과 수신된 실제 처리 구간을 보여�
 
 test('배송지 펼침은 핵심 정보만 남기고 대상 기록과 안내를 배송 관리로 연결한다', () => {
   const { element, node } = fixture();
-  const opened = [], notices = [], selected = [];
+  const opened = [], selected = [];
   const control = mountVehicleControl({ element, mapFactory, loadRouteData: () => new Promise(() => {}),
-    onSelectVehicle() {}, onSelectDelivery: id => selected.push(id), onOpenManagement: id => opened.push(id), onOpenNotice: id => notices.push(id),
+    onSelectVehicle() {}, onSelectDelivery: id => selected.push(id), onOpenManagement: id => opened.push(id),
   });
   const next = { ...data, fleetDeliveries: deliveries.map((stop, index) => ({ ...stop, sequence: index + 1,
     notices: [{ id: `n${index}`, stopId: stop.id, time: '06:20', title: `안내 ${index}`, body: `본문 ${index}` }],
@@ -371,8 +369,7 @@ test('배송지 펼침은 핵심 정보만 남기고 대상 기록과 안내를 
   node('[data-control-stops]').listeners.click({ target: { closest: () => ({ dataset: { controlManage: 'V2-S1' } }) } });
   assert.deepEqual(opened, ['V2-S1']);
   assert.equal(node('[data-control-records-view]').hidden, false);
-  node('[data-control-compose]').listeners.click();
-  assert.deepEqual(notices, ['V2-S1']);
+  assert.doesNotMatch(element.innerHTML, /data-control-compose|notice-send-status/);
   node('[data-control-record-stop]').listeners.change({ target: { value: 'V2-S2' } });
   assert.deepEqual(selected, ['V2-S2']);
   control.update(next, 'V2', 'V2-S2');
@@ -386,7 +383,7 @@ test('기록 필터와 순서 관리 화면 전환은 편집 영역을 재생성
   const { element, node } = fixture();
   let editStarts = 0;
   const control = mountVehicleControl({ element, mapFactory, loadRouteData: () => new Promise(() => {}),
-    onSelectVehicle() {}, onSelectDelivery() {}, onOpenNotice() {}, onOpenManagement() {}, onOpenRoute() { editStarts += 1; },
+    onSelectVehicle() {}, onSelectDelivery() {}, onOpenManagement() {}, onOpenRoute() { editStarts += 1; },
   });
   const next = { ...data, fleetDeliveries: [{ ...deliveries[0], notices: [{ id: 'n', stopId: 'V2-S1', time: '06:20', title: '대상 알림' }] }],
     events: [{ stopId: 'V2-S1', vehicleId: 'V2', time: '06:10', message: '대상 이력' }] };
@@ -405,6 +402,5 @@ test('기록 필터와 순서 관리 화면 전환은 편집 영역을 재생성
   assert.equal(node('[data-control-route-view]').hidden, true);
   assert.equal(route.innerHTML, 'existing editor with draft');
   control.update({ ...next, connected: false }, 'V2', 'V2-S1');
-  assert.equal(node('[data-control-compose]').disabled, true);
   control.destroy();
 });

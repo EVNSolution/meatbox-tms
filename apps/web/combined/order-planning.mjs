@@ -73,13 +73,13 @@ export function mountOrderPlanning({
   if (!element) throw new TypeError('주문 배차 영역이 필요합니다.');
   element.innerHTML = `
     <div class="order-planning-layout">
-    <aside class="order-vehicle-panel" aria-labelledby="order-vehicle-heading">
+    <aside class="panel order-vehicle-panel" aria-labelledby="order-vehicle-heading">
       <div class="order-vehicle-heading"><div><h2 id="order-vehicle-heading" data-order-group-heading>배차 차량</h2><p data-order-group-note>수신 순서</p></div></div>
       <div class="order-vehicle-list" data-order-vehicle aria-label="배차 차량 선택"></div>
       <div class="order-dispatch-actions" data-order-dispatch-actions hidden><button type="button" class="button subtle" data-order-dispatch-pin disabled>핀배차</button><p data-order-dispatch-context>차량 또는 지도 주문을 선택해 주세요.</p><p data-order-dispatch-result role="status" hidden></p></div>
       <p class="order-region-note" data-order-region-note><strong>권역 기능 준비 중</strong> 실제 권역 데이터가 연결되면 경계와 권역 내 배송지 정보를 제공합니다.</p>
     </aside>
-    <section class="order-map-panel" aria-labelledby="order-map-heading">
+    <section class="panel order-map-panel" aria-labelledby="order-map-heading">
       <div class="order-map-heading"><div><h2 id="order-map-heading">주문 배차 지도</h2><p data-order-map-description>전체 등록 주문과 선택 차량 배정</p></div><div class="order-map-controls"><fieldset class="order-map-mode" data-order-map-mode-control hidden><legend class="sr-only">지도 표시 단위</legend><label><input type="radio" name="order-map-mode" value="regions" data-order-map-mode checked><span>권역 단위</span></label><label><input type="radio" name="order-map-mode" value="orders" data-order-map-mode><span>주문 단위</span></label></fieldset></div></div>
       <div class="order-map-canvas" data-order-map-canvas aria-label="주문 위치">
         <div class="order-map-layer" data-order-map-layer></div>

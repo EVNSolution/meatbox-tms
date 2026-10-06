@@ -23,8 +23,13 @@ if (![authOwner, dispatchOwner].every(owner => ["node", "kotlin"].includes(owner
 const gateway = createLegacyGateway({ apiOrigin, kotlinApiOrigin, kotlinResources:resourceOwner === "kotlin", kotlinAuth:authOwner === "kotlin", kotlinDispatch:dispatchOwner === "kotlin", publicOrigin, distDirectory });
 
 gateway.server.listen(port, host, () => {
-  console.log(`Meatbox legacy transition gateway ready at ${publicOrigin}`);
-  console.log(`Start the legacy Node API with PUBLIC_ORIGIN=${publicOrigin}`);
+  console.log(`Meatbox web gateway ready at ${publicOrigin}`);
+  const sourceOwner = kotlinApiOrigin === undefined ? "node" : "kotlin";
+  console.log(`API owners: source=${sourceOwner}, auth=${authOwner}, resources=${resourceOwner}, dispatch=${dispatchOwner}`);
+  if (kotlinApiOrigin !== undefined) console.log(`Kotlin API origin: ${kotlinApiOrigin}`);
+  if ([sourceOwner, authOwner, resourceOwner, dispatchOwner].includes("node")) {
+    console.log(`Start the selected Node API at ${apiOrigin} with PUBLIC_ORIGIN=${publicOrigin}`);
+  }
 });
 
 let stopping = false;

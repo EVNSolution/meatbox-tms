@@ -11,20 +11,6 @@
   font-size: 12px;
 }
 
-.sidebar-note {
-  max-width: none;
-  margin: 0;
-  padding: 9px 12px 10px;
-  border-top: 1px solid var(--border);
-  background: #f8f9fb;
-}
-
-.page-footer {
-  max-width: 1600px;
-  margin: -4px auto 0;
-  padding: 0 20px 22px;
-}
-
 .sr-only {
   position: absolute !important;
   width: 1px !important;
@@ -35,9 +21,4 @@
   clip: rect(0, 0, 0, 0) !important;
   white-space: nowrap !important;
   border: 0 !important;
-}
-
-.terminal-row.selected:focus-visible,
-.terminal-row[aria-current="true"]:focus-visible {
-  outline-offset: -3px;
 }

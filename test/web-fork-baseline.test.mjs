@@ -32,7 +32,8 @@ const authoredPaths = [
   'apps/web/.gitignore', 'apps/web/.oxlintrc.json', 'apps/web/README.md',
   'apps/web/package-lock.json', 'apps/web/package.json', 'apps/web/public/theme.css',
   'apps/web/public/components.css', 'apps/web/combined/status-notification.css',
-  'apps/web/scripts/api-routing.mjs',
+  'apps/web/scripts/api-routing.mjs', 'apps/web/combined/operations-adapter.test.mjs',
+  'apps/web/test/serve-legacy.test.mjs',
   'apps/web/scripts/legacy-gateway.mjs', 'apps/web/scripts/serve-legacy.mjs',
   'apps/web/scripts/test.mjs', 'apps/web/src/auth-contract.ts', 'apps/web/src/auth.ts',
   'apps/web/src/shared/maps/order-map.test.mjs', 'apps/web/test/auth-contract.test.mjs',
@@ -80,6 +81,10 @@ function expectedTargets(source) {
     if (source.endsWith('/meatbox-logo.svg')) targets.push('apps/web/public/portal-logo.svg');
     return targets;
   }
+  const renamed = { 'simulation-adapter.mjs': 'operations-adapter.mjs', 'simulation-client.mjs': 'operations-client.mjs', 'simulation-client.test.mjs': 'operations-client.test.mjs' };
+  if (source.startsWith('apps/combined/') && renamed[source.slice('apps/combined/'.length)]) {
+    return ['apps/web/combined/' + source.slice('apps/combined/'.length), 'apps/web/combined/' + renamed[source.slice('apps/combined/'.length)]];
+  }
   if (source.startsWith('apps/combined/')) {
     const name = source.slice('apps/combined/'.length);
     return [legacyTests.has(name) ? 'test/web-fork-legacy/' + name : 'apps/web/combined/' + name];
@@ -105,13 +110,14 @@ test('frontend fork accounts for every fixed-baseline source and all transformed
   assert.equal(inventory.initialForkTargetFileCount, 145);
   assert.equal(inventory.historicalTargetFileCount, 163);
   assert.equal(inventory.targetFileCount, inventory.records.filter(record => record.status === 'active').length);
-  assert.equal(inventory.records.length, 163);
+  assert.equal(inventory.additionalDerivedTargetFileCount, 3);
+  assert.equal(inventory.records.length, 163 + inventory.additionalDerivedTargetFileCount);
   assert.deepEqual([...new Set(inventory.records.map(record => record.source))].sort(), sourceFiles);
 
   const pairs = inventory.records.map(record => `${record.source} -> ${record.target}`);
   const expectedPairs = sourceFiles.flatMap(source => expectedTargets(source).map(target => `${source} -> ${target}`));
   assert.equal(new Set(pairs).size, pairs.length, 'duplicate source-to-target mapping');
-  assert.equal(new Set(inventory.records.map(record => record.target)).size, 163, 'each target has one provenance source');
+  assert.equal(new Set(inventory.records.map(record => record.target)).size, inventory.records.length, 'each target has one provenance source');
   assert.deepEqual(pairs.sort(), expectedPairs.sort());
   for (const record of inventory.records) {
     assert.doesNotMatch(record.target, /(?:^|\/)(?:\.runtime|node_modules|dist|build)(?:\/|$)/);
@@ -139,7 +145,7 @@ test('CSS fragments retain fixed original ranges and extraction evidence without
     });
     assert.equal(hash(pieces.join('')), hash(baseline(source)), `${source}: extraction ranges must account for the entire original cascade`);
     const entry = readFileSync(path.join(root, directory, 'styles.css'), 'utf8');
-    assert.deepEqual([...entry.matchAll(/@import\s+["']\.\/styles\/([^"']+)\.css["']/g)].map(match => match[1]), fragments.map(([name]) => name), `${source}: preserve fragment import order`);
+    assert.deepEqual([...entry.matchAll(/@import\s+["']\.\/styles\/([^"']+)\.css["']/g)].map(match => match[1]), fragments.filter(([name]) => inventory.records.find(record => record.target === `${directory}/styles/${name}.css`).status === 'active').map(([name]) => name), `${source}: preserve active fragment import order`);
   }
   const toolbar = inventory.records.find(record => record.target === 'apps/web/combined/date-summary-toolbar.css');
   assert.deepEqual(toolbar.derivation, {
@@ -225,14 +231,15 @@ test('historical regression tests retain provenance and intentional changes are 
   const tests = inventory.records.filter(record => record.source.endsWith('.test.mjs'));
   const pure = tests.filter(record => record.target.startsWith('apps/web/'));
   const legacy = tests.filter(record => record.target.startsWith('test/web-fork-legacy/'));
-  assert.equal(pure.length, 34);
+  assert.equal(new Set(pure.map(record => record.source)).size, 34);
+  assert.equal(pure.length, 35, 'historical tests plus the renamed operational-client target');
   assert.equal(legacy.length, 5);
   for (const record of pure.filter(record => record.status === 'active')) {
     if (record.sourceSha256 !== record.targetSha256) assert.ok(record.changes.some(change => typeof change === 'string' && change.trim()), `${record.target}: explain intentional regression changes`);
   }
   for (const record of legacy.filter(record => record.status === 'active')) {
     const fork = readFileSync(path.join(root, record.target), 'utf8');
-    assert.equal(fork.replaceAll('../../apps/web/combined/', './'), baseline(record.source).toString('utf8'), `${record.target}: only UI import paths may differ`);
+    assert.equal(fork.replaceAll('../../apps/web/combined/', './').replaceAll('../../apps/combined/', './'), baseline(record.source).toString('utf8'), `${record.target}: only UI import paths may differ`);
   }
 });
 

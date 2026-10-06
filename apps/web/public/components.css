@@ -85,7 +85,7 @@ a[aria-disabled="true"] { cursor: not-allowed; }
 
 :where(button, input, select, textarea, summary, a, [tabindex]):focus-visible { position: relative; z-index: 2; outline: 2px solid var(--focus); outline-offset: 2px; }
 
-:where(.date-picker-dialog, .dispatch-workflow-dialog, .order-dialog, .customer-notice-dialog, .support-dispatch-dialog, .component-dialog) {
+:where(.date-picker-dialog, .dispatch-workflow-dialog, .order-dialog, .support-dispatch-dialog, .component-dialog) {
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -93,7 +93,7 @@ a[aria-disabled="true"] { cursor: not-allowed; }
   box-shadow: var(--dialog-shadow);
   font-family: var(--meatbox-font);
 }
-:where(.date-picker-dialog, .dispatch-workflow-dialog, .order-dialog, .customer-notice-dialog, .support-dispatch-dialog, .component-dialog)::backdrop { background: var(--dialog-backdrop); }
+:where(.date-picker-dialog, .dispatch-workflow-dialog, .order-dialog, .support-dispatch-dialog, .component-dialog)::backdrop { background: var(--dialog-backdrop); }
 
 @media (max-width: 700px) {
   :is(input:not([type="checkbox"], [type="radio"], [type="hidden"]), select, textarea) { font-size: 16px; }

@@ -21,7 +21,7 @@ test("every built page resolves its own scripts, styles and fixed public assets"
     }
   }
   for (const asset of [
-    "combined/assets/PretendardVariable.ttf", "combined/assets/OFL-1.1.txt",
+    "portal-font.ttf", "combined/assets/OFL-1.1.txt",
     "combined/assets/vendor/maplibre/maplibre-gl-csp.js",
     "combined/assets/vendor/maplibre/maplibre-gl-csp-worker.js",
     "combined/assets/vendor/maplibre/LICENSE.txt", "combined/assets/maps/dsv-korea-v1.json",
