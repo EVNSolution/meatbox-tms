@@ -7,7 +7,9 @@
 - 프런트는 `apps/web/` 한 모듈이다. 배차 관리, 배송 관제, 자원 관리와 별도 인증·디자인 가이드 진입점을 빌드한다.
 - Kotlin/Spring이 인증, 준비된 원본 조회, SQLite 자원 저장, 날짜별 계산·확정·수정·순서 변경과 checkpoint를 소유한다.
 - 웹 게이트웨이는 인증된 정적 파일과 Kotlin API 전달을 담당한다. TEST native 모드에서 Node 업무 writer를 시작하지 않는다.
-- 배차 화면의 명령은 `calculate_dispatch`, `reassign`, `publish_dispatch`, `begin_dispatch_revision`, `cancel_dispatch_revision`, `set_route_order` 여섯 개다. 계산안, 확정 배차와 수정안을 구분한다.
+- 배차 화면의 명령은 `calculate_dispatch`, `reassign`, `publish_dispatch`, `begin_dispatch_revision`, `discard_dispatch_revision`, `set_route_order` 여섯 개다. 계산안, 확정 배차와 수정안을 구분한다.
+
+이관한 fleet 계약은 원본의 기사 표기 그룹을 후보로 사용한다. 현재 [DispatchFleet](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchFleet.kt)는 번호판·차량 기준 위치를 합성하며, [자원 인수 도구](../scripts/import-resource-catalog.mjs)도 같은 종류의 후보를 등록한다. 등록부의 저장 성공이나 관제의 후보 수는 실제 차량 신원의 증거가 아니다. 실제 차량 등록부와 배차 후보는 아직 연결되지 않았다. 이관 완료는 기존 계약의 호환 범위이며, 이 경계를 해소하는 기능은 [다음 커밋·PR 계획](next-feature-delivery-plan.md)의 F01·F07·F08이다.
 
 ## UI 정리 결과
 

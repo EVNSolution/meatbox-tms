@@ -27,6 +27,7 @@
 | 원본 날짜 경계 | 요청 날짜와 일반·gzip day 본문 날짜 대조; 상태 캐시 재사용 전 원본 재검사 | [원본 조회](../services/api/src/test/kotlin/com/evnsolution/meatbox/compat/DispatchDataReaderTest.kt), [상태 저장소](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/DispatchStoreTest.kt) | 실제 공급 자료의 계약·인수·대사와 복구 |
 | 체크포인트 | Kotlin 날짜별 JSON v2 저장·기존 운행 기록 복원 | [상태 소유권·재시작](../test/api-connection/kotlin-state-owner.test.mjs) | 선택한 작성자 구성, 비정상 종료, 백업·복원 |
 | 자원 등록부 | Kotlin SQLite v2와 revision CAS | [Kotlin 자원](../services/api/src/test/kotlin/com/evnsolution/meatbox/resources/ResourceStoreTest.kt), [실제 JAR 자원](../test/api-connection/kotlin-resources.test.mjs) | 원본 인수·스키마 이행·복구와 저장 후 조회 |
+| 차량 신원·배차 후보 연결 | 기사 표기 그룹에서 번호판·차량 기준 위치를 합성; 기존 자원 인수도 합성 fleet 사용; 등록부와 배차 미연결 | [현재 fleet](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchFleet.kt), [자원 인수](../scripts/import-resource-catalog.mjs), [배차 주입](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchConfiguration.kt) | 검증된 명부·실제 차량 ID·명시적 매핑·확정 snapshot 보존 |
 | 배송 사진 | 제품 업로드·증빙 저장 API 미구현; 과거 기사 데모 삭제 | [현재 업무 API](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchController.kt) | 서버 증빙 저장과 권한·보존·삭제 |
 | GPS·ETA | 원본 좌표와 저장된 운행·계획 정보 조회; 실제 기기 수신 미구현 | [관제](../apps/web/combined/vehicle-control.test.mjs), [운행 기록](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/OperationalStateTest.kt) | 실제 기기 입력과 현장 오차·지연 |
 | 고객 알림 | 기존 알림 기록 조회; 배차 명령과 외부 전달 결과 연결 미구현 | [운행 기록](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/OperationalStateTest.kt) | 공급자 접수, 실제 수신·클릭·재동기화 |
@@ -103,6 +104,8 @@ native 배포 도구는 기존 Node writer를 중지하고 Kotlin writer를 선�
 ### 4. 외부 주문·기사·배차 공급 계약
 
 현재 날짜 데이터는 준비된 manifest와 JSON 파일에서 읽는다. 일반 JSON과 gzip 응답은 요청 날짜와 본문 날짜가 일치해야 한다. 상태 저장소는 캐시가 있어도 현재 원본 날짜를 다시 검사한다. 불일치 자료는 조회·명령 처리 전에 거절한다. 이 검사는 외부 공급자 계약을 대신하지 않는다.
+
+현재 상태의 `sourceId`는 전체 CSV 해시다. 같은 해시와 날짜 아래에서 유효한 day 내용이 바뀌는 경우를 별도 내용 버전으로 대조하지 않는다. 날짜 검사만으로 원본 불변성을 보장하지 않는다. 이 경우의 재현, 캐시·checkpoint 보호와 기존 v2 이행은 [기능 계획](next-feature-delivery-plan.md)의 F02에 남겼다.
 
 저장소에는 외부 Meatbox API, webhook, 메시지 브로커의 인증·버전·재전송 계약이 없다. CSV/JSON 준비 경계는 어댑터 개발에 사용할 수 있다.
 
