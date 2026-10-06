@@ -1,6 +1,6 @@
 .list-toolbar .field input,
 .list-toolbar .field select,
-.list-toolbar > .button { height: 42px; min-height: 42px; line-height: 20px; }
+.list-toolbar > .button { height: var(--control-height); min-height: var(--control-height); line-height: 20px; }
 .list-toolbar .field:nth-child(2) { flex: 0 1 240px; }
 .list-toolbar .field:nth-child(3) { flex: 0 0 140px; }
 
@@ -24,7 +24,7 @@
 .delivery-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 20px; border-top: 1px solid var(--border); }
 .delivery-pagination p { margin: 0; font-size: 12px; font-variant-numeric: tabular-nums; }
 .delivery-pagination > div { display: flex; align-items: center; gap: 10px; }
-.delivery-pagination .button { min-height: 32px; padding: 5px 10px; font-size: 12px; }
+.delivery-pagination .button { min-height: var(--control-height); padding: 5px 10px; font-size: 12px; }
 .delivery-pagination span { min-width: 52px; color: var(--muted); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
 .delivery-tip { margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: #f8f9fb; }
 .delivery-tip p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -43,7 +43,7 @@
 #event-list,
 #notification-list { overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .monitor-deliveries > li + li { border-top: 1px solid var(--border); }
-.monitor-stop { display: grid; grid-template-columns: 22px minmax(0, 1fr) 54px 48px; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 6px 12px; border: 0; color: var(--text); background: #fff; text-align: left; font: inherit; font-size: 13px; cursor: pointer; }
+.monitor-stop { display: grid; grid-template-columns: 22px minmax(0, 1fr) 54px 48px; align-items: center; gap: 8px; width: 100%; min-height: var(--control-height); padding: 6px 12px; border: 0; color: var(--text); background: #fff; text-align: left; font: inherit; font-size: 13px; cursor: pointer; }
 .monitor-stop:hover { background: #f8fafc; }
 .monitor-stop[aria-pressed="true"] { background: var(--selected); }
 .monitor-stop-number { color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
@@ -72,7 +72,7 @@
 #delivery-timeline { max-height: 192px; }
 #event-list,
 #notification-list { max-height: 216px; }
-#page-control .timeline li { grid-template-columns: 56px minmax(0, 1fr); gap: 8px; min-height: 32px; padding: 6px 0 6px 16px; align-items: baseline; }
+#page-control .timeline li { grid-template-columns: 56px minmax(0, 1fr); gap: 8px; min-height: var(--control-height); padding: 6px 0 6px 16px; align-items: baseline; }
 #page-control .timeline li:last-child { padding-bottom: 6px; }
 #page-control .timeline li:not(:last-child)::before { top: 16px; bottom: -16px; }
 #page-control .timeline li::after { top: 12px; }
@@ -89,7 +89,7 @@
 .notification-actions .notification-description { margin: 0; font-size: 12px; font-weight: 400; }
 .monitor-toolbar .button,
 .notification-actions .button,
-.route-edit-actions .button { min-height: 32px; padding: 5px 10px; font-size: 12px; line-height: 20px; }
+.route-edit-actions .button { min-height: var(--control-height); padding: 5px 10px; font-size: 12px; line-height: 20px; }
 #notification-list { display: block; }
 #notification-list .notification-item { padding: 0; border: 0; border-radius: 0; }
 #notification-list .notification-item + .notification-item { border-top: 1px solid var(--border); }
@@ -104,13 +104,12 @@
 .notification-detail .notification-copy { font-size: 13px; line-height: 20px; }
 .notification-item small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
 #notice-send-status { border: 1px solid var(--border); border-radius: 4px; }
-.customer-notice-dialog { width: min(520px, calc(100% - 32px)); padding: 0; border: 1px solid var(--border-strong); border-radius: 8px; color: var(--text); background: #fff; }
-.customer-notice-dialog::backdrop { background: #10182880; }
+.customer-notice-dialog { width: min(520px, calc(100% - 32px)); padding: 0; }
 .customer-notice-dialog form { padding: 20px; }
 .notice-dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .notice-dialog-heading h2 { margin: 0; font-size: 20px; }
 .notice-dialog-heading p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
-.notice-dialog-close { display: inline-grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
+.notice-dialog-close { display: inline-grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius); background: transparent; color: var(--muted); cursor: pointer; }
 .notice-dialog-close:hover { background: #f2f4f7; }
 .customer-notice-dialog textarea { width: 100%; resize: vertical; min-height: 120px; padding: 10px; border: 1px solid var(--border-strong); border-radius: var(--radius); color: var(--text); font: inherit; }
 .notice-dialog-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; color: var(--muted); font-size: 12px; }

@@ -21,6 +21,7 @@ async function fixtureDist() {
     "login/index.html": "<h1>login</h1>",
     "dev/register/index.html": "<h1>register</h1>",
     "portal.css": "@import '/theme.css'; body { color: #111; }",
+    "components.css": ".button { min-height: 44px; }",
     "theme.css": "@font-face { font-family: Pretendard; src: url('/portal-font.ttf'); }",
     "portal-logo.svg": "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>",
     "portal-font.ttf": "font",
@@ -162,7 +163,7 @@ test("static UI is session protected while exact portal files remain public", as
   await new Promise(resolve => gateway.server.listen(new URL(publicOrigin).port, "127.0.0.1", resolve));
   t.after(async () => { await gateway.close(); await new Promise(resolve => api.server.close(resolve)); });
 
-  for (const url of ["/login", "/dev/register", "/portal.css", "/theme.css", "/portal-logo.svg", "/portal-font.ttf", "/portal-validation.js", "/portal-auth.js"]) {
+  for (const url of ["/login", "/dev/register", "/portal.css", "/theme.css", "/components.css", "/portal-logo.svg", "/portal-font.ttf", "/portal-validation.js", "/portal-auth.js"]) {
     assert.equal((await requestRaw(publicOrigin, url)).status, 200, url);
   }
   const denied = await requestRaw(publicOrigin, "/combined/app.mjs?id=S5");
@@ -180,6 +181,7 @@ test("static UI is session protected while exact portal files remain public", as
   assert.match(allowed.headers["content-security-policy"], /default-src 'self'/);
   assert.equal((await requestRaw(publicOrigin, "/portal.css/extra")).status, 302);
   assert.equal((await requestRaw(publicOrigin, "/theme.css/extra")).status, 302);
+  assert.equal((await requestRaw(publicOrigin, "/components.css/extra")).status, 302);
   assert.equal((await requestRaw(publicOrigin, "/theme.js")).status, 302);
 
   assert.equal((await requestRaw(publicOrigin, "/login?next=https://attacker.invalid", { headers: { cookie: "session=valid" } })).headers.location, "/");

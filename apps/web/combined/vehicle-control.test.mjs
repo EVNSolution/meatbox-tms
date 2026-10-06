@@ -77,8 +77,8 @@ test('자료가 없거나 확인 중이어도 관제 카드와 운행 정보 구
   assert.equal([...node('[data-control-summary]').innerHTML.matchAll(/<div><dt>/g)].length, 6);
   assert.equal(node('[data-control-search]').disabled, true);
   assert.match(node('[data-control-record-stop]').innerHTML, /배송 자료 미확인/);
-  assert.match(node('[data-control-records]').innerHTML, /배송 자료를 확인하고 있습니다/);
-  assert.match(node('[data-control-events]').innerHTML, /배송 자료를 확인하고 있습니다/);
+  assert.match(node('[data-control-records]').innerHTML, /미확인/);
+  assert.match(node('[data-control-events]').innerHTML, /미확인/);
   assert.doesNotMatch(node('[data-control-records]').innerHTML, /기록이 없습니다/);
   assert.equal(mapCreates, 0);
 
@@ -86,8 +86,9 @@ test('자료가 없거나 확인 중이어도 관제 카드와 운행 정보 구
   control.clear({ message: '배송 자료를 불러오지 못했습니다.' });
   assert.match(node('[data-control-map]').innerHTML, /배송 자료를 불러오지 못했습니다/);
   assert.match(node('[data-control-summary]').innerHTML, /남은 박스<\/span><strong>미확인/);
-  assert.match(node('[data-control-records]').innerHTML, /배송 자료를 불러오지 못했습니다/);
-  assert.match(node('[data-control-events]').innerHTML, /배송 자료를 불러오지 못했습니다/);
+  assert.match(node('[data-control-summary]').innerHTML, /배송 자료를 불러오지 못했습니다/);
+  assert.match(node('[data-control-records]').innerHTML, /미확인/);
+  assert.match(node('[data-control-events]').innerHTML, /미확인/);
   assert.equal(node('[data-support-data]').innerHTML, '');
 
   assert.equal(control.update({ fleetVehicles: [], fleetDeliveries: [], events: [] }), null);
@@ -97,8 +98,11 @@ test('자료가 없거나 확인 중이어도 관제 카드와 운행 정보 구
   assert.match(node('[data-control-summary]').innerHTML, /보류 배송지<\/dt><dd>0곳/);
   assert.match(node('[data-control-summary]').innerHTML, /현재 도착 ETA<\/dt><dd>미확인/);
   assert.match(node('[data-control-record-stop]').innerHTML, /배정된 배송지 없음/);
-  assert.match(node('[data-control-records]').innerHTML, /표시할 기록이 없습니다/);
-  assert.match(node('[data-control-events]').innerHTML, /기록된 사건이 없습니다/);
+  assert.match(node('[data-control-records]').innerHTML, /미등록/);
+  assert.match(node('[data-control-events]').innerHTML, /미등록/);
+  assert.match(node('[data-control-vehicles]').innerHTML, /미배정/);
+  assert.equal(node('[data-control-map]').innerHTML, '');
+  assert.doesNotMatch(node('[data-control-summary]').innerHTML + node('[data-control-stops]').innerHTML + node('[data-control-records]').innerHTML, /empty-state|없습니다/);
   assert.equal(mapCreates, 0);
   control.destroy();
 });
@@ -120,7 +124,7 @@ test('운영 자료가 사라졌다가 돌아오면 초기화한 관제 기능�
   assert.equal(mapCreates, 1);
   assert.equal(node('[data-control-search]').disabled, false);
   node('[data-control-search]').listeners.input({ target: { value: '없는 차량' } });
-  assert.match(node('[data-control-vehicles]').innerHTML, /조회 결과가 없습니다/);
+  assert.match(node('[data-control-vehicles]').innerHTML, /검색 결과 없음/);
 
   control.clear({ empty: true, message: '확정된 배차가 없습니다.' });
   assert.equal(mapRemoves, 1);
@@ -183,8 +187,8 @@ test('이전 위치 응답은 clear 이후 빈 지도 안내를 덮지 않는다
   resolveFirst({ points: [{ id: 'V2-S1', lng: 127.1, lat: 37.5 }] });
   await flush();
   assert.equal(markers, 0);
-  assert.match(node('[data-control-map]').innerHTML, /확정된 배차가 없습니다/);
-  assert.equal(node('[data-control-map-note]').textContent, '확정된 배차가 없습니다.');
+  assert.equal(node('[data-control-map]').innerHTML, '');
+  assert.equal(node('[data-control-map-note]').textContent, '미배정');
 
   control.update(data, 'V2', 'V2-S1');
   await flush();

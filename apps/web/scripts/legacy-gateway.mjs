@@ -9,6 +9,7 @@ const PUBLIC_FILES = new Map([
   ["/dev/register", "dev/register/index.html"],
   ["/portal.css", "portal.css"],
   ["/theme.css", "theme.css"],
+  ["/components.css", "components.css"],
   ["/portal-logo.svg", "portal-logo.svg"],
   ["/portal-font.ttf", "portal-font.ttf"],
   ["/portal-validation.js", "portal-validation.js"],

@@ -14,6 +14,7 @@
 | 디자인 참조 | `apps/web/ui-layout/` | 현재 토큰과 실제 조작을 설명하며 제품 상태를 쓰지 않는다. |
 | 로그인·등록 | `apps/web/src/auth.ts`, `auth-contract.ts`, `login/`, `dev/register/` | 인증 입력과 세션 계약을 관리한다. |
 | 공통 색·글꼴·기본 크기 | `apps/web/public/theme.css` | 운영·인증·가이드가 같은 기준을 사용하게 한다. |
+| 공통 UI 컴포넌트 | `apps/web/public/components.css`, `apps/web/src/shared/ui/` | 버튼·입력·카드·탭·대화상자 스타일과 상단 알림을 공유한다. 날짜 조작은 `combined/date-picker.*`, 날짜 집계 배치는 `combined/date-summary-toolbar.*`에서 관리한다. |
 | 보호 정적 파일·라우팅 | `apps/web/scripts/legacy-gateway.mjs`, `api-routing.mjs` | 세션 검사, API owner 전달, 폐기 URL의 410을 처리한다. |
 | Kotlin 인증 | `services/api/src/main/kotlin/com/evnsolution/meatbox/auth/` | 로그인·등록·로그아웃·세션과 access JSON v1 호환을 담당한다. |
 | Kotlin 자원 | `services/api/src/main/kotlin/com/evnsolution/meatbox/resources/` | SQLite v2 조회·저장·버전 충돌·트랜잭션을 담당한다. |

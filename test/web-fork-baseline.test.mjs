@@ -31,10 +31,12 @@ const cssFragments = new Map([
 const authoredPaths = [
   'apps/web/.gitignore', 'apps/web/.oxlintrc.json', 'apps/web/README.md',
   'apps/web/package-lock.json', 'apps/web/package.json', 'apps/web/public/theme.css',
+  'apps/web/public/components.css', 'apps/web/combined/status-notification.css',
   'apps/web/scripts/api-routing.mjs',
   'apps/web/scripts/legacy-gateway.mjs', 'apps/web/scripts/serve-legacy.mjs',
   'apps/web/scripts/test.mjs', 'apps/web/src/auth-contract.ts', 'apps/web/src/auth.ts',
   'apps/web/src/shared/maps/order-map.test.mjs', 'apps/web/test/auth-contract.test.mjs',
+  'apps/web/src/shared/ui/status-notification.mjs', 'apps/web/src/shared/ui/status-notification.test.mjs',
   'apps/web/test/api-routing.test.mjs',
   'apps/web/test/fork-artifact.check.mjs', 'apps/web/test/legacy-gateway.test.mjs',
   'apps/web/tsconfig.json', 'apps/web/vite.config.mjs',
@@ -145,7 +147,8 @@ test('CSS fragments retain fixed original ranges and extraction evidence without
     extractedSha256: hash(originalLines('apps/combined/styles.css', 268, 323)),
     evidence: 'apps/web/.runtime/design-proof/css-split-proof.json',
   });
-  assert.equal(readFileSync(path.join(root, toolbar.target), 'utf8'), originalLines('apps/combined/styles.css', 268, 323), 'the shared date/summary toolbar retains its exact product CSS');
+  assert.equal(hash(readFileSync(path.join(root, toolbar.target))), toolbar.targetSha256, 'the shared toolbar retains the reviewed target hash alongside its original extraction');
+  assert.ok(toolbar.changes.some(change => /center/i.test(change)), 'explain the intentional center alignment change');
 });
 
 test('shared map is an exact original-function extraction with the established fixed asset URLs', () => {

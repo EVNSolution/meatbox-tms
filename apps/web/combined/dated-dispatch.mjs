@@ -55,11 +55,12 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   const previous = query('[data-dispatch-prev]');
   const next = query('[data-dispatch-next]');
   let manifest = null, regions = null, planning = null, simulationData = null;
-  let started = false, available = null, loading = true, current = null, epoch = 0, controller = null, destroyed = false;
+  let started = false, available = null, loading = true, current = null, epoch = 0, controller = null, destroyed = false, confirmedEmpty = false;
   const cache = new Map();
   const listeners = [];
   const listen = (node, type, fn) => { node.addEventListener(type, fn); listeners.push(() => node.removeEventListener(type, fn)); };
   function showUnavailable(text, empty = false) {
+    confirmedEmpty = empty;
     if (!planning) planning = planningFactory({ element: host, ...(onAssign ? { onSelect, onAssign: extra => {
       if (!current || simulationData?.sourceData?.date !== current.date) throw new Error('운영 상태를 먼저 확인해 주세요.');
       return onAssign(extra);
@@ -76,7 +77,8 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   }
   function updateViews() {
     const operational = simulationData?.sourceData?.date === current?.date ? simulationData : null;
-    planning?.update(display(), null);
+    if (!current.orders.length) planning?.clear({ empty: true, message: `${current.date}에 등록된 주문이 없습니다.` });
+    else planning?.update(display(), null);
     workflowHost.hidden = !operational?.dispatch;
     workflow.update(operational, Boolean(operational));
   }
@@ -112,7 +114,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
         }
       }
       if (destroyed || ticket !== epoch) return;
-      showUnavailable(text, Boolean(date)); message(text);
+      showUnavailable(text, Boolean(date)); message(date ? '' : text);
       loading = false; onContextChange(); return;
     }
     message(`${date} 배차를 불러오고 있습니다.`);
@@ -131,6 +133,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
         simulationData = operational;
       }
       current = day; loading = false;
+      confirmedEmpty = day.orders.length === 0;
       host.hidden = false;
       updateViews();
       renderSummary();
@@ -181,6 +184,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
       }
     },
     usesSource: () => available !== false,
+    status: () => ({ date: selectedDate, empty: confirmedEmpty && !loading }),
     summary: () => loading ? null : current?.summary || null,
     destroy() { destroyed = true; epoch++; controller?.abort(); planning?.destroy(); workflow.destroy(); datePicker.destroy(); listeners.forEach(remove => remove()); },
   };

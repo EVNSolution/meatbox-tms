@@ -61,13 +61,18 @@ test('빈 배차 영역은 가짜 주문이나 지도를 만들지 않고 컨테
   assert.equal(element.dataset.sourceKind, 'unavailable');
   assert.equal(nodes['group-heading'].textContent, '후보 배송원');
   assert.equal(nodes['map-summary'].textContent, '주문 0건 · 총 0박스');
-  assert.equal(nodes['map-status-text'].textContent, '등록된 주문이 없습니다.');
+  assert.equal(nodes['map-status-text'].textContent, '');
+  assert.equal(nodes['map-status'].hidden, true);
+  assert.match(nodes.vehicle.innerHTML, />미등록</);
+  assert.doesNotMatch(nodes.vehicle.innerHTML + nodes.list.innerHTML, /등록된 주문이 없습니다/);
   assert.equal(nodes['list-panel'].hidden, false);
   assert.equal(nodes['list-panel'].open, true);
   for (const name of ['dispatch-pin', 'search', 'previous', 'next']) assert.equal(nodes[name].disabled, true);
   assert.equal(nodes['dispatch-actions'].hidden, false);
   assert.equal(nodes['map-mode-control'].hidden, false);
   planning.clear({ message: '주문 자료를 불러오지 못했습니다.' });
+  assert.equal(nodes['map-status'].hidden, false);
+  assert.equal(nodes['map-status-text'].textContent, '주문 자료를 불러오지 못했습니다.');
   assert.equal(nodes['map-summary'].textContent, '주문 수량 확인 전');
   assert.equal(nodes['list-total'].textContent, '확인 전');
   planning.destroy();
@@ -84,8 +89,8 @@ test('자료 날짜에서 빈 날짜로 이동하면 지도와 이전 주문을 
   assert.match(nodes.vehicle.innerHTML, /기사 1/);
   assert.equal(nodes.selection.hidden, true);
   planning.clear({ empty: true, message: '등록된 주문이 없습니다.' });
-  assert.equal(nodes.selection.hidden, false);
-  assert.match(nodes.selection.innerHTML, /주문이 등록되면/);
+  assert.equal(nodes.selection.hidden, true);
+  assert.equal(nodes.selection.innerHTML, '');
   assert.equal(removed, 1);
   assert.equal(layersRemoved, 1);
   assert.doesNotMatch(nodes.vehicle.innerHTML, /기사 1/);
@@ -97,6 +102,19 @@ test('자료 날짜에서 빈 날짜로 이동하면 지도와 이전 주문을 
   assert.equal(nodes['map-canvas'].dataset.orderDate, '2025-09-16');
   assert.equal(nodes.search.disabled, false);
   assert.equal(nodes['list-panel'].open, false);
+  assert.match(nodes.list.innerHTML, /1001/);
+  planning.destroy();
+});
+
+test('주문 위치가 미등록이어도 지도 중앙에 별도 없음 카드를 만들지 않는다', () => {
+  const { element, nodes } = fixture();
+  const planning = mount({ element }, { layerFactory: () => ({ update() {}, destroy() {} }) });
+  const input = importedPlanningData();
+  input.fleetDeliveries = input.fleetDeliveries.map(order => ({ ...order, coordinates: null }));
+  planning.update(input);
+  assert.equal(nodes['map-status'].hidden, true);
+  assert.equal(nodes['map-status-text'].textContent, '');
+  assert.match(nodes['map-count'].textContent, /위치 미등록 3건/);
   assert.match(nodes.list.innerHTML, /1001/);
   planning.destroy();
 });

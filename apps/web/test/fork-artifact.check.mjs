@@ -85,7 +85,13 @@ test("built gateway retains response transformations, source isolation and authe
   // Native legacy POST errors link portal.css alone, so it owns this dependency.
   const portal = await get("/portal.css", false);
   assert.equal(portal.status, 200);
-  assert.match(await portal.text(), /@import\s+["']\/theme\.css["']/);
+  const portalText = await portal.text();
+  assert.match(portalText, /@import\s+["']\/theme\.css["']/);
+  assert.match(portalText, /@import\s+["']\/components\.css["']/);
+  const components = await get("/components.css", false);
+  assert.equal(components.status, 200, "login controls remain available without a session");
+  assert.match(await components.text(), /\.button\s*,\s*\.auth-form \.primary\s*\{/);
+  assert.equal((await get("/components.css/extra", false)).status, 302);
   const themeAssets = [...themeText.matchAll(/url\(["']?([^)'"\s]+)["']?\)/g)];
   assert.ok(themeAssets.length, "shared font must be available before login");
   for (const [, asset] of themeAssets) {

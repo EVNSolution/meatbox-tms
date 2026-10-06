@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 106,
-  "authoredFileCount": 19,
+  "authoredFileCount": 23,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,12 +28,13 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "6e41de872735fd571e10488fe2af5231c36074477346b29774a0dcf6d46182e6",
+      "targetSha256": "132da264df584e27393144ee6166d5f311a1de262eb7e24d2a039a7aa634823e",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Keep delivery control containers and tabs visible without data; distinguish confirmed empty and unknown counts and reset previous date selections, notices and route drafts."
+        "Keep delivery control containers and tabs visible without data; distinguish confirmed empty and unknown counts and reset previous date selections, notices and route drafts.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -353,10 +354,11 @@
       "source": "apps/combined/date-picker.css",
       "sourceSha256": "42ae92908366916e1055b017c7962dcc62b1c08c1e7470e99d69f9aa5437c36a",
       "target": "apps/web/combined/date-picker.css",
-      "targetSha256": "df8101d49923f100d7b82426e5f979aba2f641eaa7f64c34c5841826a4d66a80",
+      "targetSha256": "ffb1f1783c0aaa4d047ba6d0896e2212c0773f0862ccbe55b91bfc1ead2db3a9",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
-        "Use the shared 6px control-radius token while retaining the 44px date trigger height"
+        "Use the shared 6px control-radius token while retaining the 44px date trigger height",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "status": "active"
     },
@@ -400,11 +402,12 @@
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "9674de8db4b2583367067b1f5a71ce961bed9b9f65b6eb2c56ee71d463814b18",
+      "targetSha256": "50fab6085739c09bfd6c629f3e3fa993269159f7d9b104f91a56357d8d192d69",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Remove unused escaping helper, selection value and catch binding; retain update argument position",
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -412,10 +415,11 @@
       "source": "apps/combined/dated-dispatch.test.mjs",
       "sourceSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c",
       "target": "apps/web/combined/dated-dispatch.test.mjs",
-      "targetSha256": "f9c210f324712c3fe3a8a74ddf8272998283edbbd080aefc793b809f76855c2f",
+      "targetSha256": "8950c06e9893f80515393280157bfcb7726652f9b5dbd9e92b04ff855e66596b",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -552,9 +556,11 @@
       "source": "apps/combined/dispatch-workflow.css",
       "sourceSha256": "d3c042a43e3ae08a4eac46590b3bc9f662d90ba11a909fb5a4c4b5b99ea00a13",
       "target": "apps/web/combined/dispatch-workflow.css",
-      "targetSha256": "d3c042a43e3ae08a4eac46590b3bc9f662d90ba11a909fb5a4c4b5b99ea00a13",
+      "targetSha256": "67ad7c9eafebe42678d2383f21d9c9613c85f1af65aefefa185ef0d9363ce72f",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
-      "changes": [],
+      "changes": [
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+      ],
       "status": "active"
     },
     {
@@ -752,13 +758,14 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "2214fba82356facfaff19cde14677c60e90ef2197d71fa492ee6226d36abf7f9",
+      "targetSha256": "974049fd80242e3030223b5cee4a72e62f7eb48fa25672e79ce789ce1e1ad9db",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions",
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Load operational date-picker styling directly after retiring the demo shell."
+        "Load operational date-picker styling directly after retiring the demo shell.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -864,10 +871,11 @@
       "source": "apps/combined/operations.css",
       "sourceSha256": "97acc70d352b0fe56833669611ef10b4ffbdab2f56a79e3f891ac9af4dc86b4b",
       "target": "apps/web/combined/operations.css",
-      "targetSha256": "3388c9f8af7f3f26b9f3e640f6faf00ae00cf8b4630ddef843e25c518ac116dc",
+      "targetSha256": "aa164fde694d42146512c21fc754604fcd5b0a69b6cd61f0cefae674f6ab6650",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
-        "Use the shared 6px --radius for the customer-notice textarea instead of 4px; retain dense row and utility control dimensions"
+        "Use the shared 6px --radius for the customer-notice textarea instead of 4px; retain dense row and utility control dimensions",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "status": "active"
     },
@@ -875,11 +883,12 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "fe54526547070baa3c9ea8a99ed45a8dc25ba4eccfbd862b8a074a67565d03c9",
+      "targetSha256": "41c2f21e32f2b11775a57de1ac039d5254b1897ef8085ffd165e4588a74421c2",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "status": "active"
     },
@@ -887,7 +896,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "9e9a0332bc883b61102dfafcdcbaad09af5b66e95c1f633a9f34e7f576b54be8",
+      "targetSha256": "ade1b4022a5ae0245db73a274fa09f0ee61e4a427c70f2db9ed4693bd7300a9f",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -895,7 +904,8 @@
         "Import and re-export the exact shared map model/factory functions instead of defining them inside the planning view",
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Restore the empty selection card after a populated date hid its unselected-order view."
+        "Restore the empty selection card after a populated date hid its unselected-order view.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -925,12 +935,13 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "895c27dbae68ac33567695f664772a85b1be029276f88ad7e10d0f0047b25407",
+      "targetSha256": "2766690b85fe4d936f1a8779fa6314da0e5fa44c4253a38f42d5a90c9a7bf7dd",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Restore the empty selection card after a populated date hid its unselected-order view."
+        "Restore the empty selection card after a populated date hid its unselected-order view.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -1248,10 +1259,11 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/workspace.css",
-      "targetSha256": "0a14e2c9e6d60f9ea5523c3c700f2b31cb937583d8c32f09219f349b7137a2d7",
+      "targetSha256": "07ba7140ae65c53d6b97ef7882503634a5ab4158da0197b790a29e462c484918",
       "reason": "Derive the workspace stylesheet from original lines 345-948; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
-        "Extract original CSS lines 345-948 into a dedicated stylesheet"
+        "Extract original CSS lines 345-948 into a dedicated stylesheet",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1284,11 +1296,12 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/controls.css",
-      "targetSha256": "37ea9fcb839a315629378b546e64242cb102e684bc34d279b50e8bce61a2b3d9",
+      "targetSha256": "19967bc1febf87fa049bde8c035c37ca867e128430366bb97fa775da48d805e1",
       "reason": "Derive the controls stylesheet from original lines 1180-1305; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1180-1305 into a dedicated stylesheet",
-        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order"
+        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1357,10 +1370,11 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/composition.css",
-      "targetSha256": "8f86e2b2709e1947cbec5172a7eda5f59ad85cd4ae8ffe1317ff924b3d3bc27b",
+      "targetSha256": "7554e27b467a592f83c266862d35a7b8bcb5a720ec24d85240cd5ea4c7e73722",
       "reason": "Derive the composition stylesheet from original lines 1574-1843; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
-        "Extract original CSS lines 1574-1843 into a dedicated stylesheet"
+        "Extract original CSS lines 1574-1843 into a dedicated stylesheet",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1375,10 +1389,11 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/date-summary-toolbar.css",
-      "targetSha256": "80faa13d20917447ae56cca34d186ee9ab6d89a88b132684cb98036d2184e6ef",
+      "targetSha256": "4a8ff064b50623282dec8969afe97ac9d8b2f1b7befab1ea64951def65cf7718",
       "reason": "Derive the date-summary-toolbar stylesheet from original lines 268-323; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
-        "Extract original CSS lines 268-323 into a dedicated stylesheet"
+        "Extract original CSS lines 268-323 into a dedicated stylesheet",
+        "Center date controls and summary cards using the shared component tokens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1393,12 +1408,13 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "d96bda38feef72c73f84f24a8ab12bb76198afdfdb9316ee7b2db31e8c944762",
+      "targetSha256": "6e1be390ef8d6c7a019883c1b50764c4cc20fed5728ffafbac55f5872bf9f908",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Use the shared 44px --control-height for the management target selector instead of 42px; retain dense row and utility control dimensions",
-        "Use the existing map container and theme tokens for empty delivery control status."
+        "Use the existing map container and theme tokens for empty delivery control status.",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "status": "active"
     },
@@ -1406,12 +1422,13 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "181d940a3f5ab929c5a218a6eebaae70e326e8ec3360094a69f23968f020502b",
+      "targetSha256": "263b16bf554a6c124b55db91c3ce8a5d29ecb15a729b92c77cc7b594ee5684d8",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Preserve fleet, workload, map and details containers without data; clear old records, dialogs and map responses and recover on valid data."
+        "Preserve fleet, workload, map and details containers without data; clear old records, dialogs and map responses and recover on valid data.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -1419,11 +1436,12 @@
       "source": "apps/combined/vehicle-control.test.mjs",
       "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
       "target": "apps/web/combined/vehicle-control.test.mjs",
-      "targetSha256": "79b7b275513f1487d56dc25900f5f912c83c5344c5a9c19f5842f78e0c6bc0c6",
+      "targetSha256": "18fcd70d25a9b18c8418a14016a16038fe523e0d9f2e278898be092ea5954ace",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Verify confirmed empty versus unknown control state, loaded-empty-loaded recovery and stale asynchronous map responses."
+        "Verify confirmed empty versus unknown control state, loaded-empty-loaded recovery and stale asynchronous map responses.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -1488,11 +1506,12 @@
       "source": "apps/portal/portal.css",
       "sourceSha256": "f60b1133cba63152770ed6a6df3db8dbc648beb6680bfb0609c4ca60be8ea01c",
       "target": "apps/web/public/portal.css",
-      "targetSha256": "256932a607384ad22c92a2d78ceabfca9fb822ef49010f8f8e7a9fb69b8724a6",
+      "targetSha256": "3550ca7cf2bde1ea3b0d6f4ed6e19f49127858fdb02c21b9e25910707645c97b",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Remove unused landing/workspace styles and duplicate overrides; retain authentication layout and feedback using the shared theme tokens",
-        "Import /theme.css from the public portal stylesheet so native API POST error HTML that links only portal.css retains the same authentication colors, font and dimensions"
+        "Import /theme.css from the public portal stylesheet so native API POST error HTML that links only portal.css retains the same authentication colors, font and dimensions",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "status": "active"
     },
@@ -1525,11 +1544,12 @@
       "source": "workspaces/jiin-ui/design-guide.css",
       "sourceSha256": "77d00d6a3386e87c79bf80a4cc8c2856f88948d291d31705d1a2b644bec4b293",
       "target": "apps/web/ui-layout/design-guide.css",
-      "targetSha256": "c3c462c1655e71843c88b10ecd8da3185de33feb56147ba2ba069035ade79968",
+      "targetSha256": "ed930f85804a8040437ce4499734d39aecce88ac7a7a5443c4d34cc9037278ca",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Align guide tokens and control dimensions with the product theme; load the actual date-picker and extracted date/summary-toolbar styles",
-        "Apply the shared 44px control-height minimum only to design-guide tab specimens; preserve the existing 42px tabs in the synthetic sample views"
+        "Apply the shared 44px control-height minimum only to design-guide tab specimens; preserve the existing 42px tabs in the synthetic sample views",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "status": "active"
     },
@@ -1537,11 +1557,12 @@
       "source": "workspaces/jiin-ui/design-guide.mjs",
       "sourceSha256": "aa45a9f4886cdf4ce604aa4fd5e80a3ddbb48de49751441f35a3a36737545a21",
       "target": "apps/web/ui-layout/design-guide.mjs",
-      "targetSha256": "86a0655ae39fccbc01fc3f1453953f2ba9a05df3504411dcc65696c5d755df42",
+      "targetSha256": "a051a5d56e6550faf6e5885a2a7d186fe48023b3e6a6b7c98bf9118fb9a9bc68",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Compose the approved local guide from the preserved terminal specimens, a read-only previews/terminal-view reference and the actual combined date-picker/date-summary-toolbar/icon components; retain synthetic provenance and local-only sample interactions",
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "references": [
         {
@@ -1693,10 +1714,11 @@
       "source": "workspaces/jiin-ui/styles.css",
       "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
       "target": "apps/web/ui-layout/styles/workspace.css",
-      "targetSha256": "005419175657f36e33c789816753c025dcefbc19d4b0376eafa2cb65a43f68ab",
+      "targetSha256": "6de67339cc3d45ee57ba7bb839b329abb06867acfdf0614750fedc7bbc19def7",
       "reason": "Derive the workspace stylesheet from original lines 346-967; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
-        "Extract original CSS lines 346-967 into a dedicated stylesheet"
+        "Extract original CSS lines 346-967 into a dedicated stylesheet",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1729,11 +1751,12 @@
       "source": "workspaces/jiin-ui/styles.css",
       "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
       "target": "apps/web/ui-layout/styles/controls.css",
-      "targetSha256": "375da3f2b9d0e1df2839238556cedf6fd2b0d257916f29c79639be86beda83bf",
+      "targetSha256": "fba5ee7ee80a1a5aea5ee9a35f03a41b09e6dcef356e76f710c5c811cf508547",
       "reason": "Derive the controls stylesheet from original lines 1201-1332; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1201-1332 into a dedicated stylesheet",
-        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order"
+        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1768,10 +1791,11 @@
       "source": "workspaces/jiin-ui/styles.css",
       "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
       "target": "apps/web/ui-layout/styles/composition.css",
-      "targetSha256": "073ed60e5a20fdddca8b56d7dc0ca2c1acc79c0664c8423906beff3446f97011",
+      "targetSha256": "a679546cf1605186b54926360a629acf90d5bfaa195942a97919e8a4fe7adc6b",
       "reason": "Derive the composition stylesheet from original lines 1541-1782; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
-        "Extract original CSS lines 1541-1782 into a dedicated stylesheet"
+        "Extract original CSS lines 1541-1782 into a dedicated stylesheet",
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1971,7 +1995,7 @@
     {
       "path": "apps/web/README.md",
       "origin": "authored",
-      "sha256": "c259f9c4fdd9ce5394539027c21595f918feb6708bb05374fecdfb9563434c94",
+      "sha256": "9d25ff44dff41821b7fb180d43400b62d50b98867c8410ffc8458f8994d36a2b",
       "reason": "Describe the current complete frontend fork, original API writer, shared design theme, local commands and verification boundaries. Document actual Kotlin reader connection, single-writer ownership, fixture and integration commands. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Document the verified native TEST Kotlin authentication and dispatch ownership, Node API shutdown, supported rollback fixtures, offline account administration, and demo deletion scope.",
       "status": "active"
     },
@@ -1992,7 +2016,7 @@
     {
       "path": "apps/web/public/theme.css",
       "origin": "authored",
-      "sha256": "94ef6256c3a7342d07cab9b09051989857707dc5f26a52fd4d37d182b42ac72f",
+      "sha256": "40205364ea54eda9ef5b5b216ed2db6b5d6bb15fd9282e4c90c71bc05bd64ab0",
       "reason": "Author the shared public font, brand and dimension foundation using approved DESIGN.md decisions without exposing protected UI code or business data.",
       "status": "active"
     },
@@ -2006,7 +2030,7 @@
     {
       "path": "apps/web/scripts/legacy-gateway.mjs",
       "origin": "authored",
-      "sha256": "c7c2c6f14040c172946e13ecbe43857e93cd2f631ccc7f48bb6cbf6db4c93bdc",
+      "sha256": "a538aa869163771d4e5074898d665c43e6939930a5998f2bb93aff8cb2c9d191",
       "reason": "Serve only allowed built frontend paths, preserve legacy routes and forward cookie/origin/API/WebSocket contracts while the existing Node service remains the writer. Add opt-in exact Kotlin read routing while Node remains the authentication and single business writer. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection.",
       "status": "active"
     },
@@ -2080,14 +2104,14 @@
     {
       "path": "apps/web/test/fork-artifact.check.mjs",
       "origin": "authored",
-      "sha256": "3541c66ed59a98eb1cea0ec815929c929aaf587373c33dfbd0f659d53640d556",
+      "sha256": "b1fb11e8bf29156573fc8f7fb21bdd27cacfef733a3aa10f4b5f2e0b7500eb58",
       "reason": "Check real built pages, independent public authentication/theme assets, gateway response transformations and protected-source isolation. Verify the built public portal stylesheet imports the independently served shared theme.",
       "status": "active"
     },
     {
       "path": "apps/web/test/legacy-gateway.test.mjs",
       "origin": "authored",
-      "sha256": "d59ff7fe74b2a0fcf3917ac73ec0eacab251ace17cfe138ad49a76bbfc8908e8",
+      "sha256": "ba3337f7fa089e990fb64192632f104b29c5f228f500943b26994e6b6cbda140",
       "reason": "Verify existing API/session/origin/WebSocket forwarding, exact public allowlists and fail-closed protected asset serving. Verify native incorrect-login 401 and invalid-registration 400 HTML responses retain the public portal stylesheet contract. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback.",
       "status": "active"
     },
@@ -2103,6 +2127,34 @@
       "origin": "authored",
       "sha256": "df3c26d041a1dd7c9a7314106d44f7d8cb128b2c37b979a202dfcf3405bfd33e",
       "reason": "Build all frontend HTML entries and public assets from the standalone package with independent authentication output and local proxies. Add opt-in exact Kotlin read routing while Node remains the authentication and single business writer. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/public/components.css",
+      "origin": "authored",
+      "sha256": "afa63d78fdf21d47c6345f7a40b74c0b64adaaa8983343dfa42914e62d6ab22b",
+      "reason": "Own shared buttons, fields, cards, tabs, focus and dialog appearance across product, guide and authentication pages.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/src/shared/ui/status-notification.mjs",
+      "origin": "authored",
+      "sha256": "433c416e256fa99230c36784b9bd65e5654d967d14f82b8b20cdc64d1e25211a",
+      "reason": "Own transient, dismissible empty-data notifications with duplicate suppression and hover or focus pause.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/src/shared/ui/status-notification.test.mjs",
+      "origin": "authored",
+      "sha256": "5a70285f22ed16a606142c3455fbf4f8ab4f0f9b6d57e21ed58dddf3d4ae428b",
+      "reason": "Verify notification timing, context changes, dismissal, pause and lifecycle cleanup with a controlled clock.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/status-notification.css",
+      "origin": "authored",
+      "sha256": "70bec8cb7a7f5961b8f57a3fac3f7cb50490ca2ee3646f53f660fd1fdf92620d",
+      "reason": "Position and size the shared top notification without replacing operational work areas.",
       "status": "active"
     }
   ],

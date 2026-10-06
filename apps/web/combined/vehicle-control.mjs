@@ -21,7 +21,7 @@ const actualSpeedText = row => row.actualSpeed
   ? `${row.actualSpeed.completedStops}곳 / ${row.actualSpeed.elapsedMinutes}분`
   : '산정 대기';
 
-const factRows = facts => facts.length ? facts.map(fact => `<li><time>${esc(fact.time || '-')}</time><span>${esc(fact.message)}</span></li>`).join('') : '<li class="muted">기록된 사건이 없습니다.</li>';
+const factRows = facts => facts.length ? facts.map(fact => `<li><time>${esc(fact.time || '-')}</time><span>${esc(fact.message)}</span></li>`).join('') : '<li class="muted">미등록</li>';
 
 export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery, onOpenNotice, onOpenManagement, onOpenRoute = () => {},
   mapFactory = createOrderMap, markerFactory = createOrderMarker,
@@ -79,18 +79,18 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   function renderVehicles() {
     const visible = sortVehicleOperations(rows, sort).filter(item => `${item.vehicle.id} ${item.vehicle.plate} ${item.vehicle.driver}`.toLocaleLowerCase('ko-KR').includes(search));
     find('[data-control-count]').textContent = `${visible.length}대`;
-    replacePreservingFocus(list, visible.map(item => `<button type="button" class="control-vehicle-row" data-control-vehicle="${esc(item.vehicle.id)}" aria-pressed="${item.vehicle.id === row?.vehicle.id}"><span><strong>${esc(item.vehicle.plate || item.vehicle.id)}</strong><small>${esc(item.vehicle.driver || '배송원 미등록')}</small></span><span aria-label="남은 배송지">${count(item.remainingStops)}</span><span aria-label="남은 박스">${count(item.remainingBoxes)}</span><span class="muted" aria-label="${esc(`예상 소요 시간 ${remainingText(item)}`)}">${esc(remainingText(item))}</span></button>`).join('') || '<p class="empty-state">조회 결과가 없습니다.</p>', '[data-control-vehicle]');
+    replacePreservingFocus(list, visible.map(item => `<button type="button" class="control-vehicle-row" data-control-vehicle="${esc(item.vehicle.id)}" aria-pressed="${item.vehicle.id === row?.vehicle.id}"><span><strong>${esc(item.vehicle.plate || item.vehicle.id)}</strong><small>${esc(item.vehicle.driver || '배송원 미등록')}</small></span><span aria-label="남은 배송지">${count(item.remainingStops)}</span><span aria-label="남은 박스">${count(item.remainingBoxes)}</span><span class="muted" aria-label="${esc(`예상 소요 시간 ${remainingText(item)}`)}">${esc(remainingText(item))}</span></button>`).join('') || '<p class="control-unit-note">검색 결과 없음</p>', '[data-control-vehicle]');
   }
 
   function renderSummary() {
     const source = Boolean(data?.sourceData);
-    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.plate || row.vehicle.id)}</h2><p>${esc(row.vehicle.driver || '배송원 미등록')}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동·하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}` : '<p class="empty-state">확정된 배차가 없습니다.</p>';
+    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.plate || row.vehicle.id)}</h2><p>${esc(row.vehicle.driver || '배송원 미등록')}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동·하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}` : '<p class="control-unit-note">미배정</p>';
     find('[data-control-detail-title]').textContent = row ? `${row.vehicle.plate || row.vehicle.id} 상세` : '차량 상세';
   }
 
   function renderEmptySummary(empty, message) {
     const quantity = empty ? 0 : null;
-    find('[data-control-summary]').innerHTML = `<div class="panel-heading"><div><h2>운행 정보</h2><p>${esc(message)}</p></div><span class="badge">${empty ? '배차 대기' : '자료 확인 중'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(quantity, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(quantity, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>미확인</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${empty ? '확정된 배차 없음' : '미확인'}</dd></div><div><dt>현재 도착 ETA</dt><dd>미확인</dd></div><div><dt>고정 출발 기준</dt><dd>미확인</dd></div><div><dt>마지막 도착 ETA</dt><dd>미확인</dd></div><div><dt>전체 인도 완료</dt><dd>미확인</dd></div><div><dt>보류 배송지</dt><dd>${count(quantity, '곳')}</dd></div></dl>`;
+    find('[data-control-summary]').innerHTML = `<div class="panel-heading"><div><h2>운행 정보</h2>${empty ? '' : `<p>${esc(message)}</p>`}</div><span class="badge">${empty ? '배차 대기' : '자료 확인 중'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(quantity, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(quantity, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>미확인</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${empty ? '미배정' : '미확인'}</dd></div><div><dt>현재 도착 ETA</dt><dd>미확인</dd></div><div><dt>고정 출발 기준</dt><dd>미확인</dd></div><div><dt>마지막 도착 ETA</dt><dd>미확인</dd></div><div><dt>전체 인도 완료</dt><dd>미확인</dd></div><div><dt>보류 배송지</dt><dd>${count(quantity, '곳')}</dd></div></dl>`;
     find('[data-control-detail-title]').textContent = '차량 상세';
   }
 
@@ -99,7 +99,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   }
 
   function renderStops() {
-    const markup = row?.deliveries.map(stop => `<details class="control-stop" data-control-stop="${esc(stop.id)}" ${opened.has(stop.id) ? 'open' : ''}><summary data-control-stop-summary="${esc(stop.id)}"><span class="control-stop-sequence">${esc(stop.sequence)}</span><strong>${esc(stop.name)}</strong><span class="badge ${stop.statusTone || ''}">${esc(labels[stop.status] || '미확인')}</span>${referenceIcon('expand')}</summary>${opened.has(stop.id) ? stopContents(stop) : ''}</details>`).join('') || '<p class="empty-state">배정된 배송지가 없습니다.</p>';
+    const markup = row?.deliveries.map(stop => `<details class="control-stop" data-control-stop="${esc(stop.id)}" ${opened.has(stop.id) ? 'open' : ''}><summary data-control-stop-summary="${esc(stop.id)}"><span class="control-stop-sequence">${esc(stop.sequence)}</span><strong>${esc(stop.name)}</strong><span class="badge ${stop.statusTone || ''}">${esc(labels[stop.status] || '미확인')}</span>${referenceIcon('expand')}</summary>${opened.has(stop.id) ? stopContents(stop) : ''}</details>`).join('') || '<p class="control-unit-note">미배정</p>';
     replacePreservingFocus(stopList, markup, '[data-control-stop-summary]');
   }
 
@@ -124,7 +124,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     const records = deliveryRecords(data, stop, recordFilter);
     const markup = records.map(record => `<li class="control-record" data-record-kind="${esc(record.kind)}"><time>${esc(record.time || '-')}</time>${record.kind === 'notice'
       ? `<details data-control-record-id="${esc(record.key)}"><summary data-control-record-key="${esc(record.key)}"><span class="control-record-kind">고객 알림</span><strong>${esc(record.title || '고객 안내')}</strong>${referenceIcon('expand')}</summary><p>${esc(record.body)}</p><small>${esc(record.status || (source ? '처리 기록' : '시연 기록'))}</small></details>`
-      : `<div><span class="control-record-kind">처리 이력</span><p>${esc(record.message)}</p></div>`}</li>`).join('') || '<li class="empty-state">표시할 기록이 없습니다.</li>';
+      : `<div><span class="control-record-kind">처리 이력</span><p>${esc(record.message)}</p></div>`}</li>`).join('') || '<li class="muted">미등록</li>';
     replacePreservingFocus(recordList, markup, '[data-control-record-key]');
     for (const id of expanded) recordList.querySelector(`[data-control-record-id="${CSS.escape(id)}"]`)?.setAttribute('open', '');
     find('[data-control-events]').innerHTML = factRows(vehicleEvents(data, row?.vehicle.id));
@@ -232,18 +232,18 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     showRecords();
     removeMap();
     find('[data-control-count]').textContent = empty ? '0대' : '미확인';
-    list.innerHTML = `<p class="empty-state">${esc(message)}</p>`;
+    list.innerHTML = `<p class="control-unit-note">${empty ? '미배정' : '미확인'}</p>`;
     renderEmptySummary(empty, message);
-    stopList.innerHTML = `<p class="empty-state">${empty ? '배정된 배송지가 없습니다.' : esc(message)}</p>`;
+    stopList.innerHTML = `<p class="control-unit-note">${empty ? '미배정' : '미확인'}</p>`;
     find('[data-control-record-stop]').innerHTML = `<option value="">${empty ? '배정된 배송지 없음' : '배송 자료 미확인'}</option>`;
     find('[data-control-record-stop]').value = '';
-    recordList.innerHTML = `<li class="empty-state">${empty ? '표시할 기록이 없습니다.' : esc(message)}</li>`;
-    find('[data-control-events]').innerHTML = empty ? factRows([]) : `<li class="muted">${esc(message)}</li>`;
+    recordList.innerHTML = `<li class="muted">${empty ? '미등록' : '미확인'}</li>`;
+    find('[data-control-events]').innerHTML = empty ? factRows([]) : '<li class="muted">미확인</li>';
     find('[data-support-data]').innerHTML = '';
     find('[data-control-common]').hidden = false;
     element.querySelectorAll('[data-control-record-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.controlRecordFilter === 'all')));
-    mapElement.innerHTML = `<div class="control-map-empty" role="status">${esc(message)}</div>`;
-    find('[data-control-map-note]').textContent = message;
+    mapElement.innerHTML = empty ? '' : `<div class="control-map-empty" role="status">${esc(message)}</div>`;
+    find('[data-control-map-note]').textContent = empty ? '미배정' : message;
     setControlsDisabled(true);
   }
 

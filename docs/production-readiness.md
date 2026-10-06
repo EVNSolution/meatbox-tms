@@ -1,8 +1,10 @@
 # 운영 준비도
 
-구현에는 날짜별 배차와 상태 보존, 자원 등록부가 구현되어 있다. 실제 기사·고객에게 운영을 확대하려면 아래 접근 통제·증빙·복구·연동 조건을 추가로 입증해야 한다. 가장 큰 차이는 화면 완성도가 아니라 **사용자별 데이터 권한, 내구성 있는 업무 기록, 실제 입출력 연동, 다중 writer 안전성**이다.
+기존 운영 프런트는 `apps/web/` 하나로 포크했고, 인증·원본 조회·날짜별 배차·자원 저장은 Kotlin/Spring API로 이관했다. 실제 기사·고객에게 운영을 확대하려면 **사용자별 데이터 권한, 내구성 있는 업무 기록, 실제 입출력 연동, 작성자 구성의 안전성**을 추가로 입증해야 한다.
 
 이 문서는 현재 코드의 존재와 운영 증거를 분리한다. 과거 배포 기록, 다른 브랜치, 로컬 미커밋 작업은 검토 대상의 운영 준비도에 합산하지 않는다.
+
+현재 구조는 [확정 아키텍처](new-stack-architecture.md)와 [기능별 파일 책임](project-structure.md)을 따른다. TEST native 모드는 보호 웹 게이트웨이와 Kotlin API를 사용하며 기존 Node 업무 API는 중지한다. 기사·고객·시나리오 데모는 [실제 삭제 결과](demo-removal-result.md)의 폐기 범위다. 해당 데모의 동작을 현재 제품 기능으로 합산하지 않는다. QA·운영 환경과 실제 공급자 연결은 후속 범위다.
 
 ## 판정 기준
 
@@ -19,14 +21,14 @@
 
 | 영역 | 구현 경계 | 관련 회귀 | 운영 확대 시 필요한 근거 |
 | --- | --- | --- | --- |
-| 인증 | 초대·가입·로그인·메모리 세션 | [인증](../test/access.test.js), [게이트웨이](../test/gateway.test.js) | 역할·고객·차량별 접근 제한과 거부 경로 |
-| 날짜별 배차 | 초안·확정·수정안 | [배차](../test/dispatch-operations.test.mjs), [명령 API](../test/source-operations-api.test.js) | 기존 확정 상태 보존, 충돌·실패·복구 |
-| 체크포인트 | `DISPATCH_STATE_DIR` 설정 시 JSON 저장 | [통합](../test/system-integration.test.mjs) | 단일 작성자 통제, 비정상 종료, 백업·복원 |
-| 자원 등록부 | 별도 SQLite와 revision CAS | [자원 API](../test/resource-api.test.js) | 원본 인수·스키마 이행·복구와 저장 후 조회 |
-| 배송 사진 | 예시 이미지·로컬 미리보기와 완료 전 확인 | [완료 처리](../test/scenario-controls.test.js) | 서버 증빙 저장과 권한·보존·삭제 |
-| GPS·ETA | 예시 위치와 계획·시뮬레이션 표시 | [시간 계산](../test/vehicle-timing.test.js) | 실제 기기 입력과 현장 오차·지연 |
-| 고객 알림 | 화면 내부 이벤트와 목록 | [배송 흐름](../test/fleet-flow.test.js) | 공급자 접수, 실제 수신·클릭·재동기화 |
-| 배포 | systemd·Caddy 템플릿 | [검증 절차](verification.md) | 불변 후보와 실제 실행 버전·설정의 일치 |
+| 인증 | Kotlin 초대·가입·로그인·로그아웃, 계정 JSON v1·메모리 세션 | [Kotlin 인증](../services/api/src/test/kotlin/com/evnsolution/meatbox/auth/AuthHttpTest.kt), [native 게이트웨이](../test/api-connection/kotlin-native-gateway.test.mjs) | 테넌트·역할·고객·차량별 접근 제한과 거부 경로 |
+| 날짜별 배차 | Kotlin 계산·핀배차·확정·수정안 시작/취소·순서 저장 | [배차](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/DispatchPlanTest.kt), [실제 JAR 명령](../test/api-connection/kotlin-state-owner.test.mjs) | 기존 확정 상태 보존, 충돌·실패·복구와 실제 기사 수신 |
+| 체크포인트 | Kotlin 날짜별 JSON v2 저장·기존 운행 기록 복원 | [상태 소유권·재시작](../test/api-connection/kotlin-state-owner.test.mjs) | 선택한 작성자 구성, 비정상 종료, 백업·복원 |
+| 자원 등록부 | Kotlin SQLite v2와 revision CAS | [Kotlin 자원](../services/api/src/test/kotlin/com/evnsolution/meatbox/resources/ResourceStoreTest.kt), [실제 JAR 자원](../test/api-connection/kotlin-resources.test.mjs) | 원본 인수·스키마 이행·복구와 저장 후 조회 |
+| 배송 사진 | 제품 업로드·증빙 저장 API 미구현; 과거 기사 데모 삭제 | [현재 업무 API](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchController.kt) | 서버 증빙 저장과 권한·보존·삭제 |
+| GPS·ETA | 원본 좌표와 저장된 운행·계획 정보 조회; 실제 기기 수신 미구현 | [관제](../apps/web/combined/vehicle-control.test.mjs), [운행 기록](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/OperationalStateTest.kt) | 실제 기기 입력과 현장 오차·지연 |
+| 고객 알림 | 기존 알림 기록 조회; 배차 명령과 외부 전달 결과 연결 미구현 | [운행 기록](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/OperationalStateTest.kt) | 공급자 접수, 실제 수신·클릭·재동기화 |
+| 배포 | PR·main CI, 검증한 불변 산출물의 TEST 배포·복구 | [검사 workflow](../.github/workflows/new-stack.yml), [TEST 배포 workflow](../.github/workflows/deploy-test.yml), [배포·복구 도구](../deploy/new-stack/README.md) | 각 후보의 실행 버전·설정 일치와 QA·운영 승격 |
 
 이 표는 기능이 바뀔 때 갱신하는 구현 경계다. 각 배포의 통과·실패·미확인은 [릴리스 기록](templates/release-record.md)에 남긴다.
 
@@ -38,31 +40,33 @@
 
 ### 1. principal-resource authorization
 
-현재 세션 principal은 사용자명과 표시 이름을 제공한다. 로그인한 사용자는 같은 HTTP·WebSocket 경로를 통해 날짜 전체 상태와 명령에 접근하며, 운영자·기사·고객 역할이나 주문·차량·매장 소속을 서버가 판정하지 않는다. 화면의 선택 ID와 링크 파라미터는 권한 경계가 아니다.
+Kotlin 세션 principal은 사용자명과 표시 이름을 제공한다. 업무 HTTP 필터는 로그인 여부를 검사하지만 테넌트·운영자·기사·고객 역할이나 주문·차량·매장 소속을 판정하지 않는다. 날짜 상태와 명령은 사용자별 자료 범위로 제한하지 않는다. 화면의 선택 ID와 링크 파라미터는 권한 경계가 아니다. 폐기한 시뮬레이션 WebSocket은 게이트웨이에서 410으로 닫는다.
 
 근거:
 
-- 세션의 공개 사용자 정보와 메모리 세션: [`access.js`](../lib/access.js)
-- 로그인 여부만 확인한 뒤 API와 WebSocket을 여는 흐름: [`server.js`](../server.js)
-- 날짜 상태·명령에서 사용자명은 rate limit 키로만 사용: [`source-operations-router.js`](../lib/source-operations-router.js)
+- 세션의 공개 사용자 정보와 메모리 세션: [`AuthService.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/auth/AuthService.kt)
+- 로그인 여부를 검사하는 업무 필터: [`DispatchSessionFilter.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchSessionFilter.kt), [`ResourceSessionFilter.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/resources/ResourceSessionFilter.kt)
+- 날짜 명령에서 사용자명은 rate limit 키로 사용: [`DispatchController.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchController.kt)
+- 보호 정적 파일·Kotlin 프록시·폐기 경로 차단: [`legacy-gateway.mjs`](../apps/web/scripts/legacy-gateway.mjs)
 
 완료 조건:
 
 - 운영자, 배차 담당자, 기사, 고객 principal과 각 resource 관계를 서버 데이터로 정의한다.
 - 주문·배송지·차량·배차 초안·완료 증빙·알림별 읽기/쓰기 권한을 deny-by-default로 검사한다.
-- 기사 A가 기사 B 차량을 조회·변경하고 고객 A가 고객 B 주문을 조회하는 요청을 HTTP, WebSocket, 직접 ID 변경 모두에서 거절한다.
+- 기사 A가 기사 B 차량을 조회·변경하고 고객 A가 고객 B 주문을 조회하는 요청을 HTTP와 직접 ID 변경에서 거절한다. 실시간 조회 경로를 추가하면 같은 권한 검사를 적용한다.
 - 명령 감사 기록에 principal, resource, 요청 ID, 이전/이후 revision, 결과 시각을 남긴다.
 - 기존 검토 계정의 이행 규칙과 권한 회수 절차를 문서화하고 권한 거부 회귀를 배포 게이트로 둔다.
 
 ### 2. 업무 상태·증빙의 영속성과 복구
 
-현재 날짜별 배차 상태는 `DISPATCH_STATE_DIR`이 있을 때 JSON 체크포인트로 저장된다. 파일 동기화 후 atomic rename을 사용하지만 디렉터리 fsync는 하지 않아 전원 손실 시 최신 rename을 잃을 수 있음을 코드가 명시한다. 시나리오 상태와 로그인 세션은 프로세스 메모리다. 배송 사진은 object URL 또는 포함된 예시 이미지로 미리보기만 하며 서버에 전송되지 않는다.
+Kotlin 날짜별 배차 상태는 JSON 체크포인트 v2에 저장한다. 임시 파일을 동기화한 뒤 atomic rename으로 교체한다. 디렉터리 fsync는 구현하지 않아 전원 손실 시 최신 교체의 내구성은 별도 검증이 필요하다. 기존 확정 운행·진행·완료 기록은 복원하지만 실제 기사 명령과 사진 업로드 API는 아직 없다. 로그인 세션은 프로세스 메모리에 보관한다.
 
 근거:
 
-- 체크포인트 쓰기와 한계: [`source-operations-router.js`](../lib/source-operations-router.js)
-- 메모리 시뮬레이션: [`operating-simulation.js`](../lib/operating-simulation.js)
-- 사진 미리보기와 `hasPhoto` 명령: [`driver.mjs`](../apps/combined/driver.mjs)
+- 체크포인트 쓰기와 저장 실패 처리: [`DispatchStore.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchStore.kt)
+- 기존 운행 기록 복원: [`OperationalState.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/OperationalState.kt)
+- 메모리 세션: [`AuthService.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/auth/AuthService.kt)
+- 현재 제품의 여섯 업무 명령: [`DispatchController.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchController.kt)
 
 완료 조건:
 
@@ -74,13 +78,16 @@
 
 ### 3. multi-writer 내구성과 idempotency
 
-날짜별 명령 queue와 revision 검사는 한 Node 프로세스 안에서만 직렬화한다. 파일 체크포인트에는 여러 프로세스를 조정하는 lock 또는 fencing token이 없다. 접근 계정 파일은 디렉터리 lock을 쓰지만 stale lock 복구와 분산 저장소를 제공하지 않는다. 자원 SQLite는 `BEGIN IMMEDIATE`와 revision CAS를 사용하지만 `journal_mode=DELETE`이며 명시적 `busy_timeout`이나 여러 프로세스 부하 계약이 없다.
+Kotlin 날짜별 상태 조회·명령은 서비스 내부 `@Synchronized`로 직렬화하며 boot/revision 충돌을 검사한다. 체크포인트에는 여러 업무 프로세스를 조정하는 lock 또는 fencing token이 없다. 계정 JSON은 프로세스 lock과 디렉터리 lock을 쓰지만 stale lock 자동 복구와 분산 저장소는 제공하지 않는다. 자원 SQLite는 `BEGIN IMMEDIATE`, revision CAS와 `busy_timeout`을 사용한다. 최종 다중 작성자 계약과 외부 명령의 영속 idempotency 기록은 아직 없다.
+
+native 배포 도구는 기존 Node writer를 중지하고 Kotlin writer를 선택한다. 배포·복구의 호스트 lock과 예상 활성 릴리스 검사는 전환을 보호하며 업무 프로세스의 동시 작성 lock을 대신하지 않는다.
 
 근거:
 
-- 날짜별 프로세스 내부 queue: [`source-operations-router.js`](../lib/source-operations-router.js)
-- 접근 파일 lock: [`access.js`](../lib/access.js)
-- 자원 SQLite transaction: [`resource-store.js`](../lib/resource-store.js)
+- 날짜별 프로세스 내부 동기화: [`DispatchStore.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchStore.kt)
+- 접근 파일 lock: [`AtomicAccessFile.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/auth/AtomicAccessFile.kt)
+- 자원 SQLite transaction·대기 제한: [`ResourceStore.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/resources/ResourceStore.kt)
+- writer 전환·복구 lock: [`배포 도구 설명`](../deploy/new-stack/README.md)
 
 완료 조건:
 
@@ -95,8 +102,8 @@
 
 근거:
 
-- 파일 기반 날짜 조회: [`dispatch-data.js`](../lib/dispatch-data.js)
-- 날짜 상태 생성: [`source-operations-router.js`](../lib/source-operations-router.js)
+- 파일 기반 날짜 조회: [`DispatchDataReader.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/compat/DispatchDataReader.kt)
+- 날짜 상태 생성: [`DispatchStore.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchStore.kt), [`DispatchPlan.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchPlan.kt)
 - 준비 스크립트: [`prepare-dispatch-data.py`](../scripts/prepare-dispatch-data.py), [`prepare-destination-data.py`](../scripts/prepare-destination-data.py)
 
 완료 조건:
@@ -110,7 +117,9 @@
 
 ### 5. 실제 GPS와 ETA 성능
 
-현재 source 상태의 차량 위치는 예시 출처이고 ETA는 기존 계획·시뮬레이션 입력에서 계산된다. 브라우저가 실제 기사 기기의 위치를 서버로 보내는 경로, 위치 정확도·시각·장치 신원 검증, map matching, 오래된 위치 거절은 없다.
+현재 관제 지도는 원본에 있는 좌표를 표시하며 좌표가 없으면 자료 없음으로 표시한다. 기존 계획·운행 기록 조회를 실제 기기의 GPS·ETA 수신으로 해석하지 않는다. 기사 위치를 서버에 보내는 제품 API, 위치 정확도·시각·장치 신원 검증, map matching과 오래된 위치 거절은 아직 없다.
+
+근거: [`vehicle-control.mjs`](../apps/web/combined/vehicle-control.mjs), [`OperationalState.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/OperationalState.kt), [`현재 업무 API`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchController.kt).
 
 완료 조건:
 
@@ -122,7 +131,9 @@
 
 ### 6. 기사 수신·오프라인·외부 알림
 
-배차 확정은 서버 snapshot에 반영되지만 기사 기기 수신·수락·거절·재배차 acknowledgment가 없다. 고객 알림도 화면 내부 기록이며 FCM, Web Push, 문자 공급자의 운영 결과가 아니다.
+배차 확정은 서버 snapshot에 반영되지만 기사 기기 수신·수락·거절·재배차 acknowledgment는 제품 API에 없다. 기존 고객 알림 기록 조회도 현재 배차의 외부 전달 결과를 증명하지 않는다. 별도 Push Lab 서비스와 기존 Push 작업은 유지하지만 배차·알림의 제품 통합 완료로 합산하지 않는다.
+
+근거: [`DispatchController.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchController.kt), [`OperationalState.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/OperationalState.kt), [`Push 서비스 보존 경계`](../deploy/new-stack/README.md).
 
 완료 조건:
 
@@ -133,13 +144,15 @@
 
 ### 7. 관측·백업·재해 복구·릴리스 증명
 
-저장소에는 systemd와 Caddy 예시가 있지만 CI workflow, runtime SHA endpoint, 중앙 지표·로그·경보 계약은 없다. 과거 배포 문서는 당시 증거이며 검토 대상과 실행 중인 서비스가 같다는 뜻이 아니다.
+저장소에는 PR·main CI와 TEST 자동 배포 workflow가 있다. CI에서 전체 검사를 통과한 불변 산출물을 배포하며 서버에서 manifest·Git SHA·활성 모드·서비스 health를 확인한다. 배포·복구 도구는 업무 자료를 보존하고 전환 전 백업을 확보한다. 중앙 지표·로그·경보와 RPO/RTO는 별도 운영 계약이 필요하다. 과거 실행 문서는 당시 증거이며 현재 후보와 실행 중인 서비스가 같다는 뜻이 아니다.
+
+근거: [`검사 workflow`](../.github/workflows/new-stack.yml), [`TEST 배포 workflow`](../.github/workflows/deploy-test.yml), [`산출물 확인·배포·복구`](../deploy/new-stack/README.md).
 
 완료 조건:
 
 - 깨끗한 격리 환경의 테스트를 commit SHA에 연결하고 실패 시 후보 승격을 차단한다.
 - runtime이 불변 버전과 readiness를 노출하고 배포 후 후보 SHA와 일치시킨다.
-- 인증 실패, 명령 오류, 저장 지연/실패, queue, WebSocket 연결, ETA stale, 외부 공급 실패를 관측한다.
+- 인증 실패, 명령 오류, 저장 지연/실패, 요청 대기, ETA stale, 외부 공급 실패를 관측한다. 실시간 연결을 추가하면 연결 상태도 관측한다.
 - 접근 파일, 업무 원장, 자원 DB, 사진 객체의 백업·복원과 RPO/RTO를 정하고 복구 훈련 결과를 남긴다.
 - 기존 확정 배차와 진행 상태를 보존한 롤백을 검증한다.
 
@@ -158,7 +171,7 @@
 | 게이트 | 승인에 필요한 증거 |
 | --- | --- |
 | G1 소스 | 후보의 전체 회귀와 변경 범위 검토 |
-| G2 보안·인가 | 역할·소속별 허용 및 거부 경로의 HTTP·WebSocket 검증 |
+| G2 보안·인가 | 테넌트·역할·소속별 허용 및 거부 경로의 HTTP 검증; 추가하는 실시간 경로도 같은 기준 적용 |
 | G3 데이터 내구성 | 선택한 작성자 구성, 저장 실패·재시작·백업·복원, 감사 기록 |
 | G4 외부 계약 | 사용하는 주문·GPS·알림 공급 계약과 계약 테스트 |
 | G5 후보·runtime | 불변 산출물과 실제 실행 버전의 일치, 상태 점검, 롤백 |
@@ -166,4 +179,4 @@
 
 사용 범위에 필요한 게이트가 충족되어야 운영을 확대한다. 과거 배포나 별도 브랜치의 결과는 대상 릴리스의 검증을 대신하지 않는다.
 
-로컬 실행은 [개발 환경](development.md), 검증 결과 작성은 [검증 가이드](verification.md), 배포·백업 절차는 [운영 가이드](operations.md), 인증 경계는 [보안과 접근 제어](security-and-access.md)를 따른다.
+현행 로컬 실행은 [새 스택 개발 환경](new-stack-development.md), 검사·배포 흐름은 [변경 전달 기준](delivery-workflow.md), 배포·백업·복구는 [새 스택 배포 도구](../deploy/new-stack/README.md)를 따른다. 기존 [검증 가이드](verification.md)와 [보안·접근 제어](security-and-access.md)는 참고 자료다. 현행 소유권과 폐기한 데모의 경계는 위 구현 근거를 우선한다.

@@ -1,84 +1,4 @@
-.button {
-  min-height: var(--control-height);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 11px;
-  color: var(--action);
-  background: #ffffff;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-decoration: none;
-}
-
-.button:hover {
-  background: #f5f6f8;
-}
-
-.button.primary {
-  color: #ffffff;
-  background: var(--action);
-  border-color: var(--action);
-}
-
-.button.primary:hover {
-  background: #343638;
-}
-
-.button.subtle {
-  color: var(--muted);
-  background: transparent;
-  border-color: var(--border);
-}
-
-.button:disabled,
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  padding: 2px 7px;
-  color: #41464e;
-  background: #f0f2f4;
-  border: 1px solid #cbd0d7;
-  border-radius: var(--radius);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.25;
-  white-space: nowrap;
-}
-
-.badge.blue {
-  color: #173fa6;
-  background: #eef4ff;
-  border-color: #a9c3f4;
-}
-
-.badge.green {
-  color: #0e662f;
-  background: #edf8f0;
-  border-color: #99d2aa;
-}
-
-.badge.amber {
-  color: #704000;
-  background: #fff6df;
-  border-color: #e7bf70;
-}
-
-.badge.neutral {
-  color: #515760;
-  background: #f2f3f5;
-  border-color: #c9ced5;
-}
+@import "/components.css";
 
 .muted {
   color: var(--muted);
@@ -117,16 +37,7 @@ button:disabled {
   border: 0 !important;
 }
 
-:where(button, input, select, summary, a):focus-visible {
-  position: relative;
-  z-index: 2;
-  outline: 3px solid #76a9ff;
-  outline-offset: 2px;
-}
-
 .terminal-row.selected:focus-visible,
 .terminal-row[aria-current="true"]:focus-visible {
-  outline-color: #1d4ed8;
   outline-offset: -3px;
 }
-

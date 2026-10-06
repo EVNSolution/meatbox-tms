@@ -1,0 +1,36 @@
+.status-notification {
+  position: fixed;
+  top: calc(var(--header-height, 56px) + 12px);
+  left: 50%;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: min(640px, calc(100vw - 32px));
+  padding: 8px 8px 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 4px 16px #00000018;
+  transform: translateX(-50%);
+}
+
+.status-notification p { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.status-notification button {
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--muted);
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+}
+.status-notification button:hover { color: var(--text); background: var(--workspace); }
+.status-notification button:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }

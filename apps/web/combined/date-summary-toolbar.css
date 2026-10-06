@@ -5,7 +5,7 @@
   margin: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .summary-counts > * {
@@ -35,17 +35,17 @@
 .date-summary-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px 16px;
   margin-bottom: 14px;
   padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #fff;
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .date-summary-actions { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 44px; font-size: 13px; }
-.date-summary-meta { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-left: auto; }
+.date-summary-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
 .date-summary-toolbar .summary-counts { width: auto; max-width: 100%; }
 
 @media (max-width: 700px) {

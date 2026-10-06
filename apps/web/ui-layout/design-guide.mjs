@@ -37,7 +37,7 @@ function mountDateToolbarSample(container) {
   const today = '2026-09-16';
   const fixtures = {
     '2026-09-14': [['차량', 8], ['배송', 24], ['완료', 24]],
-    '2026-09-15': [],
+    '2026-09-15': [['차량', 0], ['배송', 0], ['완료', 0]],
     [today]: [['차량', 8], ['배송', 24], ['완료', 5]],
   };
   const toolbar = container.querySelector('[data-guide-date-toolbar]');
@@ -48,10 +48,10 @@ function mountDateToolbarSample(container) {
   let picker;
   function select(value) {
     const counts = fixtures[value];
-    if (counts.length) summary.update(counts);
-    else summary.clear();
-    status.textContent = value === today ? '컴포넌트 예제' : counts.length ? '이력 조회 · 읽기 전용' : '자료 없음';
-    feedback.textContent = `${value} 예제${counts.length ? ' 수량입니다.' : '에는 자료가 없어 수량을 숨깁니다.'} 실제 조회·배차 상태는 변경하지 않습니다.`;
+    const empty = value === '2026-09-15';
+    summary.update(counts);
+    status.textContent = value === today ? '컴포넌트 예제' : empty ? '자료 없음' : '이력 조회 · 읽기 전용';
+    feedback.textContent = `${value}${empty ? '에 자료가 없다고 확인된 경우의 수량 0 예제입니다.' : ' 예제 수량입니다.'} 실제 조회·배차 상태는 변경하지 않습니다.`;
     todayButton.disabled = value === today;
     picker.update({ value, dates: Object.keys(fixtures) });
   }
@@ -122,7 +122,7 @@ export function mountDesignGuide(container) {
           ${token('구분선', '--border', 'is-border')}
         </ul>
         <div class="design-guide-type" aria-label="타이포와 간격 표본">
-          <p class="design-guide-title-sample">Pretendard · 제목 24px</p><p class="muted">기본 반경 6px · 조작 44px · 헤더 56px</p>
+          <p class="design-guide-title-sample">Pretendard · 제목 24px</p><p class="muted">조작 44px · 조작 반경 6px · 카드 반경 8px · 대화상자 반경 12px · 헤더 56px</p>
           <p class="design-guide-body-sample"><span>본문 14px</span><span>배송 상태와 시간을 빠르게 읽는 밀도</span></p>
           <p class="muted design-guide-caption-sample"><span>보조 정보 12px</span><span>갱신 시각과 표본 경계</span></p>
           <div class="design-guide-spacing" aria-label="간격 기준 4, 8, 12, 16, 24픽셀"><i></i><i></i><i></i><i></i><i></i></div>
@@ -135,7 +135,7 @@ export function mountDesignGuide(container) {
       <div class="design-guide-controls">
         <div class="design-guide-control-group">
           <h3>버튼 상태</h3>
-          <div class="design-guide-inline"><button type="button" class="button primary">주요 액션</button><button type="button" class="button">보조 액션</button><button type="button" class="button subtle">낮은 강조</button><button type="button" class="button" disabled>비활성</button></div>
+          <div class="design-guide-inline"><button type="button" class="button primary">주요 액션</button><button type="button" class="button">보조 액션</button><button type="button" class="button subtle">낮은 강조</button><button type="button" class="button" disabled>비활성</button><a class="button" role="link" aria-disabled="true" tabindex="-1">비활성 링크</a></div>
           <p class="footer-note">Tab 키로 실제 focus 표시를 확인할 수 있습니다.</p>
         </div>
         <div class="design-guide-control-group">
@@ -145,10 +145,15 @@ export function mountDesignGuide(container) {
         <div class="design-guide-control-group design-guide-control-wide">
           <h3>탭과 배지 상태</h3>
           <div class="detail-tabs" role="tablist" aria-label="디자인 가이드 탭 표본"><button type="button" role="tab" id="design-guide-tab-one" aria-selected="true" aria-controls="design-guide-panel-one" data-guide-tab>정상 선택</button><button type="button" role="tab" id="design-guide-tab-two" aria-selected="false" aria-controls="design-guide-panel-two" tabindex="-1" data-guide-tab>다른 탭</button><button type="button" role="tab" id="design-guide-tab-disabled" aria-selected="false" aria-controls="design-guide-panel-disabled" tabindex="-1" disabled>비활성</button></div>
-          <div class="design-guide-tab-panel" role="tabpanel" id="design-guide-panel-one" aria-labelledby="design-guide-tab-one"><span>선택된 탭 표본</span></div>
-          <div class="design-guide-tab-panel" role="tabpanel" id="design-guide-panel-two" aria-labelledby="design-guide-tab-two" hidden><span>키보드 방향키로도 이동할 수 있습니다.</span></div>
-          <div class="design-guide-tab-panel" role="tabpanel" id="design-guide-panel-disabled" aria-labelledby="design-guide-tab-disabled" hidden><span>비활성 탭 표본</span></div>
+          <div class="design-guide-tab-panel tab-panel" role="tabpanel" id="design-guide-panel-one" aria-labelledby="design-guide-tab-one"><span>선택된 탭 표본</span></div>
+          <div class="design-guide-tab-panel tab-panel" role="tabpanel" id="design-guide-panel-two" aria-labelledby="design-guide-tab-two" hidden><span>키보드 방향키로도 이동할 수 있습니다.</span></div>
+          <div class="design-guide-tab-panel tab-panel" role="tabpanel" id="design-guide-panel-disabled" aria-labelledby="design-guide-tab-disabled" hidden><span>비활성 탭 표본</span></div>
           <div class="design-guide-inline design-guide-badges" aria-label="배지 색상 비교">${badge('배송 중', 'blue')}${badge('배송 완료', 'green')}${badge('ETA 변경', 'amber')}${badge('미확정', 'neutral')}</div>
+        </div>
+        <div class="design-guide-control-group design-guide-control-wide">
+          <h3>카드와 조회 상태</h3>
+          <section class="panel" aria-labelledby="guide-state-heading"><div class="panel-heading"><h3 id="guide-state-heading">공통 카드 표본</h3></div><div class="design-guide-panel-body"><p class="muted">아래 문구는 시각 상태를 비교하는 예제입니다.</p><div class="guide-state-samples"><p class="component-state" data-state="loading" role="status">로딩 예제 · 선택 날짜의 자료를 확인하고 있습니다.</p><p class="guide-inline-empty">자료 없음 예제 · 등록된 차량이 없습니다.</p><p class="component-state" data-state="error">조회 오류 예제 · 연결을 확인하고 다시 조회해 주세요.</p><label class="field"><span>안내 문구 입력 표본</span><textarea rows="3" placeholder="입력과 focus 표시를 확인하세요."></textarea></label><button type="button" class="button" data-guide-dialog-open>대화상자 표본 열기</button></div></div></section>
+          <dialog class="component-dialog" data-guide-dialog aria-labelledby="guide-dialog-title"><form method="dialog"><h3 id="guide-dialog-title">공통 대화상자 표본</h3><p>Tab 키로 조작하고 Escape 키나 닫기 버튼으로 돌아갑니다. 실제 배차 자료는 변경하지 않습니다.</p><button type="submit" class="button primary">닫기</button></form></dialog>
         </div>
       </div>
     </section>
@@ -158,7 +163,7 @@ export function mountDesignGuide(container) {
       <div class="design-guide-panel-body guide-toolbar-sample">
         ${dateSummaryToolbar({ label: '날짜·집계 예제', actions: '<span>조회 날짜</span><div data-guide-datepicker></div><button class="button" type="button" data-guide-today>오늘 예제</button>', summaryLabel: '수량 예제', context: '<span class="badge neutral" data-guide-date-mode></span>', attributes: 'data-guide-date-toolbar' })}
         <p class="footer-note" data-guide-date-feedback role="status"></p>
-        <p class="footer-note">9월 14일은 읽기 전용, 15일은 빈 날짜, 16일은 현재 날짜 표본입니다. 날짜 조작과 상태·집계는 별도 영역에서 상단을 맞춥니다.</p>
+        <p class="footer-note">9월 14일은 읽기 전용, 15일은 빈 날짜, 16일은 현재 날짜 표본입니다. 날짜 조작과 상태·집계는 별도 영역에서 중앙을 맞춥니다.</p>
       </div>
     </section>
 
@@ -196,5 +201,6 @@ export function mountDesignGuide(container) {
   });
   mountDateToolbarSample(container);
   mountTabSample(container);
+  container.querySelector('[data-guide-dialog-open]').addEventListener('click', () => container.querySelector('[data-guide-dialog]').showModal());
   container.dataset.mounted = 'true';
 }

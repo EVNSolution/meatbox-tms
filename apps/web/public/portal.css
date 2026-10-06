@@ -1,4 +1,5 @@
 @import "/theme.css";
+@import "/components.css";
 
 /* Authentication layout; colors, type and control dimensions come from theme.css. */
 * { box-sizing: border-box; }
@@ -8,7 +9,6 @@ body { margin: 0; color: var(--text); background: var(--workspace); font: 14px/1
 a { color: inherit; text-decoration: none; }
 button, input { font: inherit; }
 button { cursor: pointer; }
-:where(button, a, input):focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
 header { height: var(--header-height); padding: 0 20px; display: flex; align-items: center; background: var(--surface); border-bottom: 1px solid var(--border); }
 .brand { display: inline-flex; align-items: center; gap: 8px; color: var(--brand); font-size: 15px; font-weight: 700; white-space: nowrap; }
 .brand img { display: block; width: 126px; height: 30px; }
@@ -19,14 +19,12 @@ h1 { font-size: 25px; line-height: 1.35; letter-spacing: -.035em; }
 .eyebrow { margin-bottom: 12px; color: var(--muted); font-size: 12px; font-weight: 700; }
 .intro { margin-top: 12px; color: var(--muted); }
 .auth-shell { max-width: 488px; padding: 64px 24px; margin: auto; }
-.auth-card { padding: 32px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.auth-card { padding: 32px; }
 .auth-form { display: grid; gap: 16px; margin-top: 24px; }
 .form-field { display: grid; gap: 4px; }
 .form-field > label { display: block; margin-bottom: 4px; font-weight: 600; }
-.auth-form input { width: 100%; min-width: 0; height: var(--control-height); padding: 0 12px; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius); font-weight: 600; }
-.primary { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--control-height); padding: 0 14px; color: var(--surface); background: var(--text); border: 1px solid var(--text); border-radius: var(--radius); font-weight: 700; line-height: 1.5; }
-.primary:hover { background: #413f3d; }
-.primary:disabled { cursor: not-allowed; opacity: .55; }
+.auth-form input { font-weight: 600; }
+.auth-form .primary { width: 100%; }
 .field-feedback { min-height: 1.5em; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .field-feedback.is-error { color: var(--red); }
 .auth-form input[aria-invalid="true"] { border-color: var(--red); }
