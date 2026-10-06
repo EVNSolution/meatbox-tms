@@ -10,8 +10,8 @@
   ],
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
-  "targetFileCount": 106,
-  "authoredFileCount": 23,
+  "targetFileCount": 99,
+  "authoredFileCount": 25,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,13 +28,14 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "132da264df584e27393144ee6166d5f311a1de262eb7e24d2a039a7aa634823e",
+      "targetSha256": "242159e261823378cecb302184fa9aa635f08df57787f584d21906dd289cc1be",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Keep delivery control containers and tabs visible without data; distinguish confirmed empty and unknown counts and reset previous date selections, notices and route drafts.",
-        "Use one transient empty-data notification while retaining work areas and persistent errors."
+        "Use one transient empty-data notification while retaining work areas and persistent errors.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
       ],
       "status": "active"
     },
@@ -54,7 +55,9 @@
       "targetSha256": "3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22",
       "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
       "changes": [],
-      "status": "active"
+      "status": "removed",
+      "removedOn": "2026-10-06",
+      "removalReason": "Retire unreachable operational UI, replaced simulation boundary, unused demo CSS or duplicate font. Current three operational pages, canonical font, Kotlin read APIs and original golden contracts remain."
     },
     {
       "source": "apps/combined/assets/PretendardVariable.ttf",
@@ -69,10 +72,11 @@
       "source": "apps/combined/assets/SOURCES.md",
       "sourceSha256": "6ffa9631265e05a66936bb0ec72b1c1ca29773066e6177c371377199f1be8e1d",
       "target": "apps/web/public/combined/assets/SOURCES.md",
-      "targetSha256": "2f96999c3d6a479cda1f27140888fb94219cfcb8762537e10e9e21b01d3d8dba",
+      "targetSha256": "66a1cda59da48bee3fd6fe605aead6e2427af26f8ea767fceb01caa3bdda44f6",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
-        "Record the current official-page logo URL observation and distinguish eight official-site SVG icons from five local control geometries; retain preserved asset bytes and hashes"
+        "Record the current official-page logo URL observation and distinguish eight official-site SVG icons from five local control geometries; retain preserved asset bytes and hashes",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
       ],
       "status": "active"
     },
@@ -402,12 +406,13 @@
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "50fab6085739c09bfd6c629f3e3fa993269159f7d9b104f91a56357d8d192d69",
+      "targetSha256": "30f97e4cc448b47c81c7ccdd96658a5b6e8702fd7c2149b8d5acb834abb86a9b",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Remove unused escaping helper, selection value and catch binding; retain update argument position",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Use one transient empty-data notification while retaining work areas and persistent errors."
+        "Use one transient empty-data notification while retaining work areas and persistent errors.",
+        "Name the connected state for operational data without changing source or command contracts."
       ],
       "status": "active"
     },
@@ -450,7 +455,9 @@
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage."
       ],
-      "status": "active"
+      "status": "removed",
+      "removedOn": "2026-10-06",
+      "removalReason": "Retire unreachable operational UI, replaced simulation boundary, unused demo CSS or duplicate font. Current three operational pages, canonical font, Kotlin read APIs and original golden contracts remain."
     },
     {
       "source": "apps/combined/delivery-review.test.mjs",
@@ -494,7 +501,9 @@
       "targetSha256": "8448e916376c2119558583082e9905b283dc862ae11f78fe347a11e7d4409ffb",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [],
-      "status": "active"
+      "status": "removed",
+      "removedOn": "2026-10-06",
+      "removalReason": "Retire unreachable operational UI, replaced simulation boundary, unused demo CSS or duplicate font. Current three operational pages, canonical font, Kotlin read APIs and original golden contracts remain."
     },
     {
       "source": "apps/combined/destination-directory.test.mjs",
@@ -503,7 +512,9 @@
       "targetSha256": "77e300a08b8f39baf6c4a0e743a6ac9113ac807cf8374b72cf0e0067556f9c9c",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [],
-      "status": "active"
+      "status": "removed",
+      "removedOn": "2026-10-06",
+      "removalReason": "Retire unreachable operational UI, replaced simulation boundary, unused demo CSS or duplicate font. Current three operational pages, canonical font, Kotlin read APIs and original golden contracts remain."
     },
     {
       "source": "apps/combined/dispatch-assignment.mjs",
@@ -556,10 +567,11 @@
       "source": "apps/combined/dispatch-workflow.css",
       "sourceSha256": "d3c042a43e3ae08a4eac46590b3bc9f662d90ba11a909fb5a4c4b5b99ea00a13",
       "target": "apps/web/combined/dispatch-workflow.css",
-      "targetSha256": "67ad7c9eafebe42678d2383f21d9c9613c85f1af65aefefa185ef0d9363ce72f",
+      "targetSha256": "7bd6f3b15492e0b1c826bfd76a7748cea2d2cb7512e5ae75920908dbc92531c7",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "status": "active"
     },
@@ -567,11 +579,12 @@
       "source": "apps/combined/dispatch-workflow.mjs",
       "sourceSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59",
       "target": "apps/web/combined/dispatch-workflow.mjs",
-      "targetSha256": "5978aa41811989fd6d931c645f77f8553e784d6099d9e0277fed20d043a270e9",
+      "targetSha256": "ec142f34795e75c72732d83d8e16978ce30a79bfaf389af9b500e1d22c2938ee",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
       ],
       "status": "active"
     },
@@ -758,14 +771,15 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "974049fd80242e3030223b5cee4a72e62f7eb48fa25672e79ce789ce1e1ad9db",
+      "targetSha256": "36e64c146c195057b8bd17ea3d037f7f744eee3ccdb4ddfcd029355ff06ae701",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions",
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Load operational date-picker styling directly after retiring the demo shell.",
-        "Use one transient empty-data notification while retaining work areas and persistent errors."
+        "Use one transient empty-data notification while retaining work areas and persistent errors.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
       ],
       "status": "active"
     },
@@ -776,7 +790,9 @@
       "targetSha256": "83e16a5d0e67fee06e09f2ecf0189266e33bb3e1af1c32f6a57b95ddc7237a3c",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [],
-      "status": "active"
+      "status": "removed",
+      "removedOn": "2026-10-06",
+      "removalReason": "Retire unreachable operational UI, replaced simulation boundary, unused demo CSS or duplicate font. Current three operational pages, canonical font, Kotlin read APIs and original golden contracts remain."
     },
     {
       "source": "apps/combined/map-wheel-zoom.mjs",
@@ -871,11 +887,12 @@
       "source": "apps/combined/operations.css",
       "sourceSha256": "97acc70d352b0fe56833669611ef10b4ffbdab2f56a79e3f891ac9af4dc86b4b",
       "target": "apps/web/combined/operations.css",
-      "targetSha256": "aa164fde694d42146512c21fc754604fcd5b0a69b6cd61f0cefae674f6ab6650",
+      "targetSha256": "8db9b2d9d55e88e993229fa937e14d94bbf5c9e1b66c45c268d57e08b9f764f2",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Use the shared 6px --radius for the customer-notice textarea instead of 4px; retain dense row and utility control dimensions",
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "status": "active"
     },
@@ -883,12 +900,13 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "41c2f21e32f2b11775a57de1ac039d5254b1897ef8085ffd165e4588a74421c2",
+      "targetSha256": "b4e00b03973785c8151ee11418b78a2164779df0d12af82345438df62dd897c6",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "status": "active"
     },
@@ -896,7 +914,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "ade1b4022a5ae0245db73a274fa09f0ee61e4a427c70f2db9ed4693bd7300a9f",
+      "targetSha256": "1ef6a47b6031e2b25f836e961cbe775ca996a137bb3b123d24cf8f53e094ccea",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -905,7 +923,8 @@
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Restore the empty selection card after a populated date hid its unselected-order view.",
-        "Use one transient empty-data notification while retaining work areas and persistent errors."
+        "Use one transient empty-data notification while retaining work areas and persistent errors.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
       ],
       "status": "active"
     },
@@ -994,10 +1013,11 @@
       "source": "apps/combined/resource-management.css",
       "sourceSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
       "target": "apps/web/combined/resource-management.css",
-      "targetSha256": "13db364820617af8b222f9797060983c2e398588ac42f5a9a875b446c832da82",
+      "targetSha256": "3dbad1e883af2956a212a1a81c55b7120eec8227361d300b200f45977a93f214",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
-        "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px"
+        "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "status": "active"
     },
@@ -1005,28 +1025,33 @@
       "source": "apps/combined/resource-management.mjs",
       "sourceSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
       "target": "apps/web/combined/resource-management.mjs",
-      "targetSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
+      "targetSha256": "666d34c60142ffb5310ca22abbf2a9df33baab6b707154ec6e269c240c0e2131",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
-      "changes": [],
+      "changes": [
+        "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events."
+      ],
       "status": "active"
     },
     {
       "source": "apps/combined/resource-management.test.mjs",
       "sourceSha256": "44615c6e7c1e03176b84950823376125d3913f946b27b745932d83f5de7b54f5",
       "target": "apps/web/combined/resource-management.test.mjs",
-      "targetSha256": "44615c6e7c1e03176b84950823376125d3913f946b27b745932d83f5de7b54f5",
+      "targetSha256": "60b5676f7db6f43ee1af9469fd8769c73617285500c50133fc08a1bf5d523d81",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
-      "changes": [],
+      "changes": [
+        "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events."
+      ],
       "status": "active"
     },
     {
       "source": "apps/combined/route-editor.mjs",
       "sourceSha256": "19e20fbbb0c48b070d4a9e289bbbd1ee5557f0e20c57aa6a050a54f3644764d3",
       "target": "apps/web/combined/route-editor.mjs",
-      "targetSha256": "e124d95882467710f21291c7ac5148bf4e876f9bb1b4cf19b00c2f1efc80bf68",
+      "targetSha256": "9e7461eec9f9fdda2fd3bf06abff0205f950a4109f0612abb784c982663a7c36",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
-        "Discard previous route drafts and pending UI state when switching to a date without delivery data."
+        "Discard previous route drafts and pending UI state when switching to a date without delivery data.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
       ],
       "status": "active"
     },
@@ -1034,10 +1059,11 @@
       "source": "apps/combined/route-editor.test.mjs",
       "sourceSha256": "a1e90e8412edb90cf341b7bf8487abac5629f45f204d84893b7ee1d41e28556f",
       "target": "apps/web/combined/route-editor.test.mjs",
-      "targetSha256": "1eb01f1eb34b0cd0cb9a73d7ede83888219da0c394b2d2ca12c6579d20cafab1",
+      "targetSha256": "1a89e789a57e3d0ac9a80724805195d47665e3bf89226f6e9b30423b6cb6b80d",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
-        "Verify empty-date reset blocks stale route actions and recovers normal route editing on received data."
+        "Verify empty-date reset blocks stale route actions and recovers normal route editing on received data.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
       ],
       "status": "active"
     },
@@ -1105,16 +1131,19 @@
       "targetSha256": "5eefd43b37e1984de1009b0537a22b753610bc292db82416965b22c940e1ccd1",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [],
-      "status": "active"
+      "status": "removed",
+      "removedOn": "2026-10-06",
+      "removalReason": "Retire unreachable operational UI, replaced simulation boundary, unused demo CSS or duplicate font. Current three operational pages, canonical font, Kotlin read APIs and original golden contracts remain."
     },
     {
       "source": "apps/combined/simulation-adapter.test.mjs",
       "sourceSha256": "054905457874fb971973ac92e7e0fd6b3638858bfe2c4ce1448e290906aae212",
       "target": "test/web-fork-legacy/simulation-adapter.test.mjs",
-      "targetSha256": "c90fc66ab85ef29285b6f855b29464ff89488cd2ddaa9e3ea544a1845c234812",
+      "targetSha256": "37361f7c8a7e2ace1727ce6d37f3bd98a93efeae11ae41a762cf6393bf254a7e",
       "reason": "Keep writer/scenario-dependent regression tests at repository level and point UI imports at the frontend fork; server imports remain repository-owned.",
       "changes": [
-        "Retarget sibling UI model imports to ../../apps/web/combined; preserve existing Node writer/scenario imports"
+        "Retarget sibling UI model imports to ../../apps/web/combined; preserve existing Node writer/scenario imports",
+        "Compare retired simulation behavior against the retained original golden adapter; source-only product behavior has its own contract tests."
       ],
       "status": "active"
     },
@@ -1128,7 +1157,9 @@
         "Preserve the legacy headerless-manifest 404 simulation branch while an explicit Kotlin reader error stays failed; import the strict TypeScript reader contract.",
         "Removed retired demo behavior while preserving operational regression coverage."
       ],
-      "status": "active"
+      "status": "removed",
+      "removedOn": "2026-10-06",
+      "removalReason": "Retire unreachable operational UI, replaced simulation boundary, unused demo CSS or duplicate font. Current three operational pages, canonical font, Kotlin read APIs and original golden contracts remain."
     },
     {
       "source": "apps/combined/simulation-client.test.mjs",
@@ -1139,7 +1170,9 @@
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage."
       ],
-      "status": "active"
+      "status": "removed",
+      "removedOn": "2026-10-06",
+      "removalReason": "Retire unreachable operational UI, replaced simulation boundary, unused demo CSS or duplicate font. Current three operational pages, canonical font, Kotlin read APIs and original golden contracts remain."
     },
     {
       "source": "apps/combined/source-client.mjs",
@@ -1210,10 +1243,11 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles.css",
-      "targetSha256": "40f70e587adcc55a68671fd3236c1cbf9d7b214204791c255fb18525957010e3",
+      "targetSha256": "d569f0053e0a761b424d92f096be3ee95ed1a87aa37759125a4ef24db2799852",
       "reason": "Replace the monolithic CSS entry with explicit original-order imports; fragments preserve complete original line-range provenance and reviewed shared-theme/date-toolbar changes.",
       "changes": [
-        "Split the original complete CSS cascade into explicit responsibility fragments while preserving their import order"
+        "Split the original complete CSS cascade into explicit responsibility fragments while preserving their import order",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "status": "active"
     },
@@ -1240,11 +1274,12 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/shell.css",
-      "targetSha256": "5c84d47c3c8e26e691506ac6842833c88bb0b4ea6c4a6e595e19c3b27b5e987f",
+      "targetSha256": "a1911fe6168e595f67978ea3f1946876402f4acc0fb99357ba32925fafa91379",
       "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 57-344 into a dedicated stylesheet",
-        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order"
+        "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1272,7 +1307,9 @@
         "extractedSha256": "0a14e2c9e6d60f9ea5523c3c700f2b31cb937583d8c32f09219f349b7137a2d7",
         "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
       },
-      "status": "active"
+      "status": "removed",
+      "removedOn": "2026-10-06",
+      "removalReason": "Retire unreachable operational UI, replaced simulation boundary, unused demo CSS or duplicate font. Current three operational pages, canonical font, Kotlin read APIs and original golden contracts remain."
     },
     {
       "source": "apps/combined/styles.css",
@@ -1290,18 +1327,21 @@
         "extractedSha256": "92dd7e6612e945d06c8e93fc3d14746275e44a9405bb40b367078560c36cfe8b",
         "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
       },
-      "status": "active"
+      "status": "removed",
+      "removedOn": "2026-10-06",
+      "removalReason": "Retire unreachable operational UI, replaced simulation boundary, unused demo CSS or duplicate font. Current three operational pages, canonical font, Kotlin read APIs and original golden contracts remain."
     },
     {
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/controls.css",
-      "targetSha256": "19967bc1febf87fa049bde8c035c37ca867e128430366bb97fa775da48d805e1",
+      "targetSha256": "1f7d983bd5069bb080abe06ef95213ca5f7348cd8e0de99eac1f667ddfd3593f",
       "reason": "Derive the controls stylesheet from original lines 1180-1305; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1180-1305 into a dedicated stylesheet",
         "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1316,10 +1356,11 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/responsive.css",
-      "targetSha256": "261628f5fef7fb69c98f5bc617ae6fd7e4188a9ae5346d6e364135c947a3aa57",
+      "targetSha256": "f76d7d9b1efa7c3a0472f1742c32140e642b16054899d806af5dd9ae3d396f36",
       "reason": "Derive the responsive stylesheet from original lines 1306-1449; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
-        "Extract original CSS lines 1306-1449 into a dedicated stylesheet"
+        "Extract original CSS lines 1306-1449 into a dedicated stylesheet",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1334,10 +1375,11 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/live.css",
-      "targetSha256": "b2e39051b3caba138c58d9c85437300f7e88723f2f7df57ec445fae78af59282",
+      "targetSha256": "294547a0f3c67cb7da164dd2b8e5f0d34ab377e1d7c6224982b5a5d9adcd83f3",
       "reason": "Derive the live stylesheet from original lines 1450-1525; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
-        "Extract original CSS lines 1450-1525 into a dedicated stylesheet"
+        "Extract original CSS lines 1450-1525 into a dedicated stylesheet",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1352,10 +1394,11 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/responsive-small.css",
-      "targetSha256": "98c28ceaa730cd6bf991ef90f3f8a508c68c9b4b8611bdb1f695bda3580f5330",
+      "targetSha256": "0a8a7d3141517a7b32b654419b6dc2a49ff2aed6a0f44ae4ff2b4244794ca3af",
       "reason": "Derive the responsive-small stylesheet from original lines 1526-1573; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
-        "Extract original CSS lines 1526-1573 into a dedicated stylesheet"
+        "Extract original CSS lines 1526-1573 into a dedicated stylesheet",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1370,11 +1413,12 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/composition.css",
-      "targetSha256": "7554e27b467a592f83c266862d35a7b8bcb5a720ec24d85240cd5ea4c7e73722",
+      "targetSha256": "809fa3759edfe9dab5a37b8f7a952932de7a9a911ddaa7f9fbde8e85a359fb9d",
       "reason": "Derive the composition stylesheet from original lines 1574-1843; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1574-1843 into a dedicated stylesheet",
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1422,13 +1466,14 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "263b16bf554a6c124b55db91c3ce8a5d29ecb15a729b92c77cc7b594ee5684d8",
+      "targetSha256": "d1bd4aac845feae174c4f46e4b1b2b7188bbf1bac1d01fb98bed12b2a8f9e54f",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Preserve fleet, workload, map and details containers without data; clear old records, dialogs and map responses and recover on valid data.",
-        "Use one transient empty-data notification while retaining work areas and persistent errors."
+        "Use one transient empty-data notification while retaining work areas and persistent errors.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
       ],
       "status": "active"
     },
@@ -1436,12 +1481,13 @@
       "source": "apps/combined/vehicle-control.test.mjs",
       "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
       "target": "apps/web/combined/vehicle-control.test.mjs",
-      "targetSha256": "18fcd70d25a9b18c8418a14016a16038fe523e0d9f2e278898be092ea5954ace",
+      "targetSha256": "d1949b74b174308620adc7a0fa01d8fc84947c3e6e7e29e9ca4cdd3631891074",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Verify confirmed empty versus unknown control state, loaded-empty-loaded recovery and stale asynchronous map responses.",
-        "Use one transient empty-data notification while retaining work areas and persistent errors."
+        "Use one transient empty-data notification while retaining work areas and persistent errors.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
       ],
       "status": "active"
     },
@@ -1458,10 +1504,11 @@
       "source": "apps/combined/vehicle-operations-model.test.mjs",
       "sourceSha256": "87c1362b55540f97db6670bf65922289f6a70068e54dd7f243bf805333c5ab7a",
       "target": "test/web-fork-legacy/vehicle-operations-model.test.mjs",
-      "targetSha256": "7f97037fe99d11f8acc0f8dec5a77fa563b3284b6e937f355b6d4a9542881653",
+      "targetSha256": "d230802fa1899b99cfc97ed5c0344890e513137b2cca82bfc22cde7fb423a144",
       "reason": "Keep writer/scenario-dependent regression tests at repository level and point UI imports at the frontend fork; server imports remain repository-owned.",
       "changes": [
-        "Retarget sibling UI model imports to ../../apps/web/combined; preserve existing Node writer/scenario imports"
+        "Retarget sibling UI model imports to ../../apps/web/combined; preserve existing Node writer/scenario imports",
+        "Compare retired simulation behavior against the retained original golden adapter; source-only product behavior has its own contract tests."
       ],
       "status": "active"
     },
@@ -1694,12 +1741,13 @@
       "source": "workspaces/jiin-ui/styles.css",
       "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
       "target": "apps/web/ui-layout/styles/shell.css",
-      "targetSha256": "8a8da14334c85bc2e41627ef50a128e20b887ab11d57a48e2596e3c06c51374d",
+      "targetSha256": "b0cbcb2b2fd9ea3327dac375142f4298980d419742695af4b5baa21b4c8547dd",
       "reason": "Derive the shell stylesheet from original lines 56-345; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 56-345 into a dedicated stylesheet",
         "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1714,11 +1762,12 @@
       "source": "workspaces/jiin-ui/styles.css",
       "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
       "target": "apps/web/ui-layout/styles/workspace.css",
-      "targetSha256": "6de67339cc3d45ee57ba7bb839b329abb06867acfdf0614750fedc7bbc19def7",
+      "targetSha256": "0809975da13e1538c3777937197ebb28ecf85c002f5d425bc49e756b86e20e2e",
       "reason": "Derive the workspace stylesheet from original lines 346-967; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 346-967 into a dedicated stylesheet",
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1733,10 +1782,11 @@
       "source": "workspaces/jiin-ui/styles.css",
       "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
       "target": "apps/web/ui-layout/styles/preview.css",
-      "targetSha256": "fa759193fa32dcd51b7ecf97ef78698fefcfb416ac60770be4f9c3845cb0bc35",
+      "targetSha256": "6c439b1d7c3d78d65b8ffebaf0d947b3f13dbbe28c0500e0e536e50736a0f5d7",
       "reason": "Derive the preview stylesheet from original lines 968-1200; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
-        "Extract original CSS lines 968-1200 into a dedicated stylesheet"
+        "Extract original CSS lines 968-1200 into a dedicated stylesheet",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1751,12 +1801,13 @@
       "source": "workspaces/jiin-ui/styles.css",
       "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
       "target": "apps/web/ui-layout/styles/controls.css",
-      "targetSha256": "fba5ee7ee80a1a5aea5ee9a35f03a41b09e6dcef356e76f710c5c811cf508547",
+      "targetSha256": "39c1a0e842a772b15bb30b55bcbd53bcff15120c4793106e4aa7aac148aa23d2",
       "reason": "Derive the controls stylesheet from original lines 1201-1332; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1201-1332 into a dedicated stylesheet",
         "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1771,12 +1822,13 @@
       "source": "workspaces/jiin-ui/styles.css",
       "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
       "target": "apps/web/ui-layout/styles/responsive.css",
-      "targetSha256": "59d50c942d5bd462b3442db9a1cf998b1860226d07f32987d73f3b204fbc2db9",
+      "targetSha256": "030d7f7daaaff03c97529f2e09b752da93551cee9b332abe93b218998364a1af",
       "reason": "Derive the responsive stylesheet from original lines 1333-1540; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1333-1540 into a dedicated stylesheet",
         "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1791,11 +1843,12 @@
       "source": "workspaces/jiin-ui/styles.css",
       "sourceSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6",
       "target": "apps/web/ui-layout/styles/composition.css",
-      "targetSha256": "a679546cf1605186b54926360a629acf90d5bfaa195942a97919e8a4fe7adc6b",
+      "targetSha256": "809fa3759edfe9dab5a37b8f7a952932de7a9a911ddaa7f9fbde8e85a359fb9d",
       "reason": "Derive the composition stylesheet from original lines 1541-1782; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1541-1782 into a dedicated stylesheet",
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1975,6 +2028,45 @@
       "status": "removed",
       "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
       "removedOn": "2026-10-05"
+    },
+    {
+      "source": "apps/combined/simulation-adapter.mjs",
+      "sourceSha256": "5eefd43b37e1984de1009b0537a22b753610bc292db82416965b22c940e1ccd1",
+      "target": "apps/web/combined/operations-adapter.mjs",
+      "targetSha256": "dbbe6b0773620810806dc0246e37112aebc691a4edac9dc7c8ef85b49af99daf",
+      "reason": "Continue the existing source-operation boundary under an operational name after retiring demo inputs.",
+      "changes": [
+        "Rename the existing boundary for source operations; retain source delivery bundling, ETA, reconnect and original-order CAS contracts without the retired simulation path.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/simulation-client.mjs",
+      "sourceSha256": "9eb1950a8a75eb67e57a28e0da770b6497602c62024eb09958f77aea808ea8d0",
+      "target": "apps/web/combined/operations-client.mjs",
+      "targetSha256": "195aa4947e17ed60793329800cbf56d440ef008e2fe995ea8d9e9265c83058b0",
+      "reason": "Continue the existing source-operation boundary under an operational name after retiring demo inputs.",
+      "changes": [
+        "Preserve the legacy headerless-manifest 404 simulation branch while an explicit Kotlin reader error stays failed; import the strict TypeScript reader contract.",
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Rename the existing boundary for source operations; retain source delivery bundling, ETA, reconnect and original-order CAS contracts without the retired simulation path.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+      ],
+      "status": "active"
+    },
+    {
+      "source": "apps/combined/simulation-client.test.mjs",
+      "sourceSha256": "802909c4d14874f7f57840b9f2c06f107c4db7a2c61e265114ba6ce585c6339c",
+      "target": "apps/web/combined/operations-client.test.mjs",
+      "targetSha256": "04e3a784c192e067a7054128567814d831b452008f7e0cac3331095f0e237265",
+      "reason": "Continue the existing source-operation boundary under an operational name after retiring demo inputs.",
+      "changes": [
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Rename the existing boundary for source operations; retain source delivery bundling, ETA, reconnect and original-order CAS contracts without the retired simulation path.",
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+      ],
+      "status": "active"
     }
   ],
   "authoredFiles": [
@@ -2037,7 +2129,7 @@
     {
       "path": "apps/web/scripts/serve-legacy.mjs",
       "origin": "authored",
-      "sha256": "b67cac9e7b5632b3e9cf2cd53b1fb0dc24bb16cffbe1ce7fa38b609914a6940f",
+      "sha256": "5244463a6093b24e7b9161dbdad512f270f1da88e666d12a2ea3b2e95a94181c",
       "reason": "Provide the loopback-only local entry for the built frontend and existing API gateway without importing server implementation. Add opt-in exact Kotlin read routing while Node remains the authentication and single business writer. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection.",
       "status": "active"
     },
@@ -2104,7 +2196,7 @@
     {
       "path": "apps/web/test/fork-artifact.check.mjs",
       "origin": "authored",
-      "sha256": "b1fb11e8bf29156573fc8f7fb21bdd27cacfef733a3aa10f4b5f2e0b7500eb58",
+      "sha256": "908f759080e07be72268c3abad7b0cc84c3d930ecde06f79b10aef623e57a0e9",
       "reason": "Check real built pages, independent public authentication/theme assets, gateway response transformations and protected-source isolation. Verify the built public portal stylesheet imports the independently served shared theme.",
       "status": "active"
     },
@@ -2132,7 +2224,7 @@
     {
       "path": "apps/web/public/components.css",
       "origin": "authored",
-      "sha256": "afa63d78fdf21d47c6345f7a40b74c0b64adaaa8983343dfa42914e62d6ab22b",
+      "sha256": "3bd57849525a415b00d64c669f547d3af1eacc1b07b06ce188827a66d84ebd75",
       "reason": "Own shared buttons, fields, cards, tabs, focus and dialog appearance across product, guide and authentication pages.",
       "status": "active"
     },
@@ -2156,6 +2248,20 @@
       "sha256": "70bec8cb7a7f5961b8f57a3fac3f7cb50490ca2ee3646f53f660fd1fdf92620d",
       "reason": "Position and size the shared top notification without replacing operational work areas.",
       "status": "active"
+    },
+    {
+      "path": "apps/web/combined/operations-adapter.test.mjs",
+      "origin": "authored",
+      "reason": "Verify source-only operational adaptation, original-ID bundling, historical records and ETA presentation.",
+      "status": "active",
+      "sha256": "835cde472418104cc7bbc1616fd9b778f21d40c56aa8127aeab689fd0c50c54c"
+    },
+    {
+      "path": "apps/web/test/serve-legacy.test.mjs",
+      "origin": "authored",
+      "reason": "Verify gateway startup explains its selected Kotlin or comparison owners without instructing a second writer.",
+      "status": "active",
+      "sha256": "065a1488db6c73b26a0fb7f649066d7eb0c62fc5fd405a928b0bd997d2329d15"
     }
   ],
   "historicalTargetFileCount": 163,
@@ -3140,5 +3246,6 @@
       "removalReason": "Removed retired demo or duplicate original UI; operational frontend and shared API/golden models are retained.",
       "removedOn": "2026-10-05"
     }
-  ]
+  ],
+  "additionalDerivedTargetFileCount": 3
 }

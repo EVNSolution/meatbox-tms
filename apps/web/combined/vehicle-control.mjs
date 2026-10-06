@@ -23,7 +23,7 @@ const actualSpeedText = row => row.actualSpeed
 
 const factRows = facts => facts.length ? facts.map(fact => `<li><time>${esc(fact.time || '-')}</time><span>${esc(fact.message)}</span></li>`).join('') : '<li class="muted">미등록</li>';
 
-export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery, onOpenNotice, onOpenManagement, onOpenRoute = () => {},
+export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery, onOpenManagement, onOpenRoute = () => {},
   mapFactory = createOrderMap, markerFactory = createOrderMarker,
   loadRouteData = null,
 }) {
@@ -45,8 +45,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       <section id="monitor-list-panel" role="tabpanel" aria-labelledby="tab-monitor"><p class="control-unit-note">배송지를 펼쳐 배송 정보와 요청사항을 확인하세요.</p><div data-control-stops class="control-stop-list"></div></section>
       <section id="control-management-panel" role="tabpanel" aria-labelledby="tab-management" hidden>
         <div data-control-records-view>
-          <div class="control-management-target"><label class="field"><span>선택 배송지</span><select data-control-record-stop aria-label="관리할 배송지"></select></label><div class="control-management-actions"><button type="button" class="button subtle" data-control-compose>안내 작성</button><button type="button" class="button" data-control-route>배송 순서 관리</button></div></div>
-          <p id="notice-send-status" class="route-message" role="status" hidden></p>
+          <div class="control-management-target"><label class="field"><span>선택 배송지</span><select data-control-record-stop aria-label="관리할 배송지"></select></label><div class="control-management-actions"><button type="button" class="button" data-control-route>배송 순서 관리</button></div></div>
           <div class="control-record-filters" role="group" aria-label="기록 유형"><button type="button" data-control-record-filter="all" aria-pressed="true">전체</button><button type="button" data-control-record-filter="history" aria-pressed="false">처리 이력</button><button type="button" data-control-record-filter="notice" aria-pressed="false">고객 알림</button></div>
           <p class="control-unit-note">수신된 최근 기록을 시간순으로 표시합니다.</p><ol class="control-record-list" data-control-records tabindex="0" aria-label="선택 배송지 이력과 알림"></ol>
           <details class="control-common-events" data-control-common><summary>차량 공통 사건 이력</summary><p class="muted">대상 배송지가 지정되지 않은 최근 기록입니다.</p><ol class="control-fact-list" data-control-events></ol></details>
@@ -116,7 +115,6 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     if (selector.innerHTML !== options) selector.innerHTML = options;
     selector.value = stop?.id || '';
     selector.disabled = !stop;
-    find('[data-control-compose]').disabled = !stop || data?.connected === false || Boolean(data?.dispatch?.readOnly);
     find('[data-control-route]').disabled = !row?.deliveries.length || Boolean(data?.dispatch?.readOnly);
     find('[data-control-common]').hidden = recordFilter === 'notice';
     element.querySelectorAll('[data-control-record-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.controlRecordFilter === recordFilter)));
@@ -216,7 +214,6 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     find('[data-control-sort]').disabled = disabled;
     find('[data-control-support]').disabled = disabled || !row;
     find('[data-control-record-stop]').disabled = disabled || !row;
-    find('[data-control-compose]').disabled = disabled || !row;
     find('[data-control-route]').disabled = disabled || !row?.deliveries.length;
     element.querySelectorAll('[data-control-record-filter]').forEach(button => { button.disabled = disabled; });
   }
@@ -268,7 +265,6 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     if (button) { showRecords(); onOpenManagement(button.dataset.controlManage); }
   });
   find('[data-control-record-stop]').addEventListener('change', event => { if (data && event.target.value) onSelectDelivery(event.target.value); });
-  find('[data-control-compose]').addEventListener('click', () => { if (data && row) onOpenNotice(find('[data-control-record-stop]').value); });
   find('[data-control-route]').addEventListener('click', () => {
     if (!data || !row?.deliveries.length) return;
     find('[data-control-records-view]').hidden = true;

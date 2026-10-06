@@ -22,13 +22,13 @@
 - 처리: 원본 이미지를 변형 없이 저장
 - SHA-256: `9e15812f416651aa6e9a2152c989adb3b4b69130d70db882f37c5a75a8cdeb2c`
 
-### `PretendardVariable.ttf`
+### `/portal-font.ttf`
 
 - 출처: 로컬 설치 파일 `/Users/jiin/Library/Fonts/PretendardVariable.ttf`
 - 역할: 로컬 UI 레퍼런스의 self-hosted 한국어 UI 서체
 - 폰트 메타데이터: Pretendard Variable, Version 1.309, Copyright © 2023 Kil Hyung-jin
 - 라이선스: SIL Open Font License 1.1 (`OFL-1.1.txt`). Pretendard 및 기반 서체 저작권 고지를 포함한 공식 전체 LICENSE: https://github.com/orioncactus/pretendard/blob/main/LICENSE
-- 처리: 원본 TTF를 byte-for-byte 복사. 현재 환경에 `fontTools`와 Brotli가 없어 WOFF2 변환은 수행하지 않음
+- 처리: 원본 TTF를 byte-for-byte 복사. 운영·인증·가이드는 `public/portal-font.ttf` 하나를 사용합니다. 사용하지 않는 `combined/assets/PretendardVariable.ttf` 복제본은 제거했습니다.
 - SHA-256: `3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22`
 
 ## Usage boundary

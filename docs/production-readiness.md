@@ -22,7 +22,9 @@
 | 영역 | 구현 경계 | 관련 회귀 | 운영 확대 시 필요한 근거 |
 | --- | --- | --- | --- |
 | 인증 | Kotlin 초대·가입·로그인·로그아웃, 계정 JSON v1·메모리 세션 | [Kotlin 인증](../services/api/src/test/kotlin/com/evnsolution/meatbox/auth/AuthHttpTest.kt), [native 게이트웨이](../test/api-connection/kotlin-native-gateway.test.mjs) | 테넌트·역할·고객·차량별 접근 제한과 거부 경로 |
+| 운영 UI | 배차·관제·자원 세 화면, 공유 컴포넌트와 상단 알림; 빈 자료·로딩·조회 오류 구분 | [공유 스타일](../apps/web/public/components.css), [상단 알림](../apps/web/src/shared/ui/status-notification.test.mjs), [자원 화면](../apps/web/combined/resource-management.test.mjs) | 지원 브라우저·좁은 화면·키보드 접근과 실제 업무 흐름 |
 | 날짜별 배차 | Kotlin 계산·핀배차·확정·수정안 시작/취소·순서 저장 | [배차](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/DispatchPlanTest.kt), [실제 JAR 명령](../test/api-connection/kotlin-state-owner.test.mjs) | 기존 확정 상태 보존, 충돌·실패·복구와 실제 기사 수신 |
+| 원본 날짜 경계 | 요청 날짜와 일반·gzip day 본문 날짜 대조; 상태 캐시 재사용 전 원본 재검사 | [원본 조회](../services/api/src/test/kotlin/com/evnsolution/meatbox/compat/DispatchDataReaderTest.kt), [상태 저장소](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/DispatchStoreTest.kt) | 실제 공급 자료의 계약·인수·대사와 복구 |
 | 체크포인트 | Kotlin 날짜별 JSON v2 저장·기존 운행 기록 복원 | [상태 소유권·재시작](../test/api-connection/kotlin-state-owner.test.mjs) | 선택한 작성자 구성, 비정상 종료, 백업·복원 |
 | 자원 등록부 | Kotlin SQLite v2와 revision CAS | [Kotlin 자원](../services/api/src/test/kotlin/com/evnsolution/meatbox/resources/ResourceStoreTest.kt), [실제 JAR 자원](../test/api-connection/kotlin-resources.test.mjs) | 원본 인수·스키마 이행·복구와 저장 후 조회 |
 | 배송 사진 | 제품 업로드·증빙 저장 API 미구현; 과거 기사 데모 삭제 | [현재 업무 API](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchController.kt) | 서버 증빙 저장과 권한·보존·삭제 |
@@ -31,6 +33,8 @@
 | 배포 | PR·main CI, 검증한 불변 산출물의 TEST 배포·복구 | [검사 workflow](../.github/workflows/new-stack.yml), [TEST 배포 workflow](../.github/workflows/deploy-test.yml), [배포·복구 도구](../deploy/new-stack/README.md) | 각 후보의 실행 버전·설정 일치와 QA·운영 승격 |
 
 이 표는 기능이 바뀔 때 갱신하는 구현 경계다. 각 배포의 통과·실패·미확인은 [릴리스 기록](templates/release-record.md)에 남긴다.
+
+날짜별 업무 API는 계산·핀배차·확정·수정안 시작·수정안 취소·배송 순서 저장 여섯 명령을 제공한다. 운영 UI는 이 명령만 호출한다. 기존 고객 알림·처리 이력·보류 상태는 조회한다. 새 고객 알림 발송과 보류·복원 변경은 현재 제품 기능에 포함하지 않는다.
 
 ## 적용 범위와 우선순위
 
@@ -98,19 +102,22 @@ native 배포 도구는 기존 Node writer를 중지하고 Kotlin writer를 선�
 
 ### 4. 외부 주문·기사·배차 공급 계약
 
-현재 날짜 데이터는 준비된 manifest와 JSON 파일에서 읽는다. 저장소에는 외부 Meatbox API, webhook, 메시지 브로커의 인증·버전·재전송 계약이 없다. CSV/JSON 준비 경계는 어댑터 개발에 유용하지만 운영 공급자 계약을 대신하지 않는다.
+현재 날짜 데이터는 준비된 manifest와 JSON 파일에서 읽는다. 일반 JSON과 gzip 응답은 요청 날짜와 본문 날짜가 일치해야 한다. 상태 저장소는 캐시가 있어도 현재 원본 날짜를 다시 검사한다. 불일치 자료는 조회·명령 처리 전에 거절한다. 이 검사는 외부 공급자 계약을 대신하지 않는다.
+
+저장소에는 외부 Meatbox API, webhook, 메시지 브로커의 인증·버전·재전송 계약이 없다. CSV/JSON 준비 경계는 어댑터 개발에 사용할 수 있다.
 
 근거:
 
 - 파일 기반 날짜 조회: [`DispatchDataReader.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/compat/DispatchDataReader.kt)
 - 날짜 상태 생성: [`DispatchStore.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchStore.kt), [`DispatchPlan.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchPlan.kt)
+- 요청·본문 날짜 경계 회귀: [`DispatchDataReaderTest.kt`](../services/api/src/test/kotlin/com/evnsolution/meatbox/compat/DispatchDataReaderTest.kt), [`DispatchStoreTest.kt`](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/DispatchStoreTest.kt)
 - 준비 스크립트: [`prepare-dispatch-data.py`](../scripts/prepare-dispatch-data.py), [`prepare-destination-data.py`](../scripts/prepare-destination-data.py)
 
 완료 조건:
 
 - 공급자와 파일/API 인수 방식, 인증, stable ID, 버전, 전체/증분 구분, 취소·수정·재배차, 삭제, 시간대, 인수 완료 조건을 확정한다. 파일 인수를 사용하는 범위에 실시간 webhook을 필수로 요구하지 않는다.
 - 원본 event ID와 버전을 보존하고 중복·역순·누락·부분 실패를 idempotent하게 처리한다.
-- 원본 계약 fixture와 소비자 contract test를 버전 관리하고, 알 수 없는 필드·참조·수량은 조용히 보정하지 않고 격리한다. 현재 서버 로더에는 URL 날짜와 day 본문 날짜의 직접 일치 검사가 없으므로 이 경계도 검증·보강한다.
+- 원본 계약 fixture와 소비자 contract test를 버전 관리하고, 알 수 없는 필드·참조·수량은 조용히 보정하지 않고 격리한다.
 - 재동기화와 대사 절차가 확정될 때까지 준비된 파일을 운영 실시간 원장으로 표현하지 않는다.
 
 ## P1: 현장 운영 신뢰성 확보

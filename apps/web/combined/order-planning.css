@@ -1,6 +1,5 @@
 @import url('./dispatch-workflow.css');
 .order-planning-layout { display: grid; grid-template-columns: minmax(250px, 300px) minmax(0, 1fr); gap: 12px; }
-.order-vehicle-panel, .order-map-panel { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .order-vehicle-heading, .order-map-heading { display: flex; align-items: center; justify-content: space-between; min-height: 62px; padding: 20px; border-bottom: 1px solid var(--border); }
 .order-vehicle-heading h2, .order-map-heading h2 { margin: 0; font-size: 18px; font-weight: 600; }
 .order-vehicle-heading p, .order-map-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
@@ -96,7 +95,7 @@
 .order-source-regions { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 7px; color: var(--muted); font-size: 10px; }
 [data-source-kind="file"] .order-map-selection { max-width: min(370px, calc(100% - 24px)); max-height: 240px; overflow: auto; }
 .order-overlap-picker { display: grid; gap: 5px; margin-top: 10px; color: var(--muted); font-size: 11px; }
-.order-overlap-picker select { width: 100%; min-width: 0; max-width: 100%; height: 36px; font-size: 12px; }
+.order-overlap-picker select { max-width: 100%; }
 .order-source-list { margin-top: 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
 .order-source-list > summary { min-height: 48px; padding: 14px 16px; font-size: 13px; cursor: pointer; }
 .order-source-list > summary > span { margin-left: 8px; color: var(--muted); font-size: 12px; }

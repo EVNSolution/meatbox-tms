@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { connectSimulation, expandSourceCommand } from './simulation-client.mjs';
+import { connectOperations, expandSourceCommand } from './operations-client.mjs';
 
 test('종료한 연결은 늦게 읽힌 날짜 목록으로 상태 조회를 다시 시작하지 않는다', async t => {
   const saved = { fetch: globalThis.fetch, location: globalThis.location, window: globalThis.window,
@@ -15,7 +15,7 @@ test('종료한 연결은 늦게 읽힌 날짜 목록으로 상태 조회를 다
   globalThis.location = { href: 'https://demo.test/combined/', search: '' };
   globalThis.window = { addEventListener: name => listeners.push(name), removeEventListener() {} };
   globalThis.sessionStorage = { getItem() { return null; } };
-  const client = connectSimulation({ onState() {}, onStatus() {}, onError() {} });
+  const client = connectOperations({ onState() {}, onStatus() {}, onError() {} });
   t.after(() => { client.close(); Object.assign(globalThis, saved); });
   await new Promise(resolve => setImmediate(resolve));
   client.close();
@@ -99,7 +99,7 @@ test('source 연결은 묶음 UI 순서를 원본 주문 명령으로 확장한 
   globalThis.sessionStorage = { getItem() { return null; }, setItem() {} };
   globalThis.window = { addEventListener() {}, removeEventListener() {} };
   globalThis.setTimeout = () => 1; globalThis.clearTimeout = () => {};
-  const client = connectSimulation({ onState() {}, onStatus() {}, onError() {} });
+  const client = connectOperations({ onState() {}, onStatus() {}, onError() {} });
   t.after(() => { client.close(); Object.assign(globalThis, saved); });
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
@@ -126,7 +126,7 @@ for (const [label, status, reader] of [
     };
     globalThis.setTimeout = (callback, delay) => { const timer = { callback, delay }; retries.push(timer); return timer; };
     globalThis.clearTimeout = timer => { if (timer) timer.cancelled = true; };
-    const client = connectSimulation({ onState() { assert.fail('누락된 입력으로 업무 상태를 만들지 않는다'); },
+    const client = connectOperations({ onState() { assert.fail('누락된 입력으로 업무 상태를 만들지 않는다'); },
       onStatus(connected, message) { statuses.push({ connected, message }); }, onError: message => errors.push(message) });
     t.after(() => { client.close(); Object.assign(globalThis, saved); });
     await new Promise(resolve => setImmediate(resolve));

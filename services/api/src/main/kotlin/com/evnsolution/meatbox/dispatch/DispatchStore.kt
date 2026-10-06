@@ -55,6 +55,7 @@ class DispatchStore(
         val manifest = reader.loadManifest()
         if (date !in manifest.dates) fail(HttpServletResponse.SC_NOT_FOUND, "DISPATCH_DATA_NOT_FOUND")
         val sourceId = manifest.node.path("source").path("csvSha256").asString("")
+        val rawDay = reader.readDay(date)
         entries[date]?.let {
             if (it.sourceId != sourceId) fail(
                 HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
@@ -62,7 +63,7 @@ class DispatchStore(
             )
             return it
         }
-        val day = parse(reader.files.readRequired(Path.of("days", "$date.json"), false), "DISPATCH_DATA_INVALID")
+        val day = parse(rawDay, "DISPATCH_DATA_INVALID")
         val saved = checkpoint(date, sourceId)
         val plan = try { DispatchPlan(day, sourceId, clock, saved) } catch (error: DispatchException) {
             if (saved == null) throw error

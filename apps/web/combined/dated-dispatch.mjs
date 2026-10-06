@@ -54,7 +54,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   const workflow = workflowFactory({ element: workflowHost, onCommand });
   const previous = query('[data-dispatch-prev]');
   const next = query('[data-dispatch-next]');
-  let manifest = null, regions = null, planning = null, simulationData = null;
+  let manifest = null, regions = null, planning = null, operationalData = null;
   let started = false, available = null, loading = true, current = null, epoch = 0, controller = null, destroyed = false, confirmedEmpty = false;
   const cache = new Map();
   const listeners = [];
@@ -62,7 +62,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   function showUnavailable(text, empty = false) {
     confirmedEmpty = empty;
     if (!planning) planning = planningFactory({ element: host, ...(onAssign ? { onSelect, onAssign: extra => {
-      if (!current || simulationData?.sourceData?.date !== current.date) throw new Error('운영 상태를 먼저 확인해 주세요.');
+      if (!current || operationalData?.sourceData?.date !== current.date) throw new Error('운영 상태를 먼저 확인해 주세요.');
       return onAssign(extra);
     } } : {}) });
     host.hidden = false; workflowHost.hidden = false;
@@ -72,11 +72,11 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     else toolbarSummary.clear();
   }
   function display() {
-    if (simulationData?.sourceData?.date === current?.date) return { ...simulationData, fleetDeliveries: simulationData.dispatchOrders || simulationData.fleetDeliveries, dispatchSource: current, dispatchRegions: regions };
+    if (operationalData?.sourceData?.date === current?.date) return { ...operationalData, fleetDeliveries: operationalData.dispatchOrders || operationalData.fleetDeliveries, dispatchSource: current, dispatchRegions: regions };
     return { ...adaptDispatchDay(current, regions), dispatch: { phase: 'unplanned', readOnly: true } };
   }
   function updateViews() {
-    const operational = simulationData?.sourceData?.date === current?.date ? simulationData : null;
+    const operational = operationalData?.sourceData?.date === current?.date ? operationalData : null;
     if (!current.orders.length) planning?.clear({ empty: true, message: `${current.date}에 등록된 주문이 없습니다.` });
     else planning?.update(display(), null);
     workflowHost.hidden = !operational?.dispatch;
@@ -130,7 +130,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
         if (destroyed || ticket !== epoch) return;
         if (!operational) { loading = false; showUnavailable('운영 상태를 확인하지 못했습니다.'); message(`${date}의 운영 상태를 불러오지 못했습니다. 다시 시도해 주세요.`, true); onContextChange(); return; }
         if (operational.sourceData?.date !== date) throw new Error('운영 상태를 불러오지 못했습니다.');
-        simulationData = operational;
+        operationalData = operational;
       }
       current = day; loading = false;
       confirmedEmpty = day.orders.length === 0;
@@ -172,7 +172,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   listen(retry, 'click', () => { if (regions && manifest) selectDate(selectedDate); else start(); });
   return {
     update(data, _selectedId, contextDate) {
-      simulationData = data;
+      operationalData = data;
       const contextChanged = contextDate !== undefined && contextDate !== externalDate;
       if (contextDate !== undefined) externalDate = contextDate;
       if (!started) start();

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { vehicleOperations, sortVehicleOperations, resolveControlVehicle, resolveDefaultControlVehicle, resolveControlDelivery, vehicleEvents, deliveryFacts, noticesForDelivery, deliveryRecords, controlPosition, summarizeFleetTiming } from '../../apps/web/combined/vehicle-operations-model.mjs';
 import { OperatingSimulation } from '../../lib/operating-simulation.js';
-import { adaptSimulation } from '../../apps/web/combined/simulation-adapter.mjs';
+import { adaptSimulation } from '../../apps/combined/simulation-adapter.mjs';
 
 test('vehicle workload uses assigned IDs, includes held work and distinguishes missing boxes from zero', () => {
   const data = { fleetVehicles: [{ id: 'V2' }, { id: 'V1', live: true }, { id: 'V3' }], fleetDeliveries: [

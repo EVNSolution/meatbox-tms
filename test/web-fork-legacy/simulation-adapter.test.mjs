@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adaptSimulation, customerHeadline, publishedEtaText } from '../../apps/web/combined/simulation-adapter.mjs';
+import { adaptSimulation, customerHeadline, publishedEtaText } from '../../apps/combined/simulation-adapter.mjs';
 import { createRequire } from 'node:module';
 const { OperatingSimulation } = createRequire(import.meta.url)('../../lib/operating-simulation');
 

@@ -1,30 +1,3 @@
-/* Combined view: live connection and source-owned simulation data. */
-.connection-badge {
-  min-height: 24px;
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  color: var(--muted);
-  background: #f5f6f8;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.connection-badge[data-state="connected"] {
-  color: #0e662f;
-  background: #edf8f0;
-  border-color: #99d2aa;
-}
-
-.connection-badge[data-state="error"] {
-  color: #8d1b12;
-  background: #fff2f0;
-  border-color: #efb4ae;
-}
-
 .loading-state {
   min-height: 116px;
   display: flex;
@@ -51,17 +24,6 @@
   box-shadow: 0 0 0 5px rgb(219 14 100 / 12%);
 }
 
-.route-actions-body {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 12px;
-}
-
-.terminal-row-eta {
-  font-variant-numeric: tabular-nums;
-}
-
 @media (max-width: 520px) {
   .loading-state {
     align-items: flex-start;
@@ -73,4 +35,3 @@
     margin-left: 0;
   }
 }
-

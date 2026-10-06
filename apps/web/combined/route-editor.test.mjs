@@ -196,3 +196,21 @@ test('cancel discards the draft and invokes return even for a read-only route', 
   action('cancel');
   assert.equal(cancelled.length, 2);
 });
+
+test('보류 기록은 유지하지만 미지원 보류·복원 명령은 제공하거나 전송하지 않는다', () => {
+  const { editor, element, click, action, sent } = editorFixture();
+  const state = editableState();
+  state.deliveries.push({ id: 'S4', name: '기존 보류', status: 'skipped' });
+  editor.update(state, 'S4', true);
+  assert.match(element.innerHTML, /기존 보류/);
+  assert.doesNotMatch(element.innerHTML, /data-hold|route-hold/);
+  click({ '[data-hold]': { dataset: { hold: 'S4' } } });
+  assert.deepEqual(sent, []);
+  editor.beginEdit();
+  moveSecond(click);
+  action('save');
+  assert.deepEqual(sent, [['set_route_order', {
+    order: ['S1', 'S3', 'S2', 'S4'], expectedOrder: ['S1', 'S2', 'S3', 'S4'],
+    expectedStatuses: ['current', 'pending', 'pending', 'skipped'], expectedPhase: 'shipping',
+  }]]);
+});

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
+import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -508,5 +509,133 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     const logout = await postForm(fixture, '/logout', {}, cookie);
     assert.equal(logout.status, 303);
     assert.equal((await requestJson(fixture, '/api/session', { cookie })).response.status, 401);
+  });
+});
+
+test('Kotlin rejects mismatched source dates before serving or saving dispatch state', { timeout: 90_000 }, async t => {
+  const fixture = await createFixture();
+  t.after(() => fixture.close());
+  const cookie = await login(fixture);
+  const sourcePath = date => path.join(fixture.dataDirectory, 'days', `${date}.json`);
+  const route = date => `/api/dispatch-data/days/${date}`;
+  const validDay = { ...fixture.days[0], vendorMetadata: { keep: 'unknown source field' } };
+  const plain = Buffer.from(` ${JSON.stringify(validDay)}\n`);
+  const compressed = gzipSync(plain);
+  await fs.writeFile(sourcePath(fixture.today), plain);
+  await fs.writeFile(`${sourcePath(fixture.today)}.gz`, compressed);
+
+  const rawRead = (pathname, encoding) => new Promise((resolve, reject) => {
+    const request = http.get(new URL(pathname, fixture.origin), {
+      headers: { Cookie: cookie, 'Accept-Encoding': encoding },
+    }, response => {
+      const chunks = [];
+      response.on('data', chunk => chunks.push(chunk));
+      response.on('error', reject);
+      response.on('end', () => resolve({ status: response.statusCode, headers: response.headers, bytes: Buffer.concat(chunks) }));
+    });
+    request.setTimeout(5000, () => request.destroy(new Error('Source date boundary request timed out')));
+    request.on('error', reject);
+  });
+
+  await t.test('keeps normal raw and gzip bytes unknown fields and representation etags', async () => {
+    for (const [encoding, expected] of [['identity', plain], ['gzip', compressed]]) {
+      const response = await rawRead(route(fixture.today), encoding);
+      assert.equal(response.status, 200);
+      assert.deepEqual(response.bytes, expected);
+      assert.equal(response.headers.etag, `"${createHash('sha256').update(expected).digest('hex')}"`);
+      assert.equal(response.headers['content-encoding'], encoding === 'gzip' ? 'gzip' : undefined);
+    }
+  });
+
+  // Today is warm; tomorrow has not been read by DispatchStore.
+  const initial = (await requestJson(fixture, `${route(fixture.today)}/state`, { cookie })).body;
+  await t.test('rejects wrong and missing raw dates for cold and warm plans without a checkpoint', async () => {
+    for (const date of [fixture.tomorrow, fixture.today]) {
+      const original = await fs.readFile(sourcePath(date));
+      const day = JSON.parse(original);
+      for (const invalid of [{ ...day, date: date === fixture.today ? fixture.tomorrow : fixture.today },
+        Object.fromEntries(Object.entries(day).filter(([key]) => key !== 'date'))]) {
+        try {
+          await fs.writeFile(sourcePath(date), JSON.stringify(invalid));
+          for (const encoding of ['identity', 'gzip']) {
+            const response = await rawRead(route(date), encoding);
+            assert.equal(response.status, 500);
+            assert.deepEqual(JSON.parse(response.bytes), { error: 'DISPATCH_DATA_INVALID' });
+          }
+          const state = await requestJson(fixture, `${route(date)}/state`, { cookie });
+          assert.equal(state.response.status, 500);
+          assert.equal(state.body.error, 'DISPATCH_DATA_INVALID');
+          const command = await requestJson(fixture, `${route(date)}/commands`, {
+            cookie, method: 'POST', body: commandFor(initial, 'calculate_dispatch', { vehicleIds: ['TRUCK-1'] }),
+          });
+          assert.equal(command.response.status, 500);
+          assert.equal(command.body.error, 'DISPATCH_DATA_INVALID');
+          assert.deepEqual(await fs.readdir(fixture.stateDirectory), []);
+        } finally { await fs.writeFile(sourcePath(date), original); }
+        const restored = await requestJson(fixture, `${route(date)}/state`, { cookie });
+        assert.equal(restored.response.status, 200);
+        assert.equal(restored.body.sourceData.date, date);
+        assert.equal(restored.body.revision, 0);
+      }
+    }
+  });
+
+  await t.test('checks the selected gzip date rather than trusting its valid raw sibling', async () => {
+    for (const invalid of [{ ...validDay, date: fixture.tomorrow },
+      Object.fromEntries(Object.entries(validDay).filter(([key]) => key !== 'date'))]) {
+      try {
+        await fs.writeFile(`${sourcePath(fixture.today)}.gz`, gzipSync(Buffer.from(JSON.stringify(invalid))));
+        assert.equal((await rawRead(route(fixture.today), 'identity')).status, 200);
+        const response = await rawRead(route(fixture.today), 'gzip');
+        assert.equal(response.status, 500);
+        assert.deepEqual(JSON.parse(response.bytes), { error: 'DISPATCH_DATA_INVALID' });
+        assert.deepEqual(await fs.readdir(fixture.stateDirectory), []);
+      } finally { await fs.writeFile(`${sourcePath(fixture.today)}.gz`, compressed); }
+    }
+  });
+
+  await t.test('rejects gzip expansion above the dispatch day limit with a valid date and raw sibling', async () => {
+    const excessive = Buffer.alloc(16 * 1024 * 1024 + 1, ' ');
+    plain.copy(excessive);
+    try {
+      await fs.writeFile(`${sourcePath(fixture.today)}.gz`, gzipSync(excessive));
+      const response = await rawRead(route(fixture.today), 'gzip');
+      assert.equal(response.status, 500);
+      assert.deepEqual(JSON.parse(response.bytes), { error: 'DISPATCH_DATA_INVALID' });
+      assert.deepEqual((await rawRead(route(fixture.today), 'identity')).bytes, plain);
+      assert.deepEqual(await fs.readdir(fixture.stateDirectory), []);
+    } finally { await fs.writeFile(`${sourcePath(fixture.today)}.gz`, compressed); }
+  });
+
+  await t.test('rejects an oversized raw day before serving cached state or saving a checkpoint', async () => {
+    const excessive = Buffer.alloc(16 * 1024 * 1024 + 1, ' ');
+    plain.copy(excessive);
+    try {
+      await fs.writeFile(sourcePath(fixture.today), excessive);
+      for (const encoding of ['identity', 'gzip']) {
+        const response = await rawRead(route(fixture.today), encoding);
+        assert.equal(response.status, 500);
+        assert.deepEqual(JSON.parse(response.bytes), { error: 'DISPATCH_DATA_INVALID' });
+      }
+      const state = await requestJson(fixture, `${route(fixture.today)}/state`, { cookie });
+      assert.equal(state.response.status, 500);
+      assert.equal(state.body.error, 'DISPATCH_DATA_INVALID');
+      const command = await requestJson(fixture, `${route(fixture.today)}/commands`, {
+        cookie, method: 'POST', body: commandFor(initial, 'calculate_dispatch', { vehicleIds: ['TRUCK-1'] }),
+      });
+      assert.equal(command.response.status, 500);
+      assert.equal(command.body.error, 'DISPATCH_DATA_INVALID');
+      assert.deepEqual(await fs.readdir(fixture.stateDirectory), []);
+    } finally { await fs.writeFile(sourcePath(fixture.today), plain); }
+  });
+
+  await t.test('allows the unchanged source to create a valid checkpoint after rejection', async () => {
+    const response = await requestJson(fixture, `${route(fixture.today)}/commands`, {
+      cookie, method: 'POST', body: commandFor(initial, 'calculate_dispatch', { vehicleIds: ['TRUCK-1'] }),
+    });
+    assert.equal(response.response.status, 200);
+    const saved = JSON.parse(await fs.readFile(path.join(fixture.stateDirectory, `${fixture.today}.json`), 'utf8'));
+    assert.equal(saved.date, fixture.today);
+    assert.equal(saved.revision, 1);
   });
 });

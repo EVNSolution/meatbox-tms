@@ -1,4 +1,4 @@
-import { calculatedEtaText } from './simulation-adapter.mjs';
+import { calculatedEtaText } from './operations-adapter.mjs';
 import { referenceIcon } from './reference-icons.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -75,11 +75,10 @@ export function mountRouteEditor({ element, onSend, onSelect, onCancel = () => {
         const movable = draft && stop.status === 'pending';
         const eligible = rows.filter(row => row.status === 'pending');
         const place = eligible.findIndex(row => row.id === stop.id);
-        const canHold = access.editable && stop.id !== latest.customerStopId && ['pending', 'skipped'].includes(stop.status);
         return `<li class="route-row${draft ? ' editing' : ''}${stop.id === selectedId ? ' selected' : ''}" data-route-id="${stop.id}">
           ${draft ? `<button class="route-handle" data-handle="${stop.id}" data-focus="handle-${stop.id}" aria-label="${escapeHtml(stop.name)} 순서 이동" title="끌어서 이동하거나 위아래 방향키 사용" ${!movable || pending || !connected ? 'disabled' : ''}>${referenceIcon('handle')}</button>` : ''}
           <span class="route-number">${index + 1}</span><button class="route-select" data-route-select="${stop.id}" data-focus="select-${stop.id}" aria-pressed="${stop.id === selectedId}" title="${escapeHtml(stop.address)}"><strong>${escapeHtml(stop.name)}</strong><span class="route-meta"><span class="badge ${stop.statusTone}">${labels[stop.status]}</span><small>ETA ${escapeHtml(stop.preciseTimeText || calculatedEtaText(stop))}</small>${draft && index !== stop.sequence - 1 ? `<span class="route-draft">${stop.sequence} → ${index + 1}번째</span>` : ''}</span></button>
-          <div class="route-row-actions">${draft ? movable ? `<button class="route-move" data-move="${stop.id}" data-direction="-1" data-focus="up-${stop.id}" aria-label="${escapeHtml(stop.name)} 위로" ${place === 0 || pending || !connected ? 'disabled' : ''}>${referenceIcon('up')}</button><button class="route-move" data-move="${stop.id}" data-direction="1" data-focus="down-${stop.id}" aria-label="${escapeHtml(stop.name)} 아래로" ${place === eligible.length - 1 || pending || !connected ? 'disabled' : ''}>${referenceIcon('down')}</button>` : '<span class="route-locked">고정</span>' : canHold ? `<button class="route-hold" data-hold="${stop.id}" data-focus="hold-${stop.id}" ${!connected ? 'disabled' : ''}>${stop.status === 'skipped' ? '복원' : '보류'}</button>` : ''}</div>
+          <div class="route-row-actions">${draft ? movable ? `<button class="route-move" data-move="${stop.id}" data-direction="-1" data-focus="up-${stop.id}" aria-label="${escapeHtml(stop.name)} 위로" ${place === 0 || pending || !connected ? 'disabled' : ''}>${referenceIcon('up')}</button><button class="route-move" data-move="${stop.id}" data-direction="1" data-focus="down-${stop.id}" aria-label="${escapeHtml(stop.name)} 아래로" ${place === eligible.length - 1 || pending || !connected ? 'disabled' : ''}>${referenceIcon('down')}</button>` : '<span class="route-locked">고정</span>' : ''}</div>
         </li>`;
       }).join('')}</ol><p class="route-message" role="status" data-error="${error}" ${message ? '' : 'hidden'}>${escapeHtml(message)}</p>`;
     element.querySelector('.route-list').scrollTop = scrollTop;
@@ -114,8 +113,6 @@ export function mountRouteEditor({ element, onSend, onSelect, onCancel = () => {
     }
     const moving = event.target.closest('[data-move]');
     if (moving) moveBy(moving.dataset.move, Number(moving.dataset.direction));
-    const hold = event.target.closest('[data-hold]');
-    if (hold && connected && !draft && routeEditability(latest).editable) onSend('toggle_skip', { stopId: hold.dataset.hold });
     render();
   });
   element.addEventListener('keydown', event => {
