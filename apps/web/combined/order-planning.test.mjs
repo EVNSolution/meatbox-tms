@@ -82,7 +82,10 @@ test('자료 날짜에서 빈 날짜로 이동하면 지도와 이전 주문을 
   });
   planning.update(importedPlanningData());
   assert.match(nodes.vehicle.innerHTML, /기사 1/);
+  assert.equal(nodes.selection.hidden, true);
   planning.clear({ empty: true, message: '등록된 주문이 없습니다.' });
+  assert.equal(nodes.selection.hidden, false);
+  assert.match(nodes.selection.innerHTML, /주문이 등록되면/);
   assert.equal(removed, 1);
   assert.equal(layersRemoved, 1);
   assert.doesNotMatch(nodes.vehicle.innerHTML, /기사 1/);

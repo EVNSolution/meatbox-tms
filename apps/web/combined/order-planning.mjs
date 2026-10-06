@@ -496,6 +496,7 @@ export function mountOrderPlanning({
       query('[data-order-region-note]').innerHTML = '<strong>배송 권역</strong>주문 자료가 등록되면 권역별 수량을 표시합니다.';
       mapStatus.hidden = false; mapRetry.hidden = true; mapStatusText.textContent = message;
       count.textContent = empty ? '등록된 주문 위치가 없습니다.' : '주문 위치를 아직 확인하지 못했습니다.';
+      selection.hidden = false;
       selection.innerHTML = '<span>선택 주문</span><strong>주문이 등록되면 지도에서 선택할 수 있습니다.</strong>';
       summary.textContent = empty ? '주문 0건 · 총 0박스' : '주문 수량 확인 전';
       delete canvas.dataset.orderPointCount; delete canvas.dataset.orderDate;
