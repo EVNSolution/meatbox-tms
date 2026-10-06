@@ -166,3 +166,18 @@ test('deploy wrapper uses an SSH control option valid for both ssh and scp', asy
   assert.match(wrapper, /-o ControlPath="\$CONTROL_PATH"/);
   assert.doesNotMatch(wrapper, /SSH_ARGS=\(-S/);
 });
+
+test('deploy wrapper creates a master that accepts unattended SSH sessions', async () => {
+  const wrapper = await fs.readFile(path.join(ROOT, 'deploy/new-stack/deploy-ci-artifact.sh'), 'utf8');
+  const masterCommand = wrapper.split('\n').find(line => line.includes('-o ControlMaster=yes'));
+  assert.ok(masterCommand, 'wrapper must define its own SSH master');
+  const { stdout } = await execFile('bash', ['-c', `
+    SSH_ARGS=(-F /dev/null)
+    CONTROL_PATH=/tmp/meatbox-master-config-test
+    TEST_USER=ubuntu
+    TEST_HOST=127.0.0.1
+    ${masterCommand.trim().replace(/^ssh /, 'ssh -G ')}
+  `]);
+  const controlMaster = stdout.split('\n').find(line => line.startsWith('controlmaster '));
+  assert.equal(controlMaster, 'controlmaster true');
+});

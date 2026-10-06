@@ -89,7 +89,8 @@ else
     --instance-os-user "$TEST_USER" \
     --ssh-public-key "file://$KEY_FILE.pub" >/dev/null
   SSH_ARGS=(-o ControlPath="$CONTROL_PATH" -i "$KEY_FILE" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
-  ssh "${SSH_ARGS[@]}" -o ControlMaster=yes -o ControlPersist=120 -MNf "$TEST_USER@$TEST_HOST"
+  # Set master mode once; a second -M would require confirmation for each session.
+  ssh "${SSH_ARGS[@]}" -o ControlMaster=yes -o ControlPersist=120 -Nf "$TEST_USER@$TEST_HOST"
   OWN_CONTROL=1
 fi
 
