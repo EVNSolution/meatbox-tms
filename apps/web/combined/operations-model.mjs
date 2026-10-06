@@ -1,6 +1,6 @@
-export function operatorRoute(hash) {
+export function operatorRoute(hash = '') {
   const [path, section] = hash.replace(/^#\//, '').split('/');
-  const page = ['orders', 'deliveries', 'control'].includes(path) ? path : path === 'manage' ? 'control' : 'deliveries';
+  const page = ['orders', 'deliveries', 'control'].includes(path) ? path : path === 'manage' ? 'control' : 'orders';
   return { page, controlTab: path === 'manage' || (page === 'control' && section === 'manage') ? 'management' : 'monitor' };
 }
 

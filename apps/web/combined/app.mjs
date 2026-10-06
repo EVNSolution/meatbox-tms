@@ -108,7 +108,7 @@ const simulation = connectSimulation({
       state.pendingNotice = null; state.noticeMessage = '연결이 끊겨 안내를 전달하지 못했습니다.'; state.noticeError = true;
     }
     byId('connection-panel').hidden = connected || state.page === 'deliveries';
-    byId('live-pages').hidden = state.page !== 'deliveries' && !state.dateContext && !state.data;
+    byId('live-pages').hidden = state.page === 'control' && !state.dateContext && !state.data;
     byId('connection-title').textContent = message;
     byId('connection-detail').textContent = connected ? '' : '연결이 복구되면 같은 진행 상태를 이어갑니다.';
     syncDispatchContext();
@@ -133,7 +133,7 @@ function render() {
   renderPage();
   renderControlDate();
   byId('vehicle-control').hidden = !state.data;
-  byId('live-pages').hidden = state.page !== 'deliveries' && !state.dateContext && !state.data;
+  byId('live-pages').hidden = state.page === 'control' && !state.dateContext && !state.data;
   byId('connection-panel').hidden = state.connected || state.page === 'deliveries';
   if (state.page === 'orders') orderPlanning.update(state.data, state.selectedId, state.dateContext?.date);
   if (!state.data) { controlSummaryToolbar.clear(); return; }

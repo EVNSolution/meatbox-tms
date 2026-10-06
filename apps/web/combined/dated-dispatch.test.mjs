@@ -102,7 +102,7 @@ async function waitFor(check) {
 function planningSpy() {
   const mounts = [];
   const factory = options => {
-    const instance = { options, updates: [], destroyed: false, update(...args) { this.updates.push(args); }, destroy() { this.destroyed = true; } };
+    const instance = { options, updates: [], cleared: [], clear(context) { this.cleared.push(context); }, destroyed: false, update(...args) { this.updates.push(args); }, destroy() { this.destroyed = true; } };
     mounts.push(instance);
     return instance;
   };
@@ -275,7 +275,7 @@ test('로컬 날짜 조회 중 같은 관제 문맥의 갱신은 취소하지 �
   dated.destroy();
 });
 
-test('준비되지 않은 날짜는 요청하지 않고 이전 지도를 숨긴다', async t => {
+test('준비되지 않은 날짜는 이전 주문을 지우고 빈 배차 영역과 0 집계를 표시한다', async t => {
   installBrowserGlobals(t);
   const { element, nodes } = domFixture();
   const planning = planningSpy();
@@ -293,9 +293,11 @@ test('준비되지 않은 날짜는 요청하지 않고 이전 지도를 숨긴�
   nodes.date.value = '2025-09-14'; nodes.date.dispatch('change');
   await tick();
   assert.equal(calls.length, before);
-  assert.equal(nodes.planning.hidden, true);
-  assert.equal(nodes.summary.hidden, true);
-  assert.match(nodes.status.textContent, /주문 자료가 없습니다/);
+  assert.equal(nodes.planning.hidden, false);
+  assert.equal(nodes.summary.hidden, false);
+  assert.match(nodes.summary.innerHTML, /주문.*0.*박스.*0.*후보 차량.*0/);
+  assert.equal(planning.mounts[0].cleared.at(-1).empty, true);
+  assert.match(nodes.status.textContent, /등록된 주문이 없습니다/);
   assert.equal(nodes.retry.hidden, true);
   assert.equal(dated.summary(), null);
   dated.destroy();
@@ -317,11 +319,38 @@ test('관제에서 자료 없는 날짜로 바꾼 뒤 배차로 돌아오면 이
   await waitFor(() => nodes.summary.hidden === false);
   const before = calls.length;
   dated.update(null, null, '2026-09-28');
-  await waitFor(() => nodes.status.textContent.includes('주문 자료가 없습니다'));
+  await waitFor(() => nodes.status.textContent.includes('등록된 주문이 없습니다'));
   assert.equal(nodes.date.value, '2026-09-28');
-  assert.equal(nodes.summary.hidden, true);
-  assert.equal(nodes.planning.hidden, true);
+  assert.equal(nodes.summary.hidden, false);
+  assert.match(nodes.summary.innerHTML, /주문.*0.*박스.*0.*후보 차량.*0/);
+  assert.equal(nodes.planning.hidden, false);
   assert.equal(calls.length, before);
+  dated.destroy();
+});
+
+test('자료 없는 날짜 선택도 운영 날짜에 전달하고 늦은 빈 응답은 새 날짜를 덮지 않는다', async t => {
+  installBrowserGlobals(t);
+  const { element, nodes } = domFixture();
+  const planning = planningSpy(), workflow = planningSpy();
+  const emptyResponse = deferred(), selected = [];
+  const dated = mountDatedDispatch({ element, planningFactory: planning.factory, workflowFactory: workflow.factory,
+    fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day(url.split('/').at(-1)),
+    onDateChange: date => {
+      selected.push(date);
+      return date === '2026-10-06' ? emptyResponse.promise : { sourceData: { date }, dispatch: { phase: 'unplanned' }, fleetDeliveries: [] };
+    },
+  });
+  dated.update(null, null);
+  await waitFor(() => nodes.summary.hidden === false);
+  nodes.date.value = '2026-10-06'; nodes.date.dispatch('change');
+  nodes.date.value = '2025-09-16'; nodes.date.dispatch('change');
+  await waitFor(() => planning.mounts[0].updates.at(-1)?.[0].dispatchSource.date === '2025-09-16');
+  emptyResponse.resolve(null); await tick();
+  assert.deepEqual(selected, ['2025-09-15', '2026-10-06', '2025-09-16']);
+  assert.equal(nodes.date.value, '2025-09-16');
+  assert.equal(planning.mounts[0].cleared.at(-1).empty, false);
+  assert.equal(nodes.workflow.hidden, false);
+  assert.equal(nodes.status.hidden, true);
   dated.destroy();
 });
 
@@ -346,6 +375,36 @@ test('날짜 조회 실패 시 이전 날짜의 집계를 남기지 않는다', 
   dated.destroy();
 });
 
+test('초기 연결보다 주문이 먼저 도착해도 같은 날짜의 운영 상태로 배차 화면을 복구한다', async t => {
+  installBrowserGlobals(t);
+  const { element, nodes } = domFixture();
+  const planning = planningSpy();
+  const operational = { sourceData: { date: manifest.defaultDate }, dispatch: { phase: 'unplanned' }, fleetDeliveries: [] };
+  let selections = 0, dayFetches = 0;
+  const dated = mountDatedDispatch({ element, planningFactory: planning.factory,
+    onDateChange: async () => ++selections === 1 ? null : operational,
+    fetchJSON: async url => {
+      if (url.endsWith('/manifest')) return manifest;
+      if (url.endsWith('/regions')) return regions;
+      dayFetches++; return day(manifest.defaultDate);
+    },
+  });
+  dated.update(null, null);
+  await waitFor(() => nodes.retry.hidden === false);
+  assert.equal(planning.mounts[0].updates.length, 0);
+  assert.equal(nodes.summary.hidden, true);
+  dated.update(operational, null, manifest.defaultDate);
+  await waitFor(() => planning.mounts[0].updates.length === 1);
+  assert.equal(nodes.retry.hidden, true);
+  assert.equal(nodes.status.hidden, true);
+  assert.equal(nodes.planning.hidden, false);
+  assert.equal(nodes.workflow.hidden, false);
+  assert.equal(dayFetches, 1);
+  assert.equal(selections, 2);
+  assert.equal(planning.mounts[0].updates[0][0].sourceData.date, manifest.defaultDate);
+  dated.destroy();
+});
+
 test('manifest 404에서도 이전 시나리오를 표시하지 않는다', async t => {
   installBrowserGlobals(t);
   const { element, nodes } = domFixture();
@@ -357,9 +416,10 @@ test('manifest 404에서도 이전 시나리오를 표시하지 않는다', asyn
   dated.update(simulation, 'S1');
   await waitFor(() => nodes.retry.hidden === false);
   assert.equal(dated.usesSource(), true);
-  assert.equal(nodes.planning.hidden, true);
+  assert.equal(nodes.planning.hidden, false);
   assert.equal(nodes.summary.hidden, true);
-  assert.equal(planning.mounts.length, 0);
+  assert.equal(planning.mounts.length, 1);
+  assert.equal(planning.mounts[0].updates.length, 0);
   assert.match(nodes.status.textContent, /불러오지 못했습니다/);
   assert.deepEqual(selected, []);
   dated.destroy();
@@ -376,8 +436,9 @@ test('형식 오류와 시간 초과는 가짜 기존 시나리오로 바꾸지 
     const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
     dated.update({ fleetDeliveries: [{ id: 'S1' }] }, 'S1');
     await waitFor(() => nodes.retry.hidden === false);
-    assert.equal(planning.mounts.length, 0);
-    assert.equal(nodes.planning.hidden, true);
+    assert.equal(planning.mounts.length, 1);
+    assert.equal(planning.mounts[0].updates.length, 0);
+    assert.equal(nodes.planning.hidden, false);
     assert.doesNotMatch(nodes.status.textContent, /기존 시나리오/);
     assert.match(nodes.status.textContent, /불러오지 못했습니다/);
     dated.destroy();
@@ -419,10 +480,13 @@ test('URL 없이 다시 열면 세션 과거 날짜 대신 실제 오늘의 빈 
   const planning = planningSpy();
   const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory, now: () => '2026-09-27' });
   dated.update(null, null);
-  await waitFor(() => nodes.toolbar.hidden === false && nodes.status.textContent.includes('주문 자료가 없습니다'));
+  await waitFor(() => nodes.toolbar.hidden === false && nodes.status.textContent.includes('등록된 주문이 없습니다'));
   assert.deepEqual(requested, []);
   assert.equal(nodes.date.value, '2026-09-27');
-  assert.equal(nodes.summary.hidden, true);
+  assert.equal(nodes.summary.hidden, false);
+  assert.equal(nodes.planning.hidden, false);
+  assert.equal(planning.mounts[0].updates.length, 0);
+  assert.equal(planning.mounts[0].cleared.at(-1).empty, true);
   assert.equal(nodes.date.disabled, false);
   nodes.date.value = '2025-09-17'; nodes.date.dispatch('change');
   await waitFor(() => planning.mounts[0]?.updates.length === 1);
@@ -467,7 +531,7 @@ test('저장 날짜가 있어도 URL 없이 실제 오늘을 선택한다', asyn
   };
   const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory, now: () => '2026-09-27' });
   dated.update(null, null);
-  await waitFor(() => nodes.status.textContent.includes('주문 자료가 없습니다'));
+  await waitFor(() => nodes.status.textContent.includes('등록된 주문이 없습니다'));
   assert.deepEqual(requested, []);
   assert.equal(nodes.date.value, '2026-09-27');
   assert.equal(storage.values.get('meatbox.dispatch.date'), '2030-01-01');

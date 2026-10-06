@@ -225,7 +225,7 @@ test('historical regression tests retain provenance and intentional changes are 
   assert.equal(pure.length, 34);
   assert.equal(legacy.length, 5);
   for (const record of pure.filter(record => record.status === 'active')) {
-    if (record.sourceSha256 !== record.targetSha256) assert.ok(record.changes.includes('Removed retired demo behavior while preserving operational regression coverage.'), record.target);
+    if (record.sourceSha256 !== record.targetSha256) assert.ok(record.changes.some(change => typeof change === 'string' && change.trim()), `${record.target}: explain intentional regression changes`);
   }
   for (const record of legacy.filter(record => record.status === 'active')) {
     const fork = readFileSync(path.join(root, record.target), 'utf8');

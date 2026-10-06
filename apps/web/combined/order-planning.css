@@ -140,3 +140,7 @@
 .order-reassign-error { color: #a23220; font-size: 12px; }
 .order-vehicle-name small { flex-shrink: 0; }
 .order-vehicle-name strong { min-width: 0; overflow-wrap: anywhere; }
+
+[data-source-kind="unavailable"] .order-map-status { width: min(360px, calc(100% - 32px)); text-align: center; line-height: 1.6; }
+[data-source-kind="unavailable"] .order-map-selection strong { font-size: 12px; font-weight: 500; }
+[data-source-kind="unavailable"] .order-map-mode label { cursor: default; }

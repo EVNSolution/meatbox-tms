@@ -2,10 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { operatorRoute, filterFleetDeliveries, normalizeVehicleFilter, resolveDeliverySelection } from './operations-model.mjs';
 
-test('management links resolve inside control and unknown links fall back safely', () => {
-  for (const hash of ['#/manage', '#/control/manage']) assert.deepEqual(operatorRoute(hash), {page:'control', controlTab:'management'});
-  assert.deepEqual(operatorRoute('#/orders'), {page:'orders', controlTab:'monitor'});
-  assert.deepEqual(operatorRoute('#/unknown'), {page:'deliveries', controlTab:'monitor'});
+test('known operator links retain their page and control tab', () => {
+  const expectedRoutes = new Map([
+    ['#/orders', {page:'orders', controlTab:'monitor'}],
+    ['#/deliveries', {page:'deliveries', controlTab:'monitor'}],
+    ['#/control', {page:'control', controlTab:'monitor'}],
+    ['#/control/manage', {page:'control', controlTab:'management'}],
+    ['#/manage', {page:'control', controlTab:'management'}],
+  ]);
+
+  for (const [hash, expected] of expectedRoutes) assert.deepEqual(operatorRoute(hash), expected);
+});
+
+test('missing and unknown operator links open dispatch orders', () => {
+  for (const hash of [undefined, '', '#', '#/', '#/unknown']) {
+    assert.deepEqual(operatorRoute(hash), {page:'orders', controlTab:'monitor'});
+  }
 });
 
 test('fleet deliveries filter by vehicle, status, destination, address, and driver', () => {

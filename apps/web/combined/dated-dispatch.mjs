@@ -59,6 +59,17 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   const cache = new Map();
   const listeners = [];
   const listen = (node, type, fn) => { node.addEventListener(type, fn); listeners.push(() => node.removeEventListener(type, fn)); };
+  function showUnavailable(text, empty = false) {
+    if (!planning) planning = planningFactory({ element: host, ...(onAssign ? { onSelect, onAssign: extra => {
+      if (!current || simulationData?.sourceData?.date !== current.date) throw new Error('운영 상태를 먼저 확인해 주세요.');
+      return onAssign(extra);
+    } } : {}) });
+    host.hidden = false; workflowHost.hidden = false;
+    planning.clear({ empty, message: text });
+    workflow.update(null, false, { date: selectedDate, empty });
+    if (empty) toolbarSummary.update([['주문', 0], ['박스', 0], ['후보 차량', 0]]);
+    else toolbarSummary.clear();
+  }
   function display() {
     if (simulationData?.sourceData?.date === current?.date) return { ...simulationData, fleetDeliveries: simulationData.dispatchOrders || simulationData.fleetDeliveries, dispatchSource: current, dispatchRegions: regions };
     return { ...adaptDispatchDay(current, regions), dispatch: { phase: 'unplanned', readOnly: true } };
@@ -88,11 +99,20 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   async function selectDate(date) {
     const ticket = ++epoch;
     controller?.abort(); controller = new AbortController();
-    selectedDate = date; setNavigation(date); current = null; loading = true; renderSummary(); host.hidden = true; workflowHost.hidden = true;
-    workflow.update(null, false);
+    selectedDate = date; setNavigation(date); current = null; loading = true;
+    showUnavailable('주문 자료를 불러오고 있습니다.');
     onContextChange();
     if (!date || !manifest.dates.some(item => item.date === date)) {
-      message(date ? `${date}에 주문 자료가 없습니다. 날짜를 선택해 이력을 조회할 수 있습니다.` : '요청한 날짜가 올바르지 않습니다. 배차 날짜를 다시 선택해 주세요.');
+      const text = date ? `${date}에 등록된 주문이 없습니다. 주문이 등록되면 이 화면에 표시됩니다.` : '요청한 날짜가 올바르지 않습니다. 배차 날짜를 다시 선택해 주세요.';
+      if (date && onDateChange) {
+        try { await onDateChange(date); } catch {
+          if (destroyed || ticket !== epoch) return;
+          loading = false; showUnavailable('운영 상태를 확인하지 못했습니다.');
+          message('운영 상태를 불러오지 못했습니다. 다시 시도해 주세요.', true); onContextChange(); return;
+        }
+      }
+      if (destroyed || ticket !== epoch) return;
+      showUnavailable(text, Boolean(date)); message(text);
       loading = false; onContextChange(); return;
     }
     message(`${date} 배차를 불러오고 있습니다.`);
@@ -106,15 +126,11 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
       if (onDateChange) {
         const operational = await onDateChange(date);
         if (destroyed || ticket !== epoch) return;
-        if (!operational) { loading = false; message(`${date}에 운영 자료가 없습니다.`); onContextChange(); return; }
+        if (!operational) { loading = false; showUnavailable('운영 상태를 확인하지 못했습니다.'); message(`${date}의 운영 상태를 불러오지 못했습니다. 다시 시도해 주세요.`, true); onContextChange(); return; }
         if (operational.sourceData?.date !== date) throw new Error('운영 상태를 불러오지 못했습니다.');
         simulationData = operational;
       }
       current = day; loading = false;
-      if (!planning) planning = planningFactory({ element: host, ...(onAssign ? { onSelect, onAssign: extra => {
-        if (!current || simulationData?.sourceData?.date !== current.date) throw new Error('운영 상태를 먼저 확인해 주세요.');
-        return onAssign(extra);
-      } } : {}) });
       host.hidden = false;
       updateViews();
       renderSummary();
@@ -123,14 +139,14 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
       onContextChange();
     } catch (error) {
       if (destroyed || ticket !== epoch || error.name === 'AbortError') return;
-      current = null; renderSummary(); host.hidden = true; workflowHost.hidden = true;
+      current = null; showUnavailable('주문 자료를 불러오지 못했습니다. 다시 불러오기를 눌러 주세요.');
       loading = false;
       message(error instanceof TypeError ? error.message : '배차 정보를 불러오지 못했습니다. 다시 시도해 주세요.', true);
       onContextChange();
     }
   }
   async function start() {
-    started = true; message('배차 정보를 확인하고 있습니다.');
+    started = true; showUnavailable('주문 자료를 확인하고 있습니다.'); message('배차 정보를 확인하고 있습니다.');
     try {
       manifest = await fetchJSON('/api/dispatch-data/manifest');
       if (destroyed) return;
@@ -144,7 +160,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
       await selectDate(externalDate === undefined ? selected : externalDate);
     } catch {
       if (destroyed) return;
-      loading = false; message('배차 자료를 불러오지 못했습니다. 다시 시도해 주세요.', true);
+      loading = false; showUnavailable('주문 자료를 불러오지 못했습니다. 다시 불러오기를 눌러 주세요.'); message('배차 자료를 불러오지 못했습니다. 다시 시도해 주세요.', true);
       onContextChange();
     }
   }
@@ -158,6 +174,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
       if (contextDate !== undefined) externalDate = contextDate;
       if (!started) start();
       else if (regions && contextChanged && selectedDate !== contextDate) selectDate(contextDate);
+      else if (regions && !loading && !current && data?.sourceData?.date === selectedDate) selectDate(selectedDate);
       else if (current && data?.sourceData && !loading) {
         if (current.date !== data.sourceData.date) selectDate(data.sourceData.date);
         else updateViews();
