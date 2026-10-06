@@ -85,20 +85,28 @@ node --test test/api-connection/*.test.mjs
 
 ## 계정 오프라인 관리
 
-아래는 경로·사용자 이름 자리표시자다. 실제 비밀을 문서나 콘솔에 출력하지 않는다. 초대 발급은 기존 파일을 덮어쓰지 않는 새 0600 파일에 저장한다. 실행 전 정확한 access 파일과 대상 사용자 및 백업을 확인한다.
+TEST에서는 API의 systemd 사용자 `meatbox-demo`로 CLI를 실행한다. 로컬에서는 access 파일 소유자인 사용자로 실행한다. 실행 전 서비스 사용자, access 파일 소유자, 대상 사용자와 백업을 확인한다.
+
+CLI는 새 0600 파일을 만든 뒤 access 파일을 원자적으로 교체한다. root로 실행하면 access 파일이 root 소유로 바뀌어 API 인증 요청이 503으로 실패할 수 있다. 2026-10-06 TEST 확인에서 이 실패를 재현했고 서비스 사용자 소유권으로 복구했다. CLI를 root로 실행하지 않는다.
+
+아래는 현재 TEST 경로다. 초대 출력 경로와 대상 사용자 이름은 자리표시자다. 초대 출력 디렉터리는 `meatbox-demo`가 소유하는 비공개 디렉터리여야 한다. 실제 비밀을 문서나 콘솔에 출력하지 않는다. 초대는 기존 파일을 덮어쓰지 않는 새 0600 파일에 저장한다.
 
 ```sh
-java -jar services/api/build/libs/meatbox-api-0.0.1-SNAPSHOT.jar \
+systemctl show meatbox-api.service --property=User --value
+sudo stat -c '%U:%G %a' /var/lib/meatbox-demo/access.json
+# Expected: meatbox-demo; meatbox-demo:meatbox-demo 600.
+
+sudo -u meatbox-demo java -Xmx128m -jar /opt/meatbox-tms/current/api/meatbox-api.jar \
   --spring.main.web-application-type=none \
-  --meatbox.auth.access-file=/absolute/path/access.json \
+  --meatbox.auth.access-file=/var/lib/meatbox-demo/access.json \
   --meatbox.auth.admin-command=issue-invite \
   --meatbox.auth.admin-output=/absolute/private/path/invite.txt
 
-java -jar services/api/build/libs/meatbox-api-0.0.1-SNAPSHOT.jar \
+sudo -u meatbox-demo java -Xmx128m -jar /opt/meatbox-tms/current/api/meatbox-api.jar \
   --spring.main.web-application-type=none \
-  --meatbox.auth.access-file=/absolute/path/access.json \
+  --meatbox.auth.access-file=/var/lib/meatbox-demo/access.json \
   --meatbox.auth.admin-command=disable-user \
   --meatbox.auth.admin-username=reviewed-user
 ```
 
-CLI는 웹 서버 없이 실행하며 `AuthStore`의 교차 프로세스 잠금·원자적 쓰기 경계를 공유한다.
+CLI는 웹 서버 없이 실행하며 `AuthStore`의 교차 프로세스 잠금·원자적 쓰기 경계를 공유한다. 실행 후 access 파일의 소유자와 0600 권한, API health와 인증 응답을 다시 확인한다.
