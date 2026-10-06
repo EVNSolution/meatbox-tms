@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="./date-picker.css">
   <link rel="stylesheet" href="/combined/assets/vendor/maplibre/maplibre-gl.css">
   <link rel="stylesheet" href="./order-planning.css">
+  <link rel="stylesheet" href="./status-notification.css">
   <script type="module" src="./app.mjs"></script>
 </head>
 <body>
@@ -28,6 +29,7 @@
       <section class="page-intro" aria-labelledby="page-heading">
         <div><h1 id="page-heading" tabindex="-1">배차 관리</h1><p class="intro-copy" id="page-description">차량별 배정과 전체 주문 위치</p></div>
       </section>
+      <div id="status-notification" class="status-notification" hidden></div>
       <section class="connection-panel view-content" id="connection-panel" aria-live="polite">
         <div class="panel loading-state"><span class="loading-dot" aria-hidden="true"></span><div><strong id="connection-title">배송 정보를 불러오고 있습니다.</strong><p id="connection-detail">잠시만 기다려 주세요.</p></div><button type="button" class="button" id="retry-connection" hidden>다시 연결</button></div>
       </section>

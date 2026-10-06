@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 106,
-  "authoredFileCount": 20,
+  "authoredFileCount": 23,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,12 +28,13 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "6e41de872735fd571e10488fe2af5231c36074477346b29774a0dcf6d46182e6",
+      "targetSha256": "132da264df584e27393144ee6166d5f311a1de262eb7e24d2a039a7aa634823e",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Keep delivery control containers and tabs visible without data; distinguish confirmed empty and unknown counts and reset previous date selections, notices and route drafts."
+        "Keep delivery control containers and tabs visible without data; distinguish confirmed empty and unknown counts and reset previous date selections, notices and route drafts.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -401,11 +402,12 @@
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "9674de8db4b2583367067b1f5a71ce961bed9b9f65b6eb2c56ee71d463814b18",
+      "targetSha256": "50fab6085739c09bfd6c629f3e3fa993269159f7d9b104f91a56357d8d192d69",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Remove unused escaping helper, selection value and catch binding; retain update argument position",
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -413,10 +415,11 @@
       "source": "apps/combined/dated-dispatch.test.mjs",
       "sourceSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c",
       "target": "apps/web/combined/dated-dispatch.test.mjs",
-      "targetSha256": "f9c210f324712c3fe3a8a74ddf8272998283edbbd080aefc793b809f76855c2f",
+      "targetSha256": "8950c06e9893f80515393280157bfcb7726652f9b5dbd9e92b04ff855e66596b",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -755,13 +758,14 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "2214fba82356facfaff19cde14677c60e90ef2197d71fa492ee6226d36abf7f9",
+      "targetSha256": "974049fd80242e3030223b5cee4a72e62f7eb48fa25672e79ce789ce1e1ad9db",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions",
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Load operational date-picker styling directly after retiring the demo shell."
+        "Load operational date-picker styling directly after retiring the demo shell.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -892,7 +896,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "9e9a0332bc883b61102dfafcdcbaad09af5b66e95c1f633a9f34e7f576b54be8",
+      "targetSha256": "ade1b4022a5ae0245db73a274fa09f0ee61e4a427c70f2db9ed4693bd7300a9f",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -900,7 +904,8 @@
         "Import and re-export the exact shared map model/factory functions instead of defining them inside the planning view",
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Restore the empty selection card after a populated date hid its unselected-order view."
+        "Restore the empty selection card after a populated date hid its unselected-order view.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -930,12 +935,13 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "895c27dbae68ac33567695f664772a85b1be029276f88ad7e10d0f0047b25407",
+      "targetSha256": "2766690b85fe4d936f1a8779fa6314da0e5fa44c4253a38f42d5a90c9a7bf7dd",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Restore the empty selection card after a populated date hid its unselected-order view."
+        "Restore the empty selection card after a populated date hid its unselected-order view.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -1416,12 +1422,13 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "181d940a3f5ab929c5a218a6eebaae70e326e8ec3360094a69f23968f020502b",
+      "targetSha256": "263b16bf554a6c124b55db91c3ce8a5d29ecb15a729b92c77cc7b594ee5684d8",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Preserve fleet, workload, map and details containers without data; clear old records, dialogs and map responses and recover on valid data."
+        "Preserve fleet, workload, map and details containers without data; clear old records, dialogs and map responses and recover on valid data.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -1429,11 +1436,12 @@
       "source": "apps/combined/vehicle-control.test.mjs",
       "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
       "target": "apps/web/combined/vehicle-control.test.mjs",
-      "targetSha256": "79b7b275513f1487d56dc25900f5f912c83c5344c5a9c19f5842f78e0c6bc0c6",
+      "targetSha256": "18fcd70d25a9b18c8418a14016a16038fe523e0d9f2e278898be092ea5954ace",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Verify confirmed empty versus unknown control state, loaded-empty-loaded recovery and stale asynchronous map responses."
+        "Verify confirmed empty versus unknown control state, loaded-empty-loaded recovery and stale asynchronous map responses.",
+        "Use one transient empty-data notification while retaining work areas and persistent errors."
       ],
       "status": "active"
     },
@@ -2126,6 +2134,27 @@
       "origin": "authored",
       "sha256": "afa63d78fdf21d47c6345f7a40b74c0b64adaaa8983343dfa42914e62d6ab22b",
       "reason": "Own shared buttons, fields, cards, tabs, focus and dialog appearance across product, guide and authentication pages.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/src/shared/ui/status-notification.mjs",
+      "origin": "authored",
+      "sha256": "433c416e256fa99230c36784b9bd65e5654d967d14f82b8b20cdc64d1e25211a",
+      "reason": "Own transient, dismissible empty-data notifications with duplicate suppression and hover or focus pause.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/src/shared/ui/status-notification.test.mjs",
+      "origin": "authored",
+      "sha256": "5a70285f22ed16a606142c3455fbf4f8ab4f0f9b6d57e21ed58dddf3d4ae428b",
+      "reason": "Verify notification timing, context changes, dismissal, pause and lifecycle cleanup with a controlled clock.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/status-notification.css",
+      "origin": "authored",
+      "sha256": "70bec8cb7a7f5961b8f57a3fac3f7cb50490ca2ee3646f53f660fd1fdf92620d",
+      "reason": "Position and size the shared top notification without replacing operational work areas.",
       "status": "active"
     }
   ],

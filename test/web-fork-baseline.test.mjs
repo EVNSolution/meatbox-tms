@@ -31,11 +31,12 @@ const cssFragments = new Map([
 const authoredPaths = [
   'apps/web/.gitignore', 'apps/web/.oxlintrc.json', 'apps/web/README.md',
   'apps/web/package-lock.json', 'apps/web/package.json', 'apps/web/public/theme.css',
-  'apps/web/public/components.css',
+  'apps/web/public/components.css', 'apps/web/combined/status-notification.css',
   'apps/web/scripts/api-routing.mjs',
   'apps/web/scripts/legacy-gateway.mjs', 'apps/web/scripts/serve-legacy.mjs',
   'apps/web/scripts/test.mjs', 'apps/web/src/auth-contract.ts', 'apps/web/src/auth.ts',
   'apps/web/src/shared/maps/order-map.test.mjs', 'apps/web/test/auth-contract.test.mjs',
+  'apps/web/src/shared/ui/status-notification.mjs', 'apps/web/src/shared/ui/status-notification.test.mjs',
   'apps/web/test/api-routing.test.mjs',
   'apps/web/test/fork-artifact.check.mjs', 'apps/web/test/legacy-gateway.test.mjs',
   'apps/web/tsconfig.json', 'apps/web/vite.config.mjs',

@@ -11,6 +11,7 @@ import { sourceVehicleContext } from './source-context.mjs';
 import { mountDatePicker } from './date-picker.mjs';
 import { seoulToday, validOperatingDate } from './operating-date.mjs';
 import { dateSummaryToolbar, mountDateSummaryToolbar } from './date-summary-toolbar.mjs';
+import { mountStatusNotification } from '../src/shared/ui/status-notification.mjs';
 
 const pages = {
   orders: { title: '배차 관리', description: '주문 확인, 배송원 선택과 배차 전송' },
@@ -38,6 +39,7 @@ function mountOperationalShell() {
   byId('app-navigation').innerHTML = '<nav class="app-nav-links" aria-label="운영 업무"><a href="#/orders" data-page-link="orders">배차 관리</a><a href="#/control" data-page-link="control">배송 관제</a><a href="#/deliveries" data-page-link="deliveries">자원 관리</a></nav>';
 }
 mountOperationalShell();
+const statusNotification = mountStatusNotification({ element: byId('status-notification') });
 document.querySelectorAll('[data-field-icon]').forEach(element => { element.innerHTML = referenceIcon(element.dataset.fieldIcon); });
 byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'control-date-actions', summaryLabel: '선택 관제일 요약', actions: '<span>조회 날짜</span><div id="control-date-picker"></div><button type="button" class="button subtle" id="control-today">오늘</button>', context: '<span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span>' });
 const controlSummaryToolbar = mountDateSummaryToolbar(byId('control-date-toolbar'));
@@ -67,7 +69,7 @@ const orderPlanning = mountDatedDispatch({ element: byId('order-planning'), onSe
     const result = await simulation.send('reassign', extra);
     if (!result) throw new Error('배정을 변경하지 못했습니다. 현재 주문 상태를 확인해 주세요.');
     return { ...result, shared: true };
-  }, onContextChange: () => { if (state.data) { renderSummary(); syncDispatchContext(); } } });
+  }, onContextChange: () => { if (state.data) { renderSummary(); syncDispatchContext(); } renderStatusNotification(); } });
 mountResourceManagement({ element: byId('resource-management') });
 function selectDelivery(id) {
   state.selectedId = id;
@@ -134,6 +136,7 @@ function render() {
   syncDispatchContext();
   renderPage();
   renderControlDate();
+  renderStatusNotification();
   byId('vehicle-control').hidden = false;
   byId('live-pages').hidden = false;
   byId('connection-panel').hidden = state.connected || state.page === 'deliveries';
@@ -205,8 +208,23 @@ function renderControlDate() {
   byId('control-today').disabled = !context || date === today;
   byId('control-readonly').hidden = !(validOperatingDate(date) && date < today || state.data?.dispatch?.readOnly);
   const empty = byId('control-empty');
-  empty.hidden = Boolean(state.data);
-  empty.textContent = controlDataPresentation(context, state.connectionMessage).message;
+  const presentation = controlDataPresentation(context, state.connectionMessage);
+  empty.hidden = Boolean(state.data) || presentation.empty;
+  empty.textContent = empty.hidden ? '' : presentation.message;
+}
+
+function renderStatusNotification() {
+  const date = state.dateContext?.date;
+  const context = `${state.page}:${date || ''}`;
+  let message = '';
+  if (state.page === 'orders') {
+    const dispatch = orderPlanning.status();
+    if (dispatch.empty && dispatch.date === date) message = `${date}에 등록된 주문이 없습니다.`;
+  } else if (state.page === 'control' && !state.dateContext?.invalid) {
+    if (state.dateContext?.empty) message = `${date}에 배송 자료가 없습니다.`;
+    else if (state.data && !vehicleOperations(state.data).some(item => !state.data.dispatch || item.deliveries.length)) message = `${date}에 확정된 배차가 없습니다.`;
+  }
+  statusNotification.update({ context, key: message ? `${context}:empty` : undefined, message });
 }
 
 function renderSummary() {
@@ -256,6 +274,14 @@ window.addEventListener('hashchange', () => {
   // Pointer users keep focus on the selected menu; keyboard users enter the new page.
   if (!fromPointerMenu) byId('page-heading').focus({ preventScroll: true });
   window.scrollTo(0, 0);
+});
+window.addEventListener('pagehide', event => {
+  if (event.persisted) return;
+  statusNotification.destroy();
+  simulation.close();
+  orderPlanning.destroy();
+  vehicleControl.destroy();
+  controlDatePicker.destroy();
 });
 byId('retry-connection').addEventListener('click', () => location.reload());
 document.querySelector('.skip-link').addEventListener('click', event => { event.preventDefault(); byId('page-heading').focus(); });
