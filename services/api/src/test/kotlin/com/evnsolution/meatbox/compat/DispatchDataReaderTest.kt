@@ -55,6 +55,65 @@ class DispatchDataReaderTest {
     }
 
     @Test
+    fun `rejects wrong or missing raw day dates even with a valid gzip sibling`() {
+        val fixture = fixture()
+        Files.write(directory.resolve("days/$DATE.json.gz"), gzip(fixture.day))
+        val reader = reader()
+
+        for (day in listOf("{\"date\":\"2026-10-06\"}", "{\"orders\":[]}")) {
+            Files.writeString(directory.resolve("days/$DATE.json"), day)
+            for (encoding in listOf(null, "gzip")) {
+                assertError("DISPATCH_DATA_INVALID") { reader.day(DATE, encoding) }
+            }
+        }
+    }
+
+    @Test
+    fun `rejects wrong or missing dates in the selected gzip representation`() {
+        val fixture = fixture()
+        val reader = reader()
+
+        for (day in listOf("{\"date\":\"2026-10-06\"}", "{\"orders\":[]}")) {
+            Files.write(directory.resolve("days/$DATE.json.gz"), gzip(day.toByteArray()))
+            assertThat(reader.day(DATE, null).bytes).isEqualTo(fixture.day)
+            assertError("DISPATCH_DATA_INVALID") { reader.day(DATE, "gzip") }
+        }
+    }
+
+    @Test
+    fun `bounds gzip expansion at the existing dispatch day size limit`() {
+        val fixture = fixture()
+        val reader = reader()
+        val limit = 16 * 1024 * 1024
+        val atLimit = fixture.day.copyOf(limit).apply { fill(' '.code.toByte(), fixture.day.size) }
+        val compressed = gzip(atLimit)
+        Files.write(directory.resolve("days/$DATE.json.gz"), compressed)
+        assertThat(reader.day(DATE, "gzip").bytes).isEqualTo(compressed)
+
+        val excessive = atLimit.copyOf(limit + 1).apply { this[limit] = ' '.code.toByte() }
+        Files.write(directory.resolve("days/$DATE.json.gz"), gzip(excessive))
+        assertError("DISPATCH_DATA_INVALID") { reader.day(DATE, "gzip") }
+        assertThat(reader.day(DATE, null).bytes).isEqualTo(fixture.day)
+    }
+
+    @Test
+    fun `bounds raw day bytes before parsing even with a valid gzip sibling`() {
+        val fixture = fixture()
+        val reader = reader()
+        val limit = 16 * 1024 * 1024
+        val atLimit = fixture.day.copyOf(limit).apply { fill(' '.code.toByte(), fixture.day.size) }
+        Files.write(directory.resolve("days/$DATE.json"), atLimit)
+        Files.write(directory.resolve("days/$DATE.json.gz"), gzip(fixture.day))
+        assertThat(reader.day(DATE, null).bytes).isEqualTo(atLimit)
+
+        val excessive = atLimit.copyOf(limit + 1).apply { this[limit] = ' '.code.toByte() }
+        Files.write(directory.resolve("days/$DATE.json"), excessive)
+        for (encoding in listOf(null, "gzip")) {
+            assertError("DISPATCH_DATA_INVALID") { reader.day(DATE, encoding) }
+        }
+    }
+
+    @Test
     fun `maps manifest and target failures to the legacy error stages`() {
         var reader = reader()
         assertError("DISPATCH_DATA_UNAVAILABLE") { reader.manifest(null) }
@@ -98,7 +157,7 @@ class DispatchDataReaderTest {
             { "schemaVersion": 1, "defaultDate": "$DATE", "vendorMetadata": {"keep": true},
               "dates": [{"date":"$DATE","weekday":"월요일","other":"kept"}] }
         """.trimIndent().toByteArray()
-        val day = "{\"date\":\"$DATE\",\"orders\":[{\"id\":\"A\"}]}\n".toByteArray()
+        val day = "{\"date\":\"$DATE\",\"vendorMetadata\":{\"keep\":true},\"orders\":[{\"id\":\"A\"}]}\n".toByteArray()
         val regions = "{\"type\":\"FeatureCollection\",\"features\":[]}\n".toByteArray()
         Files.write(directory.resolve("manifest.json"), manifest)
         Files.write(directory.resolve("days/$DATE.json"), day)

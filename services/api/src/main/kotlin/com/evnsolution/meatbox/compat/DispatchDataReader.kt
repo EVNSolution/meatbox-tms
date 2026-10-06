@@ -18,6 +18,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.ResolverStyle
 import java.util.HexFormat
+import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
 @Suppress("TooManyFunctions")
@@ -36,7 +37,28 @@ class DispatchDataReader(
         if (!isValidDate(date)) throw notFound()
         val manifest = loadManifest()
         if (date !in manifest.dates) throw notFound()
-        return selectFile(Path.of("days", "$date.json"), acceptEncoding)
+        val raw = readDay(date)
+        val selected = selectFile(Path.of("days", "$date.json"), acceptEncoding, raw)
+        if (selected.contentEncoding == "gzip") requireGzipDayDate(date, selected.bytes)
+        return selected
+    }
+
+    internal fun readDay(date: String): ByteArray =
+        files.readRequired(Path.of("days", "$date.json"), missingManifest = false).also { requireDayDate(date, it) }
+
+    private fun requireDayDate(date: String, bytes: ByteArray) {
+        val node = runCatching {
+            require(bytes.size <= MAX_DAY_BYTES)
+            mapper.readTree(bytes)
+        }.getOrElse { throw invalid(it) }
+        if (!node.isObject || node.get("date")?.takeIf(JsonNode::isString)?.asString() != date) throw invalid()
+    }
+
+    private fun requireGzipDayDate(date: String, bytes: ByteArray) {
+        val expanded = runCatching {
+            GZIPInputStream(bytes.inputStream()).use { it.readNBytes(MAX_DAY_BYTES + 1) }
+        }.getOrElse { throw invalid(it) }
+        requireDayDate(date, expanded)
     }
 
     fun regions(acceptEncoding: String?): DispatchFile {
@@ -136,6 +158,7 @@ class DispatchDataReader(
     }
 
     companion object {
+        private const val MAX_DAY_BYTES = 16 * 1024 * 1024
         private val DATE_PATTERN = Regex("^\\d{4}-\\d{2}-\\d{2}$")
         private val DATE_FORMAT = DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT)
     }
