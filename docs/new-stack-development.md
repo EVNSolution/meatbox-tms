@@ -28,7 +28,7 @@ make check-new-stack
 make check-release
 ```
 
-설치는 lockfile을 사용한다. `make check-new-stack`은 Kotlin `check bootJar`, 프런트 typecheck·lint·build·테스트·산출물, provenance와 golden 회귀를 순서대로 확인한다. `make check-release`는 여기에 전체 Node/golden/배포·패키지 회귀와 실제 JAR 연결 계약을 더한다. `make check-api-connection`은 연결 계약만 따로 빌드·검사할 때 사용한다. 작은 변경은 먼저 인접 focused test를 실행한다.
+설치는 lockfile을 사용한다. `make check-modules`는 Kotlin `check bootJar`와 프런트 typecheck·lint·build·테스트·산출물을 확인하는 공통 모듈 검사다. `make check-new-stack`은 공통 검사에 포크 provenance와 golden 회귀를 더하는 독립 개발 검사다. `make check-release`는 공통 검사 뒤 루트 전체 Node/golden/배포·패키지 회귀를 한 번 실행하고 실제 JAR 연결 계약을 검사한다. 루트 `npm test`에 포함된 포크 회귀를 별도로 반복하지 않는다. `make check-api-connection`은 연결 계약만 따로 빌드·검사할 때 사용한다. 작은 변경은 먼저 인접 focused test를 실행한다.
 
 ## 로컬 실행
 
@@ -77,7 +77,9 @@ node --test test/api-connection/*.test.mjs
 
 웹 생성물은 `apps/web/.runtime/dist/`, 서버 생성물은 `services/api/build/`에 두고 Git에서 제외한다. 패키저는 현재 working tree의 파일 바이트를 담으므로 삭제된 데모를 기준 커밋에서 복원하지 않는다. 새 TEST 릴리스의 성공 수치와 SHA는 실제 배포·복구·재적용·인증 smoke가 끝난 [데모 삭제 결과](demo-removal-result.md)에서만 기록한다. 기존 수치는 [Kotlin 상태 이관 결과](kotlin-state-migration-result.md)의 이전 실행 증거다.
 
-배포용 산출물은 `make package-new-stack`으로 만든다. 이 명령은 `check-release`를 먼저 실행해 현재 소스에서 JAR·웹을 빌드하고 계약 검사까지 통과한 뒤 immutable 패키지를 생성한다. `node scripts/package-new-stack.mjs`는 이미 생성한 바이트를 포장하는 저수준 도구이며 빌드 최신성을 보장하지 않으므로 배포 후보 생성 명령으로 직접 사용하지 않는다. 패키지의 dirty scope에는 프런트·Kotlin 소스도 포함된다. `.gradle/`, `.kotlin/`, `build/`와 `.runtime/`은 Git 기준점에서 제외한다.
+배포용 산출물은 로컬에서 `make package-new-stack`으로 만든다. 이 명령은 `check-release`를 먼저 실행해 현재 소스에서 JAR·웹을 빌드하고 계약 검사까지 통과한 뒤 immutable 패키지를 생성한다. CI는 같은 순서를 한 워크플로에서 명시적으로 실행해 `make check-release`의 빌드·검사를 한 번 통과한 바이트를 `node scripts/package-new-stack.mjs --archive`로 한 번만 포장한다. 생성한 `.tar.gz`, `SHA256SUMS`, 실제 checkout SHA·PR head SHA·run ID·run attempt를 담은 `release-metadata.json`만 `meatbox-test-release` artifact로 7일 보관한다. 첫 실행은 같은 이름의 artifact를 덮지 않고, 실패 복구 재실행만 같은 run의 artifact를 교체하며 새 attempt를 기록한다. PR에서는 merge ref를 검사하므로 metadata의 실제 checkout SHA와 PR head SHA를 구분한다. 배포 단계는 이 artifact를 재사용하며 설치·검사·빌드를 반복하지 않는다.
+
+`node scripts/package-new-stack.mjs`는 이미 생성한 바이트를 포장하는 저수준 도구이며, 독립 실행만으로 빌드 최신성을 보장하지 않는다. 패키지의 dirty scope에는 프런트·Kotlin 소스도 포함된다. `.gradle/`, `.kotlin/`, `build/`와 `.runtime/`은 Git 기준점에서 제외한다.
 
 프런트 책임은 [프로젝트 구조](project-structure.md), 최초 포크 근거는 [프런트 포크 계획](frontend-fork-plan.md)을 따른다.
 

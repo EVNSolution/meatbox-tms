@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := check-new-stack
 
-.PHONY: setup-new-stack check-new-stack check-release run-api run-web dev-web preview-web run-fork-fixture run-connected-fixture run-native-fixture check-api-connection package-new-stack
+.PHONY: setup-new-stack check-modules check-new-stack check-release run-api run-web dev-web preview-web run-fork-fixture run-connected-fixture run-native-fixture check-api-connection package-new-stack
 
 setup-new-stack:
 	npm ci
@@ -8,12 +8,14 @@ setup-new-stack:
 	npm --prefix apps/web ci
 	./services/api/gradlew -p services/api --no-daemon classes
 
-check-new-stack:
+check-modules:
 	./services/api/gradlew -p services/api --no-daemon check bootJar
 	npm --prefix apps/web run check
+
+check-new-stack: check-modules
 	node --test test/web-fork-baseline.test.mjs test/web-fork-legacy/*.test.mjs
 
-check-release: check-new-stack
+check-release: check-modules
 	npm test
 	node --test test/api-connection/*.test.mjs
 
