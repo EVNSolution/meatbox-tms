@@ -1,0 +1,9 @@
+html,
+body,
+button,
+input,
+select {
+  font-family: var(--meatbox-font);
+}
+
+.reference-icon { display: block; flex-shrink: 0; width: 20px; height: 20px; pointer-events: none; }

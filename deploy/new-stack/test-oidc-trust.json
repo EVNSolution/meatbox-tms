@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::902837199612:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": "repo:EVNSolution@267003080/meatbox-tms@1368015789:environment:test",
+          "token.actions.githubusercontent.com:environment": "test",
+          "token.actions.githubusercontent.com:ref": "refs/heads/main",
+          "token.actions.githubusercontent.com:repository_id": "1368015789",
+          "token.actions.githubusercontent.com:repository_owner_id": "267003080"
+        }
+      }
+    }
+  ]
+}

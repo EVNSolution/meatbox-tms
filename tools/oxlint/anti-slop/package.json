@@ -1,0 +1,12 @@
+{
+  "name": "@meatbox/oxlint-plugin-anti-slop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "dependencies": {
+    "@oxlint/plugins": "1.86.0"
+  }
+}

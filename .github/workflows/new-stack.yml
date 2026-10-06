@@ -1,0 +1,100 @@
+name: New stack checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: new-stack-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26.3.1'
+          package-manager-cache: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Install locked Node dependencies
+        run: |
+          npm ci
+          npm --prefix tools/oxlint/anti-slop ci
+          npm --prefix apps/web ci
+      - name: Verify Kotlin, frontend, golden and API contracts
+        run: make check-release
+      - name: Package verified immutable release
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          mkdir -p .runtime
+          node scripts/package-new-stack.mjs --archive > .runtime/ci-package-result.json
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+          import path from 'node:path';
+
+          const packageResult = JSON.parse(await readFile('.runtime/ci-package-result.json', 'utf8'));
+          if (packageResult.status !== 'packaged' || !packageResult.archive || !packageResult.releaseId) {
+            throw new Error('packager did not return a complete immutable release');
+          }
+          const manifest = JSON.parse(await readFile(path.join(packageResult.directory, 'MANIFEST.json'), 'utf8'));
+          if (manifest.releaseId !== packageResult.releaseId || manifest.git?.head !== process.env.GITHUB_SHA) {
+            throw new Error('release manifest does not match the checked out Git revision');
+          }
+          const archive = path.resolve(packageResult.archive);
+          const archiveName = path.basename(archive);
+          if (!archiveName.endsWith('.tar.gz')) throw new Error('release archive is not a tar.gz');
+          const bytes = await readFile(archive);
+          const archiveSha256 = createHash('sha256').update(bytes).digest('hex');
+          const uploadDirectory = path.resolve('.runtime/ci-release');
+          await rm(uploadDirectory, { recursive: true, force: true });
+          await mkdir(uploadDirectory, { recursive: true });
+          await copyFile(archive, path.join(uploadDirectory, archiveName));
+          await writeFile(path.join(uploadDirectory, 'SHA256SUMS'), `${archiveSha256}  ${archiveName}\n`);
+          await writeFile(path.join(uploadDirectory, 'release-metadata.json'), `${JSON.stringify({
+            format: 1,
+            artifactName: 'meatbox-test-release',
+            releaseId: packageResult.releaseId,
+            archive: archiveName,
+            archiveSha256,
+            git: {
+              actualSha: manifest.git.head,
+              prHeadSha: process.env.PR_HEAD_SHA || null,
+              ref: process.env.GITHUB_REF,
+            },
+            github: {
+              event: process.env.EVENT_NAME,
+              repository: process.env.GITHUB_REPOSITORY,
+              runId: process.env.RUN_ID,
+              runAttempt: process.env.RUN_ATTEMPT,
+            },
+          }, null, 2)}\n`);
+          NODE
+      - name: Upload verified TEST release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: meatbox-test-release
+          path: .runtime/ci-release/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+          overwrite: ${{ github.run_attempt > 1 }}

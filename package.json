@@ -2,11 +2,11 @@
   "name": "meatbox-tms-demo",
   "version": "1.0.0",
   "private": true,
-  "description": "미트박스 TMS 데모 — 고객 배송 트래킹 + 다이나믹 ETA",
+  "description": "미트박스 TMS 레거시 API 및 호환성 검증",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test",
+    "test": "node --test test/*.test.js test/*.test.mjs test/web-fork-legacy/*.test.mjs apps/combined/*.test.mjs workspaces/sanghyun-scenario/test/*.test.js",
     "check:capacity": "node scripts/capacity-check.mjs",
     "check:capacity:stream": "node scripts/capacity-stream-check.mjs"
   },

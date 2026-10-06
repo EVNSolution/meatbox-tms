@@ -1,0 +1,4 @@
+interface:
+  display_name: "미트박스 작업 단위"
+  short_description: "고정된 프런트 포크·Kotlin API 방향에 맞춰 구현 범위와 검증을 정합니다."
+  default_prompt: "$meatbox-work-unit로 이번 변경의 요구 동작, 범위, 완료 조건과 검증을 정하고 실행해 주세요."

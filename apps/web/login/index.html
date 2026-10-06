@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>미트박스 TMS</title>
+    <link rel="stylesheet" href="/portal.css">
+  </head>
+  <body>
+    <a class="skip" href="#main">본문으로 이동</a>
+    <header>
+      <a class="brand" href="/"><img src="/portal-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a>
+    </header>
+    <main id="main" class="auth-shell">
+      <section class="auth-card">
+        <p class="eyebrow">MEATBOX TMS</p>
+        <h1>로그인</h1>
+        <p class="intro">미트박스 TMS에 로그인해 주세요.</p>
+        <p class="success" role="status" data-registered hidden>가입이 완료되었습니다. 새 계정으로 로그인해 주세요.</p>
+        <p class="error" role="alert" data-auth-error hidden></p>
+        <form method="post" action="/login" class="auth-form" data-validate data-auth-kind="login">
+          <input type="hidden" name="next" value="/">
+          <div class="form-field">
+            <label for="username">아이디</label>
+            <input id="username" name="username" type="text" autocomplete="username" required minlength="3" maxlength="40" pattern="[A-Za-z0-9](?:[A-Za-z0-9_.]|-){2,39}" autofocus aria-describedby="username-feedback" data-required="아이디를 입력해 주세요." data-too-short="3자 이상으로 입력해 주세요." data-too-long="40자 이내로 입력해 주세요." data-pattern="영문 또는 숫자로 시작하는 아이디를 입력해 주세요.">
+            <p class="field-feedback" id="username-feedback" data-hint="" aria-live="polite" aria-atomic="true"></p>
+          </div>
+          <div class="form-field">
+            <label for="password">비밀번호</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128" aria-describedby="password-feedback" data-required="비밀번호를 입력해 주세요." data-too-short="8자 이상으로 입력해 주세요." data-too-long="128자 이내로 입력해 주세요.">
+            <p class="field-feedback" id="password-feedback" data-hint="" aria-live="polite" aria-atomic="true"></p>
+          </div>
+          <button class="primary" type="submit">로그인</button>
+        </form>
+        <p class="form-note">발급받은 계정으로 로그인해 주세요.</p>
+      </section>
+    </main>
+    <script src="/portal-validation.js" defer></script>
+    <script type="module" src="/portal-auth.js"></script>
+  </body>
+</html>

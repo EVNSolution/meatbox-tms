@@ -1,6 +1,16 @@
 # 문서
 
-## 개발 및 운영
+## 현재 이관 기준
+
+현행 제품 구조와 실행 기준은 아래 문서를 먼저 읽는다. 나머지 Node API·배포·화면 문서는 기존 계약과 이행 이력의 참고 자료이며 폐기한 고객·기사·시나리오 UI를 현행 제품으로 해석하지 않는다.
+
+- [이관 Git 기준점과 독립 검토](release-baseline-2026-10-05.md)
+- [단일 프런트·Kotlin 구조](new-stack-architecture.md), [기능별 파일 책임](project-structure.md)
+- [새 스택 설치·실행·검사](new-stack-development.md), [현재 UI 기준](../DESIGN.md)
+- [Kotlin 이관 검증](kotlin-state-migration-result.md), [데모 실제 삭제 결과](demo-removal-result.md)
+- [삭제 파일 전체 목록](demo-removal-inventory.json), [중간 정리와 다음 작업](migration-checkpoint-2026-10-05.md)
+
+## 기존 개발 및 운영 참고
 
 | 문서 | 내용 |
 |---|---|

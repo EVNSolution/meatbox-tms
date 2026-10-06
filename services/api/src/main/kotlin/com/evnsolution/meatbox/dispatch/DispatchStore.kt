@@ -1,0 +1,163 @@
+package com.evnsolution.meatbox.dispatch
+
+import com.evnsolution.meatbox.compat.DispatchDataReader
+import com.evnsolution.meatbox.compat.SafeSourceFiles
+import com.evnsolution.meatbox.compat.DispatchDataException
+import jakarta.servlet.http.HttpServletResponse
+import java.io.IOException
+import tools.jackson.core.StreamReadFeature
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.databind.node.ObjectNode
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.PosixFilePermissions
+import java.util.UUID
+
+class DispatchStore(
+    private val reader: DispatchDataReader,
+    private val stateDirectory: Path,
+    private val clock: () -> Long = System::currentTimeMillis,
+) {
+    val boot: String = UUID.randomUUID().toString()
+    private val parser = JsonMapper.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build()
+    private val stateFiles = SafeSourceFiles(stateDirectory)
+    // ponytail: one service-wide lock; use per-date locks if measured throughput requires them.
+    private val entries = object : LinkedHashMap<String, Entry>(4, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Entry>): Boolean = size > MAX_DATES
+    }
+
+    @Synchronized
+    fun snapshot(date: String): ObjectNode = publicState(entry(date).plan.snapshot())
+
+    @Synchronized
+    fun command(date: String, command: ObjectNode): ObjectNode {
+        if (!command.path("expectedBoot").isString) fail(HttpServletResponse.SC_BAD_REQUEST, "INVALID_COMMAND")
+        if (command.path("expectedBoot").asString() != boot) {
+            fail(HttpServletResponse.SC_CONFLICT, "BOOT_MISMATCH", "서버가 다시 시작되었습니다. 최신 상태를 다시 불러와 주세요.")
+        }
+        val current = entry(date)
+        val candidate = DispatchPlan(current.day, current.sourceId, clock, current.plan.exportCheckpoint())
+        val output = candidate.command(command)
+        save(date, candidate.exportCheckpoint())
+        entries[date] = current.copy(plan = candidate)
+        output.set("state", publicState(output.path("state") as ObjectNode))
+        return output
+    }
+
+    private fun entry(date: String): Entry {
+        verifyDirectory()
+        // Read-only source bundle and current manifest remain the authority, even with a warm cache.
+        val manifest = reader.loadManifest()
+        if (date !in manifest.dates) fail(HttpServletResponse.SC_NOT_FOUND, "DISPATCH_DATA_NOT_FOUND")
+        val sourceId = manifest.node.path("source").path("csvSha256").asString("")
+        entries[date]?.let {
+            if (it.sourceId != sourceId) fail(
+                HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                "DISPATCH_STATE_SOURCE_MISMATCH",
+            )
+            return it
+        }
+        val day = parse(reader.files.readRequired(Path.of("days", "$date.json"), false), "DISPATCH_DATA_INVALID")
+        val saved = checkpoint(date, sourceId)
+        val plan = try { DispatchPlan(day, sourceId, clock, saved) } catch (error: DispatchException) {
+            if (saved == null) throw error
+            fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_INVALID")
+        }
+        return Entry(day, sourceId, plan).also { entries[date] = it }
+    }
+
+    private fun checkpoint(date: String, sourceId: String): ObjectNode? {
+        val path = stateDirectory.resolve("$date.json")
+        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) return null
+        val bytes = try {
+            if (Files.size(path) > MAX_FILE_BYTES) fail(
+                HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                "DISPATCH_STATE_INVALID",
+            )
+            stateFiles.readRequired(Path.of("$date.json"), false)
+        } catch (_: IOException) {
+            fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_INVALID")
+        } catch (_: DispatchDataException) {
+            fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_INVALID")
+        }
+        return parse(bytes, "DISPATCH_STATE_INVALID").also {
+            val matches = it.path("schemaVersion").asInt() == CHECKPOINT_SCHEMA && it.path("date").asString() == date
+            if (!matches || !it.path("sourceId").isString) fail(
+                HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                "DISPATCH_STATE_INVALID",
+            )
+            if (it.path("sourceId").asString() != sourceId) fail(
+                HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                "DISPATCH_STATE_SOURCE_MISMATCH",
+            )
+        }
+    }
+
+    private fun parse(bytes: ByteArray, code: String): ObjectNode {
+        if (bytes.size > MAX_FILE_BYTES) fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, code)
+        val parsed = runCatching { parser.readTree(bytes) }.getOrNull()
+        return parsed as? ObjectNode ?: fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, code)
+    }
+
+    private fun save(date: String, checkpoint: ObjectNode) {
+        val target = stateDirectory.resolve("$date.json")
+        val temporary = stateDirectory.resolve(".$date.${UUID.randomUUID()}.tmp")
+        try {
+            verifyDirectory()
+            val unsafeTarget = Files.exists(target, LinkOption.NOFOLLOW_LINKS) &&
+                !Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)
+            if (Files.isSymbolicLink(target) || unsafeTarget) {
+                fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_WRITE_FAILED")
+            }
+            val permissions = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))
+            val bytes = parser.writeValueAsBytes(checkpoint)
+            if (bytes.size > MAX_FILE_BYTES) fail(
+                HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                "DISPATCH_STATE_WRITE_FAILED",
+            )
+            val options = setOf(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
+            FileChannel.open(temporary, options, permissions).use {
+                val buffer = ByteBuffer.wrap(bytes)
+                while (buffer.hasRemaining()) it.write(buffer)
+                it.force(true)
+            }
+            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: IOException) {
+            fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_WRITE_FAILED")
+        } finally {
+            // A cleanup failure after atomic replacement must not report a failed commit.
+            runCatching { Files.deleteIfExists(temporary) }
+        }
+    }
+
+    private fun verifyDirectory() {
+        if (!Files.isDirectory(stateDirectory, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(stateDirectory)) {
+            fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_INVALID")
+        }
+        var path = stateDirectory
+        while (path.parent != null) {
+            if (Files.isSymbolicLink(path)) fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_INVALID")
+            path = path.parent
+        }
+    }
+
+    private fun publicState(state: ObjectNode): ObjectNode = state.put("boot", boot)
+
+    private fun fail(
+        status: Int,
+        code: String, message: String = code): Nothing = throw DispatchException(status, code, message,
+    )
+
+    private data class Entry(val day: ObjectNode, val sourceId: String, val plan: DispatchPlan)
+
+    companion object {
+        private const val CHECKPOINT_SCHEMA = 2
+        private const val MAX_DATES = 2
+        private const val MAX_FILE_BYTES = 16 * 1024 * 1024
+    }
+}

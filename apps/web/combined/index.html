@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>미트박스 TMS</title>
+  <link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./brand.css">
+  <link rel="icon" href="/combined/assets/meatbox-app.webp">
+  <link rel="stylesheet" href="./operations.css">
+  <link rel="stylesheet" href="./vehicle-control.css">
+  <link rel="stylesheet" href="./customer-requests.css">
+  <link rel="stylesheet" href="./resource-management.css">
+  <link rel="stylesheet" href="./date-picker.css">
+  <link rel="stylesheet" href="/combined/assets/vendor/maplibre/maplibre-gl.css">
+  <link rel="stylesheet" href="./order-planning.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#page-heading">본문으로 이동</a>
+  <header class="app-header" id="app-header"></header>
+  <div class="app-shell">
+    <aside class="app-navigation" id="app-navigation"></aside>
+    <main class="page-body">
+      <section class="page-intro" aria-labelledby="page-heading">
+        <div><h1 id="page-heading" tabindex="-1">배차 관리</h1><p class="intro-copy" id="page-description">차량별 배정과 전체 주문 위치</p></div>
+      </section>
+      <section class="connection-panel view-content" id="connection-panel" aria-live="polite">
+        <div class="panel loading-state"><span class="loading-dot" aria-hidden="true"></span><div><strong id="connection-title">배송 정보를 불러오고 있습니다.</strong><p id="connection-detail">잠시만 기다려 주세요.</p></div><button type="button" class="button" id="retry-connection" hidden>다시 연결</button></div>
+      </section>
+      <div id="live-pages" hidden>
+        <section id="page-deliveries" class="page-view view-content" data-page="deliveries" aria-label="자원 관리">
+          <div id="resource-management"></div>
+        </section>
+        <section id="page-orders" class="page-view view-content" data-page="orders" aria-label="배차 관리" hidden>
+          <div id="order-planning"></div>
+        </section>
+        <section id="page-control" class="page-view view-content" data-page="control" aria-label="배송 관제" hidden>
+          <div id="control-date-toolbar"></div>
+          <p class="control-empty panel" id="control-empty" hidden></p>
+          <div id="vehicle-control"></div>
+        </section>
+      </div>
+      <p class="sr-only" id="screen-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    </main>
+  </div>
+  <dialog id="customer-notice-dialog" class="customer-notice-dialog" aria-labelledby="customer-notice-heading">
+    <form method="dialog" id="customer-notice-form">
+      <div class="notice-dialog-heading"><div><h2 id="customer-notice-heading">고객 안내 작성</h2><p id="customer-notice-target"></p></div><button type="submit" class="notice-dialog-close" value="cancel" formnovalidate aria-label="닫기"><span data-field-icon="close"></span></button></div>
+      <label class="field" for="customer-notice-body"><span>안내 문구</span><textarea id="customer-notice-body" maxlength="300" rows="5" required></textarea></label>
+      <div class="notice-dialog-footer"><span id="customer-notice-count">0 / 300</span><div><button type="submit" class="button subtle" value="cancel" formnovalidate>취소</button><button type="button" class="button primary" id="send-customer-notice">팝업 보내기</button></div></div>
+    </form>
+  </dialog>
+  <script src="/combined/assets/vendor/maplibre/maplibre-gl-csp.js"></script>
+</body>
+</html>

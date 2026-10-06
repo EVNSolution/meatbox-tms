@@ -1,0 +1,970 @@
+{
+  "schemaVersion": 1,
+  "removedOn": "2026-10-05",
+  "sourceCommit": "c1f29a657678b51af888d6be2574103d89c1562f",
+  "uniqueDeletedFileCount": 194,
+  "entries": [
+    {
+      "path": "apps/combined/app-viewer.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "b5bf42108ca202f2f5f35d859dba4681d75ef637c170ca94ef2edb04adeecd29"
+    },
+    {
+      "path": "apps/combined/app.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747"
+    },
+    {
+      "path": "apps/combined/assets/delivery-proof-example.jpg",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "7f21a25e02cf13f6e812d61eddfa020f588c81a594650b4fc9106a2bec0e7796"
+    },
+    {
+      "path": "apps/combined/assets/maps/README.md",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "428bbdf31ddcf0bf131d472bca0c1741485c1410e2df162bfec34574e591ccf1"
+    },
+    {
+      "path": "apps/combined/assets/maps/driver-depot-pin.svg",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "e177a827adddac41f5ba01dede0d7c1e387365f2edd410bcf510d32b4b88c7fa"
+    },
+    {
+      "path": "apps/combined/assets/maps/dsv-destination-marker.svg",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "5f0ef8bc2ee43180de43101b26c4abd8d13cdfead5c31cf032e59554df870a46"
+    },
+    {
+      "path": "apps/combined/assets/maps/dsv-korea-v1.json",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "0acdfb023997c18119ea41cdb3e86affc7e7cdbf5d0b2f33c4f00daa575b9449"
+    },
+    {
+      "path": "apps/combined/assets/maps/dsv-vehicle-marker.svg",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "dac8f0b0bc172d8fecdfce13c306ea53ec9395655f2c84896b5b0a48bc3ea7ad"
+    },
+    {
+      "path": "apps/combined/assets/meatbox-app.webp",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "9e15812f416651aa6e9a2152c989adb3b4b69130d70db882f37c5a75a8cdeb2c"
+    },
+    {
+      "path": "apps/combined/assets/vendor/maplibre/LICENSE.txt",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2"
+    },
+    {
+      "path": "apps/combined/assets/vendor/maplibre/maplibre-gl-csp-worker.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "f950e7b15c49c8b9c7bb52136df2a2df2f6f03b83b8927774573fc98b067f7f0"
+    },
+    {
+      "path": "apps/combined/assets/vendor/maplibre/maplibre-gl-csp.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "a1f1847bac64aa00acbf80fbb79b2c5af24d8eecaaa5e2ad14080fab81f1de95"
+    },
+    {
+      "path": "apps/combined/assets/vendor/maplibre/maplibre-gl.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732"
+    },
+    {
+      "path": "apps/combined/brand.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "e4d1a54e279495b190e88e340ecf7c257d11a758a3500c2ba1329a422e5b3e30"
+    },
+    {
+      "path": "apps/combined/customer-demo-route.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "c0ebaf11c57ba47084d6f8edc91496f75a02b91997dbbf843c6853b4c1f9714c"
+    },
+    {
+      "path": "apps/combined/customer-demo-route.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "3053be1cd456070039559369c5507335b091eeda0629e5aa613c5602a8008929"
+    },
+    {
+      "path": "apps/combined/customer-inbox.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "df5935562bf9506cdf30510156cfc53d772fa7e5f1ef50bf80c460040f859170"
+    },
+    {
+      "path": "apps/combined/customer-inbox.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "a26ca0210c84b4f05890c0ef77853145ccc16358159b0bf4ce153dcb26194683"
+    },
+    {
+      "path": "apps/combined/customer-picker-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "e9182c73a2e96ef28c51514e1d211cbd63e39a7e54d219fca108961fde19d41b"
+    },
+    {
+      "path": "apps/combined/customer-picker-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "7996d03e6d5612902299d3652bcede1451aaa362aaf127079edd923ac21156b1"
+    },
+    {
+      "path": "apps/combined/customer-renderer.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "0b8db425757bc6549b3def45f2aa80dfa484a571e7b59975da3c83858b20f253"
+    },
+    {
+      "path": "apps/combined/customer-renderer.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "5a95f7b3aeba9e6049b481effc50cf0a35fdb41557b06178c8bdf63367607c2e"
+    },
+    {
+      "path": "apps/combined/customer-requests.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "ff0b5b153d8242395dcd2d89081721a0ba3781220089c84b33faff28f50a2a9d"
+    },
+    {
+      "path": "apps/combined/customer-requests.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "45117fbb2a187b39b78c24e7c7221921e0ca63918470f43aa65cd34c99458306"
+    },
+    {
+      "path": "apps/combined/customer-requests.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "aaf12a65a6af51136d1d7491f198756adbbade262564da2656d661fe5c6fc15e"
+    },
+    {
+      "path": "apps/combined/customer-scenarios.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "272e17320793a161802c7d9859ab2191fe32889629d8bd178ef694d1a07a183e"
+    },
+    {
+      "path": "apps/combined/customer-scenarios.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "75202de094bc85fc9cbf49737204b9059959b235126b05bc8774085ef906dddf"
+    },
+    {
+      "path": "apps/combined/date-picker.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "42ae92908366916e1055b017c7962dcc62b1c08c1e7470e99d69f9aa5437c36a"
+    },
+    {
+      "path": "apps/combined/date-picker.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "dd01276feb79196c02b11aaa569d38b4785fbe8e21e86dfbcc52b811f0f6adcd"
+    },
+    {
+      "path": "apps/combined/date-picker.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "cddb0c83f730b7bc590c1952873d8cfde18f12e59db4420cff9e40ca4bda3d12"
+    },
+    {
+      "path": "apps/combined/date-summary-toolbar.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "a37923e8f65437be1808ce9b5d011c8b444bef7694e161dd195ab9a7d2e9caff"
+    },
+    {
+      "path": "apps/combined/date-summary-toolbar.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "55bd07b865d77cbc6713ad464054aaacb880863c507f5be5fc2039a985100b4a"
+    },
+    {
+      "path": "apps/combined/dated-dispatch.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a"
+    },
+    {
+      "path": "apps/combined/dated-dispatch.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c"
+    },
+    {
+      "path": "apps/combined/delivery-review.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "f80b2df8ee4b5b1d009009c9d47bfce94ca6a7635f38f65af9caa8fb6a780d65"
+    },
+    {
+      "path": "apps/combined/delivery-review.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "53024d07740e75bf5732d219368be95863ef6db848d354d46267bf741f771bb0"
+    },
+    {
+      "path": "apps/combined/demo-shell.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "383859293707aeda3972737e65303a8bea36ac540b955ccc58e89afd6c5d40a9"
+    },
+    {
+      "path": "apps/combined/demo-shell.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "99d9ee46030ed0964eda609db8a657737e2fde42d37771be18e3d7885ccf0e48"
+    },
+    {
+      "path": "apps/combined/destination-directory.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "8448e916376c2119558583082e9905b283dc862ae11f78fe347a11e7d4409ffb"
+    },
+    {
+      "path": "apps/combined/destination-directory.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "77e300a08b8f39baf6c4a0e743a6ac9113ac807cf8374b72cf0e0067556f9c9c"
+    },
+    {
+      "path": "apps/combined/dispatch-map-layer.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "944304bc83934f094fa317494e7d5ed047ba0b0f432cae91d247fd7a71dcf56d"
+    },
+    {
+      "path": "apps/combined/dispatch-map-layer.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7"
+    },
+    {
+      "path": "apps/combined/dispatch-presentation.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "b7d05ff12247461d1a15fcda270612486f03248eab0ec7fb7a1fd69b2a69cacd"
+    },
+    {
+      "path": "apps/combined/dispatch-workflow.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "d3c042a43e3ae08a4eac46590b3bc9f662d90ba11a909fb5a4c4b5b99ea00a13"
+    },
+    {
+      "path": "apps/combined/dispatch-workflow.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59"
+    },
+    {
+      "path": "apps/combined/dispatch-workflow.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "1e721931eec18bce6266d669083e65ab096947ca61a4bf9c3637bf549156f0f2"
+    },
+    {
+      "path": "apps/combined/driver-history-calendar.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "c097a37e1d31ddf19aa9bebc2083ddae07257828d9451612b9bfed18238229cf"
+    },
+    {
+      "path": "apps/combined/driver-history-calendar.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "03526c046b116035d3ef5d3b3a732296625a541ac9fceea52a117578cdc3188a"
+    },
+    {
+      "path": "apps/combined/driver-history.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "33387d656e501b4eab441be3ab43c71b60a2742c067f49a55326f01aba6f691a"
+    },
+    {
+      "path": "apps/combined/driver-history.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "c71edadc44052eb806a6df7fb6c9357d36b66c6fda279fa785ffbc74178d36d2"
+    },
+    {
+      "path": "apps/combined/driver-map-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "5fce54d456c274ad3f3a828b1133c04416ad80b036714ae4f93a423f68c2e411"
+    },
+    {
+      "path": "apps/combined/driver-map-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "504bafb6f8ce4e02f839177b234adf92342e74dd8bb02f0a3398d0e6b0a1a82c"
+    },
+    {
+      "path": "apps/combined/driver-map.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "dce5b43bab1d9cbf1b6b7dc5cfeb37e86aaa45634aeb1ca39486923b6de19141"
+    },
+    {
+      "path": "apps/combined/driver-map.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "259cb0b1e8c642e07b0213ae605e41b160f2e86d6c4f35a5f8fe2e0bf3a044ee"
+    },
+    {
+      "path": "apps/combined/driver-settings.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "11e073f7923a1f783a5d71f62da8d8e406072a758ce71489f8b67d82c7b535ed"
+    },
+    {
+      "path": "apps/combined/driver-view-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "32802901efce8012577c5937df6be8dcd386886972e5d951e4280021a964c5f0"
+    },
+    {
+      "path": "apps/combined/driver-view-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "b6c3f320241c8480f5afec1470f54a71f2fd77bdb83447a3061924b7ed832a7a"
+    },
+    {
+      "path": "apps/combined/driver.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "5502e9fe5b9dbf4b43ea66ff289e5899cf3729cdf97e1f2a3fac3ebb9d149c53"
+    },
+    {
+      "path": "apps/combined/driver.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "844acf381f77714f6c96333cd7bdf315cb1cc6eab02f0db1c34c341d8045f2bd"
+    },
+    {
+      "path": "apps/combined/driver.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "779f1aaa79680cb6c919a5b07e1f7339504d096f6d9bf1f7c3ccbf55faee611e"
+    },
+    {
+      "path": "apps/combined/index.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d"
+    },
+    {
+      "path": "apps/combined/map-preview.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "83e16a5d0e67fee06e09f2ecf0189266e33bb3e1af1c32f6a57b95ddc7237a3c"
+    },
+    {
+      "path": "apps/combined/map-wheel-zoom.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "6c095e031975ac80e1e443c1fa95ed1d02d8776acb5a3f18fd94cdab2d780b77"
+    },
+    {
+      "path": "apps/combined/map-wheel-zoom.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "0fb048418eb21f7e36b4ff8a492435840ecf7bd82c8fa07d5a294d47ff8dcc4e"
+    },
+    {
+      "path": "apps/combined/mobile-customer-links.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "79acbcaf12d7674650ae6df085f2562c47c911eae1eef892f16c36907052f56e"
+    },
+    {
+      "path": "apps/combined/mobile-customer.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "8f6cb89ee52e7a153f142eebe42db0b94d207e6689afc24c2410dc9fdd018233"
+    },
+    {
+      "path": "apps/combined/mobile-customer.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "9ba6b85ef694ca0186615c2bcb1a11ac658f99fcf84a46ad3ffb9470ac97d12b"
+    },
+    {
+      "path": "apps/combined/operating-date.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "b77d29fe79539d8809ae9d121b2152163c71bb70368d2614369cdc594eb7370f"
+    },
+    {
+      "path": "apps/combined/operations-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c"
+    },
+    {
+      "path": "apps/combined/operations-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732"
+    },
+    {
+      "path": "apps/combined/operations.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "97acc70d352b0fe56833669611ef10b4ffbdab2f56a79e3f891ac9af4dc86b4b"
+    },
+    {
+      "path": "apps/combined/order-planning.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2"
+    },
+    {
+      "path": "apps/combined/order-planning.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996"
+    },
+    {
+      "path": "apps/combined/order-planning.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b"
+    },
+    {
+      "path": "apps/combined/pagination-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "f6f85d5b296b27daafd9ad932f64b1c6f4608e2b66c6fa141d02c3013b4bc476"
+    },
+    {
+      "path": "apps/combined/pagination-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "1302bcf42732d9b25f973063f62f0f486858f216db8d5870ceaa4d27bb31936b"
+    },
+    {
+      "path": "apps/combined/reference-icons.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "f58dd54e94dc91a9f9c8e90a48820c8fe5b48a39a3e605971ac629b09267e2ba"
+    },
+    {
+      "path": "apps/combined/resource-client.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "d4d51b50f7fb8c55961f33c5bc9b2e3c4511b38bb98574e4725394ef31a9f9f2"
+    },
+    {
+      "path": "apps/combined/resource-client.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "dfa9f6cc94bbb00822863cf0f86924ef9d3e0352f2948f8d9abeecc3ab1b31a7"
+    },
+    {
+      "path": "apps/combined/resource-management.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db"
+    },
+    {
+      "path": "apps/combined/resource-management.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26"
+    },
+    {
+      "path": "apps/combined/resource-management.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "44615c6e7c1e03176b84950823376125d3913f946b27b745932d83f5de7b54f5"
+    },
+    {
+      "path": "apps/combined/route-editor.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "19e20fbbb0c48b070d4a9e289bbbd1ee5557f0e20c57aa6a050a54f3644764d3"
+    },
+    {
+      "path": "apps/combined/route-editor.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "a1e90e8412edb90cf341b7bf8487abac5629f45f204d84893b7ee1d41e28556f"
+    },
+    {
+      "path": "apps/combined/scenario-guide.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "129cbbffec628cb96cc3b3c62854ba24c663e9f888654a99a8286678b5d4b99e"
+    },
+    {
+      "path": "apps/combined/scenario-guide.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "b790e25acd564de42c7d74bd8f5b323efd942ac85fae83a541ee215535008afd"
+    },
+    {
+      "path": "apps/combined/scenario-tools.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "1334b3c8d4cf4e817ad1fe376f0a1677a4e9672bf37929c05e86eda48517e539"
+    },
+    {
+      "path": "apps/combined/scenario-tools.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "202b0959705cceb66fb120200a1d21830d6421d3b5eb131e90f8c6e7801751d9"
+    },
+    {
+      "path": "apps/combined/scenario-tools.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "0d943e9d72b442c712980ee33e1b66e481452d87600e0db11c3c5c890ea6f604"
+    },
+    {
+      "path": "apps/combined/simulation-client.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "9eb1950a8a75eb67e57a28e0da770b6497602c62024eb09958f77aea808ea8d0"
+    },
+    {
+      "path": "apps/combined/simulation-client.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "802909c4d14874f7f57840b9f2c06f107c4db7a2c61e265114ba6ce585c6339c"
+    },
+    {
+      "path": "apps/combined/source-client.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "00c7cfb02120fc13b6ca0d43f1e54a5c93c6af59401bad0785b0bd69edd8c8c9"
+    },
+    {
+      "path": "apps/combined/source-client.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "916b9829e26c5dceb234b08bb6a3f1b2c9f00b092abbc21a88a61d1f0ec7ab21"
+    },
+    {
+      "path": "apps/combined/source-context.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "a747d4a9a5270f4a973863166b16290eece7faaf978f70a00dfd6eb2afde64aa"
+    },
+    {
+      "path": "apps/combined/source-context.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "e2c2a68eda625b2c3bbb08983a62a6e97500ecf22fe5721ac491645057e661ad"
+    },
+    {
+      "path": "apps/combined/source-viewer-plan.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "7bf25e4b6de82d5a7c5f3126e57d991917784598c70d800b2e19fbf8be62d61d"
+    },
+    {
+      "path": "apps/combined/source-viewer-plan.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "60b0bccae66c73ee5f207b784ec63ba729ca6eaadc7eab996c127b8e45fc8b7e"
+    },
+    {
+      "path": "apps/combined/styles.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3"
+    },
+    {
+      "path": "apps/combined/vehicle-control.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a"
+    },
+    {
+      "path": "apps/combined/vehicle-control.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97"
+    },
+    {
+      "path": "apps/combined/vehicle-control.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa"
+    },
+    {
+      "path": "apps/combined/vehicle-operations-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "28d5db33286cfadf7d95c78892d3bdb2a6fe045c2369bc4e60290e2709b31c1e"
+    },
+    {
+      "path": "apps/combined/vehicle-operations-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "87c1362b55540f97db6670bf65922289f6a70068e54dd7f243bf805333c5ab7a"
+    },
+    {
+      "path": "apps/web/combined/app-viewer.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "b5bf42108ca202f2f5f35d859dba4681d75ef637c170ca94ef2edb04adeecd29"
+    },
+    {
+      "path": "apps/web/combined/customer-demo-route.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "c0ebaf11c57ba47084d6f8edc91496f75a02b91997dbbf843c6853b4c1f9714c"
+    },
+    {
+      "path": "apps/web/combined/customer-inbox.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "df5935562bf9506cdf30510156cfc53d772fa7e5f1ef50bf80c460040f859170"
+    },
+    {
+      "path": "apps/web/combined/customer-inbox.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "a26ca0210c84b4f05890c0ef77853145ccc16358159b0bf4ce153dcb26194683"
+    },
+    {
+      "path": "apps/web/combined/customer-picker-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "e9182c73a2e96ef28c51514e1d211cbd63e39a7e54d219fca108961fde19d41b"
+    },
+    {
+      "path": "apps/web/combined/customer-picker-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "7996d03e6d5612902299d3652bcede1451aaa362aaf127079edd923ac21156b1"
+    },
+    {
+      "path": "apps/web/combined/customer-renderer.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "691d484ffbd8e2fa1b456d295f5aa6dede54b9d4bff698a37d2fd013bab76347"
+    },
+    {
+      "path": "apps/web/combined/customer-renderer.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "5a95f7b3aeba9e6049b481effc50cf0a35fdb41557b06178c8bdf63367607c2e"
+    },
+    {
+      "path": "apps/web/combined/customer-scenarios.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "272e17320793a161802c7d9859ab2191fe32889629d8bd178ef694d1a07a183e"
+    },
+    {
+      "path": "apps/web/combined/customer-scenarios.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "75202de094bc85fc9cbf49737204b9059959b235126b05bc8774085ef906dddf"
+    },
+    {
+      "path": "apps/web/combined/demo-shell.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "383859293707aeda3972737e65303a8bea36ac540b955ccc58e89afd6c5d40a9"
+    },
+    {
+      "path": "apps/web/combined/demo-shell.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "99d9ee46030ed0964eda609db8a657737e2fde42d37771be18e3d7885ccf0e48"
+    },
+    {
+      "path": "apps/web/combined/driver-history-calendar.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "c097a37e1d31ddf19aa9bebc2083ddae07257828d9451612b9bfed18238229cf"
+    },
+    {
+      "path": "apps/web/combined/driver-history-calendar.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "03526c046b116035d3ef5d3b3a732296625a541ac9fceea52a117578cdc3188a"
+    },
+    {
+      "path": "apps/web/combined/driver-history.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "33387d656e501b4eab441be3ab43c71b60a2742c067f49a55326f01aba6f691a"
+    },
+    {
+      "path": "apps/web/combined/driver-history.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "c71edadc44052eb806a6df7fb6c9357d36b66c6fda279fa785ffbc74178d36d2"
+    },
+    {
+      "path": "apps/web/combined/driver-map-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "5fce54d456c274ad3f3a828b1133c04416ad80b036714ae4f93a423f68c2e411"
+    },
+    {
+      "path": "apps/web/combined/driver-map.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "a42f7e5ace908c7345b28654f036145ed3195c2a2551fa4a66b9de9b6018fdf5"
+    },
+    {
+      "path": "apps/web/combined/driver-map.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "259cb0b1e8c642e07b0213ae605e41b160f2e86d6c4f35a5f8fe2e0bf3a044ee"
+    },
+    {
+      "path": "apps/web/combined/driver-settings.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "11e073f7923a1f783a5d71f62da8d8e406072a758ce71489f8b67d82c7b535ed"
+    },
+    {
+      "path": "apps/web/combined/driver-view-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "32802901efce8012577c5937df6be8dcd386886972e5d951e4280021a964c5f0"
+    },
+    {
+      "path": "apps/web/combined/driver-view-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "b6c3f320241c8480f5afec1470f54a71f2fd77bdb83447a3061924b7ed832a7a"
+    },
+    {
+      "path": "apps/web/combined/driver.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "90daab73532ea252be79801a51c2eb4882184d74206e3b50fc5b219962c6de63"
+    },
+    {
+      "path": "apps/web/combined/driver.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "08850acde91a76bcec8b41982c0eb46e0f227d46a2049b0a4f6f5a070a05836d"
+    },
+    {
+      "path": "apps/web/combined/driver.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "563e6f40651ed149d9339a507d5a9fae0204fc2b75d974cfce1bc843b11b41ae"
+    },
+    {
+      "path": "apps/web/combined/mobile-customer-links.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "79acbcaf12d7674650ae6df085f2562c47c911eae1eef892f16c36907052f56e"
+    },
+    {
+      "path": "apps/web/combined/mobile-customer.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "9c4e3b7ffb2f0867b438c4bd1e8a6bbca603af895635f719893c7c2a5309ed4b"
+    },
+    {
+      "path": "apps/web/combined/mobile-customer.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "55065984b431af64a1b0618758321923ec51944f7d5c746e6080bb315fe2b36f"
+    },
+    {
+      "path": "apps/web/combined/scenario-guide.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "129cbbffec628cb96cc3b3c62854ba24c663e9f888654a99a8286678b5d4b99e"
+    },
+    {
+      "path": "apps/web/combined/scenario-guide.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "b790e25acd564de42c7d74bd8f5b323efd942ac85fae83a541ee215535008afd"
+    },
+    {
+      "path": "apps/web/combined/scenario-tools.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "710cb4d2715973bf97fa99b7dc26a4a933ab7d7a84298726c53ddc4bcdce9d22"
+    },
+    {
+      "path": "apps/web/combined/scenario-tools.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "202b0959705cceb66fb120200a1d21830d6421d3b5eb131e90f8c6e7801751d9"
+    },
+    {
+      "path": "apps/web/combined/scenario-tools.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "0d943e9d72b442c712980ee33e1b66e481452d87600e0db11c3c5c890ea6f604"
+    },
+    {
+      "path": "apps/web/combined/state-frames.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "79fbac705124888bd4ba8babc8643dd33652be61411815f1d7c5d748404e161c"
+    },
+    {
+      "path": "apps/web/public/combined/assets/delivery-proof-example.jpg",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "7f21a25e02cf13f6e812d61eddfa020f588c81a594650b4fc9106a2bec0e7796"
+    },
+    {
+      "path": "apps/web/public/combined/assets/maps/driver-depot-pin.svg",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "e177a827adddac41f5ba01dede0d7c1e387365f2edd410bcf510d32b4b88c7fa"
+    },
+    {
+      "path": "apps/web/public/scenario/common.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "3a373ce574041cd88539bf0e472e6ed50e368c679de7428ed49e369b6f72b466"
+    },
+    {
+      "path": "apps/web/public/scenario/control.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "3fe754b00d3d1a5f3168d1f818886afce7ea63046a0e8c1a8b6151616a2f4cc0"
+    },
+    {
+      "path": "apps/web/public/scenario/customer.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "d1d74a6808758606a3f4573defb50f0b0d2eac23ca047f933ff210a390b8ee71"
+    },
+    {
+      "path": "apps/web/public/scenario/driver.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "b713c92ce8c4219fb70aa6d83f85253050cd4e2b76fcc581a38c60e2c293cec7"
+    },
+    {
+      "path": "apps/web/public/scenario/present.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "cd927c2070563bac8b8331a4e8019d7f16897f57f80236ea8054165fa0b04220"
+    },
+    {
+      "path": "apps/web/public/scenario/shared.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "0f6304f06e9c36be4393cf8d6ec0ec42337789a9ddb459c4484c3ffae10c2ee7"
+    },
+    {
+      "path": "apps/web/scenario/control.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "3978fe85d4a4abf70ed9a1c203429451b668a9ffec88350c8e9f026117c9d802"
+    },
+    {
+      "path": "apps/web/scenario/customer.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "bded179444edc4f5518de6dece1c609308e98216029edf66c47b5f1f63a04b7d"
+    },
+    {
+      "path": "apps/web/scenario/driver.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "4ff8c9d2ce052eaef0cb2010b1eb050e5cbcd465b0ddac45877aac44597ba588"
+    },
+    {
+      "path": "apps/web/scenario/present.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "83ff30c647b98df7705012fc0234e41219d147b4d57a08eb0dd2a6bb187e9be2"
+    },
+    {
+      "path": "apps/web/scenario/reference.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "43814838dd3bc3c5b1ced2624071259973192f8da074f7fb0ec335a54ce6538e"
+    },
+    {
+      "path": "apps/web/src/api/dispatch-contract.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "e102ee3956de66d11cc695c1b7dc4b3644acbc0384e677c1e87c21a4d1753a45"
+    },
+    {
+      "path": "apps/web/src/api/dispatch-contract.ts",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "72fcbec116b4fc582cf5cbd37ce72d48639b8e1d4b787c72fff419235f94b05e"
+    },
+    {
+      "path": "apps/web/ui-layout/sample-data.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "e088dead8d9328e7e811687f741014958a38682b0d55f67b8b3c09992f60cafa"
+    },
+    {
+      "path": "apps/web/ui-layout/sample-data.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "e9fad4a3dd9d0bb44eebca7a0207e29550bdee84a629540b68367dcf0e6aadb2"
+    },
+    {
+      "path": "apps/web/ui-layout/scenario-tools.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "a5f2facc7c383afb750523db0e96907a3352635b37977cd29f5c453f0b67fc5f"
+    },
+    {
+      "path": "apps/web/ui-layout/scenario-tools.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "dee1a222668e487b6dcc5fa6e7c5355ab02944745a463197a6315c960c2f937f"
+    },
+    {
+      "path": "apps/web/ui-layout/scenario-tools.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "9e7f88d36cff235c983705f9a0337aab58e27cf27cc85ac2299aac097eaad99f"
+    },
+    {
+      "path": "apps/web/ui-layout/view-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "18ac4fda9d1f3c5a1e85af2edb58bfc40b79248afb4a8179fb9fb883d325ddf3"
+    },
+    {
+      "path": "apps/web/ui-layout/view-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "3731e9995072ab08ab9e38c7afd97406eb74b829b9017a44154c2ee3b65c0643"
+    },
+    {
+      "path": "scripts/vehicle-operations-browser-check.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained."
+    },
+    {
+      "path": "test/web-fork-legacy/customer-demo-route.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "64c6411b35f1ec602919e33862d07369082996976396f2c627839ef6c232ee12"
+    },
+    {
+      "path": "test/web-fork-legacy/delivery-review.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "09907df4a62569e8bd7bb059ca03fb998378815d1807bda5ee1093e2bd72870a"
+    },
+    {
+      "path": "test/web-fork-legacy/driver-map-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "lastForkSha256": "97e8224aeb38faf74a3df57a43f30a50474e1f343527489e9473481b16bde098"
+    },
+    {
+      "path": "workspaces/jiin-ui/app.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "9e316941d088e79e69f526cc8be08e2cd548ef7f9966a93c0f2117059cdab412"
+    },
+    {
+      "path": "workspaces/jiin-ui/design-guide.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "77d00d6a3386e87c79bf80a4cc8c2856f88948d291d31705d1a2b644bec4b293"
+    },
+    {
+      "path": "workspaces/jiin-ui/design-guide.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "aa45a9f4886cdf4ce604aa4fd5e80a3ddbb48de49751441f35a3a36737545a21"
+    },
+    {
+      "path": "workspaces/jiin-ui/index.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "4df117e6bd50b42b96719d7fc6b77e2f34abd7b2d3d388e53e4a1329725ee7a9"
+    },
+    {
+      "path": "workspaces/jiin-ui/sample-data.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "e088dead8d9328e7e811687f741014958a38682b0d55f67b8b3c09992f60cafa"
+    },
+    {
+      "path": "workspaces/jiin-ui/sample-data.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "e9fad4a3dd9d0bb44eebca7a0207e29550bdee84a629540b68367dcf0e6aadb2"
+    },
+    {
+      "path": "workspaces/jiin-ui/scenario-tools.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "cfb0838e64e1e9b3ce9c83158ff9f04190796d0510f183c59464ac2ed9380c94"
+    },
+    {
+      "path": "workspaces/jiin-ui/scenario-tools.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "729889b365b4221356b7dd35aa6e8516746acd2e05693d38caeecba5f11d6360"
+    },
+    {
+      "path": "workspaces/jiin-ui/scenario-tools.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "9e7f88d36cff235c983705f9a0337aab58e27cf27cc85ac2299aac097eaad99f"
+    },
+    {
+      "path": "workspaces/jiin-ui/styles.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "f8dd37e0755aff15d910ce99f1e4c5422fa16689cb244414ef0b22bfba89d3a6"
+    },
+    {
+      "path": "workspaces/jiin-ui/view-components.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "0e381f10b2c4a063e5d9a440a60bdb0a32449e9c4063aac5cbe0c21b8be3a8a0"
+    },
+    {
+      "path": "workspaces/jiin-ui/view-model.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "18ac4fda9d1f3c5a1e85af2edb58bfc40b79248afb4a8179fb9fb883d325ddf3"
+    },
+    {
+      "path": "workspaces/jiin-ui/view-model.test.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "3731e9995072ab08ab9e38c7afd97406eb74b829b9017a44154c2ee3b65c0643"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/.claude/launch.json",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained."
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/.gitignore",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained."
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/README.md",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained."
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/package-lock.json",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained."
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/package.json",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained."
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/common.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "208e5b4cfe50adbc9bfc11933413b0975e4a3024685cc2d525dcc45ed9e84f2b"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/control.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "d04883563638aa6a9ff5027db48b6111304a23f7dc005d6792a25b63c2a87da1"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/control.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "3fe754b00d3d1a5f3168d1f818886afce7ea63046a0e8c1a8b6151616a2f4cc0"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/customer.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "4e08c208049417925552f6eb67ae71c81307853ded10c32ea2a88ca4e39a5a8f"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/customer.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "d1d74a6808758606a3f4573defb50f0b0d2eac23ca047f933ff210a390b8ee71"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/driver.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "b955e51c1f62a387c51a90c51c18e51bb015a48bc46c1c377c0c0140e2a557df"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/driver.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "4152285d6b9cd87fd161d5866d684f8f335904e5181c5b811395c220618ae540"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/index.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "c7627beed01281536fb0672f43b97eafdaa7a3ddd6720e97652b5cc8826b69dd"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/present.html",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "8a400c0f1fd64d93d58a7f8f6fa3973862529312bfea01a2fc72215cc316a91c"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/present.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "cd927c2070563bac8b8331a4e8019d7f16897f57f80236ea8054165fa0b04220"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/public/shared.css",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained.",
+      "baselineSha256": "0f6304f06e9c36be4393cf8d6ec0ec42337789a9ddb459c4484c3ffae10c2ee7"
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/scripts/gen-routes.mjs",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained."
+    },
+    {
+      "path": "workspaces/sanghyun-scenario/server.js",
+      "reason": "Retired demo or duplicate frontend; shared operational and golden models retained."
+    }
+  ]
+}
