@@ -884,14 +884,15 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "27e7494847654d2ac0401ae5034549a8a10de828d7ed909c45a11c55204e6b54",
+      "targetSha256": "9e9a0332bc883b61102dfafcdcbaad09af5b66e95c1f633a9f34e7f576b54be8",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Remove unread promise binding and use endsWith for the fixed suffix",
         "Import and re-export the exact shared map model/factory functions instead of defining them inside the planning view",
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Restore the empty selection card after a populated date hid its unselected-order view."
       ],
       "status": "active"
     },
@@ -921,11 +922,12 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "ceb483292310c9a8d746c15eaf5892ce8df0f4deecd6fe85258f6a97a1605fcf",
+      "targetSha256": "895c27dbae68ac33567695f664772a85b1be029276f88ad7e10d0f0047b25407",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Restore the empty selection card after a populated date hid its unselected-order view."
       ],
       "status": "active"
     },
