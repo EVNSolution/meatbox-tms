@@ -155,6 +155,11 @@ export function mountRouteEditor({ element, onSend, onSelect, onCancel = () => {
 
   return {
     beginEdit,
+    clear() {
+      latest = null; selectedId = null; connected = false; draft = null; base = null; pending = false; drag = null;
+      message = ''; error = false; rendered = ''; renderedVehicleId = null;
+      element.innerHTML = '';
+    },
     update(state, selected, isConnected) {
       latest = state; selectedId = selected; connected = isConnected;
       if (pending && draft.every((id, index) => id === order()[index])) {

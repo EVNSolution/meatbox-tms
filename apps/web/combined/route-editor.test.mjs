@@ -63,6 +63,25 @@ const editableState = () => ({ phase: 'shipping', vehicle: { id: 'V1', live: tru
   { id: 'S1', name: '현재', status: 'current' }, { id: 'S2', name: '대기 2', status: 'pending' }, { id: 'S3', name: '대기 3', status: 'pending' },
 ] });
 
+test('빈 관제일 전환은 이전 배송 순서 편집과 요청 상태를 제거한다', () => {
+  const { editor, element, click, action, sent } = editorFixture();
+  editor.update(editableState(), 'S1', true);
+  editor.beginEdit();
+  click({ '[data-move]': { dataset: { move: 'S2', direction: '1' } } });
+  action('save');
+  assert.equal(sent.length, 1);
+  editor.clear();
+  assert.equal(element.innerHTML, '');
+  assert.equal(editor.showError('이전 날짜의 응답'), false);
+  editor.beginEdit();
+  action('save');
+  assert.equal(sent.length, 1);
+  editor.update(editableState(), 'S1', true);
+  assert.match(element.innerHTML, /data-route-action="edit"/);
+  assert.doesNotMatch(element.innerHTML, /data-route-action="save"/);
+  assert.ok(element.innerHTML.indexOf('data-route-id="S2"') < element.innerHTML.indexOf('data-route-id="S3"'));
+});
+
 test('direct route entry starts editing once and preserves the moved draft on re-entry', () => {
   const { editor, element, click, action, sent } = editorFixture();
   const state = editableState();

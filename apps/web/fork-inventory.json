@@ -28,11 +28,12 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "fe1b38c39d6d186d47df4bcf5f22dffe0e48c7651c0090e61ab42e62e6941aab",
+      "targetSha256": "6e41de872735fd571e10488fe2af5231c36074477346b29774a0dcf6d46182e6",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Keep delivery control containers and tabs visible without data; distinguish confirmed empty and unknown counts and reset previous date selections, notices and route drafts."
       ],
       "status": "active"
     },
@@ -839,10 +840,11 @@
       "source": "apps/combined/operations-model.mjs",
       "sourceSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
       "target": "apps/web/combined/operations-model.mjs",
-      "targetSha256": "acdad5080bd1f2c3f5a1e3ba588922ffc9bc759467dc047d808a6bd05a15b23e",
+      "targetSha256": "df6b1b5bc3a2e7a360816b32b1227c886075038fa0b3f3484fba1a714422aaad",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Distinguish confirmed empty delivery dates from loading, failed reads and invalid dates without creating operational state."
       ],
       "status": "active"
     },
@@ -850,10 +852,11 @@
       "source": "apps/combined/operations-model.test.mjs",
       "sourceSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732",
       "target": "apps/web/combined/operations-model.test.mjs",
-      "targetSha256": "89c4ccb95ffe1ff5f1d9ed13e984c6d698600cd8e6ee10e6c2de4b88889e183e",
+      "targetSha256": "f7ea7489e8270a302cb15d0cd6f2a3c45c1fd85e933adb78ea76ffb5da878934",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Verify control empty-date presentation does not turn loading, failures or invalid dates into confirmed absence."
       ],
       "status": "active"
     },
@@ -1009,18 +1012,22 @@
       "source": "apps/combined/route-editor.mjs",
       "sourceSha256": "19e20fbbb0c48b070d4a9e289bbbd1ee5557f0e20c57aa6a050a54f3644764d3",
       "target": "apps/web/combined/route-editor.mjs",
-      "targetSha256": "19e20fbbb0c48b070d4a9e289bbbd1ee5557f0e20c57aa6a050a54f3644764d3",
+      "targetSha256": "e124d95882467710f21291c7ac5148bf4e876f9bb1b4cf19b00c2f1efc80bf68",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
-      "changes": [],
+      "changes": [
+        "Discard previous route drafts and pending UI state when switching to a date without delivery data."
+      ],
       "status": "active"
     },
     {
       "source": "apps/combined/route-editor.test.mjs",
       "sourceSha256": "a1e90e8412edb90cf341b7bf8487abac5629f45f204d84893b7ee1d41e28556f",
       "target": "apps/web/combined/route-editor.test.mjs",
-      "targetSha256": "a1e90e8412edb90cf341b7bf8487abac5629f45f204d84893b7ee1d41e28556f",
+      "targetSha256": "1eb01f1eb34b0cd0cb9a73d7ede83888219da0c394b2d2ca12c6579d20cafab1",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
-      "changes": [],
+      "changes": [
+        "Verify empty-date reset blocks stale route actions and recovers normal route editing on received data."
+      ],
       "status": "active"
     },
     {
@@ -1386,11 +1393,12 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "f2e70238327d5d0d7216774a445aed357813fd9a39cae18fc98423f685335fb7",
+      "targetSha256": "d96bda38feef72c73f84f24a8ab12bb76198afdfdb9316ee7b2db31e8c944762",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
-        "Use the shared 44px --control-height for the management target selector instead of 42px; retain dense row and utility control dimensions"
+        "Use the shared 44px --control-height for the management target selector instead of 42px; retain dense row and utility control dimensions",
+        "Use the existing map container and theme tokens for empty delivery control status."
       ],
       "status": "active"
     },
@@ -1398,11 +1406,12 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "add44010a1c6093fb751f8f5381a2330f7b1d9ca9dc811690dc935599e4bfdda",
+      "targetSha256": "181d940a3f5ab929c5a218a6eebaae70e326e8ec3360094a69f23968f020502b",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Preserve fleet, workload, map and details containers without data; clear old records, dialogs and map responses and recover on valid data."
       ],
       "status": "active"
     },
@@ -1410,10 +1419,11 @@
       "source": "apps/combined/vehicle-control.test.mjs",
       "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
       "target": "apps/web/combined/vehicle-control.test.mjs",
-      "targetSha256": "3a0c7b8d18c1f371f118558f28a2e8301dbfa2402fe5eeadf7c37a9618407c25",
+      "targetSha256": "79b7b275513f1487d56dc25900f5f912c83c5344c5a9c19f5842f78e0c6bc0c6",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Verify confirmed empty versus unknown control state, loaded-empty-loaded recovery and stale asynchronous map responses."
       ],
       "status": "active"
     },

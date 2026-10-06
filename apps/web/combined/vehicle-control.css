@@ -28,6 +28,7 @@
 .control-map-panel .panel-heading { flex-wrap: wrap; }
 .control-map-panel .button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: 40px; padding-inline: 10px; white-space: nowrap; }
 .control-map-canvas { height: 400px; position: relative; }
+.control-map-empty { display: grid; place-items: center; height: 100%; padding: 24px; color: var(--muted); background: #f8f9fa; text-align: center; }
 .control-map-note { padding: 10px 14px; margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
 .control-map-vehicle { width: 44px; height: 44px; background: url('/combined/assets/maps/dsv-vehicle-marker.svg') center / 34px 34px no-repeat; }
 .control-details { overflow: hidden; }

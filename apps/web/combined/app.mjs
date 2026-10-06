@@ -3,7 +3,7 @@ import { connectSimulation } from './simulation-client.mjs';
 import { mountDatedDispatch } from './dated-dispatch.mjs';
 import { mountRouteEditor } from './route-editor.mjs';
 import { referenceIcon } from './reference-icons.mjs';
-import { operatorRoute, resolveDeliverySelection } from './operations-model.mjs';
+import { operatorRoute, controlDataPresentation, resolveDeliverySelection } from './operations-model.mjs';
 import { mountVehicleControl } from './vehicle-control.mjs';
 import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from './vehicle-operations-model.mjs';
 import { mountResourceManagement } from './resource-management.mjs';
@@ -26,6 +26,7 @@ const state = {
   controlVehicleId: null,
   noticeTargetId: null,
   connected: false,
+  connectionMessage: '배송 정보를 불러오고 있습니다.',
   pendingNotice: null,
   noticeMessage: '',
   noticeError: false,
@@ -104,11 +105,12 @@ const simulation = connectSimulation({
   },
   onStatus(connected, message) {
     state.connected = connected;
+    state.connectionMessage = message;
     if (!connected && state.pendingNotice) {
       state.pendingNotice = null; state.noticeMessage = '연결이 끊겨 안내를 전달하지 못했습니다.'; state.noticeError = true;
     }
     byId('connection-panel').hidden = connected || state.page === 'deliveries';
-    byId('live-pages').hidden = state.page === 'control' && !state.dateContext && !state.data;
+    byId('live-pages').hidden = false;
     byId('connection-title').textContent = message;
     byId('connection-detail').textContent = connected ? '' : '연결이 복구되면 같은 진행 상태를 이어갑니다.';
     syncDispatchContext();
@@ -132,11 +134,25 @@ function render() {
   syncDispatchContext();
   renderPage();
   renderControlDate();
-  byId('vehicle-control').hidden = !state.data;
-  byId('live-pages').hidden = state.page === 'control' && !state.dateContext && !state.data;
+  byId('vehicle-control').hidden = false;
+  byId('live-pages').hidden = false;
   byId('connection-panel').hidden = state.connected || state.page === 'deliveries';
   if (state.page === 'orders') orderPlanning.update(state.data, state.selectedId, state.dateContext?.date);
-  if (!state.data) { controlSummaryToolbar.clear(); return; }
+  if (!state.data) {
+    const presentation = controlDataPresentation(state.dateContext, state.connectionMessage);
+    controlSummaryToolbar.update(['차량', '배송', '완료'].map(label => [label, presentation.empty ? 0 : '미확인']));
+    vehicleControl.clear(presentation);
+    routeEditor.clear();
+    state.pendingNotice = null; state.noticeTargetId = null; state.noticeMessage = ''; state.noticeError = false;
+    const notice = byId('customer-notice-dialog');
+    if (notice.open) notice.close();
+    byId('notice-send-status').hidden = true;
+    if (state.page === 'control') {
+      if (!state.selectedId) renderReview(null);
+      renderTabs();
+    }
+    return;
+  }
   let selected = selectedDelivery();
   const controlRow = state.page === 'control' ? resolveControlVehicle(vehicleOperations(state.data), state.controlVehicleId, selected?.id) : null;
   if (state.page === 'control') {
@@ -189,8 +205,8 @@ function renderControlDate() {
   byId('control-today').disabled = !context || date === today;
   byId('control-readonly').hidden = !(validOperatingDate(date) && date < today || state.data?.dispatch?.readOnly);
   const empty = byId('control-empty');
-  empty.hidden = Boolean(state.data) || !context?.empty;
-  empty.textContent = context?.invalid ? '요청한 날짜가 올바르지 않습니다. 조회 날짜를 다시 선택해 주세요.' : `${date || '선택한 날짜'}에 배송 자료가 없습니다. 날짜를 선택해 이력을 조회할 수 있습니다.`;
+  empty.hidden = Boolean(state.data);
+  empty.textContent = controlDataPresentation(context, state.connectionMessage).message;
 }
 
 function renderSummary() {

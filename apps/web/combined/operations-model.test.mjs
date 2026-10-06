@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { operatorRoute, filterFleetDeliveries, normalizeVehicleFilter, resolveDeliverySelection } from './operations-model.mjs';
+import { operatorRoute, controlDataPresentation, filterFleetDeliveries, normalizeVehicleFilter, resolveDeliverySelection } from './operations-model.mjs';
+
+test('관제의 로딩과 조회 실패는 확인된 자료 없음과 구분한다', () => {
+  assert.deepEqual(controlDataPresentation(null), { empty: false, message: '배송 자료를 확인하고 있습니다.' });
+  const error = '배송 상태를 불러오지 못했습니다.';
+  assert.deepEqual(controlDataPresentation({ date: '2026-10-06', empty: false }, error), { empty: false, message: error });
+  assert.deepEqual(controlDataPresentation({ date: '2026-10-06', empty: true }, error), {
+    empty: true, message: '2026-10-06에 배송 자료가 없습니다. 배차가 확정되면 관제에 표시됩니다.',
+  });
+  assert.deepEqual(controlDataPresentation({ date: 'invalid', empty: true, invalid: true }, error), {
+    empty: false, message: '요청한 날짜가 올바르지 않습니다. 조회 날짜를 다시 선택해 주세요.',
+  });
+});
 
 test('known operator links retain their page and control tab', () => {
   const expectedRoutes = new Map([
