@@ -41,6 +41,20 @@ test("public authentication output is independent of protected UI chunks", async
   assert.doesNotMatch(auth, /dispatchPreview|fleetDeliveries|calculate_dispatch|maplibregl/);
 });
 
+test("operational calendar styling remains reachable after demo shell removal", async () => {
+  const html = await fs.readFile(path.join(dist, "combined/index.html"), "utf8");
+  const styles = [...html.matchAll(/<link\b[^>]*href="([^"]+\.css)"/g)];
+  const css = (await Promise.all(styles.map(async ([, href]) => {
+    const url = new URL(href, "https://fixture.invalid/combined/index.html");
+    return fs.readFile(path.join(dist, url.pathname), "utf8");
+  }))).join("\n");
+  const iconRule = css.match(/\.date-picker-icon\s*\{([^}]+)\}/)?.[1] || "";
+  assert.match(iconRule, /width:\s*20px\b/, "calendar icon retains its intended width");
+  assert.match(iconRule, /height:\s*20px\b/, "calendar icon retains its intended height");
+  assert.match(css, /\.date-picker-grid[^{}]*\{[^}]*display:\s*grid\b/, "calendar days retain their grid");
+  assert.match(css, /\.date-picker-dialog\s*\{/, "operational page owns the date dialog layout");
+});
+
 test("built gateway retains response transformations, source isolation and authentication gates", async t => {
   const http = await import("node:http");
   const upstream = http.createServer((req, res) => {

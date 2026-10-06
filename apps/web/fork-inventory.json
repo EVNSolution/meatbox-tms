@@ -745,12 +745,13 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "ab9f336bf6e122154397050c955fa6c2359c27fc65cc33df56b93ecf27e3bbff",
+      "targetSha256": "2214fba82356facfaff19cde14677c60e90ef2197d71fa492ee6226d36abf7f9",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions",
-        "Removed retired demo behavior while preserving operational regression coverage."
+        "Removed retired demo behavior while preserving operational regression coverage.",
+        "Load operational date-picker styling directly after retiring the demo shell."
       ],
       "status": "active"
     },
@@ -2054,7 +2055,7 @@
     {
       "path": "apps/web/test/fork-artifact.check.mjs",
       "origin": "authored",
-      "sha256": "867333b0c9e430359c201a1f298fd97ad14175981ba67fe471b21cb45cb65c3c",
+      "sha256": "3541c66ed59a98eb1cea0ec815929c929aaf587373c33dfbd0f659d53640d556",
       "reason": "Check real built pages, independent public authentication/theme assets, gateway response transformations and protected-source isolation. Verify the built public portal stylesheet imports the independently served shared theme.",
       "status": "active"
     },
