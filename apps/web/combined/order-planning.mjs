@@ -6,6 +6,7 @@ import { mountDispatchMapLayers } from './dispatch-map-layer.mjs';
 import { PAGE_SIZE, paginate } from './pagination-model.mjs';
 import { bundleDeliveries } from './delivery-bundles.mjs';
 import { geometryBounds, weightText, withZoneVolumes, zoneVolumes } from './zone-volume.mjs';
+import { isUnverifiedVehicle, locationLabel, plateLabel } from './vehicle-identity.mjs';
 import { addUnits, pointsInRectangle, pruneSelection, summarizeSelection, toggleUnits, transferPreview } from './bulk-selection.mjs';
 export { createOrderMap, createOrderMarker, orderMapModel };
 
@@ -334,12 +335,12 @@ export function mountOrderPlanning({
     const currentOrders = visibleDeliveries.filter(item => item.vehicleId === targetId);
     const currentBoxes = totalBoxes(currentOrders);
     const coordinates = vehicle.location?.coordinates;
-    const position = coordinates ? ` (${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)})` : '';
+    const position = coordinates && !isUnverifiedVehicle(vehicle) ? ` (${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)})` : '';
     const movingBoxes = bulk ? bulk.boxes : pendingAssignment.boxes;
     const movingCount = bulk ? bulk.movingCount : pendingAssignment.orderIds.length;
     const nextBoxes = currentBoxes === null || movingBoxes === null ? null : currentBoxes + movingBoxes;
     const movingLine = bulk ? `\n이동 ${bulk.movingCount}건 / ${boxesText(bulk.boxes)}${bulk.unchangedCount ? ` (이미 이 차량 ${bulk.unchangedCount}건 제외)` : ''}` : '';
-    setText('[data-order-reassign-preview]', `대상 차량 ${vehicle.driver} / ${vehicle.plate}\n현재 ${currentOrders.length}건 / ${boxesText(currentBoxes)} → 배차 후 ${currentOrders.length + movingCount}건 / ${boxesText(nextBoxes)}${movingLine}\n${vehicle.location?.label?.replace(' 예시 위치', '') || '위치 미등록'}${position}`);
+    setText('[data-order-reassign-preview]', `대상 차량 ${vehicle.driver} / ${vehicle.plate}\n현재 ${currentOrders.length}건 / ${boxesText(currentBoxes)} → 배차 후 ${currentOrders.length + movingCount}건 / ${boxesText(nextBoxes)}${movingLine}\n${locationLabel(vehicle)}${position}`);
   }
 
   function openBulkAssignment() {
@@ -352,7 +353,7 @@ export function mountOrderPlanning({
     setText('[data-order-reassign-title]', '선택 이관');
     setText('[data-order-reassign-from]', `선택 ${summary.destinationCount.toLocaleString('ko-KR')}곳 / ${summary.orderCount.toLocaleString('ko-KR')}건 / ${boxesText(summary.boxes)} / 현재 배정: ${driverText}`);
     const select = query('[data-order-reassign-target]');
-    select.innerHTML = '<option value="">차량을 선택해 주세요</option>' + pinVehicles().map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.driver)} / ${escapeHtml(vehicle.plate)}</option>`).join('');
+    select.innerHTML = '<option value="">차량을 선택해 주세요</option>' + pinVehicles().map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.driver)} / ${escapeHtml(plateLabel(vehicle))}</option>`).join('');
     select.value = '';
     query('[data-order-reassign-error]').hidden = true;
     updateAssignmentPreview();
@@ -370,7 +371,7 @@ export function mountOrderPlanning({
     setText('[data-order-reassign-title]', '핀배차');
     setText('[data-order-reassign-from]', `${chosen.name} / ${selected.length}건 / ${boxesText(pendingAssignment.boxes)} / ${from?.driver || '배차 대기'}`);
     const select = query('[data-order-reassign-target]');
-    select.innerHTML = '<option value="">차량을 선택해 주세요</option>' + pinVehicles().filter(vehicle => vehicle.id !== fromGroupId).map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.driver)} / ${escapeHtml(vehicle.plate)}</option>`).join('');
+    select.innerHTML = '<option value="">차량을 선택해 주세요</option>' + pinVehicles().filter(vehicle => vehicle.id !== fromGroupId).map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.driver)} / ${escapeHtml(plateLabel(vehicle))}</option>`).join('');
     select.value = '';
     query('[data-order-reassign-error]').hidden = true;
     updateAssignmentPreview();
@@ -410,7 +411,7 @@ export function mountOrderPlanning({
     const fallbackVehicleId = visibleDeliveries === data?.deliveries ? data?.vehicle?.id : null;
     const deliveryVehicleId = vehicleIdFor(delivery, fallbackVehicleId);
     const vehicle = vehiclesFor(data).find(item => item.id === deliveryVehicleId) ?? delivery.vehicle ?? null;
-    selection.innerHTML = `<span>선택 주문</span><strong>${escapeHtml(delivery.name || '배송지 미등록')}</strong><p><span>${boxesText(delivery.boxes)}</span><span>${escapeHtml(vehicle?.plate || '차량 미확인')}</span></p>`;
+    selection.innerHTML = `<span>선택 주문</span><strong>${escapeHtml(delivery.name || '배송지 미등록')}</strong><p><span>${boxesText(delivery.boxes)}</span><span>${escapeHtml(vehicle ? plateLabel(vehicle) : '차량 미확인')}</span></p>`;
     if (imported()) {
       selection.innerHTML = `<span>선택 주문</span><strong>${escapeHtml(delivery.name)}</strong><p>${escapeHtml(delivery.address)}</p><p><span>${boxesText(delivery.boxes)}</span><span>${escapeHtml(vehicle?.driver || '배차 대기')}</span><span>권역 ${escapeHtml(delivery.regionName)}</span></p>`;
       if (overlapIds.length > 1) selection.innerHTML += `<label class="order-overlap-picker">이 지점의 주문 ${overlapIds.length}건<select data-order-overlap aria-label="겹친 주문 선택">${overlapIds.map(id => visibleDeliveries.find(item => item.id === id)).filter(Boolean).map(item => `<option value="${escapeHtml(item.id)}" ${item.id === selectedDeliveryId ? 'selected' : ''}>${escapeHtml(item.name)} / ${boxesText(item.boxes)}</option>`).join('')}</select></label>`;
@@ -576,8 +577,8 @@ export function mountOrderPlanning({
       const completion = held ? `보류 ${countText(held)}, 미확인`
         : Number.isFinite(row?.timing?.completionMs) ? `${clockText(row.timing.completionMs, data?.dispatchSource?.date)}${row.timing.completed ? ' 완료' : ' 예상'}` : '미등록';
       const completionLabel = row?.timing?.completed ? '최종 인도 완료' : '최종 인도 완료 예측';
-      const regionLabel = `${vehicle.region || '권역 미등록'} / ${vehicle.location?.label?.replace(' 예시 위치', '') || '위치 미등록'}`;
-      if (imported()) return `<button type="button" data-order-vehicle-id="${escapeHtml(vehicle.id)}" aria-pressed="${vehicle.id === selectedVehicleId}"><span class="order-vehicle-name"><strong title="${escapeHtml(vehicle.driver)}">${escapeHtml(vehicle.driver)}</strong><small>${escapeHtml(vehicle.plate)}</small></span><span class="order-vehicle-load"><b>${data?.dispatch?.phase === 'unplanned' ? '배차 대기' : `${countText(bundleDeliveries(assigned).length)} / 주문 ${assigned.length.toLocaleString('ko-KR')}건`}</b><b>${boxesText(boxes)}</b></span><span class="order-source-regions" title="${escapeHtml(regionLabel)}">${escapeHtml(regionLabel)}</span></button>`;
+      const regionLabel = `${vehicle.region || '권역 미등록'} / ${locationLabel(vehicle)}`;
+      if (imported()) return `<button type="button" data-order-vehicle-id="${escapeHtml(vehicle.id)}" aria-pressed="${vehicle.id === selectedVehicleId}"><span class="order-vehicle-name"><strong title="${escapeHtml(vehicle.driver)}">${escapeHtml(vehicle.driver)}</strong><small>${escapeHtml(plateLabel(vehicle))}</small></span><span class="order-vehicle-load"><b>${data?.dispatch?.phase === 'unplanned' ? '배차 대기' : `${countText(bundleDeliveries(assigned).length)} / 주문 ${assigned.length.toLocaleString('ko-KR')}건`}</b><b>${boxesText(boxes)}</b></span><span class="order-source-regions" title="${escapeHtml(regionLabel)}">${escapeHtml(regionLabel)}</span></button>`;
       return `<button type="button" data-order-vehicle-id="${escapeHtml(vehicle.id)}" aria-pressed="${vehicle.id === selectedVehicleId}"><span class="order-vehicle-name"><strong>${escapeHtml(vehicle.plate || vehicle.id)}</strong><small>${escapeHtml(vehicle.driver || '배송원 미확인')}</small></span><span class="order-vehicle-load"><b>${countText(assigned.length)}</b><b>${boxesText(boxes)}</b></span><span class="order-vehicle-times"><span>${departureLabel} <strong>${departure}</strong></span><span>마지막 도착 ETA <strong>${escapeHtml(lastArrival)}</strong></span><span>${completionLabel} <strong>${escapeHtml(completion)}</strong></span></span></button>`;
     }).join('') || '<p class="order-vehicle-empty">배차 차량이 없습니다.</p>';
     if (imported()) vehicleSelect.innerHTML = `<button type="button" data-order-vehicle-id="all" aria-pressed="${selectedVehicleId === 'all'}"><span class="order-vehicle-name"><strong>${data?.dispatch?.phase === 'unplanned' ? '전체 주문' : '전체 차량'}</strong><small>${vehicles.length}대</small></span><span class="order-vehicle-load"><b>주문 ${source.length.toLocaleString('ko-KR')}건</b><b>${boxesText(totalBoxes(source))}</b></span></button>` + vehicleSelect.innerHTML;

@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 99,
-  "authoredFileCount": 29,
+  "authoredFileCount": 31,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -584,12 +584,13 @@
       "source": "apps/combined/dispatch-workflow.mjs",
       "sourceSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59",
       "target": "apps/web/combined/dispatch-workflow.mjs",
-      "targetSha256": "ec142f34795e75c72732d83d8e16978ce30a79bfaf389af9b500e1d22c2938ee",
+      "targetSha256": "6622fcc930ac47e6634ea86b78f9046ceea888c06f3e9150ad0bb08d153914c4",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Mark a synthetic plate as unverified in the candidate list"
       ],
       "status": "active"
     },
@@ -921,7 +922,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "9f0d25728653a2f559498a30efb06d7eb51a2656ab7c29ad5248e5afa126c79d",
+      "targetSha256": "57fcf1b2a92c82b24a78cef9506a81d3ddcc41c9bb8f09843907f7f99614bcdb",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -933,7 +934,8 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Add multi-select mode with click and drag selection and a bulk transfer dialog for delivery bundles",
-        "Add the zone volume table, zone selection with boundary and pins together and the delivery popup"
+        "Add the zone volume table, zone selection with boundary and pins together and the delivery popup",
+        "Stop stripping the generator's unverified disclosure from vehicle location text, drop raw coordinates for unverified vehicles, and mark synthetic plates as unverified"
       ],
       "status": "active"
     },
@@ -1036,10 +1038,11 @@
       "source": "apps/combined/resource-management.mjs",
       "sourceSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
       "target": "apps/web/combined/resource-management.mjs",
-      "targetSha256": "666d34c60142ffb5310ca22abbf2a9df33baab6b707154ec6e269c240c0e2131",
+      "targetSha256": "7dd5a631395fc96cc9ecacb02059f31953f3aaaeb3df0772b425bcf5d597a7cb",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
-        "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events."
+        "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events.",
+        "Mark every listed plate as unverified and add a screen note until a real vehicle registry exists"
       ],
       "status": "active"
     },
@@ -1058,11 +1061,12 @@
       "source": "apps/combined/route-editor.mjs",
       "sourceSha256": "19e20fbbb0c48b070d4a9e289bbbd1ee5557f0e20c57aa6a050a54f3644764d3",
       "target": "apps/web/combined/route-editor.mjs",
-      "targetSha256": "9e7461eec9f9fdda2fd3bf06abff0205f950a4109f0612abb784c982663a7c36",
+      "targetSha256": "feefae666f3e1410c4d474f49514b6e8e238d1bf8b311543eeff9ec61cd12d9e",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Discard previous route drafts and pending UI state when switching to a date without delivery data.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Show the driver name first and mark the synthetic plate as unverified"
       ],
       "status": "active"
     },
@@ -1477,14 +1481,15 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "d1bd4aac845feae174c4f46e4b1b2b7188bbf1bac1d01fb98bed12b2a8f9e54f",
+      "targetSha256": "61df9716d085dc9947364ae843fa17eb6f01ba91c77fdd9d70850e3c1841bb76",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Preserve fleet, workload, map and details containers without data; clear old records, dialogs and map responses and recover on valid data.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Show the driver name first and mark the synthetic plate as unverified in the heading, list and detail title; use the driver name in the support table"
       ],
       "status": "active"
     },
@@ -2081,6 +2086,20 @@
     }
   ],
   "authoredFiles": [
+    {
+      "path": "apps/web/combined/vehicle-identity.mjs",
+      "origin": "authored",
+      "sha256": "05ac10eb0fdd0af3b604972d1fcd7be97ec97d4a8dbd296b41e589d6215dd7bd",
+      "reason": "Decide whether a vehicle is verified and build its plate and location display text in one place, so a future real vehicle source only needs to set vehicle.source = registered to stop marking it unverified everywhere.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/vehicle-identity.test.mjs",
+      "origin": "authored",
+      "sha256": "9b3885229442c8654f7c9ba7d70f2f90cb6354e4ff64ceb60317c15f8116c21c",
+      "reason": "Verify the default-unverified decision and the plate and location text it produces, including once a vehicle is marked registered.",
+      "status": "active"
+    },
     {
       "path": "apps/web/combined/zone-volume.mjs",
       "origin": "authored",

@@ -2,6 +2,7 @@ import { referenceIcon } from './reference-icons.mjs';
 import { renderCustomerRequests } from './customer-requests.mjs';
 import { createOrderMap, createOrderMarker, orderMapModel } from '../src/shared/maps/order-map.mjs';
 import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
+import { locationLabel, plateLabel } from './vehicle-identity.mjs';
 import { vehicleOperations, sortVehicleOperations, resolveDefaultControlVehicle, resolveControlDelivery, vehicleEvents, deliveryRecords, controlPosition } from './vehicle-operations-model.mjs';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -78,13 +79,13 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   function renderVehicles() {
     const visible = sortVehicleOperations(rows, sort).filter(item => `${item.vehicle.id} ${item.vehicle.plate} ${item.vehicle.driver}`.toLocaleLowerCase('ko-KR').includes(search));
     find('[data-control-count]').textContent = `${visible.length}대`;
-    replacePreservingFocus(list, visible.map(item => `<button type="button" class="control-vehicle-row" data-control-vehicle="${esc(item.vehicle.id)}" aria-pressed="${item.vehicle.id === row?.vehicle.id}"><span><strong>${esc(item.vehicle.plate || item.vehicle.id)}</strong><small>${esc(item.vehicle.driver || '배송원 미등록')}</small></span><span aria-label="남은 배송지">${count(item.remainingStops)}</span><span aria-label="남은 박스">${count(item.remainingBoxes)}</span><span class="muted" aria-label="${esc(`예상 소요 시간 ${remainingText(item)}`)}">${esc(remainingText(item))}</span></button>`).join('') || '<p class="control-unit-note">검색 결과 없음</p>', '[data-control-vehicle]');
+    replacePreservingFocus(list, visible.map(item => `<button type="button" class="control-vehicle-row" data-control-vehicle="${esc(item.vehicle.id)}" aria-pressed="${item.vehicle.id === row?.vehicle.id}"><span><strong>${esc(item.vehicle.driver || '배송원 미등록')}</strong><small>${esc(plateLabel(item.vehicle))}</small></span><span aria-label="남은 배송지">${count(item.remainingStops)}</span><span aria-label="남은 박스">${count(item.remainingBoxes)}</span><span class="muted" aria-label="${esc(`예상 소요 시간 ${remainingText(item)}`)}">${esc(remainingText(item))}</span></button>`).join('') || '<p class="control-unit-note">검색 결과 없음</p>', '[data-control-vehicle]');
   }
 
   function renderSummary() {
     const source = Boolean(data?.sourceData);
-    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.plate || row.vehicle.id)}</h2><p>${esc(row.vehicle.driver || '배송원 미등록')}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동·하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}` : '<p class="control-unit-note">미배정</p>';
-    find('[data-control-detail-title]').textContent = row ? `${row.vehicle.plate || row.vehicle.id} 상세` : '차량 상세';
+    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.driver || '배송원 미등록')}</h2><p>${esc(plateLabel(row.vehicle))}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동·하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}` : '<p class="control-unit-note">미배정</p>';
+    find('[data-control-detail-title]').textContent = row ? `${row.vehicle.driver || row.vehicle.id} 상세` : '차량 상세';
   }
 
   function renderEmptySummary(empty, message) {
@@ -130,7 +131,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
 
   function renderSupport() {
     const source = Boolean(data?.sourceData);
-    find('[data-support-data]').innerHTML = `<h3>차량 운영 현황</h3><p class="muted">${source ? '승인 운영 계획과 수신된 실제 완료 기록을 표시합니다. GPS 기반 주변 차량 비교는 산정 대기 중입니다.' : '완수 속도는 실제 완료 사건의 시간 구간이 필요합니다. 현재 시뮬레이션 기록으로 실제 작업 속도를 산출하지 않습니다.'}</p><div class="support-table-scroll"><table><thead><tr><th>차량</th><th>완료 / 배정</th><th>계획 출발</th><th>마지막 도착 ETA</th><th>완료 예상</th><th>실제 완수 속도</th><th>안정 레벨</th></tr></thead><tbody>${rows.map(item => `<tr><th>${esc(item.vehicle.plate || item.vehicle.id)}</th><td>${item.completed.length} / ${item.deliveries.length}곳</td><td>${esc(item.fixedDepartureText || '미확인')}</td><td>${esc(item.lastArrivalEta || '미확인')}</td><td>${esc(completionText(item))}${item.timing ? `<small>${source ? '승인 운영계획' : '시뮬레이션 계산값'}</small>` : ''}</td><td>${source ? esc(actualSpeedText(item)) : '실데이터 대기'}</td><td>기준 미정</td></tr>`).join('')}</tbody></table></div>`;
+    find('[data-support-data]').innerHTML = `<h3>차량 운영 현황</h3><p class="muted">${source ? '승인 운영 계획과 수신된 실제 완료 기록을 표시합니다. GPS 기반 주변 차량 비교는 산정 대기 중입니다.' : '완수 속도는 실제 완료 사건의 시간 구간이 필요합니다. 현재 시뮬레이션 기록으로 실제 작업 속도를 산출하지 않습니다.'}</p><div class="support-table-scroll"><table><thead><tr><th>배송원</th><th>완료 / 배정</th><th>계획 출발</th><th>마지막 도착 ETA</th><th>완료 예상</th><th>실제 완수 속도</th><th>안정 레벨</th></tr></thead><tbody>${rows.map(item => `<tr><th>${esc(item.vehicle.driver || item.vehicle.id)}</th><td>${item.completed.length} / ${item.deliveries.length}곳</td><td>${esc(item.fixedDepartureText || '미확인')}</td><td>${esc(item.lastArrivalEta || '미확인')}</td><td>${esc(completionText(item))}${item.timing ? `<small>${source ? '승인 운영계획' : '시뮬레이션 계산값'}</small>` : ''}</td><td>${source ? esc(actualSpeedText(item)) : '실데이터 대기'}</td><td>기준 미정</td></tr>`).join('')}</tbody></table></div>`;
   }
 
   function renderMap() {
@@ -140,7 +141,10 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       Array.isArray(delivery.coordinates) && delivery.coordinates.length === 2 && delivery.coordinates.every(Number.isFinite)
         ? [{ id: delivery.id, lng: delivery.coordinates[0], lat: delivery.coordinates[1] }] : []) } : routeData;
     const model = orderMapModel(row?.remaining || [], activeRouteData);
-    const position = controlPosition(data, row);
+    const rawPosition = controlPosition(data, row);
+    // controlPosition() keeps vehicle-operations-model.mjs's own historical, byte-pinned label text
+    // (see test/web-fork-legacy); only its 'demo' branch needs the unverified disclosure the marker shows.
+    const position = rawPosition?.source === 'demo' ? { ...rawPosition, label: locationLabel(row.vehicle) } : rawPosition;
     const nextSignature = JSON.stringify([row?.vehicle.id, model.mapped.map(item => [item.delivery.id, item.delivery.name, item.delivery.boxes, item.coordinates]), position]);
     if (signature !== nextSignature) {
       signature = nextSignature;

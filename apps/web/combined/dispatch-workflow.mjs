@@ -1,5 +1,6 @@
 import { referenceIcon } from './reference-icons.mjs';
 import { presentationCandidateIds } from './dispatch-presentation.mjs';
+import { plateLabel } from './vehicle-identity.mjs';
 
 const PHASE_LABELS = {
   unplanned: '배차 전',
@@ -114,7 +115,7 @@ export function mountDispatchWorkflow({ element, onCommand = () => {} } = {}) {
     candidateList.innerHTML = visible.length ? visible.map(candidate => {
       const checked = selected.has(candidate.id);
       const locked = candidate.locked || busy !== '' || ['published', 'amending'].includes(model.phase);
-      return `<label class="dispatch-workflow-candidate"><input type="checkbox" data-dispatch-candidate="${escapeHtml(candidate.id)}"${checked ? ' checked' : ''}${locked ? ' disabled' : ''}><span><strong>${escapeHtml(candidate.driver || '배송원 미등록')}</strong><small>${escapeHtml([candidate.plate, candidate.region].filter(Boolean).join(' / ') || '차량 정보 미등록')}</small></span>${candidate.locked ? '<em>필수</em>' : ''}</label>`;
+      return `<label class="dispatch-workflow-candidate"><input type="checkbox" data-dispatch-candidate="${escapeHtml(candidate.id)}"${checked ? ' checked' : ''}${locked ? ' disabled' : ''}><span><strong>${escapeHtml(candidate.driver || '배송원 미등록')}</strong><small>${escapeHtml([candidate.plate ? plateLabel(candidate) : null, candidate.region].filter(Boolean).join(' / ') || '차량 정보 미등록')}</small></span>${candidate.locked ? '<em>필수</em>' : ''}</label>`;
     }).join('') : '<p class="dispatch-workflow-empty">검색 결과가 없습니다.</p>';
     selectAll.disabled = model.readOnly || ['published', 'amending'].includes(model.phase) || busy !== '' || !visible.some(candidate => !selected.has(candidate.id));
     clear.disabled = model.readOnly || ['published', 'amending'].includes(model.phase) || busy !== '' || ![...selected].some(id => !model.candidates.find(candidate => candidate.id === id)?.locked);
