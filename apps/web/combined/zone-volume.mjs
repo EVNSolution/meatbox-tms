@@ -5,8 +5,8 @@ import { destinationKey } from './delivery-bundles.mjs';
 // Weight comes only from a numeric `weightKg` on the order. Without it the sum stays null (미수신),
 // because the supplied source files carry no weight and nothing may be invented.
 const known = value => Number.isFinite(value) && value >= 0;
-const destinationOf = delivery => delivery.assignmentUnitId ? `unit:${delivery.assignmentUnitId}` : destinationKey(delivery);
-const zoneIdsOf = delivery => [...new Set((Array.isArray(delivery?.zoneIds) ? delivery.zoneIds : []).filter(id => typeof id === 'string' && id))];
+export const destinationOf = delivery => delivery.assignmentUnitId ? `unit:${delivery.assignmentUnitId}` : destinationKey(delivery);
+export const zoneIdsOf = delivery => [...new Set((Array.isArray(delivery?.zoneIds) ? delivery.zoneIds : []).filter(id => typeof id === 'string' && id))];
 
 function accumulator() {
   return { orders: 0, destinations: new Set(), boxes: 0, boxesKnown: true, weight: 0, weightKnown: true };

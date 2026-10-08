@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 99,
-  "authoredFileCount": 31,
+  "authoredFileCount": 33,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -906,7 +906,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "2a20d52295ae4be327f995110016aaea62a90093a24ff857c22309f43711e775",
+      "targetSha256": "107f37a64cf8463b216a60276800a93bd90c0139394a172cbd5be648a053caca",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -914,7 +914,8 @@
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
         "Style the multi-select controls and the drag rectangle",
-        "Style the zone volume table and the delivery popup"
+        "Style the zone volume table and the delivery popup",
+        "Style the zone drivers column and the two popup buttons"
       ],
       "status": "active"
     },
@@ -922,7 +923,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "57fcf1b2a92c82b24a78cef9506a81d3ddcc41c9bb8f09843907f7f99614bcdb",
+      "targetSha256": "bd7b65aa11821129b495d1f9522fe8be13e10f8ff25b7c9f3b28628c8703db40",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -935,7 +936,8 @@
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Add multi-select mode with click and drag selection and a bulk transfer dialog for delivery bundles",
         "Add the zone volume table, zone selection with boundary and pins together and the delivery popup",
-        "Stop stripping the generator's unverified disclosure from vehicle location text, drop raw coordinates for unverified vehicles, and mark synthetic plates as unverified"
+        "Stop stripping the generator's unverified disclosure from vehicle location text, drop raw coordinates for unverified vehicles, and mark synthetic plates as unverified",
+        "Add the zone drivers column and the zone transfer dialog that hands a delivery bundle to a driver serving another zone, and mark the plate in the reassign preview"
       ],
       "status": "active"
     },
@@ -965,7 +967,7 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "3284b1782afb2869dc04803c668f4f6e25c20d1944de8180e32d8ce31845697e",
+      "targetSha256": "13187423b2330f533fa674b011a660163756b4a04b2788372a1f7fe7c7f26191",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -973,7 +975,8 @@
         "Restore the empty selection card after a populated date hid its unselected-order view.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Cover multi-select, drag selection and bulk transfer",
-        "Cover the zone volume table, zone selection and the delivery popup"
+        "Cover the zone volume table, zone selection and the delivery popup",
+        "Cover the zone drivers column and the zone transfer dialog"
       ],
       "status": "active"
     },
@@ -2087,6 +2090,20 @@
   ],
   "authoredFiles": [
     {
+      "path": "apps/web/combined/zone-transfer.mjs",
+      "origin": "authored",
+      "sha256": "82edf418cad20f3c933c8b6ec45399e237f9a4b3834a338b283d1855ef8b8106",
+      "reason": "Derive which drivers serve each zone from the current assignment, list the other zones a delivery bundle can be handed to, and shorten driver names for the zone table.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/zone-transfer.test.mjs",
+      "origin": "authored",
+      "sha256": "35b6a31b46802b4d6a23e8d59463ac3b7ec6d87f2ed80d5b03157835ac1cd4c9",
+      "reason": "Verify zone drivers, the transfer zone options, unknown boxes and the driver name text.",
+      "status": "active"
+    },
+    {
       "path": "apps/web/combined/vehicle-identity.mjs",
       "origin": "authored",
       "sha256": "05ac10eb0fdd0af3b604972d1fcd7be97ec97d4a8dbd296b41e589d6215dd7bd",
@@ -2103,7 +2120,7 @@
     {
       "path": "apps/web/combined/zone-volume.mjs",
       "origin": "authored",
-      "sha256": "3ba1a3798d5539483776441f38c33f44243a97c56a7966d792d5a692a2512353",
+      "sha256": "9cee9fec75eb5718454714d2a87b54e1f542c820ca5c22f0c5a954b958a79cfe",
       "reason": "Count destinations, boxes, orders and weight per delivery zone without inventing weight, label zone polygons with the totals and compute zone bounds.",
       "status": "active"
     },

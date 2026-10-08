@@ -173,3 +173,5 @@
 .order-map-popup dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0 0 8px; font-size: 11px; }
 .order-map-popup dt { color: var(--muted); }
 .order-map-popup dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.order-zone-table td.order-zone-drivers { max-width: 190px; overflow: hidden; text-align: left; text-overflow: ellipsis; }
+.order-map-popup > .button { margin-right: 6px; }

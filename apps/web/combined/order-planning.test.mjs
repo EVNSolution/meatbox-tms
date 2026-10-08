@@ -27,6 +27,7 @@ function fixture() {
     'search', 'list', 'list-total', 'page', 'previous', 'next',
     'multi-toggle', 'multi-transfer', 'multi-clear', 'multi-summary', 'select-box',
     'popup', 'zone-panel', 'zone-total', 'zone-note', 'zone-rows', 'zone-page', 'zone-previous', 'zone-next',
+    'reassign-zone', 'reassign-zone-label',
   ];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
   nodes['dispatch-actions'].hidden = true;
@@ -34,6 +35,7 @@ function fixture() {
   nodes['reassign-error'].hidden = true;
   nodes['select-box'].hidden = true;
   nodes.popup.hidden = true;
+  nodes['reassign-zone-label'].hidden = true;
   nodes['zone-panel'].hidden = true;
   nodes['list-panel'].hidden = true;
   nodes['map-mode-control'].hidden = true;
@@ -1131,5 +1133,85 @@ test('같은 자료로 다시 그려도 권역 표와 팝업의 DOM을 바꾸지
   assert.deepEqual(writes, before, '내용이 같으면 다시 쓰지 않는다');
   zoneClick(nodes, 'Z2');
   assert.equal(writes.rows, before.rows + 1, '선택이 바뀌면 표를 한 번 다시 쓴다');
+  planning.destroy();
+});
+
+test('권역 표는 권역마다 그 권역 주문을 가진 배송원을 박스 많은 순으로 보이고 배차 전에는 배차 전이라고 밝힌다', () => {
+  const { planning, nodes } = mountZones();
+  planning.update(zonePlanningData(), null);
+  const rows = nodes['zone-rows'].innerHTML.match(/<tr>.*?<\/tr>/g);
+  assert.match(rows[0], /서울 첫 권역.*title="기사 2, 기사 1">기사 2, 기사 1<\/td>/);
+  assert.match(rows[1], /서울 둘째 권역.*title="기사 2">기사 2<\/td>/);
+  const unplanned = zonePlanningData();
+  unplanned.dispatch = { phase: 'unplanned', readOnly: false, candidateIds: [] };
+  unplanned.fleetDeliveries = unplanned.fleetDeliveries.map(item => ({ ...item, vehicleId: null }));
+  planning.update(unplanned, null);
+  assert.match(nodes['zone-rows'].innerHTML.match(/<tr>.*?<\/tr>/g)[0], />배차 전<\/td>/);
+  planning.destroy();
+});
+
+test('팝업의 타 권역 이관은 대상 권역을 고르면 그 권역의 배송원으로 배송지 묶음을 재배정한다', async () => {
+  const assignments = [];
+  const { planning, nodes, log } = mountZones({ onAssign: request => { assignments.push(request); return { changedCount: 2, changedBoxes: 10 }; } });
+  planning.update(zonePlanningData(), null);
+  zoneClick(nodes, 'Z1');
+  log.picks(['O1']);
+  assert.match(nodes.popup.innerHTML, /data-order-popup-transfer\s*>타 권역 이관/, '이관할 수 있는 권역이 있으면 버튼이 켜진다');
+  const closest = selector => selector.includes('transfer') ? {} : null;
+  nodes.popup.listeners.click({ target: { closest } });
+
+  assert.equal(nodes['reassign-dialog'].open, true);
+  assert.equal(nodes['reassign-title'].textContent, '타 권역 이관');
+  assert.match(nodes['reassign-from'].textContent, /주문 1 \/ 2건 \/ 10박스 \/ 서울 첫 권역 · 기사 1/);
+  assert.equal(nodes['reassign-zone-label'].hidden, false);
+  assert.match(nodes['reassign-zone'].innerHTML, /value="Z2">서울 둘째 권역 · 배송원 1명/);
+  assert.doesNotMatch(nodes['reassign-zone'].innerHTML, /value="Z1"/, '지금 권역은 대상이 아니다');
+  assert.equal(nodes['reassign-target'].disabled, true);
+  assert.equal(nodes['reassign-confirm'].disabled, true);
+  assert.equal(nodes['reassign-preview'].textContent, '대상 권역과 그 권역의 배송원을 선택해 주세요.');
+
+  nodes['reassign-zone'].value = 'Z2'; nodes['reassign-zone'].listeners.change();
+  assert.equal(nodes['reassign-target'].disabled, false);
+  assert.equal(nodes['reassign-target'].value, 'G2', '그 권역에서 박스가 가장 많은 배송원을 미리 고른다');
+  assert.match(nodes['reassign-target'].innerHTML, /기사 2 \/ 22나 2002 \(미검증\) · 이 권역 2곳 16박스/);
+  assert.match(nodes['reassign-preview'].textContent, /대상 차량 기사 2 \/ 22나 2002 \(미검증\)/);
+  assert.match(nodes['reassign-preview'].textContent, /대상 권역 서울 둘째 권역 \(배송지의 위치와 권역 소속은 그대로입니다\)/);
+  assert.equal(nodes['reassign-confirm'].disabled, false);
+
+  await nodes['reassign-confirm'].listeners.click();
+  assert.deepEqual(assignments, [{ orderIds: ['O1', 'O2'], targetGroupId: 'G2' }]);
+  assert.equal(nodes['reassign-dialog'].open, false);
+  assert.equal(nodes['reassign-zone-label'].hidden, true, '닫으면 일반 핀배차 창으로 돌아간다');
+  planning.destroy();
+});
+
+test('타 권역 이관은 보호 묶음이나 다른 권역에 넘길 배송원이 없으면 막고 일반 핀배차 창은 권역 선택 없이 열린다', () => {
+  const { planning, nodes, log } = mountZones({ onAssign: () => ({}) });
+  planning.update(zonePlanningData(), null);
+  zoneClick(nodes, 'Z2');
+  log.picks(['O4']);
+  assert.match(nodes.popup.innerHTML, /data-order-popup-transfer disabled>/, '진행·완료 묶음은 이관할 수 없다');
+  const transfer = { target: { closest: selector => selector.includes('transfer') ? {} : null } };
+  nodes.popup.listeners.click(transfer);
+  assert.equal(nodes['reassign-dialog'].open, false);
+
+  zoneClick(nodes, 'Z1');
+  log.picks(['O3']);
+  assert.match(nodes.popup.innerHTML, /data-order-popup-transfer disabled>/, 'O3의 배송원 기사 2뿐인 권역으로는 넘길 수 없다');
+  nodes.popup.listeners.click(transfer);
+  assert.equal(nodes['reassign-dialog'].open, false);
+
+  log.picks(['O1']);
+  nodes.popup.listeners.click({ target: { closest: selector => selector.includes('transfer') ? {} : null } });
+  assert.equal(nodes['reassign-dialog'].open, true);
+  nodes['reassign-cancel'].listeners.click();
+  nodes.popup.listeners.click({ target: { closest: selector => selector.includes('pin') && !selector.includes('transfer') ? {} : null } });
+  assert.equal(nodes['reassign-dialog'].open, true);
+  assert.equal(nodes['reassign-title'].textContent, '핀배차');
+  assert.equal(nodes['reassign-zone-label'].hidden, true);
+  assert.equal(nodes['reassign-target'].disabled, false);
+  nodes['reassign-target'].value = 'G2'; nodes['reassign-target'].listeners.change();
+  assert.match(nodes['reassign-preview'].textContent, /대상 차량 기사 2 \/ 22나 2002 \(미검증\)/, '일반 핀배차의 번호판도 미검증으로 표시한다');
+  assert.doesNotMatch(nodes['reassign-preview'].textContent, /대상 권역/);
   planning.destroy();
 });

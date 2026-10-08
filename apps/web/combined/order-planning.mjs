@@ -7,6 +7,7 @@ import { PAGE_SIZE, paginate } from './pagination-model.mjs';
 import { bundleDeliveries } from './delivery-bundles.mjs';
 import { geometryBounds, weightText, withZoneVolumes, zoneVolumes } from './zone-volume.mjs';
 import { isUnverifiedVehicle, locationLabel, plateLabel } from './vehicle-identity.mjs';
+import { driverNamesText, transferZoneOptions, zoneDrivers } from './zone-transfer.mjs';
 import { addUnits, pointsInRectangle, pruneSelection, summarizeSelection, toggleUnits, transferPreview } from './bulk-selection.mjs';
 export { createOrderMap, createOrderMarker, orderMapModel };
 
@@ -95,7 +96,7 @@ export function mountOrderPlanning({
       <details class="order-location-info"><summary>주문 위치 정보</summary><p data-order-map-count>위치 데이터 확인 중</p></details>
       <details class="order-zone-volume" data-order-zone-panel open hidden><summary>권역별 물량 <span data-order-zone-total></span></summary>
         <div class="order-zone-body"><p class="order-zone-note" data-order-zone-note></p>
-        <div class="order-zone-table-wrap"><table class="order-zone-table"><thead><tr><th scope="col">권역</th><th scope="col">착지</th><th scope="col">박스</th><th scope="col">주문</th><th scope="col">중량</th></tr></thead><tbody data-order-zone-rows></tbody></table></div>
+        <div class="order-zone-table-wrap"><table class="order-zone-table"><thead><tr><th scope="col">권역</th><th scope="col">착지</th><th scope="col">박스</th><th scope="col">주문</th><th scope="col">중량</th><th scope="col">배송원</th></tr></thead><tbody data-order-zone-rows></tbody></table></div>
         <div class="order-list-pages"><button type="button" class="button subtle" data-order-zone-previous>이전</button><span data-order-zone-page></span><button type="button" class="button subtle" data-order-zone-next>다음</button></div></div>
       </details>
     </section>
@@ -104,6 +105,7 @@ export function mountOrderPlanning({
     <dialog class="order-dialog order-reassign-dialog" data-order-reassign-dialog aria-labelledby="order-reassign-title">
       <div class="order-dialog-body"><div class="order-dialog-heading"><h2 id="order-reassign-title" data-order-reassign-title>핀배차</h2><button type="button" class="order-dialog-close" data-order-reassign-close aria-label="배차 창 닫기">${referenceIcon('close')}</button></div>
       <p class="order-dialog-description" data-order-reassign-from></p>
+      <label class="order-reassign-target" data-order-reassign-zone-label hidden>대상 권역<select data-order-reassign-zone aria-label="대상 권역"></select></label>
       <label class="order-reassign-target">배정할 차량<select data-order-reassign-target aria-label="배정할 차량"></select></label>
       <p class="order-reassign-preview" data-order-reassign-preview></p><p class="order-dialog-description">같은 이름과 주소의 주문을 하나의 배송지로 묶어 배차 계산안에 반영합니다.</p>
       <p class="order-reassign-error" data-order-reassign-error role="alert" hidden></p>
@@ -153,6 +155,7 @@ export function mountOrderPlanning({
   let zonePage = 1;
   let zonePinCache = null;
   let zoneHtml = '';
+  let zoneDriverMap = new Map();
   let popupHtml = '';
   let multiMode = false;
   let bulkSelection = new Set();
@@ -246,7 +249,8 @@ export function mountOrderPlanning({
       ? `주문이 있는 권역 ${rows.length.toLocaleString('ko-KR')}곳. 여러 권역에 걸친 주문은 권역마다 집계해 권역 합계가 전체보다 클 수 있습니다.${unlocated?.orders ? ` 권역을 알 수 없는 주문 ${unlocated.orders.toLocaleString('ko-KR')}건(${boxesText(unlocated.boxes)})은 표에 없습니다.` : ''}`
       : '주문이 있는 권역이 없습니다.');
     const body = query('[data-order-zone-rows]');
-    const html = paged.items.map(row => `<tr><th scope="row"><button type="button" data-order-zone-id="${escapeHtml(row.zoneId)}" aria-pressed="${row.zoneId === selectedZoneId}">${escapeHtml(row.label)}</button></th><td>${row.destinations.toLocaleString('ko-KR')}곳</td><td>${boxesText(row.boxes)}</td><td>${row.orders.toLocaleString('ko-KR')}건</td><td>${weightText(row.weightKg)}</td></tr>`).join('');
+    const driverNames = new Map(vehiclesFor(data).map(vehicle => [vehicle.id, vehicle.driver || vehicle.id]));
+    const html = paged.items.map(row => `<tr><th scope="row"><button type="button" data-order-zone-id="${escapeHtml(row.zoneId)}" aria-pressed="${row.zoneId === selectedZoneId}">${escapeHtml(row.label)}</button></th><td>${row.destinations.toLocaleString('ko-KR')}곳</td><td>${boxesText(row.boxes)}</td><td>${row.orders.toLocaleString('ko-KR')}건</td><td>${weightText(row.weightKg)}</td><td class="order-zone-drivers" title="${escapeHtml(driverNamesText(zoneDriverMap.get(row.zoneId), id => driverNames.get(id) || id, Infinity))}">${escapeHtml(driverNamesText(zoneDriverMap.get(row.zoneId), id => driverNames.get(id) || id))}</td></tr>`).join('');
     if (body && html !== zoneHtml) { zoneHtml = html; body.innerHTML = html; }
     setText('[data-order-zone-page]', `${paged.start}–${paged.end} / ${paged.total.toLocaleString('ko-KR')}곳`);
     const previous = query('[data-order-zone-previous]');
@@ -276,7 +280,7 @@ export function mountOrderPlanning({
     const vehicle = vehiclesFor(data).find(item => item.id === delivery.vehicleId);
     const zone = zoneRows.rows.find(row => row.zoneId === selectedZoneId);
     const detail = [delivery.address, delivery.detailAddress].flatMap(part => part ? [escapeHtml(part)] : []).join(' ');
-    const html = `<div class="order-popup-head"><strong>${escapeHtml(delivery.name || '배송지 미등록')}</strong><button type="button" class="order-dialog-close order-popup-close" data-order-popup-close aria-label="배송지 정보 닫기">${referenceIcon('close')}</button></div><p>${detail}</p><dl><dt>수량</dt><dd>주문 ${unit.length.toLocaleString('ko-KR')}건 / ${boxesText(totalBoxes(unit))}</dd><dt>중량</dt><dd>${weightText(weight)}</dd><dt>배송원</dt><dd>${escapeHtml(vehicle?.driver || '배차 대기')}</dd><dt>권역</dt><dd>${escapeHtml(zone?.label || delivery.regionName || '미확인')}</dd><dt>주문번호</dt><dd>${unit.map(item => escapeHtml(item.orderNumber)).join(', ')}</dd></dl><button type="button" class="button subtle" data-order-popup-pin ${canPin() && !delivery.assignmentProtected ? '' : 'disabled'}>핀배차</button>`;
+    const html = `<div class="order-popup-head"><strong>${escapeHtml(delivery.name || '배송지 미등록')}</strong><button type="button" class="order-dialog-close order-popup-close" data-order-popup-close aria-label="배송지 정보 닫기">${referenceIcon('close')}</button></div><p>${detail}</p><dl><dt>수량</dt><dd>주문 ${unit.length.toLocaleString('ko-KR')}건 / ${boxesText(totalBoxes(unit))}</dd><dt>중량</dt><dd>${weightText(weight)}</dd><dt>배송원</dt><dd>${escapeHtml(vehicle?.driver || '배차 대기')}</dd><dt>권역</dt><dd>${escapeHtml(zone?.label || delivery.regionName || '미확인')}</dd><dt>주문번호</dt><dd>${unit.map(item => escapeHtml(item.orderNumber)).join(', ')}</dd></dl><button type="button" class="button subtle" data-order-popup-pin ${canPin() && !delivery.assignmentProtected ? '' : 'disabled'}>핀배차</button> <button type="button" class="button subtle" data-order-popup-transfer ${canPin() && !delivery.assignmentProtected && transferOptionsFor(delivery).length ? '' : 'disabled'}>타 권역 이관</button>`;
     if (html !== popupHtml) { popupHtml = html; node.innerHTML = html; }
     node.hidden = false;
     positionPopup();
@@ -329,7 +333,8 @@ export function mountOrderPlanning({
       ? transferPreview(visibleDeliveries.filter(item => pendingAssignment.orderIds.includes(item.id)), targetId) : null;
     confirm.disabled = !vehicle || targetId === pendingAssignment.fromGroupId || (bulk !== null && bulk.movingCount === 0);
     if (confirm.disabled) {
-      setText('[data-order-reassign-preview]', vehicle && bulk && !bulk.movingCount ? '선택한 배송지는 이미 이 차량에 배정되어 있습니다.' : '배정할 다른 차량을 선택해 주세요.');
+      setText('[data-order-reassign-preview]', vehicle && bulk && !bulk.movingCount ? '선택한 배송지는 이미 이 차량에 배정되어 있습니다.'
+        : pendingAssignment.zoneOptions ? '대상 권역과 그 권역의 배송원을 선택해 주세요.' : '배정할 다른 차량을 선택해 주세요.');
       return;
     }
     const currentOrders = visibleDeliveries.filter(item => item.vehicleId === targetId);
@@ -339,8 +344,55 @@ export function mountOrderPlanning({
     const movingBoxes = bulk ? bulk.boxes : pendingAssignment.boxes;
     const movingCount = bulk ? bulk.movingCount : pendingAssignment.orderIds.length;
     const nextBoxes = currentBoxes === null || movingBoxes === null ? null : currentBoxes + movingBoxes;
+    const targetZone = pendingAssignment.zoneOptions?.find(option => option.zoneId === query('[data-order-reassign-zone]')?.value);
+    const zoneLine = targetZone ? `\n대상 권역 ${targetZone.label} (배송지의 위치와 권역 소속은 그대로입니다)` : '';
     const movingLine = bulk ? `\n이동 ${bulk.movingCount}건 / ${boxesText(bulk.boxes)}${bulk.unchangedCount ? ` (이미 이 차량 ${bulk.unchangedCount}건 제외)` : ''}` : '';
-    setText('[data-order-reassign-preview]', `대상 차량 ${vehicle.driver} / ${vehicle.plate}\n현재 ${currentOrders.length}건 / ${boxesText(currentBoxes)} → 배차 후 ${currentOrders.length + movingCount}건 / ${boxesText(nextBoxes)}${movingLine}\n${locationLabel(vehicle)}${position}`);
+    setText('[data-order-reassign-preview]', `대상 차량 ${vehicle.driver} / ${plateLabel(vehicle)}\n현재 ${currentOrders.length}건 / ${boxesText(currentBoxes)} → 배차 후 ${currentOrders.length + movingCount}건 / ${boxesText(nextBoxes)}${movingLine}${zoneLine}\n${locationLabel(vehicle)}${position}`);
+  }
+
+  function resetZoneTransferControls() {
+    const label = query('[data-order-reassign-zone-label]');
+    if (label) label.hidden = true;
+    const target = query('[data-order-reassign-target]');
+    if (target) target.disabled = false;
+  }
+  function transferOptionsFor(delivery) {
+    if (!delivery?.vehicleId || !selectedZoneId) return [];
+    return transferZoneOptions(zoneRows.rows, zoneDriverMap, pinVehicles().map(vehicle => vehicle.id), { fromZoneId: selectedZoneId, fromVehicleId: delivery.vehicleId });
+  }
+  function openZoneTransfer() {
+    if (!canPin() || selectedAssignmentProtected() || !selectedZoneId) return;
+    const chosen = visibleDeliveries.find(item => item.id === selectedDeliveryId);
+    const options = transferOptionsFor(chosen);
+    if (!chosen || !options.length) return;
+    const selected = chosen.assignmentUnitId ? visibleDeliveries.filter(item => item.assignmentUnitId === chosen.assignmentUnitId) : [chosen];
+    const from = vehiclesFor(data).find(item => item.id === chosen.vehicleId);
+    const fromZone = zoneRows.rows.find(row => row.zoneId === selectedZoneId)?.label || selectedZoneId;
+    pendingAssignment = { date: data.dispatchSource.date, fromGroupId: chosen.vehicleId, orderIds: selected.map(item => item.id), boxes: totalBoxes(selected), zoneOptions: options };
+    setText('[data-order-reassign-title]', '타 권역 이관');
+    setText('[data-order-reassign-from]', `${chosen.name} / ${selected.length}건 / ${boxesText(pendingAssignment.boxes)} / ${fromZone} · ${from?.driver || '배차 대기'}`);
+    const zoneSelect = query('[data-order-reassign-zone]');
+    zoneSelect.innerHTML = '<option value="">권역을 선택해 주세요</option>' + options.map(option => `<option value="${escapeHtml(option.zoneId)}">${escapeHtml(option.label)} · 배송원 ${option.loads.length}명</option>`).join('');
+    zoneSelect.value = '';
+    query('[data-order-reassign-zone-label]').hidden = false;
+    const select = query('[data-order-reassign-target]');
+    select.innerHTML = '<option value="">권역을 먼저 선택해 주세요</option>';
+    select.value = '';
+    select.disabled = true;
+    query('[data-order-reassign-error]').hidden = true;
+    updateAssignmentPreview();
+    reassignDialog.showModal();
+  }
+  function chooseTransferZone() {
+    const option = pendingAssignment?.zoneOptions?.find(item => item.zoneId === query('[data-order-reassign-zone]').value);
+    const select = query('[data-order-reassign-target]');
+    select.disabled = !option;
+    select.innerHTML = option ? option.loads.map(load => {
+      const vehicle = vehiclesFor(data).find(item => item.id === load.vehicleId);
+      return `<option value="${escapeHtml(load.vehicleId)}">${escapeHtml(vehicle?.driver || load.vehicleId)} / ${escapeHtml(plateLabel(vehicle))} · 이 권역 ${load.destinations.toLocaleString('ko-KR')}곳 ${boxesText(load.boxes)}</option>`;
+    }).join('') : '<option value="">권역을 먼저 선택해 주세요</option>';
+    select.value = option ? option.loads[0].vehicleId : '';
+    updateAssignmentPreview();
   }
 
   function openBulkAssignment() {
@@ -349,6 +401,7 @@ export function mountOrderPlanning({
     if (!summary.orderCount) return;
     const drivers = [...new Set(summary.deliveries.map(item => vehiclesFor(data).find(vehicle => vehicle.id === item.vehicleId)?.driver || '배차 대기'))];
     const driverText = drivers.length > 3 ? `${drivers.slice(0, 3).join(', ')} 외 ${drivers.length - 3}명` : drivers.join(', ');
+    resetZoneTransferControls();
     pendingAssignment = { date: data.dispatchSource.date, fromGroupId: null, bulk: true, orderIds: summary.orderIds, boxes: summary.boxes };
     setText('[data-order-reassign-title]', '선택 이관');
     setText('[data-order-reassign-from]', `선택 ${summary.destinationCount.toLocaleString('ko-KR')}곳 / ${summary.orderCount.toLocaleString('ko-KR')}건 / ${boxesText(summary.boxes)} / 현재 배정: ${driverText}`);
@@ -367,6 +420,7 @@ export function mountOrderPlanning({
     const selected = chosen.assignmentUnitId ? visibleDeliveries.filter(item => item.assignmentUnitId === chosen.assignmentUnitId) : [chosen];
     const fromGroupId = chosen.vehicleId;
     const from = vehiclesFor(data).find(item => item.id === fromGroupId);
+    resetZoneTransferControls();
     pendingAssignment = { date: data.dispatchSource.date, fromGroupId, orderIds: selected.map(item => item.id), boxes: totalBoxes(selected) };
     setText('[data-order-reassign-title]', '핀배차');
     setText('[data-order-reassign-from]', `${chosen.name} / ${selected.length}건 / ${boxesText(pendingAssignment.boxes)} / ${from?.driver || '배차 대기'}`);
@@ -527,6 +581,7 @@ export function mountOrderPlanning({
         sourceModel = orderMapModel(deliveriesFor(data), routeData);
         sourcePoints = { type: 'FeatureCollection', features: sourceModel.mapped.map(({ delivery, coordinates }) => ({ type: 'Feature', id: delivery.id, properties: { orderId: delivery.id, groupId: delivery.vehicleId, label: delivery.orderNumber }, geometry: { type: 'Point', coordinates } })) };
         zoneRows = zoneVolumes(data.dispatchRegions, deliveriesFor(data));
+        zoneDriverMap = zoneDrivers(deliveriesFor(data));
         sourceRegions = withZoneVolumes(regionOrderCounts(data.dispatchRegions, deliveriesFor(data)), zoneRows.rows);
         if (selectedZoneId && !zoneRows.rows.some(row => row.zoneId === selectedZoneId)) selectedZoneId = null;
       }
@@ -621,10 +676,11 @@ export function mountOrderPlanning({
   listen(selection, 'click', event => { if (event.target.closest?.('[data-order-pin-selected]')) openAssignment('pin'); });
   listen(query('[data-order-dispatch-pin]'), 'click', () => openAssignment('pin'));
   listen(query('[data-order-reassign-target]'), 'change', updateAssignmentPreview);
+  listen(query('[data-order-reassign-zone]'), 'change', chooseTransferZone);
   listen(query('[data-order-reassign-confirm]'), 'click', applyAssignment);
   listen(query('[data-order-reassign-cancel]'), 'click', () => reassignDialog.close());
   listen(query('[data-order-reassign-close]'), 'click', () => reassignDialog.close());
-  listen(reassignDialog, 'close', () => { pendingAssignment = null; query('[data-order-dispatch-pin]')?.focus(); });
+  listen(reassignDialog, 'close', () => { pendingAssignment = null; resetZoneTransferControls(); query('[data-order-dispatch-pin]')?.focus(); });
   listen(query('[data-order-zone-rows]'), 'click', event => {
     const row = event.target.closest?.('[data-order-zone-id]');
     if (!row) return;
@@ -635,6 +691,7 @@ export function mountOrderPlanning({
   listen(query('[data-order-popup]'), 'click', event => {
     if (event.target.closest?.('[data-order-popup-close]')) { selectedDeliveryId = null; overlapIds = []; renderScene(); renderOrderList(); return; }
     if (event.target.closest?.('[data-order-popup-pin]')) openAssignment('pin');
+    if (event.target.closest?.('[data-order-popup-transfer]')) openZoneTransfer();
   });
   listen(query('[data-order-multi-toggle]'), 'click', () => {
     if (!multiAvailable()) return;
@@ -717,7 +774,7 @@ export function mountOrderPlanning({
       vehicleSignature = ''; markerSignature = ''; geometrySignature = '';
       selectedDeliveryId = null; visibleDeliveries = []; overlapIds = []; listQuery = ''; listPage = 1;
       multiMode = false; bulkSelection = new Set(); bulkNotice = '';
-      selectedZoneId = null; zoneRows = { rows: [], totals: null, unlocated: null }; zonePage = 1; zonePinCache = null;
+      selectedZoneId = null; zoneRows = { rows: [], totals: null, unlocated: null }; zoneDriverMap = new Map(); zonePage = 1; zonePinCache = null;
       if (dragStart) stopDrag();
       element.dataset.sourceKind = 'unavailable';
       setText('[data-order-group-heading]', '후보 배송원');

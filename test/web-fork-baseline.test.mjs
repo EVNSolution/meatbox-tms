@@ -44,6 +44,7 @@ const authoredPaths = [
   'apps/web/combined/bulk-selection.mjs', 'apps/web/combined/bulk-selection.test.mjs',
   'apps/web/combined/zone-volume.mjs', 'apps/web/combined/zone-volume.test.mjs',
   'apps/web/combined/vehicle-identity.mjs', 'apps/web/combined/vehicle-identity.test.mjs',
+  'apps/web/combined/zone-transfer.mjs', 'apps/web/combined/zone-transfer.test.mjs',
 ].sort();
 const inventory = JSON.parse(readFileSync(path.join(root, 'apps/web/fork-inventory.json'), 'utf8'));
 const git = args => execFileSync('git', args, { cwd: root, maxBuffer: 16 * 1024 * 1024 });
