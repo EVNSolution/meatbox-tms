@@ -289,6 +289,39 @@ test("static lookup rejects traversal, hidden build sources and symlinks", async
   assert.ok(Number(head.headers["content-length"]) > 0);
 });
 
+test("path parameters and fragments are refused before any API owner sees them", async t => {
+  const distDirectory = await fixtureDist();
+  const node = createFixtureApi();
+  const kotlin = createFixtureApi();
+  const apiOrigin = await listen(node.server);
+  const kotlinApiOrigin = await listen(kotlin.server);
+  const publicOrigin = await unusedOrigin();
+  const gateway = createLegacyGateway({
+    apiOrigin, kotlinApiOrigin, kotlinResources: true, kotlinAuth: true, kotlinDispatch: true, publicOrigin, distDirectory,
+  });
+  await new Promise(resolve => gateway.server.listen(new URL(publicOrigin).port, "127.0.0.1", resolve));
+  t.after(async () => {
+    await gateway.close();
+    await Promise.all([node, kotlin].map(api => new Promise(resolve => api.server.close(resolve))));
+  });
+  const probes = [
+    ["GET", "/api/resources;x=1"], ["GET", "/api/resources/;x=1"], ["PATCH", "/api/resources;x=1"],
+    ["GET", "/api/dispatch-data/manifest;x=1"], ["GET", "/api/dispatch-data/regions;x=1"],
+    ["GET", "/api/dispatch-data/days/2026-10-08/state;x=1"], ["POST", "/api/dispatch-data/days/2026-10-08/commands;x=1"],
+    ["GET", "/api/session;x=1"], ["POST", "/login;x=1"], ["POST", "/login#x"], ["POST", "/dev/register#x"],
+    ["POST", "/logout#x"], ["GET", "/api/session#x"], ["GET", "/api/resources%3Bx=1"], ["GET", "/api/resources%3bx=1"],
+    ["GET", "/combined/;x=1"],
+  ];
+  for (const cookie of [undefined, "session=valid"]) {
+    for (const [method, url] of probes) {
+      const response = await requestRaw(publicOrigin, url, { method, headers: cookie ? { cookie } : {} });
+      assert.equal(response.status, 404, `${method} ${url} cookie=${cookie}`);
+    }
+  }
+  assert.deepEqual(node.seen, []);
+  assert.deepEqual(kotlin.seen, []);
+});
+
 function waitForWebSocket(ws, event) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`WebSocket ${event} timeout`)), 2_000);

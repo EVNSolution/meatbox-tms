@@ -68,11 +68,14 @@ function redirect(res, status, location, headers) {
   res.end();
 }
 
+// A path parameter (";x=1") or a fragment ("#x") lets the route selectors, which compare the raw URL,
+// and the upstream servers, which parse it, disagree about the path. No endpoint needs either.
 function rawPathIsUnsafe(rawUrl) {
-  const rawPath = String(rawUrl || "/").split(/[?#]/, 1)[0];
+  const rawPath = String(rawUrl || "/").split("?", 1)[0];
+  if (rawPath.includes("#")) return true;
   let decoded;
   try { decoded = decodeURIComponent(rawPath); } catch { return true; }
-  if (decoded.includes("\0") || decoded.includes("\\")) return true;
+  if (decoded.includes("\0") || decoded.includes("\\") || decoded.includes(";")) return true;
   const segments = decoded.split("/").filter(Boolean);
   return segments.some(segment => segment === "." || segment === ".." || segment.startsWith("."));
 }

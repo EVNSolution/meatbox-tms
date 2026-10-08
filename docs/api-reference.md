@@ -8,6 +8,7 @@
 
 - 응답은 별도 표기가 없으면 JSON이다.
 - 인증이 없거나 세션이 만료된 API 요청은 `401 {"error":"LOGIN_REQUIRED"}`다.
+- 경로에 `;`(경로 매개변수) 또는 `%3B`가 있으면 로그인 여부와 무관하게 Kotlin API는 `400 {"error":"INVALID_PATH"}`를 반환하고, 웹 게이트웨이는 `;`와 `#`가 있는 경로를 `404`로 거절한다. 어떤 경로도 매개변수를 쓰지 않는다.
 - 상태 변경은 브라우저가 보내는 `Origin`이 설정된 `PUBLIC_ORIGIN`과 정확히 같아야 한다.
 - 날짜 명령은 `Content-Type: application/json`, 최대 `128 KiB`다. 자원 변경은 최대 `256 KiB`다.
 - 날짜 명령은 인증 사용자별 분당 120회를 넘으면 `429 COMMAND_RATE_LIMITED`와 `Retry-After`를 반환한다.
