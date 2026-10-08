@@ -10,6 +10,9 @@ const ids = {
   groupPoints: 'dispatch-orders-group',
   orderPoint: 'dispatch-order-selected',
   multiSelect: 'dispatch-orders-multi',
+  zonePins: 'dispatch-zone-pins-source',
+  zonePinLayer: 'dispatch-zone-pins',
+  zonePinSelected: 'dispatch-zone-pin-selected',
 };
 
 const emptyCollection = () => ({ type: 'FeatureCollection', features: [] });
@@ -58,7 +61,7 @@ function addLayers(map, markerImage, ownedLayers, ownedSources) {
     id: ids.regionCounts, type: 'symbol', source: ids.regions, minzoom: 11,
     filter: hasOrders,
     layout: {
-      'symbol-placement': 'point', 'text-field': ['to-string', ['get', 'orderCount']],
+      'symbol-placement': 'point', 'text-field': ['coalesce', ['get', 'volumeLabel'], ['to-string', ['get', 'orderCount']]],
       'text-font': ['Noto Sans Bold'], 'text-size': 13,
       'text-allow-overlap': true, 'text-ignore-placement': true,
     },
@@ -92,9 +95,24 @@ function addLayers(map, markerImage, ownedLayers, ownedSources) {
       'icon-allow-overlap': true, 'icon-ignore-placement': true,
     },
   });
+  addSource(ids.zonePins, { type: 'geojson', data: emptyCollection() });
+  addLayer({
+    id: ids.zonePinLayer, type: 'symbol', source: ids.zonePins,
+    layout: {
+      'icon-image': ids.marker, 'icon-size': 0.55, 'icon-anchor': 'bottom',
+      'icon-allow-overlap': true, 'icon-ignore-placement': true,
+    },
+  });
+  addLayer({
+    id: ids.zonePinSelected, type: 'symbol', source: ids.zonePins, filter: nothing,
+    layout: {
+      'icon-image': ids.marker, 'icon-size': 0.8, 'icon-anchor': 'bottom',
+      'icon-allow-overlap': true, 'icon-ignore-placement': true,
+    },
+  });
 }
 
-export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () => {} } = {}) {
+export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = () => {}, onError = () => {} } = {}) {
   let destroyed = false;
   let ready = false;
   let loading = false;
@@ -103,15 +121,16 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
   const ownedSources = new Set();
   let pointData = null;
   let regionData = null;
+  let zonePinData = null;
   let latest = {
     points: emptyCollection(), regions: null, selectedGroupId: null,
-    selectedOrderId: null, selectedOrderIds: [], selectedZoneIds: [], mode: 'regions',
+    selectedOrderId: null, selectedOrderIds: [], selectedZoneIds: [], zonePins: emptyCollection(), mode: 'regions',
   };
 
   const removeResources = () => {
-    const layerIds = [ids.orderPoint, ids.groupPoints, ids.allPoints, ids.multiSelect, ids.regionCounts, ids.selectedRegion, ids.regionLine, ids.regionFill];
+    const layerIds = [ids.zonePinSelected, ids.zonePinLayer, ids.orderPoint, ids.groupPoints, ids.allPoints, ids.multiSelect, ids.regionCounts, ids.selectedRegion, ids.regionLine, ids.regionFill];
     for (const id of layerIds) if (ownedLayers.has(id) && map.getLayer(id)) map.removeLayer(id);
-    for (const id of [ids.points, ids.regions]) if (ownedSources.has(id) && map.getSource(id)) map.removeSource(id);
+    for (const id of [ids.zonePins, ids.points, ids.regions]) if (ownedSources.has(id) && map.getSource(id)) map.removeSource(id);
     ownedLayers.clear();
     ownedSources.clear();
     if (addedImage && map.hasImage(ids.marker)) map.removeImage(ids.marker);
@@ -127,17 +146,23 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
       regionData = latest.regions;
       map.getSource(ids.regions).setData(regionData || emptyCollection());
     }
+    if (zonePinData !== latest.zonePins) {
+      zonePinData = latest.zonePins;
+      map.getSource(ids.zonePins).setData(zonePinData || emptyCollection());
+    }
     const groupFilter = equals('groupId', latest.selectedGroupId);
     const orderFilter = equals('orderId', latest.selectedOrderId);
     map.setFilter(ids.groupPoints, groupFilter);
     map.setFilter(ids.orderPoint, orderFilter);
     map.setFilter(ids.multiSelect, includes('orderId', latest.selectedOrderIds));
+    map.setFilter(ids.zonePinSelected, equals('orderId', latest.selectedOrderId));
     map.setPaintProperty(ids.allPoints, 'icon-opacity', latest.selectedGroupId ? 0.5 : 1);
     map.setFilter(ids.selectedRegion, includes('zoneId', latest.selectedZoneIds));
     const regionVisibility = latest.mode === 'regions' ? 'visible' : 'none';
     const pointVisibility = latest.mode === 'orders' ? 'visible' : 'none';
     for (const id of [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.regionCounts]) map.setLayoutProperty(id, 'visibility', regionVisibility);
     for (const id of [ids.allPoints, ids.groupPoints, ids.orderPoint, ids.multiSelect]) map.setLayoutProperty(id, 'visibility', pointVisibility);
+    for (const id of [ids.zonePinLayer, ids.zonePinSelected]) map.setLayoutProperty(id, 'visibility', regionVisibility);
   };
 
   const start = () => {
@@ -154,7 +179,7 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
       } finally {
         map.off('error', captureSetupError);
       }
-      const requiredLayers = [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.regionCounts, ids.multiSelect, ids.allPoints, ids.groupPoints, ids.orderPoint];
+      const requiredLayers = [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.regionCounts, ids.multiSelect, ids.allPoints, ids.groupPoints, ids.orderPoint, ids.zonePinLayer, ids.zonePinSelected];
       if (setupErrors.length || requiredLayers.some(id => !map.getLayer(id))) {
         removeResources();
         throw setupErrors[0] || new Error('배차 지도 레이어를 생성하지 못했습니다.');
@@ -167,8 +192,20 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
   };
 
   const pointLayers = [ids.orderPoint, ids.groupPoints, ids.allPoints];
+  const zoneClick = event => {
+    const point = event?.point || { x: 0, y: 0 };
+    const box = [[point.x - 12, point.y - 12], [point.x + 12, point.y + 12]];
+    const pins = [...new Set(map.queryRenderedFeatures(box, { layers: [ids.zonePinSelected, ids.zonePinLayer] })
+      .map(feature => feature?.properties?.orderId).filter(value => typeof value === 'string' && value))];
+    if (pins.length) { onPick(pins); return; }
+    const zone = map.queryRenderedFeatures([point.x, point.y], { layers: [ids.regionFill] })
+      .map(feature => feature?.properties?.zoneId).find(value => typeof value === 'string' && value);
+    onZonePick(zone || null);
+  };
   const click = event => {
-    if (!ready || destroyed || latest.mode !== 'orders') return;
+    if (!ready || destroyed) return;
+    if (latest.mode === 'regions') { zoneClick(event); return; }
+    if (latest.mode !== 'orders') return;
     const point = event?.point || { x: 0, y: 0 };
     const box = [[point.x - 12, point.y - 12], [point.x + 12, point.y + 12]];
     const features = map.queryRenderedFeatures(box, { layers: pointLayers });

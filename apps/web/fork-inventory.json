@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 99,
-  "authoredFileCount": 27,
+  "authoredFileCount": 29,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -538,11 +538,12 @@
       "source": "apps/combined/dispatch-map-layer.mjs",
       "sourceSha256": "944304bc83934f094fa317494e7d5ed047ba0b0f432cae91d247fd7a71dcf56d",
       "target": "apps/web/combined/dispatch-map-layer.mjs",
-      "targetSha256": "154246a569167cc2ec4a29399724ce98258ab65d382565ec1ece738c48a29e57",
+      "targetSha256": "781c1a02fc17d64ad0fb05429c62c251058066018118209bc670da631ae94a42",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
-        "Add a circle layer that highlights the orders picked for a bulk transfer"
+        "Add a circle layer that highlights the orders picked for a bulk transfer",
+        "Draw the pins of a selected zone in a separate layer, route zone and pin clicks in zone view and label zones with destinations and boxes"
       ],
       "status": "active"
     },
@@ -550,10 +551,11 @@
       "source": "apps/combined/dispatch-map-layer.test.mjs",
       "sourceSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7",
       "target": "apps/web/combined/dispatch-map-layer.test.mjs",
-      "targetSha256": "d2a2fd22d0ec331070b1b6b80a59ceeb42f80670254bae3b514d238c964ec5cc",
+      "targetSha256": "c8018136c921c28f740bb7f20e2ee82ad74a525d5c3969e9e75d72ab8a5465c1",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
-        "Cover the bulk-selection highlight layer"
+        "Cover the bulk-selection highlight layer",
+        "Cover zone pins, zone and pin click routing and the volume label"
       ],
       "status": "active"
     },
@@ -903,14 +905,15 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "0226e3d6a541ecf3f5720dbd5a06e268cf0b802076b1a0baeac28600bcb18e82",
+      "targetSha256": "2a20d52295ae4be327f995110016aaea62a90093a24ff857c22309f43711e775",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
-        "Style the multi-select controls and the drag rectangle"
+        "Style the multi-select controls and the drag rectangle",
+        "Style the zone volume table and the delivery popup"
       ],
       "status": "active"
     },
@@ -918,7 +921,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "bb62b7acb40d2cb72836f51394b351805b494a64ea22aee2f309f75540e0ebc4",
+      "targetSha256": "9f0d25728653a2f559498a30efb06d7eb51a2656ab7c29ad5248e5afa126c79d",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -929,7 +932,8 @@
         "Restore the empty selection card after a populated date hid its unselected-order view.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
-        "Add multi-select mode with click and drag selection and a bulk transfer dialog for delivery bundles"
+        "Add multi-select mode with click and drag selection and a bulk transfer dialog for delivery bundles",
+        "Add the zone volume table, zone selection with boundary and pins together and the delivery popup"
       ],
       "status": "active"
     },
@@ -959,14 +963,15 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "43c54aa7dd76d6112600b355027ed0807a28ec4ab84df1d23b606833b5cf5dd8",
+      "targetSha256": "3284b1782afb2869dc04803c668f4f6e25c20d1944de8180e32d8ce31845697e",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Restore the empty selection card after a populated date hid its unselected-order view.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Cover multi-select, drag selection and bulk transfer"
+        "Cover multi-select, drag selection and bulk transfer",
+        "Cover the zone volume table, zone selection and the delivery popup"
       ],
       "status": "active"
     },
@@ -2076,6 +2081,20 @@
     }
   ],
   "authoredFiles": [
+    {
+      "path": "apps/web/combined/zone-volume.mjs",
+      "origin": "authored",
+      "sha256": "3ba1a3798d5539483776441f38c33f44243a97c56a7966d792d5a692a2512353",
+      "reason": "Count destinations, boxes, orders and weight per delivery zone without inventing weight, label zone polygons with the totals and compute zone bounds.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/zone-volume.test.mjs",
+      "origin": "authored",
+      "sha256": "c0905a4582a99329932c05de8e5a5790ed9ff8e17a22c7c72955c2c9a6f404f9",
+      "reason": "Verify per-zone totals, unlocated orders, unknown boxes and weight, labels, zone properties and geometry bounds.",
+      "status": "active"
+    },
     {
       "path": "apps/web/combined/bulk-selection.mjs",
       "origin": "authored",

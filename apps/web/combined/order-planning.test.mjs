@@ -26,12 +26,15 @@ function fixture() {
     'reassign-close', 'reassign-from', 'reassign-target', 'reassign-preview', 'reassign-error', 'reassign-cancel', 'reassign-confirm',
     'search', 'list', 'list-total', 'page', 'previous', 'next',
     'multi-toggle', 'multi-transfer', 'multi-clear', 'multi-summary', 'select-box',
+    'popup', 'zone-panel', 'zone-total', 'zone-note', 'zone-rows', 'zone-page', 'zone-previous', 'zone-next',
   ];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
   nodes['dispatch-actions'].hidden = true;
   nodes['dispatch-result'].hidden = true;
   nodes['reassign-error'].hidden = true;
   nodes['select-box'].hidden = true;
+  nodes.popup.hidden = true;
+  nodes['zone-panel'].hidden = true;
   nodes['list-panel'].hidden = true;
   nodes['map-mode-control'].hidden = true;
   const element = new FakeNode();
@@ -931,5 +934,202 @@ test('복수 선택 중 주문 목록 항목은 단일 선택 대신 선택 묶�
   assert.equal(nodes['multi-toggle']['aria-pressed'], 'false');
   assert.equal(nodes['map-canvas'].dataset.multiSelect, 'false');
   assert.deepEqual(selectedNow(log), ['O1', 'O2'], '선택은 남기되 지도 이동은 다시 허용한다');
+  planning.destroy();
+});
+
+const square = (lng, lat) => ({ type: 'Polygon', coordinates: [[[lng, lat], [lng + 0.1, lat], [lng + 0.1, lat + 0.1], [lng, lat + 0.1], [lng, lat]]] });
+
+function zonePlanningData() {
+  const data = bulkPlanningData();
+  data.dispatchRegions = { type: 'FeatureCollection', features: [
+    { type: 'Feature', properties: { zoneId: 'Z1', label: '서울 첫 권역', quality: 'OK', baseDate: '20250630' }, geometry: square(127, 37.4) },
+    { type: 'Feature', properties: { zoneId: 'Z2', label: '서울 둘째 권역', quality: 'OK', baseDate: '20250630' }, geometry: square(127.3, 37.7) },
+    { type: 'Feature', properties: { zoneId: 'Z3', label: '주문 없는 권역', quality: 'OK', baseDate: '20250630' }, geometry: square(128, 38) },
+  ] };
+  const zones = { O1: ['Z1'], O2: ['Z1'], O3: ['Z1', 'Z2'], O4: ['Z2'] };
+  data.fleetDeliveries = data.fleetDeliveries.map(item => ({ ...item, zoneIds: zones[item.id], detailAddress: item.id === 'O1' ? '2층' : '' }));
+  return data;
+}
+
+function mountZones({ onAssign } = {}) {
+  const { element, nodes } = fixture();
+  const log = { picks: null, zonePick: null, updates: [], fits: [], moves: [] };
+  const planning = mount({ element }, {
+    onAssign,
+    mapFactory: () => ({
+      resize() {}, jumpTo() {}, remove() {},
+      fitBounds: (bounds, options) => log.fits.push({ bounds, options }),
+      project: ([lng, lat]) => ({ x: Math.round((lng - 127) * 1000), y: Math.round((lat - 37) * 1000) }),
+      on: (type, listener) => log.moves.push([type, listener]),
+    }),
+    layerFactory: (_map, callbacks) => { log.picks = callbacks.onPick; log.zonePick = callbacks.onZonePick; return { update: value => log.updates.push(value), destroy() {} }; },
+  });
+  return { planning, nodes, log };
+}
+const zoneClick = (nodes, id) => nodes['zone-rows'].listeners.click({ target: { closest: () => ({ dataset: { orderZoneId: id } }) } });
+
+test('권역별 물량 표는 착지·박스·주문을 권역마다 세고 중량은 값이 없으면 미수신으로 보인다', () => {
+  const { planning, nodes, log } = mountZones();
+  assert.equal(nodes['zone-panel'].hidden, true);
+  planning.update(zonePlanningData(), null);
+  assert.equal(nodes['zone-panel'].hidden, false);
+  assert.equal(nodes['zone-total'].textContent, '전체 3곳 / 26박스 / 주문 4건 / 중량 미수신');
+  assert.match(nodes['zone-note'].textContent, /주문이 있는 권역 2곳.*권역 합계가 전체보다 클 수 있습니다/);
+  const rows = nodes['zone-rows'].innerHTML.match(/<tr>.*?<\/tr>/g);
+  assert.equal(rows.length, 2, '주문이 없는 권역은 표에 없다');
+  assert.match(rows[0], /서울 첫 권역.*2곳.*21박스.*3건.*미수신/);
+  assert.match(rows[1], /서울 둘째 권역.*2곳.*16박스.*2건.*미수신/);
+  assert.equal(nodes['zone-page'].textContent, '1–2 / 2곳');
+  assert.equal(nodes['zone-previous'].disabled, true);
+  assert.equal(nodes['zone-next'].disabled, true);
+  const labelled = log.updates.at(-1);
+  assert.equal(labelled.selectedZoneIds.length, 0);
+  assert.deepEqual(labelled.zonePins.features, []);
+  planning.destroy();
+});
+
+test('권역을 고르면 경계와 그 권역의 모든 핀이 함께 나오고 같은 권역을 다시 고르면 해제한다', () => {
+  const { planning, nodes, log } = mountZones();
+  planning.update(zonePlanningData(), null);
+  zoneClick(nodes, 'Z1');
+  let update = log.updates.at(-1);
+  assert.deepEqual(update.selectedZoneIds, ['Z1']);
+  assert.equal(update.mode, 'regions');
+  assert.deepEqual(update.zonePins.features.map(feature => feature.properties.orderId), ['O1', 'O2', 'O3']);
+  assert.deepEqual(update.zonePins.features[0].geometry.coordinates, [127.1, 37.5]);
+  assert.deepEqual(log.fits.at(-1).bounds, [[127, 37.4], [127.1, 37.5]]);
+  assert.match(nodes['zone-rows'].innerHTML, /data-order-zone-id="Z1" aria-pressed="true"/);
+  assert.match(nodes['zone-rows'].innerHTML, /data-order-zone-id="Z2" aria-pressed="false"/);
+
+  zoneClick(nodes, 'Z2');
+  update = log.updates.at(-1);
+  assert.deepEqual(update.zonePins.features.map(feature => feature.properties.orderId), ['O3', 'O4'], '여러 권역에 걸친 주문은 두 권역 모두에 핀이 나온다');
+
+  zoneClick(nodes, 'Z2');
+  update = log.updates.at(-1);
+  assert.deepEqual(update.selectedZoneIds, []);
+  assert.deepEqual(update.zonePins.features, []);
+  planning.destroy();
+});
+
+test('핀을 누르면 배송지 정보 팝업이 핀 위에 뜨고 닫기와 핀배차 버튼이 동작한다', () => {
+  const { planning, nodes, log } = mountZones({ onAssign: () => ({}) });
+  planning.update(zonePlanningData(), null);
+  log.picks(['O1']);
+  assert.equal(nodes.popup.hidden, true, '권역을 고르기 전에는 팝업이 없다');
+
+  zoneClick(nodes, 'Z1');
+  log.picks(['O1']);
+  assert.equal(nodes.popup.hidden, false);
+  assert.match(nodes.popup.innerHTML, /주문 1/);
+  assert.match(nodes.popup.innerHTML, /서울 1 2층/);
+  assert.match(nodes.popup.innerHTML, /주문 2건 \/ 10박스/);
+  assert.match(nodes.popup.innerHTML, /중량<\/dt><dd>미수신/);
+  assert.match(nodes.popup.innerHTML, /배송원<\/dt><dd>기사 1/);
+  assert.match(nodes.popup.innerHTML, /권역<\/dt><dd>서울 첫 권역/);
+  assert.match(nodes.popup.innerHTML, /1001, 1002/);
+  assert.deepEqual([nodes.popup.style.left, nodes.popup.style.top], ['100px', '460px'], '핀 좌표 위쪽에 놓는다');
+  assert.equal(log.moves.some(([type]) => type === 'move'), true, '지도를 움직이면 팝업도 따라간다');
+  assert.deepEqual(log.updates.at(-1).selectedOrderId, 'O1');
+
+  const closest = selector => selector.includes('pin') ? {} : null;
+  nodes.popup.listeners.click({ target: { closest } });
+  assert.equal(nodes['reassign-dialog'].open, true, '팝업의 핀배차가 같은 배차 창을 연다');
+  nodes['reassign-cancel'].listeners.click();
+
+  nodes.popup.listeners.click({ target: { closest: selector => selector.includes('close') ? {} : null } });
+  assert.equal(nodes.popup.hidden, true);
+  assert.equal(log.updates.at(-1).selectedOrderId, null);
+
+  log.picks(['O4']);
+  assert.equal(nodes.popup.hidden, true, '선택한 권역 밖의 주문은 팝업을 띄우지 않는다');
+  planning.destroy();
+});
+
+test('지도에서 권역을 누르면 권역을 바꾸고 같은 권역은 팝업만 닫으며 빈 곳은 선택을 해제한다', () => {
+  const { planning, nodes, log } = mountZones();
+  planning.update(zonePlanningData(), null);
+  nodes['map-mode-control'].listeners.change({ target: { matches: () => true, value: 'orders' } });
+  assert.equal(log.updates.at(-1).mode, 'orders');
+
+  log.zonePick('Z2');
+  assert.equal(log.updates.at(-1).mode, 'regions', '주문 보기에서 권역을 고르면 권역 보기로 돌아온다');
+  assert.deepEqual(log.updates.at(-1).selectedZoneIds, ['Z2']);
+  log.picks(['O4']);
+  assert.equal(nodes.popup.hidden, false);
+
+  log.zonePick('Z2');
+  assert.equal(nodes.popup.hidden, true);
+  assert.deepEqual(log.updates.at(-1).selectedZoneIds, ['Z2']);
+
+  log.zonePick(null);
+  assert.deepEqual(log.updates.at(-1).selectedZoneIds, []);
+  assert.deepEqual(log.updates.at(-1).zonePins.features, []);
+  planning.destroy();
+});
+
+test('권역이 많으면 쪽으로 나누고 지도에서 먼 쪽의 권역을 고르면 그 쪽으로 이동하며 날짜가 바뀌면 선택을 버린다', () => {
+  const { planning, nodes, log } = mountZones();
+  const data = importedPlanningData();
+  data.dispatch = { phase: 'draft', readOnly: false, candidateIds: ['G1', 'G2'] };
+  const count = 120;
+  data.dispatchRegions = { type: 'FeatureCollection', features: Array.from({ length: count }, (_, index) => ({ type: 'Feature', properties: { zoneId: `Z${index}`, label: `권역 ${String(index).padStart(3, '0')}` }, geometry: square(127 + index / 1000, 37.5) })) };
+  data.fleetDeliveries = Array.from({ length: count }, (_, index) => ({ id: `P${index}`, groupId: 'G1', vehicleId: 'G1', orderNumber: String(index), name: `주문 ${index}`, address: `서울 ${index}`, boxes: count - index, coordinates: [127.05, 37.55], zoneIds: [`Z${index}`] }));
+  planning.update(data, null);
+  assert.equal(nodes['zone-page'].textContent, '1–50 / 120곳');
+  assert.equal(nodes['zone-previous'].disabled, true);
+  assert.equal(nodes['zone-next'].disabled, false);
+  assert.equal(nodes['zone-rows'].innerHTML.match(/<tr>/g).length, 50);
+  assert.match(nodes['zone-rows'].innerHTML, /권역 000/, '박스가 많은 권역이 먼저 나온다');
+
+  nodes['zone-next'].listeners.click();
+  assert.equal(nodes['zone-page'].textContent, '51–100 / 120곳');
+  nodes['zone-next'].listeners.click();
+  assert.equal(nodes['zone-page'].textContent, '101–120 / 120곳');
+  assert.equal(nodes['zone-next'].disabled, true);
+  nodes['zone-previous'].listeners.click();
+  nodes['zone-previous'].listeners.click();
+
+  log.zonePick('Z110');
+  assert.equal(nodes['zone-page'].textContent, '101–120 / 120곳', '지도에서 고른 권역이 있는 쪽으로 이동한다');
+  assert.match(nodes['zone-rows'].innerHTML, /data-order-zone-id="Z110" aria-pressed="true"/);
+
+  planning.update({ ...data, dispatchSource: { ...data.dispatchSource, date: '2025-09-16' } }, null);
+  assert.deepEqual(log.updates.at(-1).selectedZoneIds, []);
+  assert.equal(nodes['zone-page'].textContent, '1–50 / 120곳');
+  planning.destroy();
+});
+
+test('자료가 비면 권역 표와 선택을 비우고 빈 날짜로 바뀌어도 이전 권역 팝업이 남지 않는다', () => {
+  const { planning, nodes, log } = mountZones();
+  planning.update(zonePlanningData(), null);
+  zoneClick(nodes, 'Z1');
+  log.picks(['O1']);
+  assert.equal(nodes.popup.hidden, false);
+  planning.clear({ empty: true });
+  assert.equal(nodes['zone-total'].textContent, '');
+  planning.update(zonePlanningData(), null);
+  assert.deepEqual(log.updates.at(-1).selectedZoneIds, []);
+  assert.equal(nodes.popup.hidden, true);
+  planning.destroy();
+});
+
+test('같은 자료로 다시 그려도 권역 표와 팝업의 DOM을 바꾸지 않아 초점을 잃지 않는다', () => {
+  const { planning, nodes, log } = mountZones();
+  const writes = { rows: 0, popup: 0 };
+  for (const [name, key] of [['zone-rows', 'rows'], ['popup', 'popup']]) {
+    let value = '';
+    Object.defineProperty(nodes[name], 'innerHTML', { get: () => value, set: next => { value = next; writes[key] += 1; } });
+  }
+  const data = zonePlanningData();
+  planning.update(data, null);
+  zoneClick(nodes, 'Z1');
+  log.picks(['O1']);
+  const before = { ...writes };
+  planning.update({ ...data }, null);
+  planning.update({ ...data }, null);
+  assert.deepEqual(writes, before, '내용이 같으면 다시 쓰지 않는다');
+  zoneClick(nodes, 'Z2');
+  assert.equal(writes.rows, before.rows + 1, '선택이 바뀌면 표를 한 번 다시 쓴다');
   planning.destroy();
 });

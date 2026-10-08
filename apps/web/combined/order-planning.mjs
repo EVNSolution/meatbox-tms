@@ -3,8 +3,9 @@ import { referenceIcon } from './reference-icons.mjs';
 import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 import { vehicleOperations } from './vehicle-operations-model.mjs';
 import { mountDispatchMapLayers } from './dispatch-map-layer.mjs';
-import { paginate } from './pagination-model.mjs';
+import { PAGE_SIZE, paginate } from './pagination-model.mjs';
 import { bundleDeliveries } from './delivery-bundles.mjs';
+import { geometryBounds, weightText, withZoneVolumes, zoneVolumes } from './zone-volume.mjs';
 import { addUnits, pointsInRectangle, pruneSelection, summarizeSelection, toggleUnits, transferPreview } from './bulk-selection.mjs';
 export { createOrderMap, createOrderMarker, orderMapModel };
 
@@ -85,11 +86,17 @@ export function mountOrderPlanning({
       <div class="order-map-canvas" data-order-map-canvas aria-label="주문 위치">
         <div class="order-map-layer" data-order-map-layer></div>
         <div class="order-select-box" data-order-select-box hidden></div>
+        <div class="order-map-popup" data-order-popup hidden></div>
         <div class="order-map-status" data-order-map-status role="status"><span data-order-map-status-text>지도 준비 중</span><button type="button" class="button subtle" data-order-map-retry hidden>다시 시도</button></div>
         <section class="order-map-selection" data-order-selection aria-live="polite"><span>선택 주문</span><strong>지도에서 주문을 선택해 주세요.</strong></section>
         <p class="order-map-summary" data-order-map-summary>총 물량 확인 중</p>
       </div>
       <details class="order-location-info"><summary>주문 위치 정보</summary><p data-order-map-count>위치 데이터 확인 중</p></details>
+      <details class="order-zone-volume" data-order-zone-panel open hidden><summary>권역별 물량 <span data-order-zone-total></span></summary>
+        <div class="order-zone-body"><p class="order-zone-note" data-order-zone-note></p>
+        <div class="order-zone-table-wrap"><table class="order-zone-table"><thead><tr><th scope="col">권역</th><th scope="col">착지</th><th scope="col">박스</th><th scope="col">주문</th><th scope="col">중량</th></tr></thead><tbody data-order-zone-rows></tbody></table></div>
+        <div class="order-list-pages"><button type="button" class="button subtle" data-order-zone-previous>이전</button><span data-order-zone-page></span><button type="button" class="button subtle" data-order-zone-next>다음</button></div></div>
+      </details>
     </section>
     </div>
     <details class="order-source-list" data-order-list-panel hidden><summary>주문 목록으로 찾기 <span data-order-list-total></span></summary><div class="order-source-list-content"><label>주문 검색<input type="search" data-order-search placeholder="결제번호, 주소, 기사 검색"></label><div data-order-list></div><div class="order-list-pages"><button type="button" class="button subtle" data-order-previous>이전</button><span data-order-page></span><button type="button" class="button subtle" data-order-next>다음</button></div></div></details>
@@ -140,6 +147,12 @@ export function mountOrderPlanning({
   let listQuery = '';
   let listPage = 1;
   let pendingAssignment = null;
+  let selectedZoneId = null;
+  let zoneRows = { rows: [], totals: null, unlocated: null };
+  let zonePage = 1;
+  let zonePinCache = null;
+  let zoneHtml = '';
+  let popupHtml = '';
   let multiMode = false;
   let bulkSelection = new Set();
   let bulkNotice = '';
@@ -182,6 +195,91 @@ export function mountOrderPlanning({
   function pickForBulk(orderIds) {
     if (orderIds.length) changeBulk(toggleUnits(bulkSelection, visibleDeliveries, orderIds));
   }
+  const emptyPins = { type: 'FeatureCollection', features: [] };
+  function zonePinsFor(zoneId) {
+    if (!zoneId || !sourceModel) return emptyPins;
+    if (zonePinCache?.model === sourceModel && zonePinCache.zoneId === zoneId) return zonePinCache.collection;
+    const features = sourceModel.mapped.flatMap(({ delivery, coordinates }) => (delivery.zoneIds || []).includes(zoneId)
+      ? [{ type: 'Feature', id: delivery.id, properties: { orderId: delivery.id, groupId: delivery.vehicleId, label: delivery.orderNumber }, geometry: { type: 'Point', coordinates } }] : []);
+    zonePinCache = { model: sourceModel, zoneId, collection: { type: 'FeatureCollection', features } };
+    return zonePinCache.collection;
+  }
+  function fitZone(zoneId) {
+    const bounds = geometryBounds(sourceRegions?.features.find(feature => feature.properties?.zoneId === zoneId));
+    if (bounds && map?.fitBounds) map.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 0 });
+  }
+  function applyZone(zoneId, fit) {
+    selectedZoneId = zoneId;
+    selectedDeliveryId = null;
+    overlapIds = [];
+    if (zoneId) {
+      if (mapMode !== 'regions') { multiMode = false; setMapMode('regions'); syncSourceLabels(); }
+      const index = zoneRows.rows.findIndex(row => row.zoneId === zoneId);
+      if (index >= 0) zonePage = Math.floor(index / PAGE_SIZE) + 1;
+      if (fit) fitZone(zoneId);
+    }
+    renderScene();
+    renderOrderList();
+  }
+  function pickZone(zoneId) {
+    if (zoneId && zoneId === selectedZoneId) { selectedDeliveryId = null; overlapIds = []; renderScene(); return; }
+    applyZone(zoneId, false);
+  }
+  function renderZonePanel() {
+    const panel = query('[data-order-zone-panel]');
+    if (!panel) return;
+    panel.hidden = !imported();
+    if (!imported()) {
+      setText('[data-order-zone-total]', '');
+      const emptyBody = query('[data-order-zone-rows]');
+      if (emptyBody) emptyBody.innerHTML = '';
+      zoneHtml = '';
+      return;
+    }
+    const { rows, totals, unlocated } = zoneRows;
+    const paged = paginate(rows, zonePage);
+    zonePage = paged.page;
+    const volume = row => `${row.destinations.toLocaleString('ko-KR')}곳 / ${boxesText(row.boxes)} / 주문 ${row.orders.toLocaleString('ko-KR')}건 / 중량 ${weightText(row.weightKg)}`;
+    setText('[data-order-zone-total]', totals ? `전체 ${volume(totals)}` : '');
+    setText('[data-order-zone-note]', rows.length
+      ? `주문이 있는 권역 ${rows.length.toLocaleString('ko-KR')}곳. 여러 권역에 걸친 주문은 권역마다 집계해 권역 합계가 전체보다 클 수 있습니다.${unlocated?.orders ? ` 권역을 알 수 없는 주문 ${unlocated.orders.toLocaleString('ko-KR')}건(${boxesText(unlocated.boxes)})은 표에 없습니다.` : ''}`
+      : '주문이 있는 권역이 없습니다.');
+    const body = query('[data-order-zone-rows]');
+    const html = paged.items.map(row => `<tr><th scope="row"><button type="button" data-order-zone-id="${escapeHtml(row.zoneId)}" aria-pressed="${row.zoneId === selectedZoneId}">${escapeHtml(row.label)}</button></th><td>${row.destinations.toLocaleString('ko-KR')}곳</td><td>${boxesText(row.boxes)}</td><td>${row.orders.toLocaleString('ko-KR')}건</td><td>${weightText(row.weightKg)}</td></tr>`).join('');
+    if (body && html !== zoneHtml) { zoneHtml = html; body.innerHTML = html; }
+    setText('[data-order-zone-page]', `${paged.start}–${paged.end} / ${paged.total.toLocaleString('ko-KR')}곳`);
+    const previous = query('[data-order-zone-previous]');
+    const next = query('[data-order-zone-next]');
+    if (previous) previous.disabled = paged.page === 1;
+    if (next) next.disabled = paged.page === paged.pageCount;
+  }
+  function positionPopup() {
+    const node = query('[data-order-popup]');
+    const delivery = node && !node.hidden ? visibleDeliveries.find(item => item.id === selectedDeliveryId) : null;
+    if (!delivery?.coordinates || !map?.project) return;
+    const point = map.project(delivery.coordinates);
+    const width = layer.clientWidth || 0;
+    const above = point.y - 40 - (node.offsetHeight || 0) >= 0;
+    node.dataset.placement = above ? 'above' : 'below';
+    const half = (node.offsetWidth || 300) / 2 + 4;
+    node.style.left = `${Math.round(width > half * 2 ? Math.min(Math.max(point.x, half), width - half) : point.x)}px`;
+    node.style.top = `${Math.round(above ? point.y - 40 : point.y + 12)}px`;
+  }
+  function renderPopup() {
+    const node = query('[data-order-popup]');
+    if (!node) return;
+    const delivery = imported() && mapMode === 'regions' && selectedZoneId ? visibleDeliveries.find(item => item.id === selectedDeliveryId) : null;
+    if (!delivery?.coordinates || !(delivery.zoneIds || []).includes(selectedZoneId)) { node.hidden = true; popupHtml = ''; return; }
+    const unit = delivery.assignmentUnitId ? visibleDeliveries.filter(item => item.assignmentUnitId === delivery.assignmentUnitId) : [delivery];
+    const weight = unit.every(item => Number.isFinite(item.weightKg) && item.weightKg >= 0) ? unit.reduce((sum, item) => sum + item.weightKg, 0) : null;
+    const vehicle = vehiclesFor(data).find(item => item.id === delivery.vehicleId);
+    const zone = zoneRows.rows.find(row => row.zoneId === selectedZoneId);
+    const detail = [delivery.address, delivery.detailAddress].flatMap(part => part ? [escapeHtml(part)] : []).join(' ');
+    const html = `<div class="order-popup-head"><strong>${escapeHtml(delivery.name || '배송지 미등록')}</strong><button type="button" class="order-dialog-close order-popup-close" data-order-popup-close aria-label="배송지 정보 닫기">${referenceIcon('close')}</button></div><p>${detail}</p><dl><dt>수량</dt><dd>주문 ${unit.length.toLocaleString('ko-KR')}건 / ${boxesText(totalBoxes(unit))}</dd><dt>중량</dt><dd>${weightText(weight)}</dd><dt>배송원</dt><dd>${escapeHtml(vehicle?.driver || '배차 대기')}</dd><dt>권역</dt><dd>${escapeHtml(zone?.label || delivery.regionName || '미확인')}</dd><dt>주문번호</dt><dd>${unit.map(item => escapeHtml(item.orderNumber)).join(', ')}</dd></dl><button type="button" class="button subtle" data-order-popup-pin ${canPin() && !delivery.assignmentProtected ? '' : 'disabled'}>핀배차</button>`;
+    if (html !== popupHtml) { popupHtml = html; node.innerHTML = html; }
+    node.hidden = false;
+    positionPopup();
+  }
   function syncSourceLabels() {
     const isSource = imported();
     const actions = query('[data-order-dispatch-actions]');
@@ -192,7 +290,7 @@ export function mountOrderPlanning({
     setText('[data-order-group-heading]', isSource ? data?.dispatch?.phase === 'unplanned' ? '후보 배송원' : '차량별 배정' : '배차 차량');
     setText('[data-order-group-note]', isSource ? '주문 수신 순서' : '수신 순서');
     setText('[data-order-map-description]', isSource
-      ? multiMode ? '복수 선택 중입니다. 핀을 클릭하거나 지도를 드래그해 배송지를 고릅니다.' : mapMode === 'regions' ? '지도를 확대하면 권역 중앙에 주문 수가 표시됩니다.' : '모든 주문 핀을 표시합니다.'
+      ? multiMode ? '복수 선택 중입니다. 핀을 클릭하거나 지도를 드래그해 배송지를 고릅니다.' : mapMode === 'regions' ? '권역을 누르거나 아래 표에서 고르면 경계와 배송지 핀이 함께 보입니다. 확대하면 권역 중앙에 착지·박스가 표시됩니다.' : '모든 주문 핀을 표시합니다.'
       : '전체 등록 주문과 선택 차량 배정');
     const listPanel = query('[data-order-list-panel]');
     if (listPanel) listPanel.hidden = !isSource;
@@ -363,10 +461,10 @@ export function mountOrderPlanning({
     const nextMarkerSignature = model.mapped.map(({ delivery, coordinates }) => `${delivery.id}:${delivery.name}:${delivery.boxes}:${delivery.sequence}:${vehicleIdFor(delivery, fallbackVehicleId)}:${coordinates}`).join('|');
     const nextGeometrySignature = model.mapped.map(({ delivery, coordinates }) => `${delivery.id}:${coordinates}`).join('|');
     if (map && imported()) {
-      const zones = selectedDeliveryId
+      const zones = selectedZoneId ? [selectedZoneId] : selectedDeliveryId
         ? source.find(item => item.id === selectedDeliveryId)?.zoneIds || []
         : selectedVehicleId === 'all' ? [] : [...new Set(vehicleDeliveries.flatMap(item => item.zoneIds || []))];
-      pointLayer.update({ points: sourcePoints, regions: sourceRegions, selectedGroupId: selectedVehicleId === 'all' ? null : selectedVehicleId, selectedOrderId: selectedDeliveryId, selectedOrderIds: [...bulkSelection], selectedZoneIds: zones, mode: mapMode });
+      pointLayer.update({ points: sourcePoints, regions: sourceRegions, selectedGroupId: selectedVehicleId === 'all' ? null : selectedVehicleId, selectedOrderId: selectedDeliveryId, selectedOrderIds: [...bulkSelection], selectedZoneIds: zones, zonePins: zonePinsFor(selectedZoneId), mode: mapMode });
       if (mapFailure) return;
     } else if (map && nextMarkerSignature !== markerSignature) {
       markerSignature = nextMarkerSignature;
@@ -397,6 +495,8 @@ export function mountOrderPlanning({
     mapRetry.hidden = true;
     mapStatusText.textContent = '';
     updateSelection();
+    renderPopup();
+    renderZonePanel();
     syncSummary();
   }
 
@@ -406,6 +506,7 @@ export function mountOrderPlanning({
         map = mapFactory(layer);
         wheelZoom = installModifierWheelZoom(map);
         mapFailure = '';
+        map.on?.('move', positionPopup);
         resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(() => map?.resize()) : null;
         resizeObserver?.observe(canvas);
       } catch {
@@ -417,14 +518,16 @@ export function mountOrderPlanning({
     }
     map.resize?.();
     if (imported()) {
-      if (!pointLayer) pointLayer = layerFactory(map, { onPick(ids) { if (multiMode && multiAvailable()) { pickForBulk(ids); return; } overlapIds = ids; selectedDeliveryId = ids[0] || null; if (!selectedDeliveryId) { selectedVehicleId = 'all'; fitVehicleRequested = false; updateVehicles(); } renderScene(); renderOrderList(); if (selectedDeliveryId) onSelect(selectedDeliveryId); }, onError(error) { mapFailure = error?.message || '주문 지도 레이어를 불러오지 못했습니다.'; renderScene(); } });
+      if (!pointLayer) pointLayer = layerFactory(map, { onZonePick: pickZone, onPick(ids) { if (multiMode && multiAvailable()) { pickForBulk(ids); return; } overlapIds = ids; selectedDeliveryId = ids[0] || null; if (!selectedDeliveryId) { selectedVehicleId = 'all'; fitVehicleRequested = false; updateVehicles(); } renderScene(); renderOrderList(); if (selectedDeliveryId) onSelect(selectedDeliveryId); }, onError(error) { mapFailure = error?.message || '주문 지도 레이어를 불러오지 못했습니다.'; renderScene(); } });
       if (sourceData !== data) {
         sourceData = data;
         mapMarkers.splice(0).forEach(marker => marker.remove());
         routeData = { points: deliveriesFor(data).filter(item => item.coordinates).map(item => ({ id: item.id, lng: item.coordinates[0], lat: item.coordinates[1] })) };
         sourceModel = orderMapModel(deliveriesFor(data), routeData);
         sourcePoints = { type: 'FeatureCollection', features: sourceModel.mapped.map(({ delivery, coordinates }) => ({ type: 'Feature', id: delivery.id, properties: { orderId: delivery.id, groupId: delivery.vehicleId, label: delivery.orderNumber }, geometry: { type: 'Point', coordinates } })) };
-        sourceRegions = regionOrderCounts(data.dispatchRegions, deliveriesFor(data));
+        zoneRows = zoneVolumes(data.dispatchRegions, deliveriesFor(data));
+        sourceRegions = withZoneVolumes(regionOrderCounts(data.dispatchRegions, deliveriesFor(data)), zoneRows.rows);
+        if (selectedZoneId && !zoneRows.rows.some(row => row.zoneId === selectedZoneId)) selectedZoneId = null;
       }
       routeState = 'ready';
       return;
@@ -521,6 +624,17 @@ export function mountOrderPlanning({
   listen(query('[data-order-reassign-cancel]'), 'click', () => reassignDialog.close());
   listen(query('[data-order-reassign-close]'), 'click', () => reassignDialog.close());
   listen(reassignDialog, 'close', () => { pendingAssignment = null; query('[data-order-dispatch-pin]')?.focus(); });
+  listen(query('[data-order-zone-rows]'), 'click', event => {
+    const row = event.target.closest?.('[data-order-zone-id]');
+    if (!row) return;
+    applyZone(row.dataset.orderZoneId === selectedZoneId ? null : row.dataset.orderZoneId, true);
+  });
+  listen(query('[data-order-zone-previous]'), 'click', () => { zonePage -= 1; renderZonePanel(); });
+  listen(query('[data-order-zone-next]'), 'click', () => { zonePage += 1; renderZonePanel(); });
+  listen(query('[data-order-popup]'), 'click', event => {
+    if (event.target.closest?.('[data-order-popup-close]')) { selectedDeliveryId = null; overlapIds = []; renderScene(); renderOrderList(); return; }
+    if (event.target.closest?.('[data-order-popup-pin]')) openAssignment('pin');
+  });
   listen(query('[data-order-multi-toggle]'), 'click', () => {
     if (!multiAvailable()) return;
     multiMode = !multiMode;
@@ -602,6 +716,7 @@ export function mountOrderPlanning({
       vehicleSignature = ''; markerSignature = ''; geometrySignature = '';
       selectedDeliveryId = null; visibleDeliveries = []; overlapIds = []; listQuery = ''; listPage = 1;
       multiMode = false; bulkSelection = new Set(); bulkNotice = '';
+      selectedZoneId = null; zoneRows = { rows: [], totals: null, unlocated: null }; zonePage = 1; zonePinCache = null;
       if (dragStart) stopDrag();
       element.dataset.sourceKind = 'unavailable';
       setText('[data-order-group-heading]', '후보 배송원');
@@ -629,6 +744,8 @@ export function mountOrderPlanning({
       setText('[data-order-page]', empty ? '0건' : '확인 전');
       query('[data-order-previous]').disabled = true; query('[data-order-next]').disabled = true;
       syncBulk();
+      renderZonePanel();
+      renderPopup();
     },
     update(nextData, nextSelectedId) {
       if (element.dataset.sourceKind === 'unavailable') query('[data-order-list-panel]').open = false;
@@ -643,6 +760,7 @@ export function mountOrderPlanning({
         if (mapFailure) { pointLayer?.destroy(); pointLayer = null; }
         selectedVehicleId = imported() ? 'all' : 'V1'; selectedDeliveryId = null; overlapIds = []; listPage = 1;
         multiMode = false; bulkSelection = new Set(); bulkNotice = '';
+        selectedZoneId = null; zonePage = 1;
         geometrySignature = ''; markerSignature = ''; vehicleSignature = ''; mapFailure = ''; fitVehicleRequested = false;
       }
       if (!canPin() && reassignDialog?.open) reassignDialog.close();
