@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 99,
-  "authoredFileCount": 25,
+  "authoredFileCount": 27,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -538,10 +538,11 @@
       "source": "apps/combined/dispatch-map-layer.mjs",
       "sourceSha256": "944304bc83934f094fa317494e7d5ed047ba0b0f432cae91d247fd7a71dcf56d",
       "target": "apps/web/combined/dispatch-map-layer.mjs",
-      "targetSha256": "3a414e430f1e97ca3c51d4b01c09f7b67fb0c0927aab3286709753c0046f2ec7",
+      "targetSha256": "154246a569167cc2ec4a29399724ce98258ab65d382565ec1ece738c48a29e57",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
-        "Preserve fixed public asset URLs"
+        "Preserve fixed public asset URLs",
+        "Add a circle layer that highlights the orders picked for a bulk transfer"
       ],
       "status": "active"
     },
@@ -549,9 +550,11 @@
       "source": "apps/combined/dispatch-map-layer.test.mjs",
       "sourceSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7",
       "target": "apps/web/combined/dispatch-map-layer.test.mjs",
-      "targetSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7",
+      "targetSha256": "d2a2fd22d0ec331070b1b6b80a59ceeb42f80670254bae3b514d238c964ec5cc",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
-      "changes": [],
+      "changes": [
+        "Cover the bulk-selection highlight layer"
+      ],
       "status": "active"
     },
     {
@@ -900,13 +903,14 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "b4e00b03973785c8151ee11418b78a2164779df0d12af82345438df62dd897c6",
+      "targetSha256": "0226e3d6a541ecf3f5720dbd5a06e268cf0b802076b1a0baeac28600bcb18e82",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Style the multi-select controls and the drag rectangle"
       ],
       "status": "active"
     },
@@ -914,7 +918,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "1ef6a47b6031e2b25f836e961cbe775ca996a137bb3b123d24cf8f53e094ccea",
+      "targetSha256": "bb62b7acb40d2cb72836f51394b351805b494a64ea22aee2f309f75540e0ebc4",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -924,7 +928,8 @@
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Restore the empty selection card after a populated date hid its unselected-order view.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Add multi-select mode with click and drag selection and a bulk transfer dialog for delivery bundles"
       ],
       "status": "active"
     },
@@ -954,13 +959,14 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "2766690b85fe4d936f1a8779fa6314da0e5fa44c4253a38f42d5a90c9a7bf7dd",
+      "targetSha256": "43c54aa7dd76d6112600b355027ed0807a28ec4ab84df1d23b606833b5cf5dd8",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Restore the empty selection card after a populated date hid its unselected-order view.",
-        "Use one transient empty-data notification while retaining work areas and persistent errors."
+        "Use one transient empty-data notification while retaining work areas and persistent errors.",
+        "Cover multi-select, drag selection and bulk transfer"
       ],
       "status": "active"
     },
@@ -2070,6 +2076,20 @@
     }
   ],
   "authoredFiles": [
+    {
+      "path": "apps/web/combined/bulk-selection.mjs",
+      "origin": "authored",
+      "sha256": "c20c74ed489d03ea484ab4e82fa40e7b688a23bb6f6f5c6c2ec94aa96a6bf409",
+      "reason": "Select delivery bundles for a bulk transfer: expand each pick to its whole assignment unit, skip units that are on the way or finished, summarize the selection, preview which orders actually move and find the pins inside a dragged rectangle.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/bulk-selection.test.mjs",
+      "origin": "authored",
+      "sha256": "00c5e9869144fba6bf9265af5ab842a4c1e5546331461ae56855948e465b2004",
+      "reason": "Verify the bulk selection model: unit expansion, protected units, toggling, pruning after data changes, summaries with unknown box counts, transfer previews and rectangle hit tests.",
+      "status": "active"
+    },
     {
       "path": "apps/web/.gitignore",
       "origin": "authored",

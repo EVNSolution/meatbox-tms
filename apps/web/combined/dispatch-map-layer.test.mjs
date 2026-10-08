@@ -160,3 +160,21 @@ test('파괴 후 MapLibre 레이어와 소스를 남기지 않는다', async () 
   assert.equal(map.sources.size, 0);
   assert.equal(map.images.size, 0);
 });
+
+test('복수 선택 강조 레이어는 선택한 주문만 표시하고 주문 보기에서만 보이며 정리 때 함께 제거된다', async () => {
+  const map = new FakeMap();
+  const mounted = mountDispatchMapLayers(map);
+  mounted.update({ points: points(5), regions: regions(), mode: 'orders', selectedOrderIds: ['O1', 'O3'] });
+  await flush();
+  assert.equal(map.getLayer('dispatch-orders-multi').type, 'circle');
+  assert.deepEqual(map.filters.get('dispatch-orders-multi'), ['in', ['get', 'orderId'], ['literal', ['O1', 'O3']]]);
+  assert.equal(map.visibility.get('dispatch-orders-multi:visibility'), 'visible');
+  assert.ok(map.layerOrder.indexOf('dispatch-orders-multi') < map.layerOrder.indexOf('dispatch-orders-all'), '핀 아래에 그린다');
+  mounted.update({ selectedOrderIds: [] });
+  assert.deepEqual(map.filters.get('dispatch-orders-multi'), ['==', ['literal', 1], ['literal', 0]]);
+  mounted.update({ mode: 'regions', selectedOrderIds: ['O1'] });
+  assert.equal(map.visibility.get('dispatch-orders-multi:visibility'), 'none');
+  mounted.destroy();
+  assert.equal(map.layers.size, 0);
+  assert.equal(map.sources.size, 0);
+});

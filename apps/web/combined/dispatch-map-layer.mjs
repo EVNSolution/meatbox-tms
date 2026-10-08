@@ -9,6 +9,7 @@ const ids = {
   allPoints: 'dispatch-orders-all',
   groupPoints: 'dispatch-orders-group',
   orderPoint: 'dispatch-order-selected',
+  multiSelect: 'dispatch-orders-multi',
 };
 
 const emptyCollection = () => ({ type: 'FeatureCollection', features: [] });
@@ -66,6 +67,10 @@ function addLayers(map, markerImage, ownedLayers, ownedSources) {
 
   addSource(ids.points, { type: 'geojson', data: emptyCollection() });
   addLayer({
+    id: ids.multiSelect, type: 'circle', source: ids.points, filter: nothing,
+    paint: { 'circle-radius': 17, 'circle-color': '#2563eb', 'circle-opacity': 0.3, 'circle-stroke-width': 2, 'circle-stroke-color': '#1d4ed8', 'circle-translate': [0, -12] },
+  });
+  addLayer({
     id: ids.allPoints, type: 'symbol', source: ids.points,
     layout: {
       'icon-image': ids.marker, 'icon-size': 0.42, 'icon-anchor': 'bottom',
@@ -100,11 +105,11 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
   let regionData = null;
   let latest = {
     points: emptyCollection(), regions: null, selectedGroupId: null,
-    selectedOrderId: null, selectedZoneIds: [], mode: 'regions',
+    selectedOrderId: null, selectedOrderIds: [], selectedZoneIds: [], mode: 'regions',
   };
 
   const removeResources = () => {
-    const layerIds = [ids.orderPoint, ids.groupPoints, ids.allPoints, ids.regionCounts, ids.selectedRegion, ids.regionLine, ids.regionFill];
+    const layerIds = [ids.orderPoint, ids.groupPoints, ids.allPoints, ids.multiSelect, ids.regionCounts, ids.selectedRegion, ids.regionLine, ids.regionFill];
     for (const id of layerIds) if (ownedLayers.has(id) && map.getLayer(id)) map.removeLayer(id);
     for (const id of [ids.points, ids.regions]) if (ownedSources.has(id) && map.getSource(id)) map.removeSource(id);
     ownedLayers.clear();
@@ -126,12 +131,13 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
     const orderFilter = equals('orderId', latest.selectedOrderId);
     map.setFilter(ids.groupPoints, groupFilter);
     map.setFilter(ids.orderPoint, orderFilter);
+    map.setFilter(ids.multiSelect, includes('orderId', latest.selectedOrderIds));
     map.setPaintProperty(ids.allPoints, 'icon-opacity', latest.selectedGroupId ? 0.5 : 1);
     map.setFilter(ids.selectedRegion, includes('zoneId', latest.selectedZoneIds));
     const regionVisibility = latest.mode === 'regions' ? 'visible' : 'none';
     const pointVisibility = latest.mode === 'orders' ? 'visible' : 'none';
     for (const id of [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.regionCounts]) map.setLayoutProperty(id, 'visibility', regionVisibility);
-    for (const id of [ids.allPoints, ids.groupPoints, ids.orderPoint]) map.setLayoutProperty(id, 'visibility', pointVisibility);
+    for (const id of [ids.allPoints, ids.groupPoints, ids.orderPoint, ids.multiSelect]) map.setLayoutProperty(id, 'visibility', pointVisibility);
   };
 
   const start = () => {
@@ -148,7 +154,7 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onError = () =>
       } finally {
         map.off('error', captureSetupError);
       }
-      const requiredLayers = [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.regionCounts, ids.allPoints, ids.groupPoints, ids.orderPoint];
+      const requiredLayers = [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.regionCounts, ids.multiSelect, ids.allPoints, ids.groupPoints, ids.orderPoint];
       if (setupErrors.length || requiredLayers.some(id => !map.getLayer(id))) {
         removeResources();
         throw setupErrors[0] || new Error('배차 지도 레이어를 생성하지 못했습니다.');

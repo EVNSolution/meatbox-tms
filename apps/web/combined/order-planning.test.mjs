@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 import { totalBoxes, orderMapModel, regionOrderCounts, mountOrderPlanning } from './order-planning.mjs';
 
 class FakeNode {
-  constructor() { this.innerHTML = ''; this.value = ''; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.open = false; this.focused = false; }
+  constructor() { this.innerHTML = ''; this.value = ''; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.style = {}; this.open = false; this.focused = false; }
   addEventListener(type, listener) { this.listeners[type] = listener; }
   removeEventListener(type) { delete this.listeners[type]; }
   setAttribute(name, value) { this[name] = value; }
@@ -13,6 +13,7 @@ class FakeNode {
   showModal() { this.open = true; }
   close() { this.open = false; this.listeners.close?.(); }
   focus() { this.focused = true; }
+  getBoundingClientRect() { return { left: 0, top: 0 }; }
   matches() { return false; }
 }
 
@@ -24,11 +25,13 @@ function fixture() {
     'map-mode-control', 'list-panel', 'reassign-dialog', 'reassign-title',
     'reassign-close', 'reassign-from', 'reassign-target', 'reassign-preview', 'reassign-error', 'reassign-cancel', 'reassign-confirm',
     'search', 'list', 'list-total', 'page', 'previous', 'next',
+    'multi-toggle', 'multi-transfer', 'multi-clear', 'multi-summary', 'select-box',
   ];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
   nodes['dispatch-actions'].hidden = true;
   nodes['dispatch-result'].hidden = true;
   nodes['reassign-error'].hidden = true;
+  nodes['select-box'].hidden = true;
   nodes['list-panel'].hidden = true;
   nodes['map-mode-control'].hidden = true;
   const element = new FakeNode();
@@ -702,5 +705,231 @@ test('계산안은 배정 차량만 집계하고 같은 배송지 주문은 한 
   assert.doesNotMatch(nodes.vehicle.innerHTML, /data-order-vehicle-id="G2"/);
   assert.equal(pinCount, 3);
   assert.deepEqual(source, before);
+  planning.destroy();
+});
+
+function bulkPlanningData() {
+  const data = importedPlanningData();
+  data.dispatch = { phase: 'draft', readOnly: false, candidateIds: ['G1', 'G2'] };
+  data.fleetDeliveries = [...data.fleetDeliveries, { id: 'O4', groupId: 'G2', orderNumber: '1004', name: '주문 4', address: '서울 4', regionName: '서울', boxes: 5, coordinates: [127.4, 37.8], zoneIds: ['Z1'] }]
+    .map(item => item.id === 'O2' ? { ...item, name: '주문 1', address: '서울 1' } : item)
+    .map(item => ({ ...item, vehicleId: item.groupId, assignmentUnitId: item.id === 'O2' ? 'D1' : item.id === 'O1' ? 'D1' : item.id === 'O3' ? 'D2' : 'D3', assignmentProtected: item.id === 'O4' }));
+  return data;
+}
+
+function mountBulk({ onAssign } = {}) {
+  const { element, nodes } = fixture();
+  const log = { picks: null, updates: [], legacySelects: 0, dragPan: [], boxZoom: [] };
+  const planning = mount({ element }, {
+    onAssign,
+    onSelect: () => { log.legacySelects += 1; },
+    mapFactory: () => ({
+      resize() {}, jumpTo() {}, fitBounds() {}, remove() {},
+      project: ([lng, lat]) => ({ x: Math.round((lng - 127) * 1000), y: Math.round((lat - 37) * 1000) }),
+      dragPan: { enable: () => log.dragPan.push('enable'), disable: () => log.dragPan.push('disable') },
+      boxZoom: { enable: () => log.boxZoom.push('enable'), disable: () => log.boxZoom.push('disable') },
+    }),
+    layerFactory: (_map, callbacks) => { log.picks = callbacks.onPick; return { update: value => log.updates.push(value), destroy() {} }; },
+  });
+  return { planning, nodes, log };
+}
+const pointer = (type, x, y, extra = {}) => ({ type, clientX: x, clientY: y, button: 0, isPrimary: true, pointerId: 1, ...extra });
+const selectedNow = log => [...log.updates.at(-1).selectedOrderIds].sort();
+
+test('복수 선택은 핀 클릭으로 배송지 묶음을 고르고 해제하며 진행·완료 묶음과 단일 선택을 건드리지 않는다', () => {
+  const { planning, nodes, log } = mountBulk({ onAssign: () => ({}) });
+  planning.update(bulkPlanningData(), null);
+  assert.equal(nodes['multi-toggle'].disabled, false);
+  assert.equal(nodes['multi-transfer'].disabled, true);
+  assert.match(nodes['multi-summary'].textContent, /복수 선택을 켜면/);
+
+  nodes['multi-toggle'].listeners.click();
+  assert.equal(nodes['multi-toggle']['aria-pressed'], 'true');
+  assert.equal(nodes['map-canvas'].dataset.multiSelect, 'true');
+  assert.equal(log.dragPan.at(-1), 'disable');
+  assert.equal(log.boxZoom.at(-1), 'disable');
+  assert.match(nodes['map-description'].textContent, /복수 선택 중/);
+  assert.match(nodes['multi-summary'].textContent, /핀을 클릭하거나 지도를 드래그/);
+
+  log.picks(['O1']);
+  assert.deepEqual(selectedNow(log), ['O1', 'O2'], '같은 배송지 묶음의 주문이 함께 선택된다');
+  assert.equal(nodes['multi-summary'].textContent, '선택 1곳 / 2건 / 10박스');
+  assert.equal(nodes['multi-transfer'].disabled, false);
+  assert.equal(nodes['multi-clear'].disabled, false);
+
+  log.picks(['O3', 'O4']);
+  assert.deepEqual(selectedNow(log), ['O1', 'O2', 'O3']);
+  assert.equal(nodes['multi-summary'].textContent, '선택 2곳 / 3건 / 21박스 (진행·완료 1곳은 제외)');
+
+  log.picks(['O2']);
+  assert.deepEqual(selectedNow(log), ['O3']);
+  log.picks([]);
+  assert.deepEqual(selectedNow(log), ['O3'], '빈 곳을 눌러도 선택은 유지된다');
+  assert.equal(log.legacySelects, 0, '복수 선택은 단일 주문 선택으로 전달하지 않는다');
+  assert.match(nodes.selection.innerHTML, /지도에서 주문을 선택해 주세요/);
+
+  nodes['multi-clear'].listeners.click();
+  assert.deepEqual(selectedNow(log), []);
+  assert.equal(nodes['multi-transfer'].disabled, true);
+
+  nodes['multi-toggle'].listeners.click();
+  assert.equal(nodes['multi-toggle']['aria-pressed'], 'false');
+  assert.equal(log.dragPan.at(-1), 'enable');
+  log.picks(['O1']);
+  assert.equal(log.legacySelects, 1, '복수 선택을 끄면 핀 클릭은 기존 단일 선택으로 돌아간다');
+  assert.deepEqual(selectedNow(log), []);
+  planning.destroy();
+});
+
+test('지도 드래그는 사각형 안의 핀 묶음을 추가하고 짧은 이동이나 취소는 선택하지 않는다', () => {
+  const { planning, nodes, log } = mountBulk({ onAssign: () => ({}) });
+  planning.update(bulkPlanningData(), null);
+  const layer = nodes['map-layer'];
+
+  layer.listeners.pointerdown(pointer('pointerdown', 50, 450));
+  assert.equal(layer.listeners.pointermove, undefined, '복수 선택을 켜기 전에는 드래그를 시작하지 않는다');
+  assert.deepEqual(selectedNow(log), []);
+  assert.equal(nodes['select-box'].hidden, true);
+
+  nodes['multi-toggle'].listeners.click();
+  layer.listeners.pointerdown(pointer('pointerdown', 50, 450));
+  layer.listeners.pointermove(pointer('pointermove', 53, 452));
+  assert.equal(nodes['select-box'].hidden, true, '문턱보다 짧은 이동은 상자를 그리지 않는다');
+  layer.listeners.pointerup(pointer('pointerup', 53, 452));
+  assert.deepEqual(selectedNow(log), []);
+
+  layer.listeners.pointerdown(pointer('pointerdown', 250, 650));
+  layer.listeners.pointermove(pointer('pointermove', 50, 450));
+  assert.equal(nodes['select-box'].hidden, false);
+  assert.deepEqual([nodes['select-box'].style.left, nodes['select-box'].style.top, nodes['select-box'].style.width, nodes['select-box'].style.height], ['50px', '450px', '200px', '200px']);
+  layer.listeners.pointercancel(pointer('pointercancel', 50, 450));
+  assert.equal(nodes['select-box'].hidden, true);
+  assert.deepEqual(selectedNow(log), []);
+
+  layer.listeners.pointerdown(pointer('pointerdown', 50, 450));
+  layer.listeners.pointermove(pointer('pointermove', 450, 850));
+  layer.listeners.pointerup(pointer('pointerup', 450, 850));
+  assert.deepEqual(selectedNow(log), ['O1', 'O2', 'O3'], '사각형 안의 모든 핀을 고르되 진행·완료 묶음 O4는 제외한다');
+  assert.equal(nodes['select-box'].hidden, true);
+  assert.match(nodes['multi-summary'].textContent, /선택 2곳 \/ 3건 \/ 21박스/);
+
+  layer.listeners.pointerdown(pointer('pointerdown', 0, 0, { button: 2 }));
+  assert.equal(layer.listeners.pointermove, undefined, '주 버튼이 아니면 드래그를 시작하지 않는다');
+  assert.equal(layer.listeners.pointerup, undefined);
+
+  nodes['multi-clear'].listeners.click();
+  layer.listeners.pointerdown(pointer('pointerdown', 250, 450));
+  layer.listeners.pointerup(pointer('pointerup', 450, 850));
+  assert.deepEqual(selectedNow(log), ['O3'], '이동 이벤트 없이 끝나도 시작과 끝의 거리로 범위를 선택한다');
+  assert.equal(layer.listeners.pointerup, undefined, '드래그가 끝나면 이벤트 수신을 해제한다');
+  planning.destroy();
+});
+
+test('선택 이관은 선택 전체를 한 번에 보내고 이미 대상 차량에 있는 주문은 이동에서 뺀다', async () => {
+  let current = bulkPlanningData();
+  const assignments = [];
+  let planning, nodes, log;
+  const onAssign = ({ orderIds, targetGroupId }) => {
+    assignments.push({ orderIds: [...orderIds], targetGroupId });
+    const moved = new Set(orderIds);
+    const changed = current.fleetDeliveries.filter(item => moved.has(item.id) && item.vehicleId !== targetGroupId);
+    current = { ...current, fleetDeliveries: current.fleetDeliveries.map(item => moved.has(item.id) ? { ...item, vehicleId: targetGroupId, groupId: targetGroupId } : item) };
+    planning.update(current, null);
+    return { changedCount: changed.length, changedBoxes: changed.reduce((sum, item) => sum + item.boxes, 0), persisted: true };
+  };
+  ({ planning, nodes, log } = mountBulk({ onAssign }));
+  planning.update(current, null);
+  nodes['multi-toggle'].listeners.click();
+  log.picks(['O1']);
+  log.picks(['O3']);
+
+  nodes['multi-transfer'].listeners.click();
+  assert.equal(nodes['reassign-dialog'].open, true);
+  assert.equal(nodes['reassign-title'].textContent, '선택 이관');
+  assert.match(nodes['reassign-from'].textContent, /선택 2곳 \/ 3건 \/ 21박스 \/ 현재 배정: 기사 1, 기사 2/);
+  assert.equal(nodes['reassign-confirm'].disabled, true);
+  assert.match(nodes['reassign-target'].innerHTML, /value="G1"[\s\S]*value="G2"/, '출발 차량도 대상으로 고를 수 있다');
+
+  nodes['reassign-target'].value = 'G2'; nodes['reassign-target'].listeners.change();
+  assert.equal(nodes['reassign-confirm'].disabled, false);
+  assert.match(nodes['reassign-preview'].textContent, /현재 2건 \/ 16박스 → 배차 후 4건 \/ 26박스/);
+  assert.match(nodes['reassign-preview'].textContent, /이동 2건 \/ 10박스 \(이미 이 차량 1건 제외\)/);
+
+  nodes['reassign-target'].value = 'G1'; nodes['reassign-target'].listeners.change();
+  assert.match(nodes['reassign-preview'].textContent, /이동 1건 \/ 11박스 \(이미 이 차량 2건 제외\)/);
+
+  nodes['reassign-cancel'].listeners.click();
+  assert.deepEqual(assignments, []);
+  assert.deepEqual(selectedNow(log), ['O1', 'O2', 'O3'], '취소해도 선택은 유지된다');
+
+  nodes['multi-transfer'].listeners.click();
+  nodes['reassign-target'].value = 'G2'; nodes['reassign-target'].listeners.change();
+  await nodes['reassign-confirm'].listeners.click();
+  assert.deepEqual(assignments, [{ orderIds: ['O1', 'O2', 'O3'], targetGroupId: 'G2' }]);
+  assert.match(nodes['dispatch-result'].textContent, /2건 \/ 10박스/);
+  assert.equal(nodes['reassign-dialog'].open, false);
+  assert.deepEqual(selectedNow(log), [], '이관이 끝나면 선택을 비운다');
+  assert.deepEqual(current.fleetDeliveries.map(item => [item.id, item.vehicleId]), [['O1', 'G2'], ['O2', 'G2'], ['O3', 'G2'], ['O4', 'G2']]);
+
+  log.picks(['O3']);
+  nodes['multi-transfer'].listeners.click();
+  nodes['reassign-target'].value = 'G2'; nodes['reassign-target'].listeners.change();
+  assert.equal(nodes['reassign-confirm'].disabled, true);
+  assert.equal(nodes['reassign-preview'].textContent, '선택한 배송지는 이미 이 차량에 배정되어 있습니다.');
+  assert.equal(assignments.length, 1);
+  planning.destroy();
+});
+
+test('실패한 선택 이관은 선택을 유지하고 확정·과거 배차·날짜 변경·복수 선택 불가 상태에서는 선택을 비운다', async () => {
+  const current = bulkPlanningData();
+  const { planning, nodes, log } = mountBulk({ onAssign: () => { throw new Error('현재 주문 상태를 확인해 주세요.'); } });
+  planning.update(current, null);
+  nodes['multi-toggle'].listeners.click();
+  log.picks(['O1']);
+  nodes['multi-transfer'].listeners.click();
+  nodes['reassign-target'].value = 'G2'; nodes['reassign-target'].listeners.change();
+  await nodes['reassign-confirm'].listeners.click();
+  assert.equal(nodes['reassign-error'].hidden, false);
+  assert.equal(nodes['reassign-error'].textContent, '현재 주문 상태를 확인해 주세요.');
+  assert.deepEqual(selectedNow(log), ['O1', 'O2']);
+  nodes['reassign-cancel'].listeners.click();
+
+  planning.update({ ...current, dispatch: { ...current.dispatch, phase: 'published' } }, null);
+  assert.equal(nodes['multi-toggle'].disabled, true);
+  assert.equal(nodes['multi-transfer'].disabled, true);
+  assert.deepEqual(selectedNow(log), []);
+  assert.equal(nodes['map-canvas'].dataset.multiSelect, 'false');
+  assert.equal(log.dragPan.at(-1), 'enable');
+
+  planning.update(current, null);
+  nodes['multi-toggle'].listeners.click();
+  log.picks(['O3']);
+  planning.update({ ...importedPlanningData('2025-09-16'), dispatch: current.dispatch, fleetDeliveries: current.fleetDeliveries }, null);
+  assert.deepEqual(selectedNow(log), [], '날짜가 바뀌면 이전 날짜의 선택을 버린다');
+  assert.equal(nodes['multi-toggle']['aria-pressed'], 'false');
+
+  planning.update({ ...current, dispatch: { ...current.dispatch, readOnly: true } }, null);
+  assert.equal(nodes['multi-toggle'].disabled, true);
+  planning.destroy();
+});
+
+test('복수 선택 중 주문 목록 항목은 단일 선택 대신 선택 묶음에 더하고 권역 보기로 바꾸면 선택 모드를 끈다', () => {
+  const { planning, nodes, log } = mountBulk({ onAssign: () => ({}) });
+  planning.update(bulkPlanningData(), null);
+  nodes['multi-toggle'].listeners.click();
+  const click = id => nodes.list.listeners.click({ target: { closest: () => ({ dataset: { orderListId: id } }) } });
+  click('O3');
+  assert.deepEqual(selectedNow(log), ['O3']);
+  assert.match(nodes.list.innerHTML, /data-order-list-id="O3" aria-pressed="true"/);
+  assert.match(nodes.list.innerHTML, /data-order-list-id="O1" aria-pressed="false"/);
+  assert.equal(log.legacySelects, 0);
+  click('O3');
+  assert.deepEqual(selectedNow(log), []);
+
+  click('O1');
+  nodes['map-mode-control'].listeners.change({ target: { matches: () => true, value: 'regions' } });
+  assert.equal(nodes['multi-toggle']['aria-pressed'], 'false');
+  assert.equal(nodes['map-canvas'].dataset.multiSelect, 'false');
+  assert.deepEqual(selectedNow(log), ['O1', 'O2'], '선택은 남기되 지도 이동은 다시 허용한다');
   planning.destroy();
 });

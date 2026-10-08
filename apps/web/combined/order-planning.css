@@ -142,3 +142,10 @@
 [data-source-kind="unavailable"] .order-map-status { width: min(360px, calc(100% - 32px)); text-align: center; line-height: 1.6; }
 [data-source-kind="unavailable"] .order-map-selection strong { font-size: 12px; font-weight: 500; }
 [data-source-kind="unavailable"] .order-map-mode label { cursor: default; }
+.order-dispatch-actions .order-multi-actions { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
+.order-dispatch-actions .order-multi-actions .button { padding-inline: 8px; white-space: nowrap; }
+.order-dispatch-actions .order-multi-actions .button[aria-pressed="true"] { border-color: #1d4ed8; background: #e8efff; color: #1e3a8a; font-weight: 600; }
+.order-dispatch-actions .order-multi-summary { color: var(--text); font-weight: 600; }
+.order-select-box { position: absolute; z-index: 4; border: 2px dashed #1d4ed8; background: #2563eb26; pointer-events: none; }
+.order-select-box[hidden] { display: none; }
+.order-map-canvas[data-multi-select="true"] .order-map-layer { cursor: crosshair; touch-action: none; user-select: none; }

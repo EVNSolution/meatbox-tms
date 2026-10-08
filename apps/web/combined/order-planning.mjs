@@ -5,6 +5,7 @@ import { vehicleOperations } from './vehicle-operations-model.mjs';
 import { mountDispatchMapLayers } from './dispatch-map-layer.mjs';
 import { paginate } from './pagination-model.mjs';
 import { bundleDeliveries } from './delivery-bundles.mjs';
+import { addUnits, pointsInRectangle, pruneSelection, summarizeSelection, toggleUnits, transferPreview } from './bulk-selection.mjs';
 export { createOrderMap, createOrderMarker, orderMapModel };
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -76,13 +77,14 @@ export function mountOrderPlanning({
     <aside class="panel order-vehicle-panel" aria-labelledby="order-vehicle-heading">
       <div class="order-vehicle-heading"><div><h2 id="order-vehicle-heading" data-order-group-heading>배차 차량</h2><p data-order-group-note>수신 순서</p></div></div>
       <div class="order-vehicle-list" data-order-vehicle aria-label="배차 차량 선택"></div>
-      <div class="order-dispatch-actions" data-order-dispatch-actions hidden><button type="button" class="button subtle" data-order-dispatch-pin disabled>핀배차</button><p data-order-dispatch-context>차량 또는 지도 주문을 선택해 주세요.</p><p data-order-dispatch-result role="status" hidden></p></div>
+      <div class="order-dispatch-actions" data-order-dispatch-actions hidden><button type="button" class="button subtle" data-order-dispatch-pin disabled>핀배차</button><div class="order-multi-actions" data-order-multi-actions><button type="button" class="button subtle" data-order-multi-toggle aria-pressed="false" disabled>복수 선택</button><button type="button" class="button primary" data-order-multi-transfer disabled>선택 이관</button><button type="button" class="button subtle" data-order-multi-clear disabled>선택 해제</button></div><p class="order-multi-summary" data-order-multi-summary role="status"></p><p data-order-dispatch-context>차량 또는 지도 주문을 선택해 주세요.</p><p data-order-dispatch-result role="status" hidden></p></div>
       <p class="order-region-note" data-order-region-note><strong>권역 기능 준비 중</strong> 실제 권역 데이터가 연결되면 경계와 권역 내 배송지 정보를 제공합니다.</p>
     </aside>
     <section class="panel order-map-panel" aria-labelledby="order-map-heading">
       <div class="order-map-heading"><div><h2 id="order-map-heading">주문 배차 지도</h2><p data-order-map-description>전체 등록 주문과 선택 차량 배정</p></div><div class="order-map-controls"><fieldset class="order-map-mode" data-order-map-mode-control hidden><legend class="sr-only">지도 표시 단위</legend><label><input type="radio" name="order-map-mode" value="regions" data-order-map-mode checked><span>권역 단위</span></label><label><input type="radio" name="order-map-mode" value="orders" data-order-map-mode><span>주문 단위</span></label></fieldset></div></div>
       <div class="order-map-canvas" data-order-map-canvas aria-label="주문 위치">
         <div class="order-map-layer" data-order-map-layer></div>
+        <div class="order-select-box" data-order-select-box hidden></div>
         <div class="order-map-status" data-order-map-status role="status"><span data-order-map-status-text>지도 준비 중</span><button type="button" class="button subtle" data-order-map-retry hidden>다시 시도</button></div>
         <section class="order-map-selection" data-order-selection aria-live="polite"><span>선택 주문</span><strong>지도에서 주문을 선택해 주세요.</strong></section>
         <p class="order-map-summary" data-order-map-summary>총 물량 확인 중</p>
@@ -138,12 +140,48 @@ export function mountOrderPlanning({
   let listQuery = '';
   let listPage = 1;
   let pendingAssignment = null;
+  let multiMode = false;
+  let bulkSelection = new Set();
+  let bulkNotice = '';
+  let dragStart = null;
   const reassignDialog = query('[data-order-reassign-dialog]');
   const imported = () => Boolean(data?.dispatchSource);
   const canPin = () => Boolean(onAssign && imported() && (!data.dispatch || (!data.dispatch.readOnly && ['draft', 'amending'].includes(data.dispatch.phase))));
   const selectedAssignmentProtected = () => Boolean(visibleDeliveries.find(item => item.id === selectedDeliveryId)?.assignmentProtected);
   const pinVehicles = () => vehiclesFor(data).filter(vehicle => !data?.dispatch || data.dispatch.candidateIds.includes(vehicle.id));
   const setText = (selector, text) => { const node = query(selector); if (node) node.textContent = text; };
+  const multiAvailable = () => canPin() && imported();
+  const DRAG_THRESHOLD = 6;
+  function syncBulk() {
+    if (multiMode && !multiAvailable()) multiMode = false;
+    const summary = summarizeSelection(bulkSelection, visibleDeliveries);
+    const toggle = query('[data-order-multi-toggle]');
+    if (toggle) { toggle.disabled = !multiAvailable(); toggle.setAttribute('aria-pressed', String(multiMode)); }
+    const transfer = query('[data-order-multi-transfer]');
+    if (transfer) transfer.disabled = !multiAvailable() || !summary.orderCount;
+    const clearButton = query('[data-order-multi-clear]');
+    if (clearButton) clearButton.disabled = !summary.orderCount;
+    setText('[data-order-multi-summary]', summary.orderCount
+      ? `선택 ${summary.destinationCount.toLocaleString('ko-KR')}곳 / ${summary.orderCount.toLocaleString('ko-KR')}건 / ${boxesText(summary.boxes)}${bulkNotice}`
+      : multiMode ? `핀을 클릭하거나 지도를 드래그해 배송지를 고르세요. 지도를 옮기려면 복수 선택을 끄세요.${bulkNotice}`
+        : multiAvailable() ? '복수 선택을 켜면 여러 배송지를 한 번에 이관할 수 있습니다.' : '');
+    canvas.dataset.multiSelect = String(multiMode);
+    map?.dragPan?.[multiMode ? 'disable' : 'enable']?.();
+    map?.boxZoom?.[multiMode ? 'disable' : 'enable']?.();
+  }
+  function setMapMode(mode) {
+    mapMode = mode;
+    Array.from(element.querySelectorAll?.('[data-order-map-mode]') || []).forEach(input => { input.checked = input.value === mode; });
+  }
+  function changeBulk(result) {
+    bulkSelection = result.selection;
+    bulkNotice = result.skippedProtected ? ` (진행·완료 ${result.skippedProtected.toLocaleString('ko-KR')}곳은 제외)` : '';
+    renderScene();
+    renderOrderList();
+  }
+  function pickForBulk(orderIds) {
+    if (orderIds.length) changeBulk(toggleUnits(bulkSelection, visibleDeliveries, orderIds));
+  }
   function syncSourceLabels() {
     const isSource = imported();
     const actions = query('[data-order-dispatch-actions]');
@@ -154,7 +192,7 @@ export function mountOrderPlanning({
     setText('[data-order-group-heading]', isSource ? data?.dispatch?.phase === 'unplanned' ? '후보 배송원' : '차량별 배정' : '배차 차량');
     setText('[data-order-group-note]', isSource ? '주문 수신 순서' : '수신 순서');
     setText('[data-order-map-description]', isSource
-      ? mapMode === 'regions' ? '지도를 확대하면 권역 중앙에 주문 수가 표시됩니다.' : '모든 주문 핀을 표시합니다.'
+      ? multiMode ? '복수 선택 중입니다. 핀을 클릭하거나 지도를 드래그해 배송지를 고릅니다.' : mapMode === 'regions' ? '지도를 확대하면 권역 중앙에 주문 수가 표시됩니다.' : '모든 주문 핀을 표시합니다.'
       : '전체 등록 주문과 선택 차량 배정');
     const listPanel = query('[data-order-list-panel]');
     if (listPanel) listPanel.hidden = !isSource;
@@ -188,14 +226,39 @@ export function mountOrderPlanning({
     const targetId = query('[data-order-reassign-target]').value;
     const vehicle = vehiclesFor(data).find(item => item.id === targetId);
     const confirm = query('[data-order-reassign-confirm]');
-    confirm.disabled = !vehicle || targetId === pendingAssignment.fromGroupId;
-    if (confirm.disabled) { setText('[data-order-reassign-preview]', '배정할 다른 차량을 선택해 주세요.'); return; }
+    const bulk = pendingAssignment.bulk
+      ? transferPreview(visibleDeliveries.filter(item => pendingAssignment.orderIds.includes(item.id)), targetId) : null;
+    confirm.disabled = !vehicle || targetId === pendingAssignment.fromGroupId || (bulk !== null && bulk.movingCount === 0);
+    if (confirm.disabled) {
+      setText('[data-order-reassign-preview]', vehicle && bulk && !bulk.movingCount ? '선택한 배송지는 이미 이 차량에 배정되어 있습니다.' : '배정할 다른 차량을 선택해 주세요.');
+      return;
+    }
     const currentOrders = visibleDeliveries.filter(item => item.vehicleId === targetId);
     const currentBoxes = totalBoxes(currentOrders);
     const coordinates = vehicle.location?.coordinates;
     const position = coordinates ? ` (${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)})` : '';
-    const nextBoxes = currentBoxes === null || pendingAssignment.boxes === null ? null : currentBoxes + pendingAssignment.boxes;
-    setText('[data-order-reassign-preview]', `대상 차량 ${vehicle.driver} / ${vehicle.plate}\n현재 ${currentOrders.length}건 / ${boxesText(currentBoxes)} → 배차 후 ${currentOrders.length + pendingAssignment.orderIds.length}건 / ${boxesText(nextBoxes)}\n${vehicle.location?.label?.replace(' 예시 위치', '') || '위치 미등록'}${position}`);
+    const movingBoxes = bulk ? bulk.boxes : pendingAssignment.boxes;
+    const movingCount = bulk ? bulk.movingCount : pendingAssignment.orderIds.length;
+    const nextBoxes = currentBoxes === null || movingBoxes === null ? null : currentBoxes + movingBoxes;
+    const movingLine = bulk ? `\n이동 ${bulk.movingCount}건 / ${boxesText(bulk.boxes)}${bulk.unchangedCount ? ` (이미 이 차량 ${bulk.unchangedCount}건 제외)` : ''}` : '';
+    setText('[data-order-reassign-preview]', `대상 차량 ${vehicle.driver} / ${vehicle.plate}\n현재 ${currentOrders.length}건 / ${boxesText(currentBoxes)} → 배차 후 ${currentOrders.length + movingCount}건 / ${boxesText(nextBoxes)}${movingLine}\n${vehicle.location?.label?.replace(' 예시 위치', '') || '위치 미등록'}${position}`);
+  }
+
+  function openBulkAssignment() {
+    if (!canPin()) return;
+    const summary = summarizeSelection(bulkSelection, visibleDeliveries);
+    if (!summary.orderCount) return;
+    const drivers = [...new Set(summary.deliveries.map(item => vehiclesFor(data).find(vehicle => vehicle.id === item.vehicleId)?.driver || '배차 대기'))];
+    const driverText = drivers.length > 3 ? `${drivers.slice(0, 3).join(', ')} 외 ${drivers.length - 3}명` : drivers.join(', ');
+    pendingAssignment = { date: data.dispatchSource.date, fromGroupId: null, bulk: true, orderIds: summary.orderIds, boxes: summary.boxes };
+    setText('[data-order-reassign-title]', '선택 이관');
+    setText('[data-order-reassign-from]', `선택 ${summary.destinationCount.toLocaleString('ko-KR')}곳 / ${summary.orderCount.toLocaleString('ko-KR')}건 / ${boxesText(summary.boxes)} / 현재 배정: ${driverText}`);
+    const select = query('[data-order-reassign-target]');
+    select.innerHTML = '<option value="">차량을 선택해 주세요</option>' + pinVehicles().map(vehicle => `<option value="${escapeHtml(vehicle.id)}">${escapeHtml(vehicle.driver)} / ${escapeHtml(vehicle.plate)}</option>`).join('');
+    select.value = '';
+    query('[data-order-reassign-error]').hidden = true;
+    updateAssignmentPreview();
+    reassignDialog.showModal();
   }
 
   function openAssignment() {
@@ -228,7 +291,8 @@ export function mountOrderPlanning({
       const result = await onAssign({ orderIds: request.orderIds, targetGroupId: targetId });
       if (request !== pendingAssignment || request.date !== data?.dispatchSource?.date) return;
       selectedVehicleId = targetId;
-      updateVehicles(); renderScene();
+      if (request.bulk) { bulkSelection = new Set(); bulkNotice = ''; }
+      updateVehicles(); renderScene(); renderOrderList();
       reassignDialog.close();
       const status = query('[data-order-dispatch-result]');
       status.textContent = `배차 변경: ${result.changedCount}건 / ${boxesText(result.changedBoxes)}. ${data?.dispatch?.phase === 'amending' ? '수정안에 반영했습니다. 변경 배차를 다시 전송하면 확정됩니다.' : '배차 계산안에 반영했습니다. 전체 배차 전송 시 확정됩니다.'}`;
@@ -241,6 +305,7 @@ export function mountOrderPlanning({
 
   function updateSelection() {
     syncDispatchActions();
+    syncBulk();
     selection.hidden = imported() && mapMode === 'regions';
     const delivery = visibleDeliveries.find(item => item.id === selectedDeliveryId);
     if (!delivery) { selection.innerHTML = '<span>선택 주문</span><strong>지도에서 주문을 선택해 주세요.</strong>'; return; }
@@ -264,7 +329,7 @@ export function mountOrderPlanning({
     listPage = paged.page;
     const list = query('[data-order-list]');
     if (!list) return;
-    list.innerHTML = paged.items.map(item => `<button type="button" data-order-list-id="${escapeHtml(item.id)}" aria-pressed="${item.id === selectedDeliveryId}"><strong>${escapeHtml(item.orderNumber)}</strong><span>${escapeHtml(item.name)}</span><span>${escapeHtml(item.driver)}</span><b>${boxesText(item.boxes)}</b></button>`).join('') || '<p>일치하는 주문이 없습니다.</p>';
+    list.innerHTML = paged.items.map(item => `<button type="button" data-order-list-id="${escapeHtml(item.id)}" aria-pressed="${multiMode ? bulkSelection.has(item.id) : item.id === selectedDeliveryId}"><strong>${escapeHtml(item.orderNumber)}</strong><span>${escapeHtml(item.name)}</span><span>${escapeHtml(item.driver)}</span><b>${boxesText(item.boxes)}</b></button>`).join('') || '<p>일치하는 주문이 없습니다.</p>';
     setText('[data-order-list-total]', `${source.length.toLocaleString('ko-KR')}건`);
     setText('[data-order-page]', `${paged.start}–${paged.end} / ${paged.total.toLocaleString('ko-KR')}건`);
     query('[data-order-previous]').disabled = paged.page === 1;
@@ -301,7 +366,7 @@ export function mountOrderPlanning({
       const zones = selectedDeliveryId
         ? source.find(item => item.id === selectedDeliveryId)?.zoneIds || []
         : selectedVehicleId === 'all' ? [] : [...new Set(vehicleDeliveries.flatMap(item => item.zoneIds || []))];
-      pointLayer.update({ points: sourcePoints, regions: sourceRegions, selectedGroupId: selectedVehicleId === 'all' ? null : selectedVehicleId, selectedOrderId: selectedDeliveryId, selectedZoneIds: zones, mode: mapMode });
+      pointLayer.update({ points: sourcePoints, regions: sourceRegions, selectedGroupId: selectedVehicleId === 'all' ? null : selectedVehicleId, selectedOrderId: selectedDeliveryId, selectedOrderIds: [...bulkSelection], selectedZoneIds: zones, mode: mapMode });
       if (mapFailure) return;
     } else if (map && nextMarkerSignature !== markerSignature) {
       markerSignature = nextMarkerSignature;
@@ -352,7 +417,7 @@ export function mountOrderPlanning({
     }
     map.resize?.();
     if (imported()) {
-      if (!pointLayer) pointLayer = layerFactory(map, { onPick(ids) { overlapIds = ids; selectedDeliveryId = ids[0] || null; if (!selectedDeliveryId) { selectedVehicleId = 'all'; fitVehicleRequested = false; updateVehicles(); } renderScene(); renderOrderList(); if (selectedDeliveryId) onSelect(selectedDeliveryId); }, onError(error) { mapFailure = error?.message || '주문 지도 레이어를 불러오지 못했습니다.'; renderScene(); } });
+      if (!pointLayer) pointLayer = layerFactory(map, { onPick(ids) { if (multiMode && multiAvailable()) { pickForBulk(ids); return; } overlapIds = ids; selectedDeliveryId = ids[0] || null; if (!selectedDeliveryId) { selectedVehicleId = 'all'; fitVehicleRequested = false; updateVehicles(); } renderScene(); renderOrderList(); if (selectedDeliveryId) onSelect(selectedDeliveryId); }, onError(error) { mapFailure = error?.message || '주문 지도 레이어를 불러오지 못했습니다.'; renderScene(); } });
       if (sourceData !== data) {
         sourceData = data;
         mapMarkers.splice(0).forEach(marker => marker.remove());
@@ -444,7 +509,7 @@ export function mountOrderPlanning({
     if (!event.target.matches?.('[data-order-map-mode]')) return;
     if (!['regions', 'orders'].includes(event.target.value)) return;
     mapMode = event.target.value;
-    if (mapMode === 'regions') { selectedDeliveryId = null; overlapIds = []; }
+    if (mapMode === 'regions') { selectedDeliveryId = null; overlapIds = []; multiMode = false; }
     syncSourceLabels();
     renderScene();
   });
@@ -456,10 +521,64 @@ export function mountOrderPlanning({
   listen(query('[data-order-reassign-cancel]'), 'click', () => reassignDialog.close());
   listen(query('[data-order-reassign-close]'), 'click', () => reassignDialog.close());
   listen(reassignDialog, 'close', () => { pendingAssignment = null; query('[data-order-dispatch-pin]')?.focus(); });
+  listen(query('[data-order-multi-toggle]'), 'click', () => {
+    if (!multiAvailable()) return;
+    multiMode = !multiMode;
+    bulkNotice = '';
+    if (multiMode) setMapMode('orders');
+    syncSourceLabels();
+    renderScene();
+    renderOrderList();
+  });
+  listen(query('[data-order-multi-transfer]'), 'click', openBulkAssignment);
+  listen(query('[data-order-multi-clear]'), 'click', () => { changeBulk({ selection: new Set(), skippedProtected: 0 }); });
+  const selectBox = query('[data-order-select-box]');
+  const pointerPosition = event => { const bounds = layer.getBoundingClientRect(); return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }; };
+  // While dragging, the pointer may end over a map overlay or outside the map, so the document receives the events.
+  const dragHost = () => globalThis.document ?? layer;
+  function stopDrag() {
+    const host = dragHost();
+    host.removeEventListener('pointermove', moveDrag);
+    host.removeEventListener('pointerup', endDrag);
+    host.removeEventListener('pointercancel', cancelDrag);
+    dragStart = null;
+    if (selectBox) selectBox.hidden = true;
+  }
+  function moveDrag(event) {
+    if (!dragStart) return;
+    const current = pointerPosition(event);
+    if (!dragStart.moved && Math.hypot(current.x - dragStart.x, current.y - dragStart.y) < DRAG_THRESHOLD) return;
+    dragStart.moved = true;
+    if (!selectBox) return;
+    selectBox.hidden = false;
+    Object.assign(selectBox.style, { left: `${Math.min(dragStart.x, current.x)}px`, top: `${Math.min(dragStart.y, current.y)}px`, width: `${Math.abs(current.x - dragStart.x)}px`, height: `${Math.abs(current.y - dragStart.y)}px` });
+  }
+  function endDrag(event) {
+    if (!dragStart) return;
+    const start = dragStart;
+    const end = pointerPosition(event);
+    stopDrag();
+    if (!start.moved && Math.hypot(end.x - start.x, end.y - start.y) < DRAG_THRESHOLD) return;
+    if (!map || !sourceModel) return;
+    const points = sourceModel.mapped.map(({ delivery, coordinates }) => { const point = map.project(coordinates); return { id: delivery.id, x: point.x, y: point.y }; });
+    const ids = pointsInRectangle(points, start, end);
+    if (ids.length) changeBulk(addUnits(bulkSelection, visibleDeliveries, ids));
+  }
+  function cancelDrag() { stopDrag(); }
+  listen(layer, 'pointerdown', event => {
+    if (!multiMode || !multiAvailable() || !map || event.button !== 0 || event.isPrimary === false) return;
+    if (dragStart) stopDrag();
+    dragStart = { ...pointerPosition(event), moved: false };
+    const host = dragHost();
+    host.addEventListener('pointermove', moveDrag);
+    host.addEventListener('pointerup', endDrag);
+    host.addEventListener('pointercancel', cancelDrag);
+  });
   listen(query('[data-order-search]'), 'input', event => { listQuery = event.target.value; listPage = 1; renderOrderList(); });
   listen(query('[data-order-list]'), 'click', event => {
     const item = event.target.closest('[data-order-list-id]');
     if (!item) return;
+    if (multiMode && multiAvailable()) { pickForBulk([item.dataset.orderListId]); return; }
     overlapIds = [];
     pickSourceOrder(item.dataset.orderListId);
     const delivery = visibleDeliveries.find(row => row.id === selectedDeliveryId);
@@ -482,6 +601,8 @@ export function mountOrderPlanning({
       sourceData = null; routeData = null; routeState = 'idle'; mapFailure = '';
       vehicleSignature = ''; markerSignature = ''; geometrySignature = '';
       selectedDeliveryId = null; visibleDeliveries = []; overlapIds = []; listQuery = ''; listPage = 1;
+      multiMode = false; bulkSelection = new Set(); bulkNotice = '';
+      if (dragStart) stopDrag();
       element.dataset.sourceKind = 'unavailable';
       setText('[data-order-group-heading]', '후보 배송원');
       setText('[data-order-group-note]', empty ? '0명' : '자료 확인 전');
@@ -507,6 +628,7 @@ export function mountOrderPlanning({
       query('[data-order-list]').innerHTML = `<p class="order-vehicle-empty">${empty ? '미등록' : '미확인'}</p>`;
       setText('[data-order-page]', empty ? '0건' : '확인 전');
       query('[data-order-previous]').disabled = true; query('[data-order-next]').disabled = true;
+      syncBulk();
     },
     update(nextData, nextSelectedId) {
       if (element.dataset.sourceKind === 'unavailable') query('[data-order-list-panel]').open = false;
@@ -520,9 +642,11 @@ export function mountOrderPlanning({
         if (result) result.hidden = true;
         if (mapFailure) { pointLayer?.destroy(); pointLayer = null; }
         selectedVehicleId = imported() ? 'all' : 'V1'; selectedDeliveryId = null; overlapIds = []; listPage = 1;
+        multiMode = false; bulkSelection = new Set(); bulkNotice = '';
         geometrySignature = ''; markerSignature = ''; vehicleSignature = ''; mapFailure = ''; fitVehicleRequested = false;
       }
       if (!canPin() && reassignDialog?.open) reassignDialog.close();
+      bulkSelection = canPin() ? pruneSelection(bulkSelection, deliveriesFor(data) || []) : new Set();
       syncSourceLabels();
       const externalSelectedId = nextSelectedId || null;
       const source = deliveriesFor(data) || [];
@@ -539,6 +663,7 @@ export function mountOrderPlanning({
     },
     destroy() {
       destroyed = true;
+      if (dragStart) stopDrag();
       listeners.splice(0).forEach(remove => remove());
       resizeObserver?.disconnect();
       mapMarkers.splice(0).forEach(marker => marker.remove());

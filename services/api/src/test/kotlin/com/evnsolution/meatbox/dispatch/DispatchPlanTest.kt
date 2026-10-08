@@ -90,6 +90,66 @@ class DispatchPlanTest {
             .isInstanceOf(DispatchException::class.java).extracting("code").isEqualTo("INVALID_CHECKPOINT")
     }
 
+    @Test
+    fun `moves several destination bundles from different vehicles in one command and counts only real changes`() {
+        val plan = draftPlan()
+        moveTo(plan, "G1", "O3")
+        moveTo(plan, "G2", "O4")
+        moveTo(plan, "G1", "O1")
+        val before = vehiclesByOrder(plan)
+        assertThat(before).containsEntry("O3", "G1").containsEntry("O4", "G2").containsEntry("O1", "G1").containsEntry("O2", "G1")
+
+        val moved = send(plan, objectNode("type" to "reassign", "targetVehicleId" to "G2").apply {
+            set("orderIds", strings("O3", "O4", "O1"))
+        })
+
+        assertThat(moved.at("/result/requestedOrderIds")).isEqualTo(strings("O3", "O4", "O1"))
+        assertThat(moved.at("/result/expandedOrderIds")).isEqualTo(strings("O3", "O4", "O1", "O2"))
+        assertThat(moved.at("/result/affectedUnitIds").size()).isEqualTo(3)
+        assertThat(moved.at("/result/changedCount").asInt()).isEqualTo(3)
+        assertThat(moved.at("/result/changedBoxes").asDouble()).isEqualTo(6.0)
+        assertThat(vehiclesByOrder(plan).values).containsOnly("G2")
+    }
+
+    @Test
+    fun `rejects a bulk command that changes nothing and keeps the draft untouched`() {
+        val plan = draftPlan()
+        moveTo(plan, "G2", "O1", "O3", "O4")
+        val before = plan.exportCheckpoint()
+
+        assertThatThrownBy {
+            send(plan, objectNode("type" to "reassign", "targetVehicleId" to "G2").apply { set("orderIds", strings("O1", "O3", "O4")) })
+        }.isInstanceOf(DispatchException::class.java).extracting("code").isEqualTo("NO_ASSIGNMENT_CHANGE")
+        assertThatThrownBy {
+            send(plan, objectNode("type" to "reassign", "targetVehicleId" to "G2").apply { set("orderIds", strings("O1", "O9")) })
+        }.isInstanceOf(DispatchException::class.java).extracting("code").isEqualTo("INVALID_ORDERS")
+        assertThatThrownBy {
+            send(plan, objectNode("type" to "reassign", "targetVehicleId" to "G3").apply { set("orderIds", strings("O1", "O3")) })
+        }.isInstanceOf(DispatchException::class.java).extracting("code").isEqualTo("INVALID_CANDIDATE")
+        assertThat(plan.exportCheckpoint()).isEqualTo(before)
+    }
+
+    private fun draftPlan(): DispatchPlan = DispatchPlan(
+        day(),
+        "csv-a",
+        { Instant.parse("2026-09-16T01:00:00Z").toEpochMilli() },
+    ).also { plan ->
+        send(plan, objectNode("type" to "calculate_dispatch").apply { set("vehicleIds", strings("G1", "G2")) })
+    }
+
+    private fun vehiclesByOrder(plan: DispatchPlan): Map<String, String> =
+        plan.snapshot()["dispatchOrders"].associate { it["id"].asString() to it["vehicleId"].asString() }
+
+    // The calculator may already have placed an order on the target; only that case is ignored.
+    private fun moveTo(plan: DispatchPlan, vehicleId: String, vararg orderIds: String) {
+        runCatching {
+            send(plan, objectNode("type" to "reassign", "targetVehicleId" to vehicleId).apply { set("orderIds", strings(*orderIds)) })
+        }.onFailure { error ->
+            assertThat(error).isInstanceOf(DispatchException::class.java)
+            assertThat((error as DispatchException).code).isEqualTo("NO_ASSIGNMENT_CHANGE")
+        }
+    }
+
     private fun publishedPlan(): DispatchPlan = DispatchPlan(
         day(),
         "csv-a",
