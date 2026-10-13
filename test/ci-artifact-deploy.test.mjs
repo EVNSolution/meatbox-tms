@@ -161,6 +161,13 @@ test('deploy workflow has one serialized artifact-only TEST lane', async () => {
   assert.doesNotMatch(workflow, /npm ci|gradlew|vite|make check|package-new-stack\.mjs --archive/);
 });
 
+test('verification workflow reuses the Gradle build cache', async () => {
+  const workflow = await fs.readFile(path.join(ROOT, '.github/workflows/new-stack.yml'), 'utf8');
+  assert.match(workflow, /gradle\/actions\/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6/);
+  assert.match(workflow, /cache-read-only: false/);
+  assert.doesNotMatch(workflow, /cache: gradle/);
+});
+
 test('deploy wrapper uses an SSH control option valid for both ssh and scp', async () => {
   const wrapper = await fs.readFile(path.join(ROOT, 'deploy/new-stack/deploy-ci-artifact.sh'), 'utf8');
   assert.match(wrapper, /-o ControlPath="\$CONTROL_PATH"/);
