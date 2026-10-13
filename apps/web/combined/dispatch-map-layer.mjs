@@ -5,7 +5,9 @@ const ids = {
   regionFill: 'dispatch-regions-fill',
   regionLine: 'dispatch-regions-line',
   selectedRegion: 'dispatch-regions-selected',
-  regionCounts: 'dispatch-regions-counts',
+  hoverShadow: 'dispatch-regions-hover-shadow',
+  hoverFill: 'dispatch-regions-hover-fill',
+  hoverLine: 'dispatch-regions-hover-line',
   allPoints: 'dispatch-orders-all',
   groupPoints: 'dispatch-orders-group',
   orderPoint: 'dispatch-order-selected',
@@ -21,6 +23,11 @@ const hasOrders = ['>', ['get', 'orderCount'], 0];
 const equals = (property, value) => typeof value === 'string' && value
   ? ['==', ['get', property], value]
   : nothing;
+// The hovered zone rises off the map: an opaque fill and outline shifted up-left, over a soft
+// shadow shifted down-right. Translations are in screen pixels, so the lift looks the same at every zoom.
+const lifted = [-2, -3];
+const shadowOffset = [4, 6];
+const liftTransition = { duration: 160, delay: 0 };
 const includes = (property, values) => Array.isArray(values) && values.length
   ? ['in', ['get', property], ['literal', values]]
   : nothing;
@@ -57,16 +64,9 @@ function addLayers(map, markerImage, ownedLayers, ownedSources) {
   addLayer({ id: ids.regionFill, type: 'fill', source: ids.regions, filter: hasOrders, paint: { 'fill-color': '#218662', 'fill-opacity': 0.18 } });
   addLayer({ id: ids.regionLine, type: 'line', source: ids.regions, minzoom: 11, filter: hasOrders, paint: { 'line-color': '#3c705a', 'line-opacity': 0.7, 'line-width': 1.2 } });
   addLayer({ id: ids.selectedRegion, type: 'line', source: ids.regions, minzoom: 11, filter: nothing, paint: { 'line-color': '#1e5142', 'line-opacity': 0.95, 'line-width': 3 } });
-  addLayer({
-    id: ids.regionCounts, type: 'symbol', source: ids.regions, minzoom: 11,
-    filter: hasOrders,
-    layout: {
-      'symbol-placement': 'point', 'text-field': ['coalesce', ['get', 'volumeLabel'], ['to-string', ['get', 'orderCount']]],
-      'text-font': ['Noto Sans Bold'], 'text-size': 13,
-      'text-allow-overlap': true, 'text-ignore-placement': true,
-    },
-    paint: { 'text-color': '#174c3b', 'text-halo-color': '#fff', 'text-halo-width': 3 },
-  });
+  addLayer({ id: ids.hoverShadow, type: 'fill', source: ids.regions, filter: nothing, paint: { 'fill-color': '#0d2b20', 'fill-opacity': 0.28, 'fill-translate': shadowOffset, 'fill-antialias': false } });
+  addLayer({ id: ids.hoverFill, type: 'fill', source: ids.regions, filter: nothing, paint: { 'fill-color': '#e4f2eb', 'fill-opacity': 1, 'fill-translate': lifted } });
+  addLayer({ id: ids.hoverLine, type: 'line', source: ids.regions, filter: nothing, paint: { 'line-color': '#1e5142', 'line-width': 2.5, 'line-translate': lifted } });
 
   addSource(ids.points, { type: 'geojson', data: emptyCollection() });
   addLayer({
@@ -112,7 +112,7 @@ function addLayers(map, markerImage, ownedLayers, ownedSources) {
   });
 }
 
-export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = () => {}, onError = () => {} } = {}) {
+export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = () => {}, onZoneHover = () => {}, onError = () => {} } = {}) {
   let destroyed = false;
   let ready = false;
   let loading = false;
@@ -121,6 +121,7 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = ()
   const ownedSources = new Set();
   let pointData = null;
   let regionData = null;
+  let hoveredZoneId = null;
   let zonePinData = null;
   let latest = {
     points: emptyCollection(), regions: null, selectedGroupId: null,
@@ -128,7 +129,7 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = ()
   };
 
   const removeResources = () => {
-    const layerIds = [ids.zonePinSelected, ids.zonePinLayer, ids.orderPoint, ids.groupPoints, ids.allPoints, ids.multiSelect, ids.regionCounts, ids.selectedRegion, ids.regionLine, ids.regionFill];
+    const layerIds = [ids.zonePinSelected, ids.zonePinLayer, ids.orderPoint, ids.groupPoints, ids.allPoints, ids.multiSelect, ids.hoverLine, ids.hoverFill, ids.hoverShadow, ids.selectedRegion, ids.regionLine, ids.regionFill];
     for (const id of layerIds) if (ownedLayers.has(id) && map.getLayer(id)) map.removeLayer(id);
     for (const id of [ids.zonePins, ids.points, ids.regions]) if (ownedSources.has(id) && map.getSource(id)) map.removeSource(id);
     ownedLayers.clear();
@@ -159,8 +160,9 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = ()
     map.setPaintProperty(ids.allPoints, 'icon-opacity', latest.selectedGroupId ? 0.5 : 1);
     map.setFilter(ids.selectedRegion, includes('zoneId', latest.selectedZoneIds));
     const regionVisibility = latest.mode === 'regions' ? 'visible' : 'none';
+    if (latest.mode !== 'regions' && hoveredZoneId) hover(null);
     const pointVisibility = latest.mode === 'orders' ? 'visible' : 'none';
-    for (const id of [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.regionCounts]) map.setLayoutProperty(id, 'visibility', regionVisibility);
+    for (const id of [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.hoverShadow, ids.hoverFill, ids.hoverLine]) map.setLayoutProperty(id, 'visibility', regionVisibility);
     for (const id of [ids.allPoints, ids.groupPoints, ids.orderPoint, ids.multiSelect]) map.setLayoutProperty(id, 'visibility', pointVisibility);
     for (const id of [ids.zonePinLayer, ids.zonePinSelected]) map.setLayoutProperty(id, 'visibility', regionVisibility);
   };
@@ -179,7 +181,7 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = ()
       } finally {
         map.off('error', captureSetupError);
       }
-      const requiredLayers = [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.regionCounts, ids.multiSelect, ids.allPoints, ids.groupPoints, ids.orderPoint, ids.zonePinLayer, ids.zonePinSelected];
+      const requiredLayers = [ids.regionFill, ids.regionLine, ids.selectedRegion, ids.hoverShadow, ids.hoverFill, ids.hoverLine, ids.multiSelect, ids.allPoints, ids.groupPoints, ids.orderPoint, ids.zonePinLayer, ids.zonePinSelected];
       if (setupErrors.length || requiredLayers.some(id => !map.getLayer(id))) {
         removeResources();
         throw setupErrors[0] || new Error('배차 지도 레이어를 생성하지 못했습니다.');
@@ -192,15 +194,52 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = ()
   };
 
   const pointLayers = [ids.orderPoint, ids.groupPoints, ids.allPoints];
+  const pinsAt = point => [...new Set(map.queryRenderedFeatures([[point.x - 12, point.y - 12], [point.x + 12, point.y + 12]], { layers: [ids.zonePinSelected, ids.zonePinLayer] })
+    .map(feature => feature?.properties?.orderId).filter(value => typeof value === 'string' && value))];
+  const zoneAt = point => map.queryRenderedFeatures([point.x, point.y], { layers: [ids.regionFill] })
+    .map(feature => feature?.properties?.zoneId).find(value => typeof value === 'string' && value) || null;
+  const setPaint = (id, property, value, transition) => {
+    map.setPaintProperty(id, `${property}-transition`, transition);
+    map.setPaintProperty(id, property, value);
+  };
+  const hover = (zoneId, point) => {
+    if (zoneId !== hoveredZoneId) {
+      hoveredZoneId = zoneId;
+      const filter = equals('zoneId', zoneId);
+      for (const id of [ids.hoverShadow, ids.hoverFill, ids.hoverLine]) map.setFilter(id, filter);
+      if (zoneId) {
+        // Start flat, then rise on the next frame so each newly hovered zone animates its lift.
+        const instant = { duration: 0, delay: 0 };
+        setPaint(ids.hoverShadow, 'fill-translate', [0, 0], instant);
+        setPaint(ids.hoverFill, 'fill-translate', [0, 0], instant);
+        setPaint(ids.hoverLine, 'line-translate', [0, 0], instant);
+        (globalThis.requestAnimationFrame || (callback => setTimeout(callback, 16)))(() => {
+          if (destroyed || hoveredZoneId !== zoneId) return;
+          setPaint(ids.hoverShadow, 'fill-translate', shadowOffset, liftTransition);
+          setPaint(ids.hoverFill, 'fill-translate', lifted, liftTransition);
+          setPaint(ids.hoverLine, 'line-translate', lifted, liftTransition);
+        });
+      }
+      const canvas = map.getCanvas?.();
+      if (canvas) canvas.style.cursor = zoneId ? 'pointer' : '';
+    }
+    onZoneHover(zoneId ? { zoneId, point } : null);
+  };
+  const mousemove = event => {
+    if (!ready || destroyed || latest.mode !== 'regions') return;
+    const point = event?.point || { x: 0, y: 0 };
+    // A pin under the cursor wins: its own popup carries the order detail.
+    hover(pinsAt(point).length ? null : zoneAt(point), point);
+  };
+  const mouseout = () => { if (ready && !destroyed) hover(null); };
   const zoneClick = event => {
     const point = event?.point || { x: 0, y: 0 };
-    const box = [[point.x - 12, point.y - 12], [point.x + 12, point.y + 12]];
-    const pins = [...new Set(map.queryRenderedFeatures(box, { layers: [ids.zonePinSelected, ids.zonePinLayer] })
-      .map(feature => feature?.properties?.orderId).filter(value => typeof value === 'string' && value))];
+    const pins = pinsAt(point);
     if (pins.length) { onPick(pins); return; }
-    const zone = map.queryRenderedFeatures([point.x, point.y], { layers: [ids.regionFill] })
-      .map(feature => feature?.properties?.zoneId).find(value => typeof value === 'string' && value);
-    onZonePick(zone || null);
+    const zone = zoneAt(point);
+    // Touch has no hover, so a tap shows the same lifted zone and info.
+    hover(zone, point);
+    onZonePick(zone);
   };
   const click = event => {
     if (!ready || destroyed) return;
@@ -220,6 +259,8 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = ()
 
   map.on('style.load', start);
   map.on('click', click);
+  map.on('mousemove', mousemove);
+  map.on('mouseout', mouseout);
   if (map.isStyleLoaded?.()) queueMicrotask(start);
 
   return {
@@ -232,6 +273,8 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = ()
       destroyed = true;
       map.off('style.load', start);
       map.off('click', click);
+      map.off('mousemove', mousemove);
+      map.off('mouseout', mouseout);
       removeResources();
     },
   };

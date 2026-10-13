@@ -66,15 +66,12 @@ test('권역 보기는 주문 핀을 숨기고 줌 11부터 주문이 있는 권
   assert.deepEqual(map.getSource('dispatch-orders-source').data.features.map(feature => feature.geometry), orders.features.map(feature => feature.geometry));
   assert.equal(map.getSource('dispatch-regions-source').data, zones);
   assert.ok([...map.sources.values()].every(source => !source.definition.cluster));
-  const labels = map.getLayer('dispatch-regions-counts');
-  assert.equal(labels.source, 'dispatch-regions-source');
-  assert.equal(labels.minzoom, 11);
-  assert.deepEqual(labels.filter, ['>', ['get', 'orderCount'], 0]);
-  assert.deepEqual(labels.layout['text-field'], ['coalesce', ['get', 'volumeLabel'], ['to-string', ['get', 'orderCount']]], '착지·박스 문구가 있으면 그것을, 없으면 주문 수를 보인다');
-  assert.equal(labels.layout['symbol-placement'], 'point');
-  assert.equal(map.visibility.get('dispatch-regions-counts:visibility'), 'visible');
+  assert.ok([...map.layers.values()].every(layer => layer.type !== 'symbol' || !layer.layout['text-field']), '권역 위에 늘 떠 있는 수량 글자를 그리지 않는다');
+  assert.deepEqual(map.getLayer('dispatch-regions-hover-fill').filter, ['==', ['literal', 1], ['literal', 0]], '마우스를 올리기 전에는 떠오른 권역이 없다');
+  assert.equal(map.visibility.get('dispatch-regions-hover-fill:visibility'), 'visible');
   assert.equal(map.visibility.get('dispatch-orders-all:visibility'), 'none');
-  assert.ok(map.layerOrder.indexOf('dispatch-regions-counts') < map.layerOrder.indexOf('dispatch-orders-all'));
+  assert.ok(map.layerOrder.indexOf('dispatch-regions-hover-shadow') < map.layerOrder.indexOf('dispatch-regions-hover-fill'), '그림자를 권역 아래에 그린다');
+  assert.ok(map.layerOrder.indexOf('dispatch-regions-hover-line') < map.layerOrder.indexOf('dispatch-zone-pins'), '떠오른 권역이 핀을 가리지 않는다');
   mounted.destroy();
 });
 
@@ -87,7 +84,7 @@ test('주문 보기에서는 모든 핀을 줌과 관계없이 표시하며 선�
   const source = map.getSource('dispatch-orders-source');
   assert.equal(source.setDataCalls, 1);
   assert.equal(map.visibility.get('dispatch-orders-all:visibility'), 'visible');
-  assert.equal(map.visibility.get('dispatch-regions-counts:visibility'), 'none');
+  assert.equal(map.visibility.get('dispatch-regions-hover-fill:visibility'), 'none');
   assert.equal(map.getLayer('dispatch-orders-all').paint['icon-opacity'], 0.5);
   assert.equal(map.getLayer('dispatch-orders-all').layout['icon-allow-overlap'], true);
   assert.equal(map.getLayer('dispatch-orders-all').minzoom, undefined);
@@ -126,7 +123,7 @@ test('주문 보기의 겹친 핀만 선택하고 권역 보기에서는 주문 
 test('레이어 오류와 이미지 실패는 숨기지 않고 부분 자원을 정리한다', async () => {
   class EventErrorMap extends FakeMap {
     addLayer(layer) {
-      if (layer.id === 'dispatch-regions-counts') { this.fire('error', { error: new Error('invalid count layer') }); return; }
+      if (layer.id === 'dispatch-regions-hover-fill') { this.fire('error', { error: new Error('invalid count layer') }); return; }
       super.addLayer(layer);
     }
   }
@@ -230,5 +227,39 @@ test('권역 보기에서 지도를 누르면 핀이 먼저, 없으면 권역을
   map.fire('click', { point: { x: 100, y: 80 } });
   assert.deepEqual(picks.at(-1), ['O1'], '주문 보기에서는 기존 방식대로 주문 핀을 고른다');
   assert.deepEqual(zones, ['Z1', null]);
+  mounted.destroy();
+});
+
+test('권역에 마우스를 올리면 그 권역만 불투명하게 떠오르고 핀 위나 지도 밖에서는 내려간다', async () => {
+  const map = new FakeMap();
+  const hovered = [];
+  const mounted = mountDispatchMapLayers(map, { onZoneHover: value => hovered.push(value) });
+  mounted.update({ regions: regions(), mode: 'regions' });
+  await flush();
+  const zoneFilter = ['==', ['get', 'zoneId'], 'Z1'];
+  map.queries.push([], [{ properties: { zoneId: 'Z1' } }]);
+  map.fire('mousemove', { point: { x: 10, y: 20 } });
+  for (const id of ['dispatch-regions-hover-shadow', 'dispatch-regions-hover-fill', 'dispatch-regions-hover-line']) assert.deepEqual(map.filters.get(id), zoneFilter);
+  assert.deepEqual(hovered.at(-1), { zoneId: 'Z1', point: { x: 10, y: 20 } });
+  assert.equal(map.getLayer('dispatch-regions-hover-fill').paint['fill-opacity'], 1);
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.deepEqual(map.getLayer('dispatch-regions-hover-fill').paint['fill-translate'], [-2, -3], '다음 프레임에 위로 떠오른다');
+  assert.deepEqual(map.getLayer('dispatch-regions-hover-shadow').paint['fill-translate'], [4, 6]);
+  map.queries.push([{ properties: { orderId: 'O1' } }]);
+  map.fire('mousemove', { point: { x: 11, y: 21 } });
+  assert.equal(hovered.at(-1), null, '핀 위에서는 핀 팝업이 우선한다');
+  assert.deepEqual(map.filters.get('dispatch-regions-hover-fill'), ['==', ['literal', 1], ['literal', 0]]);
+  map.queries.push([], [{ properties: { zoneId: 'Z1' } }]);
+  map.fire('mousemove', { point: { x: 10, y: 20 } });
+  map.fire('mouseout');
+  assert.equal(hovered.at(-1), null);
+  map.queries.push([], [{ properties: { zoneId: 'Z1' } }]);
+  map.fire('click', { point: { x: 10, y: 20 } });
+  assert.equal(hovered.at(-1)?.zoneId, 'Z1', '터치처럼 누르기만 해도 같은 정보를 보인다');
+  mounted.update({ mode: 'orders' });
+  assert.equal(hovered.at(-1), null, '주문 보기로 바꾸면 내려간다');
+  const count = hovered.length;
+  map.fire('mousemove', { point: { x: 10, y: 20 } });
+  assert.equal(hovered.length, count, '주문 보기에서는 권역 정보를 보이지 않는다');
   mounted.destroy();
 });

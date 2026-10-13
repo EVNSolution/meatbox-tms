@@ -47,9 +47,11 @@ export function zoneVolumes(regions, deliveries) {
 
 export const weightText = weightKg => known(weightKg) ? `${weightKg.toLocaleString('ko-KR')}kg` : '미수신';
 
-export function volumeLabel(row) {
-  const boxes = known(row.boxes) ? `${row.boxes.toLocaleString('ko-KR')}박스` : '박스 미확인';
-  return `${row.destinations.toLocaleString('ko-KR')}곳 · ${boxes}${known(row.weightKg) ? ` · ${weightText(row.weightKg)}` : ''}`;
+// Lines of the zone hover popover: one figure per line, no separator dots.
+export function volumeLines(row) {
+  const lines = [`${row.destinations.toLocaleString('ko-KR')} Stop`, known(row.boxes) ? `${row.boxes.toLocaleString('ko-KR')} box` : 'box 미확인'];
+  if (known(row.weightKg)) lines.push(weightText(row.weightKg));
+  return lines;
 }
 
 export function withZoneVolumes(regions, rows) {
@@ -57,7 +59,7 @@ export function withZoneVolumes(regions, rows) {
   const byZone = new Map(rows.map(row => [row.zoneId, row]));
   return { ...regions, features: regions.features.map(feature => {
     const row = byZone.get(feature.properties?.zoneId);
-    return row ? { ...feature, properties: { ...feature.properties, destinationCount: row.destinations, boxes: row.boxes, weightKg: row.weightKg, volumeLabel: volumeLabel(row) } } : feature;
+    return row ? { ...feature, properties: { ...feature.properties, destinationCount: row.destinations, boxes: row.boxes, weightKg: row.weightKg } } : feature;
   }) };
 }
 

@@ -538,12 +538,13 @@
       "source": "apps/combined/dispatch-map-layer.mjs",
       "sourceSha256": "944304bc83934f094fa317494e7d5ed047ba0b0f432cae91d247fd7a71dcf56d",
       "target": "apps/web/combined/dispatch-map-layer.mjs",
-      "targetSha256": "781c1a02fc17d64ad0fb05429c62c251058066018118209bc670da631ae94a42",
+      "targetSha256": "4523b6e27c9b32fab2a5366f9e089cedab9543817cb972bb2223ab54e67979d5",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Add a circle layer that highlights the orders picked for a bulk transfer",
-        "Draw the pins of a selected zone in a separate layer, route zone and pin clicks in zone view and label zones with destinations and boxes"
+        "Draw the pins of a selected zone in a separate layer, route zone and pin clicks in zone view and label zones with destinations and boxes",
+        "Replace always-on zone volume labels with a hovered zone that rises (opaque fill, outline and shadow) and report the hovered zone"
       ],
       "status": "active"
     },
@@ -551,7 +552,7 @@
       "source": "apps/combined/dispatch-map-layer.test.mjs",
       "sourceSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7",
       "target": "apps/web/combined/dispatch-map-layer.test.mjs",
-      "targetSha256": "c8018136c921c28f740bb7f20e2ee82ad74a525d5c3969e9e75d72ab8a5465c1",
+      "targetSha256": "96d021cbd20cf40cf7779ee3a31fec00c4ff2657575e47db0a0773a95198aec5",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Cover the bulk-selection highlight layer",
@@ -906,7 +907,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "107f37a64cf8463b216a60276800a93bd90c0139394a172cbd5be648a053caca",
+      "targetSha256": "693bd21b835b44d0820d968decaa8d48b084836f77572545561af12a4ab93220",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -923,7 +924,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "bd7b65aa11821129b495d1f9522fe8be13e10f8ff25b7c9f3b28628c8703db40",
+      "targetSha256": "04725bf52291d1581d2088907e90309c94323d808457b6b11f9416750b77af4e",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -937,7 +938,8 @@
         "Add multi-select mode with click and drag selection and a bulk transfer dialog for delivery bundles",
         "Add the zone volume table, zone selection with boundary and pins together and the delivery popup",
         "Stop stripping the generator's unverified disclosure from vehicle location text, drop raw coordinates for unverified vehicles, and mark synthetic plates as unverified",
-        "Add the zone drivers column and the zone transfer dialog that hands a delivery bundle to a driver serving another zone, and mark the plate in the reassign preview"
+        "Add the zone drivers column and the zone transfer dialog that hands a delivery bundle to a driver serving another zone, and mark the plate in the reassign preview",
+        "Show the hovered zone volume as a popover beside the cursor instead of overlapping map labels"
       ],
       "status": "active"
     },
@@ -967,7 +969,7 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "13187423b2330f533fa674b011a660163756b4a04b2788372a1f7fe7c7f26191",
+      "targetSha256": "ae06ced52f6129c2626fa8159b7834e3c20faa5f6f031d72aeee931e577df84d",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -2120,14 +2122,14 @@
     {
       "path": "apps/web/combined/zone-volume.mjs",
       "origin": "authored",
-      "sha256": "9cee9fec75eb5718454714d2a87b54e1f542c820ca5c22f0c5a954b958a79cfe",
-      "reason": "Count destinations, boxes, orders and weight per delivery zone without inventing weight, label zone polygons with the totals and compute zone bounds.",
+      "sha256": "e62b00c2479cd2da09bfdc5243d9acad81f3bc6237d771550e82409a69dcdbaa",
+      "reason": "Count destinations, boxes, orders and weight per delivery zone without inventing weight, format the zone hover popover lines and compute zone bounds.",
       "status": "active"
     },
     {
       "path": "apps/web/combined/zone-volume.test.mjs",
       "origin": "authored",
-      "sha256": "c0905a4582a99329932c05de8e5a5790ed9ff8e17a22c7c72955c2c9a6f404f9",
+      "sha256": "4597e3a980be3d137d985014d4338d9c9630f02c56cf7fb5830549665b4c5e38",
       "reason": "Verify per-zone totals, unlocated orders, unknown boxes and weight, labels, zone properties and geometry bounds.",
       "status": "active"
     },
