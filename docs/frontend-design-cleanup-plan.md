@@ -4,7 +4,7 @@
 
 ## 요구와 근거
 
-- 디자인 정본은 저장소 `DESIGN.md` 하나다. 공식 로고·보존 자산 출처와 현재 제품 계약을 우선한다. 상위 `previews/terminal-view`는 읽기 전용 참고다.
+- 디자인 정본은 저장소 `DESIGN.md` 하나다. 공식 로고·보존 자산 출처와 현재 제품 계약을 우선한다. [`docs/history/workspace-2026-09/previews/terminal-view`](history/workspace-2026-09/previews/terminal-view/)는 읽기 전용 참고다.
 - 실제 제품은 브랜드 빨강, 액센트 분홍, Pretendard, 56px 헤더, 44px 조작, 6px 기본 반경이다. 포크 가이드는 분홍 브랜드·3px 반경·40px 입력·예전 메뉴를 보여 주고 인증 CSS도 3px 반경과 뒤에서 덮는 과거 스타일을 갖고 있다.
 - 운영 CSS 1,843줄, 참조 CSS 1,782줄에는 foundation·shell·controls·workspace·preview·responsive·composition 책임이 섞였다. 단순 중복률만으로 합치면 의도한 화면 표현을 잃는다.
 - 관제 `vehicle-control.mjs`는 배차 UI `order-planning.mjs`에서 기본 지도 함수를 가져온다. 두 기능이 실제 공통 지도 모듈을 직접 사용하도록 분리한다.

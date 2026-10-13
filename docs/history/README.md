@@ -4,6 +4,7 @@
 
 | 주제 | 보존한 근거 |
 |---|---|
+| 초기 디자인·정적 데모 | [디자인 방향](workspace-2026-09/design.md), [당시 작업 공간 안내](workspace-2026-09/README-2026-09-14.md), [정적 미리보기](workspace-2026-09/previews/terminal-view/) — 저장소 밖 상위 폴더에 있던 원문을 2026-10-13에 옮김 |
 | 이전 디자인·날짜 자료 계약 | [디자인 결정 원문](design-decisions-2026-09-28.md), [날짜 자료 초기 기록](dated-dispatch-data-2026-09-16.md) |
 | 차량 중심 화면 전환 | [개편 계획](../vehicle-operations-redesign-plan.md), [실행 요청](../vehicle-operations-redesign-prompt.md) |
 | 다차량 시연 | [설계](../fleet-operations-plan.md), [당시 테스트 명세](../fleet-operations-test-spec.md), [성능 측정](../server-data-readiness.md) |

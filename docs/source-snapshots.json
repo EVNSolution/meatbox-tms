@@ -2,7 +2,7 @@
   "scenarioCommit": "f41af790be7529d4d2da9e8ac44826acdd120a50",
   "scenarioDirectory": "workspaces/sanghyun-scenario",
   "uiDirectory": "workspaces/jiin-ui",
-  "uiSource": "../previews/terminal-view",
+  "uiSource": "docs/history/workspace-2026-09/previews/terminal-view",
   "sha256": {
     "workspaces/sanghyun-scenario/.claude/launch.json": "6e1bc3c52e6245f0647779ea04b186792aa29c4e9a8c77f64e9354c4c5443204",
     "workspaces/sanghyun-scenario/.gitignore": "4d56952b0fb13bf8f9b6c13a6d4c34a075bac3af447636a1df4335d7576e2f97",
