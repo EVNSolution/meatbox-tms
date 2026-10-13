@@ -1,14 +1,14 @@
-name: "CD · TEST 서버 배포"
+name: "Deploy TEST"
 
 on:
   workflow_run:
-    workflows: ["CI · 코드 검증과 릴리스 패키징"]
+    workflows: ["CI"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
     inputs:
       run_id:
-        description: Successful "CI · 코드 검증과 릴리스 패키징" run ID from current main or a trusted same-repository PR
+        description: Successful "CI" run ID from current main or a trusted same-repository PR
         required: true
         type: string
 
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: TEST 서버 배포
+    name: Deploy TEST
     if: >-
       ${{
         (github.event_name == 'workflow_run' &&

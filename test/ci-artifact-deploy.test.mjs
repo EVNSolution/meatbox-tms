@@ -98,7 +98,7 @@ test('run validation accepts current main and rejects a stale main run', async t
   globalThis.fetch = async url => {
     const route = new URL(url).pathname;
     const value = route.endsWith('/actions/runs/123')
-      ? { id: 123, run_attempt: 1, name: 'CI · 코드 검증과 릴리스 패키징', path: '.github/workflows/new-stack.yml', status: 'completed', conclusion: 'success', event: 'push', head_sha: SHA, head_branch: 'main', repository: { id: 1368015789, full_name: 'EVNSolution/meatbox-tms', owner: { id: 267003080 } }, head_repository: { id: 1368015789, full_name: 'EVNSolution/meatbox-tms', owner: { id: 267003080 } } }
+      ? { id: 123, run_attempt: 1, name: 'CI', path: '.github/workflows/new-stack.yml', status: 'completed', conclusion: 'success', event: 'push', head_sha: SHA, head_branch: 'main', repository: { id: 1368015789, full_name: 'EVNSolution/meatbox-tms', owner: { id: 267003080 } }, head_repository: { id: 1368015789, full_name: 'EVNSolution/meatbox-tms', owner: { id: 267003080 } } }
       : route.endsWith('/actions/runs/123/artifacts') ? { artifacts: [{ id: 9, name: 'meatbox-test-release', expired: false, expires_at: '2099-01-01T00:00:00Z', digest: `sha256:${'c'.repeat(64)}`, size_in_bytes: 10, workflow_run: { id: 123 } }] }
       : route.endsWith('/git/ref/heads/main') ? { object: { sha: current } }
         : { id: 1368015789, full_name: 'EVNSolution/meatbox-tms', owner: { id: 267003080 }, default_branch: 'main' };
@@ -117,7 +117,7 @@ test('manual PR validation requires an open same-repository current head', async
   globalThis.fetch = async url => {
     const route = new URL(url).pathname;
     const value = route.endsWith('/actions/runs/123')
-      ? { id: 123, run_attempt: 1, name: 'CI · 코드 검증과 릴리스 패키징', path: '.github/workflows/new-stack.yml', status: 'completed', conclusion: 'success', event: 'pull_request', head_sha: SHA, repository: { id: 1368015789, full_name: 'EVNSolution/meatbox-tms', owner: { id: 267003080 } }, head_repository: { id: 1368015789, full_name: 'EVNSolution/meatbox-tms', owner: { id: 267003080 } }, pull_requests: [{ number: 35 }] }
+      ? { id: 123, run_attempt: 1, name: 'CI', path: '.github/workflows/new-stack.yml', status: 'completed', conclusion: 'success', event: 'pull_request', head_sha: SHA, repository: { id: 1368015789, full_name: 'EVNSolution/meatbox-tms', owner: { id: 267003080 } }, head_repository: { id: 1368015789, full_name: 'EVNSolution/meatbox-tms', owner: { id: 267003080 } }, pull_requests: [{ number: 35 }] }
       : route.endsWith('/actions/runs/123/artifacts') ? { artifacts: [{ id: 9, name: 'meatbox-test-release', expired: false, expires_at: '2099-01-01T00:00:00Z', digest: `sha256:${'c'.repeat(64)}`, size_in_bytes: 10, workflow_run: { id: 123 } }] }
       : route.endsWith('/pulls/35') ? { number: 35, state: 'open', merge_commit_sha: 'd'.repeat(40), head: { sha: SHA, repo: { full_name: headRepository } } }
       : route.endsWith('/git/ref/pull/35/merge') ? { object: { sha: mergeRef } }
