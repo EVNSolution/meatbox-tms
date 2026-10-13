@@ -1,6 +1,12 @@
 server:
   address: 127.0.0.1
   port: ${SERVER_PORT:8081}
+  # Finish in-flight requests on SIGTERM, so a blue/green switch never cuts a checkpoint save.
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
 
 management:
   endpoints:

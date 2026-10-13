@@ -2199,8 +2199,8 @@
     {
       "path": "apps/web/scripts/legacy-gateway.mjs",
       "origin": "authored",
-      "sha256": "2936a093d7eaa02030ad2af83da4b9428cfacb6719dd2c085a1af21dfa7d8b2f",
-      "reason": "Serve only allowed built frontend paths, preserve legacy routes and forward cookie/origin/API/WebSocket contracts while the existing Node service remains the writer. Add opt-in exact Kotlin read routing while Node remains the authentication and single business writer. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection. Refuse path parameters and URL fragments before any API owner sees the request.",
+      "sha256": "31a7a2e64b260017109b689214b7ef4b9b1191ee210835934a95230047c5a51e",
+      "reason": "Serve only allowed built frontend paths, preserve legacy routes and forward cookie/origin/API/WebSocket contracts while the existing Node service remains the writer. Add opt-in exact Kotlin read routing while Node remains the authentication and single business writer. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection. Refuse path parameters and URL fragments before any API owner sees the request. Finish in-flight responses on shutdown so a blue/green switch never cuts a request.",
       "status": "active"
     },
     {
