@@ -243,8 +243,8 @@ test('권역에 마우스를 올리면 그 권역만 불투명하게 떠오르�
   assert.deepEqual(hovered.at(-1), { zoneId: 'Z1', point: { x: 10, y: 20 } });
   assert.equal(map.getLayer('dispatch-regions-hover-fill').paint['fill-opacity'], 1);
   await new Promise(resolve => setTimeout(resolve, 30));
-  assert.deepEqual(map.getLayer('dispatch-regions-hover-fill').paint['fill-translate'], [-2, -3], '다음 프레임에 위로 떠오른다');
-  assert.deepEqual(map.getLayer('dispatch-regions-hover-shadow').paint['fill-translate'], [4, 6]);
+  assert.deepEqual(map.getLayer('dispatch-regions-hover-fill').paint['fill-translate'], [-1, -1], '다음 프레임에 살짝 떠오른다');
+  assert.deepEqual(map.getLayer('dispatch-regions-hover-shadow').paint['fill-translate'], [2, 2]);
   map.queries.push([{ properties: { orderId: 'O1' } }]);
   map.fire('mousemove', { point: { x: 11, y: 21 } });
   assert.equal(hovered.at(-1), null, '핀 위에서는 핀 팝업이 우선한다');
@@ -253,6 +253,10 @@ test('권역에 마우스를 올리면 그 권역만 불투명하게 떠오르�
   map.fire('mousemove', { point: { x: 10, y: 20 } });
   map.fire('mouseout');
   assert.equal(hovered.at(-1), null);
+  map.queries.push([], [{ properties: { zoneId: 'Z1' } }]);
+  map.fire('mousemove', { point: { x: 10, y: 20 } });
+  map.fire('movestart');
+  assert.equal(hovered.at(-1), null, '지도를 움직이면 엉뚱한 자리에 남지 않게 내린다');
   map.queries.push([], [{ properties: { zoneId: 'Z1' } }]);
   map.fire('click', { point: { x: 10, y: 20 } });
   assert.equal(hovered.at(-1)?.zoneId, 'Z1', '터치처럼 누르기만 해도 같은 정보를 보인다');

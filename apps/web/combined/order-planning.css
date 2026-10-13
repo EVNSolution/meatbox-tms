@@ -175,7 +175,9 @@
 .order-map-popup dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 .order-zone-table td.order-zone-drivers { max-width: 190px; overflow: hidden; text-align: left; text-overflow: ellipsis; }
 .order-map-popup > .button { margin-right: 6px; }
-.order-zone-hover { position: absolute; z-index: 3; display: grid; gap: 1px; min-width: 120px; max-width: 220px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px #0d2b2033; color: #174c3b; font-size: 12px; line-height: 1.4; pointer-events: none; }
+.order-zone-hover { position: absolute; top: 0; left: 0; z-index: 3; display: grid; gap: 1px; min-width: 120px; max-width: 220px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 4px 14px #0d2b2026; color: #174c3b; font-size: 12px; line-height: 1.4; pointer-events: none; contain: layout paint; will-change: transform, opacity; opacity: 1; transition: opacity 120ms ease-out; }
+@starting-style { .order-zone-hover { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .order-zone-hover { transition: none; } }
 .order-zone-hover[hidden] { display: none; }
 .order-zone-hover strong { margin-bottom: 2px; color: var(--text); font-size: 13px; }
 .order-zone-hover span { font-weight: 600; }

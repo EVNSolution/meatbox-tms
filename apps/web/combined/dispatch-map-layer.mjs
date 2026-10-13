@@ -25,9 +25,9 @@ const equals = (property, value) => typeof value === 'string' && value
   : nothing;
 // The hovered zone rises off the map: an opaque fill and outline shifted up-left, over a soft
 // shadow shifted down-right. Translations are in screen pixels, so the lift looks the same at every zoom.
-const lifted = [-2, -3];
-const shadowOffset = [4, 6];
-const liftTransition = { duration: 160, delay: 0 };
+const lifted = [-1, -1];
+const shadowOffset = [2, 2];
+const liftTransition = { duration: 120, delay: 0 };
 const includes = (property, values) => Array.isArray(values) && values.length
   ? ['in', ['get', property], ['literal', values]]
   : nothing;
@@ -64,9 +64,9 @@ function addLayers(map, markerImage, ownedLayers, ownedSources) {
   addLayer({ id: ids.regionFill, type: 'fill', source: ids.regions, filter: hasOrders, paint: { 'fill-color': '#218662', 'fill-opacity': 0.18 } });
   addLayer({ id: ids.regionLine, type: 'line', source: ids.regions, minzoom: 11, filter: hasOrders, paint: { 'line-color': '#3c705a', 'line-opacity': 0.7, 'line-width': 1.2 } });
   addLayer({ id: ids.selectedRegion, type: 'line', source: ids.regions, minzoom: 11, filter: nothing, paint: { 'line-color': '#1e5142', 'line-opacity': 0.95, 'line-width': 3 } });
-  addLayer({ id: ids.hoverShadow, type: 'fill', source: ids.regions, filter: nothing, paint: { 'fill-color': '#0d2b20', 'fill-opacity': 0.28, 'fill-translate': shadowOffset, 'fill-antialias': false } });
+  addLayer({ id: ids.hoverShadow, type: 'fill', source: ids.regions, filter: nothing, paint: { 'fill-color': '#0d2b20', 'fill-opacity': 0.16, 'fill-translate': shadowOffset, 'fill-antialias': false } });
   addLayer({ id: ids.hoverFill, type: 'fill', source: ids.regions, filter: nothing, paint: { 'fill-color': '#e4f2eb', 'fill-opacity': 1, 'fill-translate': lifted } });
-  addLayer({ id: ids.hoverLine, type: 'line', source: ids.regions, filter: nothing, paint: { 'line-color': '#1e5142', 'line-width': 2.5, 'line-translate': lifted } });
+  addLayer({ id: ids.hoverLine, type: 'line', source: ids.regions, filter: nothing, paint: { 'line-color': '#1e5142', 'line-width': 2, 'line-translate': lifted } });
 
   addSource(ids.points, { type: 'geojson', data: emptyCollection() });
   addLayer({
@@ -261,6 +261,8 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = ()
   map.on('click', click);
   map.on('mousemove', mousemove);
   map.on('mouseout', mouseout);
+  // Panning or zooming leaves the popover over the wrong place; the next mousemove brings it back.
+  map.on('movestart', mouseout);
   if (map.isStyleLoaded?.()) queueMicrotask(start);
 
   return {
@@ -275,6 +277,7 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = ()
       map.off('click', click);
       map.off('mousemove', mousemove);
       map.off('mouseout', mouseout);
+      map.off('movestart', mouseout);
       removeResources();
     },
   };

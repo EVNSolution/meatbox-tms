@@ -1216,19 +1216,29 @@ test('타 권역 이관은 보호 묶음이나 다른 권역에 넘길 배송원
   planning.destroy();
 });
 
-test('권역에 마우스를 올리면 Stop·box를 줄마다 보이는 팝오버를 커서 옆에 띄우고 벗어나면 숨긴다', () => {
+test('권역에 마우스를 올리면 Stop·box를 줄마다 보이는 팝오버를 커서 옆에 띄우고 벗어나면 숨긴다', async () => {
+  const frame = () => new Promise(resolve => setTimeout(resolve, 20));
   const { planning, nodes, log } = mountZones();
   planning.update(zonePlanningData(), null);
+  log.zoneHover({ zoneId: 'Z1', point: { x: 1, y: 1 } });
   log.zoneHover({ zoneId: 'Z1', point: { x: 40, y: 50 } });
+  await frame();
   const hover = nodes['zone-hover'];
   assert.equal(hover.hidden, false);
   assert.match(hover.innerHTML, /<strong>서울 첫 권역<\/strong><span>2 Stop<\/span><span>21 box<\/span><small>주문 3건 · 기사 2, 기사 1<\/small>/);
   assert.doesNotMatch(hover.innerHTML, /곳 · /, '구분점 없이 줄을 나눈다');
-  assert.equal(hover.style.left, '56px');
-  assert.equal(hover.style.top, '66px');
+  assert.equal(hover.style.transform, 'translate3d(54px, 64px, 0)', '한 프레임에 마지막 위치만 transform으로 옮긴다');
+  const html = hover.innerHTML;
+  hover.innerHTML = 'kept';
+  log.zoneHover({ zoneId: 'Z1', point: { x: 60, y: 70 } });
+  await frame();
+  assert.equal(hover.innerHTML, 'kept', '같은 권역 안에서 움직이면 내용을 다시 쓰지 않는다');
+  hover.innerHTML = html;
   log.zoneHover(null);
+  await frame();
   assert.equal(hover.hidden, true);
   log.zoneHover({ zoneId: 'unknown', point: { x: 1, y: 1 } });
+  await frame();
   assert.equal(hover.hidden, true, '집계가 없는 권역은 보이지 않는다');
   planning.destroy();
 });

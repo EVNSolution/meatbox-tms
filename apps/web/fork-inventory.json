@@ -538,7 +538,7 @@
       "source": "apps/combined/dispatch-map-layer.mjs",
       "sourceSha256": "944304bc83934f094fa317494e7d5ed047ba0b0f432cae91d247fd7a71dcf56d",
       "target": "apps/web/combined/dispatch-map-layer.mjs",
-      "targetSha256": "4523b6e27c9b32fab2a5366f9e089cedab9543817cb972bb2223ab54e67979d5",
+      "targetSha256": "c8246da1a077b80bb967951a42ceb28433b0f5f86f6bfb7fe60b8d0b1529d9df",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -552,7 +552,7 @@
       "source": "apps/combined/dispatch-map-layer.test.mjs",
       "sourceSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7",
       "target": "apps/web/combined/dispatch-map-layer.test.mjs",
-      "targetSha256": "96d021cbd20cf40cf7779ee3a31fec00c4ff2657575e47db0a0773a95198aec5",
+      "targetSha256": "7e16a3a8dfc5074841bd1c6d13319f8e07dcdb252c4a1e579999bee0f5a75f56",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Cover the bulk-selection highlight layer",
@@ -907,7 +907,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "693bd21b835b44d0820d968decaa8d48b084836f77572545561af12a4ab93220",
+      "targetSha256": "96c5a794f79e3767d7fa1ff3933da974ab3a286652d1bb0d76f962a0afa3537c",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -924,7 +924,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "04725bf52291d1581d2088907e90309c94323d808457b6b11f9416750b77af4e",
+      "targetSha256": "6a0cf27cb3cf5bf008be9d77db4505ee7a19a0c3ca590f99c0934576d02ee3fc",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -969,7 +969,7 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "ae06ced52f6129c2626fa8159b7834e3c20faa5f6f031d72aeee931e577df84d",
+      "targetSha256": "fe4ed1890335bb32914d0b54cfe32c7d5203ce2b4eecb63657bc470ab00b6ba5",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
