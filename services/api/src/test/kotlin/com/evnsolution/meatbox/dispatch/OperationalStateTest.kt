@@ -68,6 +68,88 @@ class OperationalStateTest {
     }
 
     @Test
+    fun `driver start arrive and complete move one destination bundle at a time and survive a checkpoint`() {
+        var now = 1_000L
+        val state = OperationalState(day(), "source-a", { now })
+        fun run(body: String) = state.command(json(body.replace("REV", state.revision.toString())))
+
+        assertThatThrownBy { run("""{"type":"arrive_stop","expectedRevision":REV,"vehicleId":"G1","orderId":"O1"}""") }
+            .isInstanceOfSatisfying(DispatchException::class.java) { assertThat(it.status).isEqualTo(409) }
+
+        val started = run("""{"type":"start_route","expectedRevision":REV,"vehicleId":"G1"}""")
+        assertThat(started.at("/result/orderIds")).isEqualTo(dispatchMapper.readTree("""["O1","O1B"]"""))
+        assertThat(started.at("/state/vehicleStates/G1/phase").asString()).isEqualTo("delivering")
+        assertThat(started.at("/state/fleetDeliveries/0/status").asString()).isEqualTo("current")
+        assertThat(started.at("/state/fleetDeliveries/1/status").asString()).isEqualTo("current")
+        assertThatThrownBy { run("""{"type":"start_route","expectedRevision":REV,"vehicleId":"G1"}""") }
+            .isInstanceOfSatisfying(DispatchException::class.java) { assertThat(it.status).isEqualTo(409) }
+        assertThatThrownBy {
+            run("""{"type":"complete_stop","expectedRevision":REV,"vehicleId":"G1","orderId":"O1"}""")
+        }
+            .describedAs("완료는 도착 뒤에만 된다")
+            .isInstanceOfSatisfying(DispatchException::class.java) { assertThat(it.status).isEqualTo(409) }
+        assertThatThrownBy { run("""{"type":"arrive_stop","expectedRevision":REV,"vehicleId":"G1","orderId":"O2"}""") }
+            .describedAs("다음 배송지는 도착 처리할 수 없다")
+            .isInstanceOfSatisfying(DispatchException::class.java) { assertThat(it.status).isEqualTo(409) }
+
+        now = 2_000L
+        val arrived = run("""{"type":"arrive_stop","expectedRevision":REV,"vehicleId":"G1","orderId":"O1B"}""")
+        assertArrivedAtFirstStop(arrived)
+        val savedArrival = state.exportCheckpoint()
+        assertThat(savedArrival.at("/orders/O1/arrivedAt").asLong()).isEqualTo(now)
+        assertThat(savedArrival.at("/orders/O1B/arrivedAt").asLong()).isEqualTo(now)
+        assertThat(OperationalState(day(), "source-a", { now }, savedArrival).snapshot()).isEqualTo(state.snapshot())
+        assertThatThrownBy { run("""{"type":"arrive_stop","expectedRevision":REV,"vehicleId":"G1","orderId":"O1"}""") }
+            .isInstanceOfSatisfying(DispatchException::class.java) { assertThat(it.status).isEqualTo(409) }
+        assertThat(state.exportCheckpoint()).isEqualTo(savedArrival)
+
+        now = 3_000L
+        val completed = run("""{"type":"complete_stop","expectedRevision":REV,"vehicleId":"G1","orderId":"O1"}""")
+        assertThat(completed.at("/result/nextStopId").asString()).isEqualTo("O2")
+        assertThat(completed.at("/state/fleetDeliveries/0/status").asString()).isEqualTo("done")
+        assertThat(completed.at("/state/fleetDeliveries/2/status").asString()).isEqualTo("current")
+        assertThat(completed.at("/state/vehicleStates/G1/kpi/stopsDone").asInt()).isEqualTo(2)
+        assertThat(completed.at("/state/vehicleStates/G1/truck/fromId").asString()).isEqualTo("O1")
+        assertThat(completed.at("/state/vehicleStates/G1/truck/toId").asString()).isEqualTo("O2")
+        assertThat(completed.at("/state/vehicleStates/G1/truck/atStopId").isNull).isTrue()
+        val savedCompletion = state.exportCheckpoint()
+        assertThatThrownBy {
+            run("""{"type":"complete_stop","expectedRevision":REV,"vehicleId":"G1","orderId":"O1B"}""")
+        }
+            .isInstanceOfSatisfying(DispatchException::class.java) { assertThat(it.status).isEqualTo(409) }
+        assertThatThrownBy { run("""{"type":"arrive_stop","expectedRevision":REV,"vehicleId":"G1","orderId":"O1"}""") }
+            .isInstanceOfSatisfying(DispatchException::class.java) { assertThat(it.status).isEqualTo(409) }
+        assertThat(state.exportCheckpoint()).isEqualTo(savedCompletion)
+
+        val restored = OperationalState(day(), "source-a", { now }, state.exportCheckpoint())
+        assertThat(restored.snapshot()).isEqualTo(state.snapshot())
+
+        run("""{"type":"arrive_stop","expectedRevision":REV,"vehicleId":"G1","orderId":"O2"}""")
+        val finished = run("""{"type":"complete_stop","expectedRevision":REV,"vehicleId":"G1","orderId":"O2"}""")
+        assertThat(finished.at("/result/nextStopId").isNull).isTrue()
+        assertThat(finished.at("/state/vehicleStates/G1/phase").asString()).isEqualTo("done")
+        assertThat(finished.at("/state/vehicleStates/G1/truck/dwelling").asBoolean()).isFalse()
+        assertThat(finished.at("/state/vehicleStates/G1/truck/dwellRemaining").asInt()).isZero()
+        assertThat(OperationalState(day(), "source-a", { now }, state.exportCheckpoint()).snapshot())
+            .isEqualTo(state.snapshot())
+    }
+
+    @Test
+    fun `arrival rejects a current bundle that is not the travelling target without changing the checkpoint`() {
+        val state = OperationalState(day(), "source-a", { 1_000L })
+        state.command(json("""{"type":"start_route","expectedRevision":0,"vehicleId":"G1"}"""))
+        val checkpoint = state.exportCheckpoint()
+        (checkpoint.at("/states/G1/truck") as ObjectNode).put("toId", "O2")
+        val restored = OperationalState(day(), "source-a", { 1_000L }, checkpoint)
+        val before = restored.exportCheckpoint()
+
+        assertThatThrownBy {
+            restored.command(json("""{"type":"arrive_stop","expectedRevision":1,"vehicleId":"G1","orderId":"O1"}"""))
+        }.isInstanceOfSatisfying(DispatchException::class.java) { assertThat(it.status).isEqualTo(409) }
+        assertThat(restored.exportCheckpoint()).isEqualTo(before)
+    }
+
+    @Test
     fun `reassign moves a normalized destination bundle and preserves fractional boxes`() {
         val state = OperationalState(day(), "source-a", { 1_234L })
         val changed = state.command(
@@ -134,6 +216,15 @@ class OperationalStateTest {
           ]
         }""",
     )
+
+    private fun assertArrivedAtFirstStop(response: ObjectNode) {
+        val truck = response.at("/state/vehicleStates/G1/truck")
+        assertThat(truck.path("dwelling").asBoolean()).isTrue()
+        assertThat(truck.path("toId").isNull).isTrue()
+        assertThat(truck.path("fromId").asString()).isEqualTo("O1")
+        assertThat(truck.path("atStopId").asString()).isEqualTo("O1")
+        assertThat(response.at("/state/fleetDeliveries/0/customerStatus/key").asString()).isEqualTo("arrived")
+    }
 
     private fun json(value: String): ObjectNode = dispatchMapper.readTree(value) as ObjectNode
 }

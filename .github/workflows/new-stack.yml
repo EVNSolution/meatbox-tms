@@ -48,6 +48,7 @@ jobs:
           npm ci
           npm --prefix tools/oxlint/anti-slop ci
           npm --prefix apps/web ci
+          npm --prefix apps/driver ci
       - name: Verify Kotlin, frontend, golden and API contracts
         run: make check-release
       - name: Package verified immutable release

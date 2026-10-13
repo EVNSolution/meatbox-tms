@@ -1,0 +1,13 @@
+// Bound Ninja compile/link jobs as well as Gradle workers on small developer machines.
+allprojects { p ->
+    afterEvaluate {
+        def android = p.extensions.findByName('android')
+        if (android != null) {
+            android.defaultConfig.externalNativeBuild.cmake.arguments.addAll([
+                '-DCMAKE_JOB_POOLS=meatbox_compile=2;meatbox_link=1',
+                '-DCMAKE_JOB_POOL_COMPILE=meatbox_compile',
+                '-DCMAKE_JOB_POOL_LINK=meatbox_link'
+            ])
+        }
+    }
+}

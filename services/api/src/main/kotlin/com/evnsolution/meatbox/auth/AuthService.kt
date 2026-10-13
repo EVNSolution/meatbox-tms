@@ -80,6 +80,19 @@ class AuthService internal constructor(
         return if (remainsValid) requireNotNull(user).toAuthUser() else null
     }
 
+    /** Check a stored device binding without keeping or reconstructing a session cookie. */
+    fun isSessionActive(digest: String, username: String): Boolean {
+        val active = synchronized(sessions) {
+            pruneSessions()
+            sessions[digest]?.takeIf { it.username == username && it.expiresAt > now() }
+        } ?: return false
+        val user = loadUser(username)
+        return synchronized(sessions) {
+            val sameSession = sessions[digest] === active && active.expiresAt > now()
+            sameSession && user?.disabled == false
+        }
+    }
+
     fun logout(token: String?) {
         if (token != null) synchronized(sessions) {
             if (sessions.remove(digest(token)) != null) sessionFile.save(sessions)
@@ -117,7 +130,6 @@ class AuthService internal constructor(
         false
     }
 
-    private fun StoredUser.toAuthUser(): AuthUser = AuthUser(username, displayName, createdAt)
 
     private fun randomToken(): String = Base64.getUrlEncoder().withoutPadding()
         .encodeToString(ByteArray(TOKEN_BYTES).also(random::nextBytes))
@@ -181,6 +193,8 @@ class AuthService internal constructor(
         private const val DISPLAY_NAME_MAX_LENGTH = 80
     }
 }
+
+private fun StoredUser.toAuthUser(): AuthUser = AuthUser(username, displayName, createdAt)
 
 data class LoginInput(val username: String, val password: String)
 

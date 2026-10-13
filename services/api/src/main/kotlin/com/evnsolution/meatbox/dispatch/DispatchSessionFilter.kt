@@ -31,5 +31,5 @@ class DispatchSessionFilter(private val verifier: SessionVerifier) : OncePerRequ
         response.writer.write("{\"error\":\"$code\"}")
     }
 
-    companion object { private val PATH = Regex("^/api/dispatch-data/days/[^/]+/(?:state|commands)(?:/.*)?$") }
+    companion object { private val PATH = Regex("^/api/dispatch-data/days/[^/]+/(?:state|commands|driver)(?:/.*)?$") }
 }

@@ -30,6 +30,7 @@
     "src/**/*.ts",
     "src/**/*.mts",
     "combined/**/*.mjs",
+    "combined/**/*.ts",
     "ui-layout/**/*.mjs"
   ],
   "exclude": [

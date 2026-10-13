@@ -175,7 +175,7 @@ class DispatchPlan(
             "publish_dispatch" -> publish(command)
             "begin_dispatch_revision" -> beginRevision(command)
             "discard_dispatch_revision" -> discardRevision(command)
-            "set_route_order" -> operational(command)
+            "set_route_order", "start_route", "arrive_stop", "complete_stop" -> operational(command)
             else -> fail(400, "INVALID_COMMAND", "지원하지 않는 배차 명령입니다.")
         }
         mutableRevision += 1

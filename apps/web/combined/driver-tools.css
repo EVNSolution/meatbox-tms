@@ -1,0 +1,38 @@
+.control-driver-tools { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 14px; }
+.control-driver-tools .button { flex: 1; font-size: 12px; min-height: 40px; white-space: nowrap; }
+.driver-dialog { width: min(700px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 22px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; color: var(--text); }
+.driver-dialog::backdrop { background: #11182770; }
+.driver-dialog-heading, .driver-dialog-actions, .driver-message-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.driver-dialog-heading h2 { margin: 0; font-size: 20px; }
+.driver-dialog p { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.driver-dialog .button { min-height: 40px; }
+.driver-dialog-actions { justify-content: end; margin-top: 16px; }
+.driver-dialog-actions .muted { margin-right: auto; font-size: 12px; }
+.driver-message-toolbar { font-size: 12px; }
+.driver-message-list { display: grid; gap: 10px; list-style: none; margin: 14px 0; padding: 14px; max-height: 320px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; background: #f8f9fa; overscroll-behavior: contain; }
+.driver-message { max-width: 94%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: white; }
+.driver-message.from-ops { margin-left: 6%; background: var(--selected); }
+.driver-message > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; }
+.driver-message time { color: var(--muted); font-size: 11px; }
+.driver-message p { white-space: pre-wrap; margin: 8px 0 0; }
+.driver-message-dialog .field { display: grid; gap: 8px; }
+.driver-message-dialog textarea { width: 100%; resize: vertical; min-height: 88px; max-height: 240px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; font-size: 14px; }
+.driver-message-dialog textarea:disabled { background: #f4f5f7; }
+.driver-pickup-dialog { width: min(850px, calc(100vw - 32px)); }
+.pickup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.pickup-card { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; break-inside: avoid; }
+.pickup-card img { width: 140px; height: 140px; flex-shrink: 0; image-rendering: pixelated; }
+.pickup-card > div { min-width: 0; }
+.pickup-card strong { font-size: 13px; overflow-wrap: anywhere; }
+.pickup-card p { margin: 4px 0; font-size: 12px; }
+@media (max-width: 740px) { .pickup-grid { grid-template-columns: minmax(0, 1fr); } .driver-dialog { padding: 16px; } }
+@media print {
+  html:has(body.driver-pickup-print) { background: white !important; }
+  body.driver-pickup-print *:not(:has(.driver-pickup-dialog)):not(.driver-pickup-dialog):not(.driver-pickup-dialog *) { display: none !important; }
+  body.driver-pickup-print, body.driver-pickup-print :has(.driver-pickup-dialog) { display: block !important; position: static !important; margin: 0 !important; padding: 0 !important; width: auto !important; min-width: 0 !important; max-width: none !important; height: auto !important; min-height: 0 !important; max-height: none !important; overflow: visible !important; border: 0 !important; box-shadow: none !important; background: white !important; }
+  body.driver-pickup-print .driver-pickup-dialog { display: block; position: static; inset: auto; margin: 0; padding: 0; width: 100%; max-width: none; height: auto; max-height: none; overflow: visible; border: 0; background: white; color: black; }
+  body.driver-pickup-print .driver-pickup-dialog::backdrop { display: none; }
+  body.driver-pickup-print .driver-pickup-dialog button, body.driver-pickup-print .driver-dialog-actions { display: none; }
+  body.driver-pickup-print .pickup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.driver-pickup-print .pickup-card { border-color: #999; break-inside: avoid; page-break-inside: avoid; }
+}

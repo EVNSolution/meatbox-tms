@@ -56,8 +56,12 @@ export function usesKotlinAuth(method, rawUrl) {
 }
 
 export function usesKotlinDispatch(method, rawUrl) {
-  if (!["GET", "HEAD", "POST"].includes(method)) return false;
-  return /^\/api\/dispatch-data\/days\/[^/?]+\/(?:state|commands)(?:\?|$)/.test(String(rawUrl || ""));
+  const url = String(rawUrl || "");
+  if (["GET", "HEAD", "POST"].includes(method)) {
+    return /^\/api\/dispatch-data\/days\/[^/?]+\/(?:state|commands|driver\/messages)(?:\?|$)/.test(url);
+  }
+  return ["PUT", "DELETE"].includes(method)
+    && /^\/api\/dispatch-data\/days\/[^/?]+\/driver\/push-token(?:\?|$)/.test(url);
 }
 
 function ownerHeader(boundary) {
