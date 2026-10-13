@@ -1,6 +1,6 @@
 # 미트박스 Android 배송원 앱
 
-Expo SDK 56 / React Native 0.85.3. Android package: `com.evnsolution.meatbox.driver`.
+Expo SDK 56 / React Native 0.85.3. Android package: `com.evnsolution.meatbox.driver`. Firebase 적용 TEST 후보는 `0.1.0(2)`입니다.
 
 ## 실행과 검사
 
@@ -20,7 +20,7 @@ npm run android
 
 `.env.example`의 TEST API origin을 확인하고 필요한 경우 `.env`로 복사합니다. API 인증서가 Android에서 신뢰되어야 합니다. 인증서 검증을 끄는 설정은 없습니다. 모의 서버로 대체하는 기능은 없습니다.
 
-Firebase Android 앱의 `google-services.json`을 `.private/google-services.json`에 저장하거나 `GOOGLE_SERVICES_JSON` 경로를 지정합니다. 서비스 계정 키는 앱에 넣지 않습니다. 서버의 FCM 설정에만 사용합니다. 설정이 없거나 알림 권한/토큰 등록이 실패하면 앱에 푸시 연결 실패가 표시됩니다. 메시지는 앱에서 서버를 조회해 확인할 수 있습니다.
+Firebase Android 앱의 `google-services.json`을 `.private/google-services.json`에 저장하거나 `GOOGLE_SERVICES_JSON` 경로를 지정합니다. 서비스 계정 키는 앱에 넣지 않습니다. 서버의 FCM 설정에만 사용합니다. 설정 파일의 Android package가 일치해야 합니다. 명시한 파일이 없거나 서비스 계정 키이면 prebuild를 중단합니다. 설정이 없거나 알림 권한/토큰 등록이 실패하면 앱에 푸시 연결 실패가 표시됩니다. 메시지는 앱에서 서버를 조회해 확인할 수 있습니다.
 
 ## 기기 설치 없는 TEST APK 빌드
 
@@ -45,6 +45,7 @@ CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--max-old-space-size=2048 CMAKE_BUILD_PARA
 - 현재 배송지의 도착 처리 후 완료·다음 처리가 가능합니다. 서버 응답을 반영하고 상태 충돌 시 최신 상태를 불러옵니다.
 - 지도는 실제 주문 좌표만 표시합니다. 좌표가 없는 배송지는 안내문으로 표시합니다. 마커를 누르면 상세 sheet가 열립니다. 내 위치는 지도에서만 사용하고 서버에 전송하지 않습니다.
 - 메시지 버튼에서 운영팀 내역을 확인하고 메시지를 보냅니다. FCM은 `meatbox-driver` 채널을 사용합니다. 현재 날짜·차량에 맞는 푸시만 처리합니다.
+- 실행 중 토큰이 바뀌면 새 토큰을 서버에 직접 등록합니다. 토큰 이벤트 안에서 토큰 조회를 다시 호출하지 않습니다. 앱이 foreground로 돌아오면 권한과 토큰을 재확인하되 권한 팝업을 반복해서 열지 않습니다.
 
 ## API 계약
 

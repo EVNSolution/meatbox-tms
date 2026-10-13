@@ -1,6 +1,6 @@
 # Android 배송원 TEST 데모 계약
 
-기준일: 2026-10-13, Asia/Seoul. 앱 버전은 **0.1.0 (versionCode 1)**이며 Android package는 `com.evnsolution.meatbox.driver`다.
+기준일: 2026-10-13, Asia/Seoul. Firebase 적용 앱 후보는 **0.1.0 (versionCode 2)**이며 Android package는 `com.evnsolution.meatbox.driver`다.
 
 ## 범위와 인증
 
@@ -82,9 +82,13 @@ MEATBOX_FCM_SERVICE_ACCOUNT_FILE=<외부 서비스 계정 JSON의 절대 경로>
 
 Android에는 Firebase Android 앱의 `google-services.json`만 제공한다. 앱의 `GOOGLE_SERVICES_JSON` 경로 또는 Git에서 제외된 `.private/google-services.json`을 사용한다. 서버 서비스 계정 키를 앱에 넣지 않는다. 앱 설정 변경 후 네이티브 빌드가 필요하며 구체적인 절차는 [앱 README](../apps/driver/README.md)를 따른다.
 
+TEST Firebase 프로젝트는 `meatbox-push-pilot-20260923`다. `Meatbox Driver TEST` Android 앱을 등록하고 package 일치를 확인했다. 기존 Web Push 파일럿의 FCM 전송 계정과 키를 서버 안에서 재사용한다. Android 구성 파일, 서비스 계정 키와 인증 토큰은 Git·CI artifact·문서에 포함하지 않는다. 앱 빌드에는 공개 클라이언트 설정에 해당하는 Firebase 리소스만 포함한다.
+
 서버는 Google OAuth와 FCM HTTP v1 주소를 고정해서 사용한다. 서비스 계정 JSON의 임의 `token_uri`로 요청하지 않는다. RS256 서명, `firebase.messaging` scope, 만료 전 access token 갱신을 사용한다. 토큰 교환과 최대 3개 기기 요청의 전체 처리 예산은 4초다. 공급자 응답 실패를 임의 성공으로 바꾸거나 자동 재전송하지 않는다. 공급자 계약은 [FCM HTTP v1](https://firebase.google.com/docs/cloud-messaging/send/v1-api), [서비스 계정 OAuth](https://developers.google.com/identity/protocols/oauth2/service-account)를 따른다.
 
 알림에는 `미트박스 배송`과 `운영팀의 새 메시지가 있습니다.`라는 일반 문구만 보낸다. data는 `type:"ops_message"`, `date`, `vehicleId`, `messageId`, 일반 `title`, 일반 `body`를 포함한다. 운영자가 입력한 원문은 푸시 payload에 넣지 않는다. 앱은 인증된 메시지 API에서 원문을 조회한다.
+
+사용자에게 표시되는 Android 운영 알림은 `priority: "HIGH"`, `notification.channel_id: "meatbox-driver"`를 사용한다. 앱은 같은 채널을 생성한다. 실행 중 토큰이 바뀌면 새 토큰을 등록하며, 앱이 foreground로 돌아오면 알림 권한과 토큰을 다시 확인한다. 토큰 이벤트는 전달받은 토큰을 직접 사용해 토큰 조회가 반복되는 것을 막는다.
 
 FCM이 미설정이거나 등록이 실패해도 메시지 저장과 조회는 사용할 수 있다. 앱은 활성 상태에서 10초마다 조회한다. 웹 메시지 창은 열려 있는 동안 5초마다 조회한다. 이 조회 기능은 백그라운드 기기 알림을 보장하지 않는다.
 
@@ -97,5 +101,7 @@ FCM이 미설정이거나 등록이 실패해도 메시지 저장과 조회는 �
 사용자는 실제 Android 기기 사용을 보류했다. 기기 설치, QR 카메라, 네이티브 지도·권한, 앱 재시작 후 세션 복원, 실제 푸시 수신은 아직 검증하지 않았다. 앱의 타입 검사·lint·도메인/API 테스트 18개, 웹 테스트 295개·산출물 검사 4개, 기존 루트 테스트 267개, 실제 Kotlin JAR API 검사 57개가 통과했다. 합성 자료로 로그인·배차 계산/전송·주문별 QR·메시지 저장을 브라우저에서 확인했다. A4 인쇄는 QR 3개가 1페이지, 카드 27개가 3페이지이며 마지막 카드의 잘림이 없음을 확인했다.
 
 SDK 56 템플릿으로 ARM64 Android APK 빌드가 성공했다(7분 53초). Google 서비스 설정이 없는 기본 debug keystore 서명 TEST APK다. npm audit는 high 20·critical 0이며 원인 advisory는 수정 버전이 없는 braces와 node-forge 두 종류다. 이번 release Metro source map의 1,303개 경로에는 두 패키지가 없다. 자세한 의존성 제한은 앱 README를 따른다. CI와 TEST 배포 결과는 별도 전달 기록에서 확인한다.
+
+위 미설정 APK는 versionCode 1의 초기 검증 결과다. Firebase 적용 후보는 versionCode 2로 구분한다. 구성 파일 검증을 포함한 앱 검사 21개와 FCM payload 단위검사 3개가 통과했다. TEST 서버의 `meatbox-demo` 사용자와 설정된 키로 Google OAuth 및 FCM `validate_only: true` 요청이 모두 HTTP 200을 반환했다. 이 검사는 인증·권한·요청 형식만 확인하며 실제 기기에 전달하지 않는다. 새 APK·CI·TEST 배포 결과는 PR 전달 기록으로 연결하고, 실제 기기 수신과 알림 표시 여부는 기기 검증 때 확인한다.
 
 후속 전달은 [작업 기준](delivery-workflow.md)과 [TEST 배포·복구 절차](../deploy/new-stack/README.md)를 따른다.

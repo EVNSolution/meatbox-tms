@@ -10,6 +10,7 @@ import { parsePushData, type DriverPush } from '../domain/push';
 const CHANNEL_ID = 'meatbox-driver';
 const STORED_PUSH_TOKEN_KEY = 'meatbox.driver.push-registration';
 const registrations = new SerialQueue();
+let registeredToken: { date: string; vehicleId: string; token: string } | null = null;
 export type PushStatus = 'registering' | 'ready' | 'denied' | 'unavailable';
 
 function isSupported(): boolean {
@@ -24,31 +25,47 @@ export function configurePushNotifications(): void {
   });
 }
 
-export function registerPush(date: string, vehicleId: string, isCurrent: () => boolean): Promise<PushStatus> {
-  return registrations.run(() => registerCurrent(date, vehicleId, isCurrent));
+export function registerPush(
+  date: string,
+  vehicleId: string,
+  isCurrent: () => boolean,
+  options: { token?: string; requestPermission?: boolean } = {},
+): Promise<PushStatus> {
+  return registrations.run(() => registerCurrent(date, vehicleId, isCurrent, options));
 }
 
-async function registerCurrent(date: string, vehicleId: string, isCurrent: () => boolean): Promise<PushStatus> {
+async function registerCurrent(
+  date: string,
+  vehicleId: string,
+  isCurrent: () => boolean,
+  options: { token?: string; requestPermission?: boolean },
+): Promise<PushStatus> {
   if (!isCurrent() || !isSupported()) return 'unavailable';
+  // Expo emits the token event even for getDevicePushTokenAsync. A completed
+  // registration already owns this identical token, so do not register it twice.
+  if (options.token && registeredToken?.token === options.token
+    && registeredToken.date === date && registeredToken.vehicleId === vehicleId) return 'ready';
   try {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       importance: Notifications.AndroidImportance.HIGH,
       name: '배송 알림', vibrationPattern: [0, 250, 150, 250],
     });
     let permissions = await Notifications.getPermissionsAsync();
-    if (!permissions.granted) permissions = await Notifications.requestPermissionsAsync();
+    if (!permissions.granted && options.requestPermission !== false) permissions = await Notifications.requestPermissionsAsync();
     if (!permissions.granted) return 'denied';
-    const token = await Notifications.getDevicePushTokenAsync();
-    if (!isCurrent() || typeof token.data !== 'string' || token.data.trim() === '') return 'unavailable';
+    // A token event must use its supplied token; fetching again emits another event.
+    const token = options.token ?? (await Notifications.getDevicePushTokenAsync()).data;
+    if (!isCurrent() || typeof token !== 'string' || token.trim() === '') return 'unavailable';
     // Remove an earlier date/vehicle binding before registering this selection.
     await revokeStored();
     if (!isCurrent()) return 'unavailable';
-    await registerPushToken({ date, vehicleId, token: token.data, deviceId: Application.getAndroidId(), platform: 'android' });
-    await AsyncStorage.setItem(STORED_PUSH_TOKEN_KEY, JSON.stringify({ date, vehicleId, token: token.data }));
+    await registerPushToken({ date, vehicleId, token, deviceId: Application.getAndroidId(), platform: 'android' });
+    await AsyncStorage.setItem(STORED_PUSH_TOKEN_KEY, JSON.stringify({ date, vehicleId, token }));
     if (!isCurrent()) {
       await revokeStored({ date, vehicleId });
       return 'unavailable';
     }
+    registeredToken = { date, vehicleId, token };
     return 'ready';
   } catch {
     return 'unavailable';
@@ -66,6 +83,15 @@ async function revokeStored(scope?: { date: string; vehicleId: string | null }):
   if (scope && (scope.date !== value.date || (scope.vehicleId && value.vehicleId && scope.vehicleId !== value.vehicleId))) return;
   await revokePushToken(value.date, value.token);
   await AsyncStorage.removeItem(STORED_PUSH_TOKEN_KEY);
+  registeredToken = null;
+}
+
+export function subscribePushToken(onToken: (token: string) => void): () => void {
+  if (!isSupported()) return () => undefined;
+  const subscription = Notifications.addPushTokenListener((token) => {
+    if (token.type === 'android' && typeof token.data === 'string' && token.data.trim()) onToken(token.data);
+  });
+  return () => subscription.remove();
 }
 
 export function subscribePush(onPush: (push: DriverPush) => void): () => void {

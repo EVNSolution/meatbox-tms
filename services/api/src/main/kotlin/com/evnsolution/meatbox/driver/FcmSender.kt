@@ -83,6 +83,10 @@ class FcmSender(
             putObject("message").apply {
                 put("token", token)
                 putObject("notification").put("title", "미트박스 배송").put("body", "운영팀의 새 메시지가 있습니다.")
+                putObject("android").apply {
+                    put("priority", "HIGH")
+                    putObject("notification").put("channel_id", "meatbox-driver")
+                }
                 putObject("data").put("type", "ops_message").put("date", date).put("vehicleId", vehicleId)
                     .put("messageId", messageId).put("title", "미트박스 배송").put("body", "운영팀의 새 메시지가 있습니다.")
             }

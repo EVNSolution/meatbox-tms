@@ -9,7 +9,7 @@ import { fetchDayState, fetchMessages, getSession, logout, sendCommand, sendMess
 import { ApiError, type DriverMessage, type SessionUser } from '../api/types';
 import { POLL_INTERVAL_MS } from '../config';
 import { buildRouteOrderCommand, groupStops, isDispatchOperable, seoulToday, stopProgress, vehicleDeliveries, vehiclePhase, type DayState, type Stop } from '../domain/dispatch';
-import { registerPush, revokePush, subscribePush, type PushStatus } from '../platform/pushNotifications';
+import { registerPush, revokePush, subscribePush, subscribePushToken, type PushStatus } from '../platform/pushNotifications';
 import { RequestGate } from '../platform/requestQueue';
 import { readVehicleChoice, saveVehicleChoice } from '../storage';
 import { BottomSheet } from '../ui/BottomSheet';
@@ -154,8 +154,17 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
     if (!vehicleId) return;
     void loadMessages();
     const timer = setInterval(() => { if (AppState.currentState === 'active') void loadMessages(); }, POLL_INTERVAL_MS);
-    pushWork.current = pushWork.current.then(() => live ? registerPush(date, vehicleId, () => live && active.current) : 'unavailable').then((status) => {
-      if (live) setPushStatus(status as PushStatus);
+    const reconnectPush = (options: { token?: string; requestPermission?: boolean } = {}) => {
+      pushWork.current = pushWork.current.then(() => live
+        ? registerPush(date, vehicleId, () => live && active.current, options)
+        : 'unavailable').then((status) => {
+        if (live) setPushStatus(status as PushStatus);
+      });
+    };
+    reconnectPush();
+    const unsubscribeToken = subscribePushToken((token) => reconnectPush({ token, requestPermission: false }));
+    const foreground = AppState.addEventListener('change', (value) => {
+      if (value === 'active') reconnectPush({ requestPermission: false });
     });
     const unsubscribe = subscribePush((push) => {
       if (!live || push.date !== date || push.vehicleId !== vehicleId) return;
@@ -165,7 +174,7 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
         void loadMessages();
       } else void refresh(true);
     });
-    return () => { live = false; messageGeneration.current += 1; clearInterval(timer); unsubscribe(); };
+    return () => { live = false; messageGeneration.current += 1; clearInterval(timer); unsubscribe(); unsubscribeToken(); foreground.remove(); };
   }, [date, loadMessages, refresh, vehicleId]);
 
   async function chooseVehicle(next: string | null) {
