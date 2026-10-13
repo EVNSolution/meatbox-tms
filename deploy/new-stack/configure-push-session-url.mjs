@@ -3,14 +3,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const [input, output] = process.argv.slice(2);
-if (!input || !output) {
-  console.error('usage: configure-push-session-url.mjs INPUT_ENV OUTPUT_ENV');
+const [input, output, targetPort = '8081'] = process.argv.slice(2);
+if (!input || !output || !['8081', '8082'].includes(targetPort)) {
+  console.error('usage: configure-push-session-url.mjs INPUT_ENV OUTPUT_ENV [8081|8082]');
   process.exit(64);
 }
 
-const OLD_URL = 'http://127.0.0.1:3001/api/session';
-const NEW_URL = 'http://127.0.0.1:8081/api/session';
+// Push Lab validates TMS sessions against the active Kotlin slot, so a blue/green switch moves this URL.
+const KNOWN_URLS = ['3001', '8081', '8082'].map(port => `http://127.0.0.1:${port}/api/session`);
+const NEW_URL = `http://127.0.0.1:${targetPort}/api/session`;
 const PREFIX = Buffer.from('PUSH_LAB_TMS_SESSION_URL=');
 const source = fs.readFileSync(input);
 const matches = [];
@@ -31,7 +32,7 @@ if (matches.length !== 1) {
   throw new Error('push-lab env must contain exactly one PUSH_LAB_TMS_SESSION_URL');
 }
 const value = matches[0].value.toString('utf8');
-if (value !== OLD_URL && value !== NEW_URL) {
+if (!KNOWN_URLS.includes(value)) {
   throw new Error(`unexpected PUSH_LAB_TMS_SESSION_URL: ${value}`);
 }
 
