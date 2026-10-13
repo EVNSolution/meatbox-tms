@@ -271,21 +271,36 @@ export function mountOrderPlanning({
     node.style.left = `${Math.round(width > half * 2 ? Math.min(Math.max(point.x, half), width - half) : point.x)}px`;
     node.style.top = `${Math.round(above ? point.y - 40 : point.y + 12)}px`;
   }
+  // mousemove fires far more often than frames; keep only the latest point, write the DOM once per
+  // frame, rewrite the content only when the zone changes, and move the box with a compositor transform.
+  let hoverFrame = 0;
+  let hoverNext = null;
+  let hoverZoneId = null;
   function renderZoneHover(hovered) {
+    hoverNext = hovered;
+    if (!hoverFrame) hoverFrame = (globalThis.requestAnimationFrame || (callback => setTimeout(callback, 16)))(paintZoneHover);
+  }
+  function paintZoneHover() {
+    hoverFrame = 0;
+    const hovered = hoverNext;
     const node = query('[data-order-zone-hover]');
     if (!node) return;
     const zone = hovered && mapMode === 'regions' ? zoneRows?.rows?.find(row => row.zoneId === hovered.zoneId) : null;
-    if (!zone) { node.hidden = true; return; }
-    const driverNames = new Map(vehiclesFor(data).map(vehicle => [vehicle.id, vehicle.driver || vehicle.id]));
-    const drivers = driverNamesText(zoneDriverMap.get(zone.zoneId), id => driverNames.get(id) || id);
-    node.innerHTML = `<strong>${escapeHtml(zone.label)}</strong>${volumeLines(zone).map(line => `<span>${escapeHtml(line)}</span>`).join('')}<small>주문 ${zone.orders.toLocaleString('ko-KR')}건 · ${escapeHtml(drivers)}</small>`;
-    node.hidden = false;
+    if (!zone) { node.hidden = true; hoverZoneId = null; return; }
+    if (zone.zoneId !== hoverZoneId || node.hidden) {
+      const driverNames = new Map(vehiclesFor(data).map(vehicle => [vehicle.id, vehicle.driver || vehicle.id]));
+      const drivers = driverNamesText(zoneDriverMap.get(zone.zoneId), id => driverNames.get(id) || id);
+      node.innerHTML = `<strong>${escapeHtml(zone.label)}</strong>${volumeLines(zone).map(line => `<span>${escapeHtml(line)}</span>`).join('')}<small>주문 ${zone.orders.toLocaleString('ko-KR')}건 · ${escapeHtml(drivers)}</small>`;
+      hoverZoneId = zone.zoneId;
+      node.hidden = false;
+    }
     const width = layer.clientWidth || 0;
     const height = layer.clientHeight || 0;
-    const right = hovered.point.x + 16 + (node.offsetWidth || 160) <= width || !width;
-    const below = hovered.point.y + 16 + (node.offsetHeight || 90) <= height || !height;
-    node.style.left = `${Math.round(right ? hovered.point.x + 16 : hovered.point.x - 16 - (node.offsetWidth || 160))}px`;
-    node.style.top = `${Math.round(below ? hovered.point.y + 16 : hovered.point.y - 16 - (node.offsetHeight || 90))}px`;
+    const boxWidth = node.offsetWidth || 160;
+    const boxHeight = node.offsetHeight || 90;
+    const x = hovered.point.x + 14 + boxWidth <= width || !width ? hovered.point.x + 14 : hovered.point.x - 14 - boxWidth;
+    const y = hovered.point.y + 14 + boxHeight <= height || !height ? hovered.point.y + 14 : hovered.point.y - 14 - boxHeight;
+    node.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
   }
   function renderPopup() {
     const node = query('[data-order-popup]');
