@@ -332,9 +332,13 @@ export function createLegacyGateway({ apiOrigin, kotlinApiOrigin, kotlinResource
       pathname === "/ws/simulation" ? RETIRED_DEMO_MESSAGE : "Not Found");
   });
 
-  async function close() {
-    for (const socket of sockets) socket.destroy();
-    if (server.listening) await new Promise(resolve => server.close(resolve));
+  async function close({ graceMs = 2_000 } = {}) {
+    // Stop accepting, let in-flight responses finish, then cut whatever is still open (idle keep-alive, upgrades).
+    if (!server.listening) { for (const socket of sockets) socket.destroy(); return; }
+    const closed = new Promise(resolve => server.close(resolve));
+    server.closeIdleConnections();
+    const cutoff = setTimeout(() => { for (const socket of sockets) socket.destroy(); }, graceMs);
+    try { await closed; } finally { clearTimeout(cutoff); }
   }
   return { server, close };
 }

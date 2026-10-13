@@ -92,7 +92,7 @@ CLI는 새 0600 파일을 만든 뒤 access 파일을 원자적으로 교체한�
 아래는 현재 TEST 경로다. 초대 출력 경로와 대상 사용자 이름은 자리표시자다. 초대 출력 디렉터리는 `meatbox-demo`가 소유하는 비공개 디렉터리여야 한다. 실제 비밀을 문서나 콘솔에 출력하지 않는다. 초대는 기존 파일을 덮어쓰지 않는 새 0600 파일에 저장한다.
 
 ```sh
-systemctl show meatbox-api.service --property=User --value
+systemctl show "meatbox-api@$(cat /etc/meatbox-tms/active-slot).service" --property=User --value
 sudo stat -c '%U:%G %a' /var/lib/meatbox-demo/access.json
 # Expected: meatbox-demo; meatbox-demo:meatbox-demo 600.
 

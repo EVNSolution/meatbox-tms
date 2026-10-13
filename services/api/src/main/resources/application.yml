@@ -1,6 +1,12 @@
 server:
   address: 127.0.0.1
   port: ${SERVER_PORT:8081}
+  # Finish in-flight requests on SIGTERM, so a blue/green switch never cuts a checkpoint save.
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
 
 management:
   endpoints:
@@ -16,6 +22,7 @@ meatbox:
     enabled: ${MEATBOX_AUTH_ENABLED:false}
     access-file: ${MEATBOX_AUTH_ACCESS_FILE:}
     public-origin: ${MEATBOX_PUBLIC_ORIGIN:}
+    session-file: ${MEATBOX_AUTH_SESSION_FILE:}
     admin-command: ${MEATBOX_AUTH_ADMIN_COMMAND:}
     admin-output: ${MEATBOX_AUTH_ADMIN_OUTPUT:}
     admin-username: ${MEATBOX_AUTH_ADMIN_USERNAME:}

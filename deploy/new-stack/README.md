@@ -1,12 +1,11 @@
 # TEST new-stack deployment assets
 
-These files support two explicit rollout modes without replacing the full Caddy configuration. `connected` is the default and keeps Node as the authentication and dated-dispatch owner. `native` moves authentication, dated dispatch, and resources to Kotlin and keeps the legacy Node service stopped and disabled.
+These files deploy the native Kotlin stack as two blue/green slots on one host, so a rollout never interrupts service. Slot `blue` listens on web `4173` and API `8081`; slot `green` on web `4174` and API `8082`. Caddy forwards the public site to exactly one slot's web port; the rollout starts the candidate in the idle slot, proves it healthy end to end, switches Caddy in one reload, drains and stops the old slot. Signed-in users keep their sessions because the API persists them in `/var/lib/meatbox-demo/sessions.json` (mode `0600`, token digests only; expired or logged-out sessions never return).
 
-- Install `meatbox-api.service` and `meatbox-web.service` under `/etc/systemd/system/`.
-- Install `meatbox-gateway-new-stack.conf` as `/etc/systemd/system/meatbox-gateway.service.d/10-new-stack.conf`.
-- Create `/etc/meatbox-tms/api.env`, `/etc/meatbox-tms/web.env`, and `/etc/meatbox-tms/owners.env` from the examples with mode `0600`. The mode configurator preserves unknown existing settings and the exact `MEATBOX_PUBLIC_ORIGIN`, then changes only the known runtime and ownership keys. Node and web read the same owner file.
-- Keep `/opt/meatbox-demo/current` unchanged. The Node drop-in points execution at `/opt/meatbox-tms/current/legacy` while continuing to read the canonical dataset and persistent state from their existing locations.
-- Change only the existing fallback proxy from `127.0.0.1:3001` to `127.0.0.1:4173`. The `/push-lab` handler at `127.0.0.1:3300` must remain byte-for-byte unchanged.
+- `meatbox-api@.service` and `meatbox-web@.service` are systemd template units; the rollout installs them and `/etc/meatbox-tms/slot-blue.env` / `slot-green.env` (per-slot ports) itself. `/opt/meatbox-tms/slots/<slot>` points at that slot's immutable release and `/opt/meatbox-tms/current` at the active one; `/etc/meatbox-tms/active-slot` records which slot serves traffic.
+- Create `/etc/meatbox-tms/api.env`, `/etc/meatbox-tms/web.env`, and `/etc/meatbox-tms/owners.env` from the examples with mode `0600`. The mode configurator preserves unknown existing settings and the exact `MEATBOX_PUBLIC_ORIGIN`, then changes only the known runtime and ownership keys; slot files override the ports.
+- Keep `/opt/meatbox-demo/current` unchanged; its `REVISION` is the legacy compare-and-swap value. The retired Node API and `meatbox-gateway.service` stay stopped and disabled.
+- The Caddyfile keeps exactly one `reverse_proxy 127.0.0.1:4173` or `:4174` fallback line; the rollout rewrites only that line. The `/push-lab` handler at `127.0.0.1:3300` must remain byte-for-byte unchanged.
 
 Build and verify a release locally from the repository root:
 
@@ -25,44 +24,35 @@ Required TEST environment variables are `MEATBOX_TEST_ROLE_ARN`, `MEATBOX_TEST_I
 
 The AWS role trust is recorded in `test-oidc-trust.json`. It requires the immutable GitHub OIDC subject `repo:EVNSolution@267003080/meatbox-tms@1368015789:environment:test`, the `test` environment, `refs/heads/main`, audience `sts.amazonaws.com`, repository ID `1368015789`, and owner ID `267003080`. `test-deploy-permissions.json` limits the role to `ec2-instance-connect:SendSSHPublicKey` for this one instance and OS user `ubuntu`; it intentionally grants no `DescribeInstances`. These public JSON files contain no credentials. The GitHub environment and AWS role are configured. Automatic main CI artifact deployment has been verified through Actions OIDC on TEST; each new candidate still requires its own successful CI, artifact identity check, installed revision, health and authenticated UI verification. A draft PR or local branch does not activate automatic deployment.
 
-The rollout script expects a verified candidate, the exact legacy `REVISION` at `/opt/meatbox-demo/current`, and the expected active new-stack release ID (or `none` for a first installation):
+The rollout script expects a verified candidate, the exact legacy `REVISION` at `/opt/meatbox-demo/current`, the mode `native`, and the expected active new-stack release ID (or `none` for a first installation):
 
 ```sh
 sudo deploy/new-stack/rollout.sh /path/to/<release-id> \
-  <expected-legacy-revision> connected <connected:id-or-native:id-or-none>
+  <expected-legacy-revision> native <native:id-or-none>
 ```
 
-An omitted mode defaults to `connected`. An omitted active state is accepted only when there is no new-stack current pointer. Pass `none` only for the first new-stack install; otherwise pass the exact current state, for example `native:c1f29a657678-7cc16465b91dc217`. Use `native` after the Kotlin authentication and dated-dispatch candidate passes its migration checks:
+`native` is the only deployable mode; `connected` is retired and rejected before any change. Pass `none` only for the first new-stack install; otherwise pass the exact current state, for example `native:c1f29a657678-7cc16465b91dc217`. A host still running the pre-slot fixed units (`meatbox-api.service`, `meatbox-web.service` on 4173/8081) is treated as the `legacy` slot: the first rollout starts `green`, switches, then stops and disables the fixed units.
 
-```sh
-sudo deploy/new-stack/rollout.sh /path/to/<release-id> \
-  <expected-legacy-revision> native <connected:id-or-native:id-or-none>
-```
+Order of one rollout: verify the candidate and the active release CAS; take the backup while the old slot still serves (`access.json`, `sessions.json` and checkpoints are written by atomic rename, the resource database is copied with `VACUUM INTO` and integrity-checked); write the env candidates, Push Lab session URL candidate (`configure-push-session-url.mjs INPUT OUTPUT 8081|8082`) and Caddyfile candidate and validate it; start `meatbox-api@<target>` and wait for `/actuator/health`; start `meatbox-web@<target>` and wait for `/login` through the new gateway; install the Caddyfile and `systemctl reload caddy`; move the Push Lab session URL to the target API port and restart `meatbox-push-lab-web.service` if it was active; wait up to ten seconds for established connections to the old web port to drain; stop the old slot; re-check the active release CAS; move `current`, `deployment-mode` and `active-slot`; enable the target slot units and disable the old ones. Until the old slot stops, only in-flight requests that Caddy accepted before the reload can still reach it, so the candidate becomes the single writer within one request round trip of the switch.
 
-Native mode installs the no-Node-dependency API and web unit templates, uses a 256 MB JVM heap with a 640 MB service memory ceiling, enables `MEATBOX_AUTH_ENABLED` and `MEATBOX_DISPATCH_ENABLED`, points them at the existing account and checkpoint paths, sets all three owners to `kotlin`, and disables `meatbox-gateway.service`. Connected mode retains its 128 MB heap and 320 MB API service ceiling. If `/etc/meatbox-push-lab/push-lab-web.env` exists, the rollout requires its session URL to be the reviewed Node or Kotlin loopback URL, changes only that value to Kotlin after the API health check, and restarts only `meatbox-push-lab-web.service` when it was already active. An absent file is left alone; any other URL fails before services are stopped. The old unit, release, drop-in, data, and exact Push Lab environment remain available for rollback. Re-running the same already-active native release is rejected before services are stopped.
+Candidate `REVISION` must match its manifest Git head; it can differ from the preserved legacy revision. Rollout holds a nonblocking host lock. Existing new-stack target, installed manifest, deployment mode and expected active mode and ID must agree before mutation, and the pointer is checked again before it moves. Re-running the same already-active release is rejected before any change. Automatic rollback runs in reverse: env files back, old slot restarted if it was stopped, Caddy back, Push Lab back, candidate slot stopped and disabled, pointers back. Live account, session, checkpoint, and resource files are never restored by the rollback; the data copies under the backup directory are restricted recovery evidence.
 
-A direct `native` to `connected` rollout is rejected before release installation or service mutation. Use the reviewed backup rollback to restore the prior connected configuration, Push Lab session URL and service state.
-
-Candidate `REVISION` must match its manifest Git head; it can differ from the preserved legacy revision. Rollout and deliberate rollback share a nonblocking host lock. Existing new-stack target, installed manifest, deployment mode and expected active mode and ID must agree before mutation, and the pointer is checked again before cutover. A stale expected mode or ID, or concurrent transition is rejected. The script takes a stopped-service backup before switching writers. Automatic rollback restores code, systemd, and Caddy configuration while retaining the live account, checkpoint, and resource files. Restoring those data files is a separate point-in-time recovery decision.
-
-After a successful rollout, use the printed backup path and active mode plus release ID for a deliberate code rollback:
+After a successful rollout, use the printed backup path and the active release ID for a deliberate code rollback. It restores the backed-up `api.env`, `web.env` and `owners.env`, then runs the same blue/green rollout with the previous release, so the rollback is also uninterrupted:
 
 ```sh
 sudo /opt/meatbox-tms/current/deploy/new-stack/rollback.sh \
   /var/backups/meatbox-tms/<rollout-backup> \
-  <connected:active-id-or-native:active-id>
+  native:<active-id>
 ```
 
-Before stopping services, rollback verifies the previous immutable target, installed manifest, matching backed-up mode and all required service enable/active state files. Invalid, missing or unsafe backup records are rejected. New backups always record `push-env-present` as `0` or `1`; older backups without that marker are accepted only when a complete regular Push environment and both service-state files prove presence. Other markerless backups are rejected. Transitional or unsupported service states are rejected before mutation. This stops Kotlin first and does **not** restore `access.json`, dispatch checkpoints, or the live v2 resource database from the backup. It restores the exact prior API, web, owner, and optional Push Lab environment files plus the previous service enable/active states. A rollback to a previous native release therefore leaves Node inactive and retains the Kotlin Push Lab session URL. The data copies remain restricted recovery evidence.
+The backup must name a previous immutable release under `/opt/meatbox-tms/releases` whose installed manifest and backed-up `deployment-mode` agree; a first-install backup has nothing to roll back to. A release built before session persistence drops sessions when it starts.
 
-To reapply the same immutable release after rollback, pass its installed directory to the original rollout command. The packager verifies all declared files, ignores only the separately installed `legacy/node_modules` directory, runs a fresh `npm ci --omit=dev`, and then reuses the matching release ID:
+To reapply the same immutable release after rollback, pass its installed directory to the original rollout command. The packager verifies all declared files and reuses the matching release ID:
 
 ```sh
 sudo /opt/meatbox-tms/releases/<release-id>/deploy/new-stack/rollout.sh \
   /opt/meatbox-tms/releases/<release-id> \
   <expected-legacy-revision> \
-  connected \
-  <connected:id-or-native:id-or-none>
+  native \
+  native:<active-id>
 ```
-
-Use `native` as the third (mode) argument when reapplying a native release after rollback.

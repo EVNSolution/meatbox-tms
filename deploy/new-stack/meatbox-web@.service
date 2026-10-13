@@ -1,0 +1,27 @@
+# Blue/green slot instance: meatbox-web@blue.service or meatbox-web@green.service.
+# /etc/meatbox-tms/slot-%i.env sets the gateway port and the Kotlin origin of the same slot.
+[Unit]
+Description=Meatbox native web gateway (%i slot)
+After=network.target meatbox-api@%i.service
+Requires=meatbox-api@%i.service
+
+[Service]
+Type=simple
+User=meatbox-demo
+Group=meatbox-demo
+WorkingDirectory=/opt/meatbox-tms/slots/%i/web
+EnvironmentFile=/etc/meatbox-tms/web.env
+EnvironmentFile=/etc/meatbox-tms/owners.env
+EnvironmentFile=/etc/meatbox-tms/slot-%i.env
+ExecStart=/usr/bin/node /opt/meatbox-tms/slots/%i/web/scripts/serve-legacy.mjs
+UMask=0077
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

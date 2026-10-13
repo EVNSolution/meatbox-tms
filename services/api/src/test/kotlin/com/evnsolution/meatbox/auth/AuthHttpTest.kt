@@ -142,6 +142,7 @@ class AuthHttpTest(
         @AfterAll
         fun cleanup() {
             Files.deleteIfExists(accessFile)
+            Files.deleteIfExists(accessFile.resolveSibling("sessions.json"))
             Files.deleteIfExists(directory)
         }
     }

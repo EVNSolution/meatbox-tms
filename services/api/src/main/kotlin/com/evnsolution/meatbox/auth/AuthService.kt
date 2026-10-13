@@ -14,7 +14,8 @@ class AuthService internal constructor(
     private val random: SecureRandom = SecureRandom(),
 ) : SessionVerifier {
     private val store = AuthStore(settings.accessFile)
-    private val sessions = LinkedHashMap<String, ActiveSession>()
+    private val sessionFile = SessionFile(settings.sessionFile)
+    private val sessions = LinkedHashMap<String, ActiveSession>(sessionFile.load(now()))
     private var lastPrune = now()
 
     fun register(input: RegisterInput): AuthUser {
@@ -53,6 +54,7 @@ class AuthService internal constructor(
             pruneSessions()
             if (sessions.size >= MAX_SESSIONS) sessions.remove(sessions.entries.first().key)
             sessions[digest(token)] = ActiveSession(username, expiresAt)
+            sessionFile.save(sessions)
         }
         val authenticatedUser = requireNotNull(user)
         return LoginResult(token, authenticatedUser.toAuthUser(), expiresAt)
@@ -72,12 +74,16 @@ class AuthService internal constructor(
             )
                 .all { it }
         }
-        if (!remainsValid) synchronized(sessions) { sessions.remove(key) }
+        if (!remainsValid) synchronized(sessions) {
+            if (sessions.remove(key) != null) sessionFile.save(sessions)
+        }
         return if (remainsValid) requireNotNull(user).toAuthUser() else null
     }
 
     fun logout(token: String?) {
-        if (token != null) synchronized(sessions) { sessions.remove(digest(token)) }
+        if (token != null) synchronized(sessions) {
+            if (sessions.remove(digest(token)) != null) sessionFile.save(sessions)
+        }
     }
 
     override fun verify(cookie: String?): String =
@@ -86,7 +92,7 @@ class AuthService internal constructor(
     private fun pruneSessions() {
         val current = now()
         if (current - lastPrune < SESSION_PRUNE_INTERVAL_MILLIS && sessions.size < MAX_SESSIONS) return
-        sessions.entries.removeIf { it.value.expiresAt <= current }
+        if (sessions.entries.removeIf { it.value.expiresAt <= current }) sessionFile.save(sessions)
         lastPrune = current
     }
 
