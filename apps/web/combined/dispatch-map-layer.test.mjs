@@ -70,7 +70,7 @@ test('권역 보기는 주문 핀을 숨기고 줌 11부터 주문이 있는 권
   assert.equal(labels.source, 'dispatch-regions-source');
   assert.equal(labels.minzoom, 11);
   assert.deepEqual(labels.filter, ['>', ['get', 'orderCount'], 0]);
-  assert.deepEqual(labels.layout['text-field'], ['to-string', ['get', 'orderCount']]);
+  assert.deepEqual(labels.layout['text-field'], ['coalesce', ['get', 'volumeLabel'], ['to-string', ['get', 'orderCount']]], '착지·박스 문구가 있으면 그것을, 없으면 주문 수를 보인다');
   assert.equal(labels.layout['symbol-placement'], 'point');
   assert.equal(map.visibility.get('dispatch-regions-counts:visibility'), 'visible');
   assert.equal(map.visibility.get('dispatch-orders-all:visibility'), 'none');
@@ -159,4 +159,76 @@ test('파괴 후 MapLibre 레이어와 소스를 남기지 않는다', async () 
   assert.equal(map.layers.size, 0);
   assert.equal(map.sources.size, 0);
   assert.equal(map.images.size, 0);
+});
+
+test('복수 선택 강조 레이어는 선택한 주문만 표시하고 주문 보기에서만 보이며 정리 때 함께 제거된다', async () => {
+  const map = new FakeMap();
+  const mounted = mountDispatchMapLayers(map);
+  mounted.update({ points: points(5), regions: regions(), mode: 'orders', selectedOrderIds: ['O1', 'O3'] });
+  await flush();
+  assert.equal(map.getLayer('dispatch-orders-multi').type, 'circle');
+  assert.deepEqual(map.filters.get('dispatch-orders-multi'), ['in', ['get', 'orderId'], ['literal', ['O1', 'O3']]]);
+  assert.equal(map.visibility.get('dispatch-orders-multi:visibility'), 'visible');
+  assert.ok(map.layerOrder.indexOf('dispatch-orders-multi') < map.layerOrder.indexOf('dispatch-orders-all'), '핀 아래에 그린다');
+  mounted.update({ selectedOrderIds: [] });
+  assert.deepEqual(map.filters.get('dispatch-orders-multi'), ['==', ['literal', 1], ['literal', 0]]);
+  mounted.update({ mode: 'regions', selectedOrderIds: ['O1'] });
+  assert.equal(map.visibility.get('dispatch-orders-multi:visibility'), 'none');
+  mounted.destroy();
+  assert.equal(map.layers.size, 0);
+  assert.equal(map.sources.size, 0);
+});
+
+test('권역 보기는 선택한 권역의 핀만 별도 레이어에 그리고 주문 보기에서는 숨긴다', async () => {
+  const map = new FakeMap();
+  const mounted = mountDispatchMapLayers(map);
+  const pins = points(2);
+  mounted.update({ points: points(5), regions: regions(), mode: 'regions', zonePins: pins, selectedOrderId: 'O1', selectedZoneIds: ['Z1'] });
+  await flush();
+  assert.equal(map.getSource('dispatch-zone-pins-source').data, pins);
+  assert.equal(map.getLayer('dispatch-zone-pins').type, 'symbol');
+  assert.deepEqual(map.filters.get('dispatch-zone-pin-selected'), ['==', ['get', 'orderId'], 'O1']);
+  assert.deepEqual(map.filters.get('dispatch-regions-selected'), ['in', ['get', 'zoneId'], ['literal', ['Z1']]]);
+  assert.equal(map.visibility.get('dispatch-zone-pins:visibility'), 'visible');
+  assert.equal(map.visibility.get('dispatch-zone-pin-selected:visibility'), 'visible');
+  assert.equal(map.visibility.get('dispatch-orders-all:visibility'), 'none');
+  const before = map.getSource('dispatch-zone-pins-source').setDataCalls;
+  mounted.update({ selectedOrderId: 'O0' });
+  assert.equal(map.getSource('dispatch-zone-pins-source').setDataCalls, before, '같은 핀 자료는 다시 올리지 않는다');
+  mounted.update({ mode: 'orders' });
+  assert.equal(map.visibility.get('dispatch-zone-pins:visibility'), 'none');
+  assert.equal(map.visibility.get('dispatch-orders-all:visibility'), 'visible');
+  mounted.destroy();
+  assert.equal(map.layers.size, 0);
+  assert.equal(map.sources.size, 0);
+});
+
+test('권역 보기에서 지도를 누르면 핀이 먼저, 없으면 권역을, 둘 다 없으면 선택 해제를 알린다', async () => {
+  const map = new FakeMap();
+  const picks = [], zones = [];
+  const mounted = mountDispatchMapLayers(map, { onPick: ids => picks.push(ids), onZonePick: id => zones.push(id) });
+  mounted.update({ points: points(3), regions: regions(), mode: 'regions' });
+  await flush();
+  map.queries.push([{ properties: { orderId: 'O1' } }, { properties: { orderId: 'O1' } }, { properties: { orderId: 'O2' } }]);
+  map.fire('click', { point: { x: 100, y: 80 } });
+  assert.deepEqual(picks, [['O1', 'O2']]);
+  assert.deepEqual(map.lastQueryLayers, ['dispatch-zone-pin-selected', 'dispatch-zone-pins']);
+  assert.deepEqual(zones, []);
+
+  map.queries.push([], [{ properties: { zoneId: 'Z1' } }]);
+  map.fire('click', { point: { x: 100, y: 80 } });
+  assert.deepEqual(map.lastQueryLayers, ['dispatch-regions-fill']);
+  assert.deepEqual(zones, ['Z1']);
+  assert.equal(picks.length, 1);
+
+  map.queries.push([], []);
+  map.fire('click', { point: { x: 5, y: 5 } });
+  assert.deepEqual(zones, ['Z1', null]);
+
+  mounted.update({ mode: 'orders' });
+  map.queries.push([{ properties: { orderId: 'O1' } }]);
+  map.fire('click', { point: { x: 100, y: 80 } });
+  assert.deepEqual(picks.at(-1), ['O1'], '주문 보기에서는 기존 방식대로 주문 핀을 고른다');
+  assert.deepEqual(zones, ['Z1', null]);
+  mounted.destroy();
 });

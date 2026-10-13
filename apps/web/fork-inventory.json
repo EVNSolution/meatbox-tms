@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 99,
-  "authoredFileCount": 25,
+  "authoredFileCount": 33,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -538,10 +538,12 @@
       "source": "apps/combined/dispatch-map-layer.mjs",
       "sourceSha256": "944304bc83934f094fa317494e7d5ed047ba0b0f432cae91d247fd7a71dcf56d",
       "target": "apps/web/combined/dispatch-map-layer.mjs",
-      "targetSha256": "3a414e430f1e97ca3c51d4b01c09f7b67fb0c0927aab3286709753c0046f2ec7",
+      "targetSha256": "781c1a02fc17d64ad0fb05429c62c251058066018118209bc670da631ae94a42",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
-        "Preserve fixed public asset URLs"
+        "Preserve fixed public asset URLs",
+        "Add a circle layer that highlights the orders picked for a bulk transfer",
+        "Draw the pins of a selected zone in a separate layer, route zone and pin clicks in zone view and label zones with destinations and boxes"
       ],
       "status": "active"
     },
@@ -549,9 +551,12 @@
       "source": "apps/combined/dispatch-map-layer.test.mjs",
       "sourceSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7",
       "target": "apps/web/combined/dispatch-map-layer.test.mjs",
-      "targetSha256": "638cc3f068819d63902a759fb4f95d202be5cdc360bd71ff25fe654660bceea7",
+      "targetSha256": "c8018136c921c28f740bb7f20e2ee82ad74a525d5c3969e9e75d72ab8a5465c1",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
-      "changes": [],
+      "changes": [
+        "Cover the bulk-selection highlight layer",
+        "Cover zone pins, zone and pin click routing and the volume label"
+      ],
       "status": "active"
     },
     {
@@ -579,12 +584,13 @@
       "source": "apps/combined/dispatch-workflow.mjs",
       "sourceSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59",
       "target": "apps/web/combined/dispatch-workflow.mjs",
-      "targetSha256": "ec142f34795e75c72732d83d8e16978ce30a79bfaf389af9b500e1d22c2938ee",
+      "targetSha256": "6622fcc930ac47e6634ea86b78f9046ceea888c06f3e9150ad0bb08d153914c4",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Mark a synthetic plate as unverified in the candidate list"
       ],
       "status": "active"
     },
@@ -900,13 +906,16 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "b4e00b03973785c8151ee11418b78a2164779df0d12af82345438df62dd897c6",
+      "targetSha256": "107f37a64cf8463b216a60276800a93bd90c0139394a172cbd5be648a053caca",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Style the multi-select controls and the drag rectangle",
+        "Style the zone volume table and the delivery popup",
+        "Style the zone drivers column and the two popup buttons"
       ],
       "status": "active"
     },
@@ -914,7 +923,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "1ef6a47b6031e2b25f836e961cbe775ca996a137bb3b123d24cf8f53e094ccea",
+      "targetSha256": "bd7b65aa11821129b495d1f9522fe8be13e10f8ff25b7c9f3b28628c8703db40",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -924,7 +933,11 @@
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Restore the empty selection card after a populated date hid its unselected-order view.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Add multi-select mode with click and drag selection and a bulk transfer dialog for delivery bundles",
+        "Add the zone volume table, zone selection with boundary and pins together and the delivery popup",
+        "Stop stripping the generator's unverified disclosure from vehicle location text, drop raw coordinates for unverified vehicles, and mark synthetic plates as unverified",
+        "Add the zone drivers column and the zone transfer dialog that hands a delivery bundle to a driver serving another zone, and mark the plate in the reassign preview"
       ],
       "status": "active"
     },
@@ -954,13 +967,16 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "2766690b85fe4d936f1a8779fa6314da0e5fa44c4253a38f42d5a90c9a7bf7dd",
+      "targetSha256": "13187423b2330f533fa674b011a660163756b4a04b2788372a1f7fe7c7f26191",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Restore the empty selection card after a populated date hid its unselected-order view.",
-        "Use one transient empty-data notification while retaining work areas and persistent errors."
+        "Use one transient empty-data notification while retaining work areas and persistent errors.",
+        "Cover multi-select, drag selection and bulk transfer",
+        "Cover the zone volume table, zone selection and the delivery popup",
+        "Cover the zone drivers column and the zone transfer dialog"
       ],
       "status": "active"
     },
@@ -1025,10 +1041,11 @@
       "source": "apps/combined/resource-management.mjs",
       "sourceSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
       "target": "apps/web/combined/resource-management.mjs",
-      "targetSha256": "666d34c60142ffb5310ca22abbf2a9df33baab6b707154ec6e269c240c0e2131",
+      "targetSha256": "7dd5a631395fc96cc9ecacb02059f31953f3aaaeb3df0772b425bcf5d597a7cb",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
-        "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events."
+        "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events.",
+        "Mark every listed plate as unverified and add a screen note until a real vehicle registry exists"
       ],
       "status": "active"
     },
@@ -1047,11 +1064,12 @@
       "source": "apps/combined/route-editor.mjs",
       "sourceSha256": "19e20fbbb0c48b070d4a9e289bbbd1ee5557f0e20c57aa6a050a54f3644764d3",
       "target": "apps/web/combined/route-editor.mjs",
-      "targetSha256": "9e7461eec9f9fdda2fd3bf06abff0205f950a4109f0612abb784c982663a7c36",
+      "targetSha256": "feefae666f3e1410c4d474f49514b6e8e238d1bf8b311543eeff9ec61cd12d9e",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Discard previous route drafts and pending UI state when switching to a date without delivery data.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Show the driver name first and mark the synthetic plate as unverified"
       ],
       "status": "active"
     },
@@ -1466,14 +1484,15 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "d1bd4aac845feae174c4f46e4b1b2b7188bbf1bac1d01fb98bed12b2a8f9e54f",
+      "targetSha256": "61df9716d085dc9947364ae843fa17eb6f01ba91c77fdd9d70850e3c1841bb76",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Preserve fleet, workload, map and details containers without data; clear old records, dialogs and map responses and recover on valid data.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Show the driver name first and mark the synthetic plate as unverified in the heading, list and detail title; use the driver name in the support table"
       ],
       "status": "active"
     },
@@ -2070,6 +2089,62 @@
     }
   ],
   "authoredFiles": [
+    {
+      "path": "apps/web/combined/zone-transfer.mjs",
+      "origin": "authored",
+      "sha256": "82edf418cad20f3c933c8b6ec45399e237f9a4b3834a338b283d1855ef8b8106",
+      "reason": "Derive which drivers serve each zone from the current assignment, list the other zones a delivery bundle can be handed to, and shorten driver names for the zone table.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/zone-transfer.test.mjs",
+      "origin": "authored",
+      "sha256": "35b6a31b46802b4d6a23e8d59463ac3b7ec6d87f2ed80d5b03157835ac1cd4c9",
+      "reason": "Verify zone drivers, the transfer zone options, unknown boxes and the driver name text.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/vehicle-identity.mjs",
+      "origin": "authored",
+      "sha256": "05ac10eb0fdd0af3b604972d1fcd7be97ec97d4a8dbd296b41e589d6215dd7bd",
+      "reason": "Decide whether a vehicle is verified and build its plate and location display text in one place, so a future real vehicle source only needs to set vehicle.source = registered to stop marking it unverified everywhere.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/vehicle-identity.test.mjs",
+      "origin": "authored",
+      "sha256": "9b3885229442c8654f7c9ba7d70f2f90cb6354e4ff64ceb60317c15f8116c21c",
+      "reason": "Verify the default-unverified decision and the plate and location text it produces, including once a vehicle is marked registered.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/zone-volume.mjs",
+      "origin": "authored",
+      "sha256": "9cee9fec75eb5718454714d2a87b54e1f542c820ca5c22f0c5a954b958a79cfe",
+      "reason": "Count destinations, boxes, orders and weight per delivery zone without inventing weight, label zone polygons with the totals and compute zone bounds.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/zone-volume.test.mjs",
+      "origin": "authored",
+      "sha256": "c0905a4582a99329932c05de8e5a5790ed9ff8e17a22c7c72955c2c9a6f404f9",
+      "reason": "Verify per-zone totals, unlocated orders, unknown boxes and weight, labels, zone properties and geometry bounds.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/bulk-selection.mjs",
+      "origin": "authored",
+      "sha256": "c20c74ed489d03ea484ab4e82fa40e7b688a23bb6f6f5c6c2ec94aa96a6bf409",
+      "reason": "Select delivery bundles for a bulk transfer: expand each pick to its whole assignment unit, skip units that are on the way or finished, summarize the selection, preview which orders actually move and find the pins inside a dragged rectangle.",
+      "status": "active"
+    },
+    {
+      "path": "apps/web/combined/bulk-selection.test.mjs",
+      "origin": "authored",
+      "sha256": "00c5e9869144fba6bf9265af5ab842a4c1e5546331461ae56855948e465b2004",
+      "reason": "Verify the bulk selection model: unit expansion, protected units, toggling, pruning after data changes, summaries with unknown box counts, transfer previews and rectangle hit tests.",
+      "status": "active"
+    },
     {
       "path": "apps/web/.gitignore",
       "origin": "authored",

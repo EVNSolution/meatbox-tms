@@ -1,5 +1,6 @@
 import { calculatedEtaText } from './operations-adapter.mjs';
 import { referenceIcon } from './reference-icons.mjs';
+import { plateLabel } from './vehicle-identity.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const labels = { pending: '대기', current: '배송 중', done: '완료', skipped: '보류' };
@@ -67,7 +68,7 @@ export function mountRouteEditor({ element, onSend, onSelect, onCancel = () => {
     const scrollTop = renderedVehicleId === latest.vehicle?.id ? element.querySelector('.route-list')?.scrollTop || 0 : 0;
     renderedVehicleId = latest.vehicle?.id;
     element.innerHTML = `
-      <div class="route-heading"><div><h2>차량 배송 순서</h2><p><span>${escapeHtml(latest.vehicle?.plate)}</span><span>${escapeHtml(latest.vehicle?.driver)}</span><span>${rows.length}곳</span>${access.editable ? '' : '<span>조회 전용</span>'}</p></div><div class="route-edit-actions"><button class="button subtle" data-route-action="cancel" data-focus="cancel" ${pending ? 'disabled' : ''}>취소</button><button class="button subtle" data-route-action="reset" data-focus="reset" ${!changed() || pending || !connected ? 'disabled' : ''}>초기화</button>${draft
+      <div class="route-heading"><div><h2>차량 배송 순서</h2><p><span>${escapeHtml(latest.vehicle?.driver)}</span><span>${escapeHtml(plateLabel(latest.vehicle))}</span><span>${rows.length}곳</span>${access.editable ? '' : '<span>조회 전용</span>'}</p></div><div class="route-edit-actions"><button class="button subtle" data-route-action="cancel" data-focus="cancel" ${pending ? 'disabled' : ''}>취소</button><button class="button subtle" data-route-action="reset" data-focus="reset" ${!changed() || pending || !connected ? 'disabled' : ''}>초기화</button>${draft
         ? `<button class="button primary" data-route-action="save" data-focus="save" ${!changed() || pending || !connected ? 'disabled' : ''}>${pending ? '저장 중…' : '저장'}</button>`
         : `<button class="button" data-route-action="edit" data-focus="edit" ${!access.editable || !connected || rows.filter(stop => stop.status === 'pending').length < 2 ? 'disabled' : ''}>순서 편집</button>`}</div></div>
       <p class="route-help">${access.reason || (draft ? '손잡이를 끌거나 위아래 버튼으로 순서를 바꾼 뒤 저장하세요. 배송 중, 완료, 보류 행은 고정됩니다.' : '배송지를 눌러 선택하세요. 순서를 바꾸려면 ‘순서 편집’을 누르세요.')}</p>
