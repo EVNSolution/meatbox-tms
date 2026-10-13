@@ -155,10 +155,20 @@ test('deploy workflow has one serialized artifact-only TEST lane', async () => {
   const workflow = await fs.readFile(path.join(ROOT, '.github/workflows/deploy-test.yml'), 'utf8');
   assert.match(workflow, /group: meatbox-test-deploy/);
   assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /workflow_run:\n(?:\s+\S.*\n)*?\s+branches: \[main\]/, 'pull request CI completions must not start deploy runs');
   assert.match(workflow, /actions\/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c/);
   assert.match(workflow, /environment: test/);
   assert.match(workflow, /Recheck run freshness and artifact identity[\s\S]+Configure TEST AWS identity/);
   assert.doesNotMatch(workflow, /npm ci|gradlew|vite|make check|package-new-stack\.mjs --archive/);
+});
+
+test('verification workflow skips docs-only PR runs, keeps main full and reuses the Gradle build cache', async () => {
+  const workflow = await fs.readFile(path.join(ROOT, '.github/workflows/new-stack.yml'), 'utf8');
+  assert.match(workflow, /pull_request:\n\s+branches: \[main\]\n(?:\s+#.*\n)*\s+paths-ignore:\n\s+- '\*\*\/\*\.md'/);
+  assert.match(workflow, /push:\n\s+branches: \[main\]\n\n/, 'main push must verify and package every change');
+  assert.match(workflow, /gradle\/actions\/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6/);
+  assert.match(workflow, /cache-read-only: false/);
+  assert.doesNotMatch(workflow, /cache: gradle/);
 });
 
 test('deploy wrapper uses an SSH control option valid for both ssh and scp', async () => {

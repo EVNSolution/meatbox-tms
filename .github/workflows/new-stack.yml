@@ -3,6 +3,12 @@ name: New stack checks
 on:
   pull_request:
     branches: [main]
+    # Docs-only pull requests have nothing to verify or package. Every main
+    # push still runs the full lane because TEST deploys only a main artifact.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.codex/**'
   push:
     branches: [main]
 
@@ -30,7 +36,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
+      # Saves the Gradle build cache on every run, so detekt, compileKotlin and
+      # test are FROM-CACHE whenever the Kotlin inputs are unchanged. The
+      # artifact, not the cache, stays the deployment evidence.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: false
       - name: Install locked Node dependencies
         run: |
           npm ci

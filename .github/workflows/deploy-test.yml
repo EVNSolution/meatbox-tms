@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows: [New stack checks]
     types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       run_id:

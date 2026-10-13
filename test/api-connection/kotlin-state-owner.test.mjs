@@ -107,7 +107,9 @@ async function bootJarPath() {
 async function startKotlin(settings) {
   const java = process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin/java') : 'java';
   const child = spawn(java, [
-    '-Xms64m', '-Xmx256m', '-jar', settings.jar,
+    // C1-only JIT: short-lived fixture JVMs spend ~40% less CPU on startup, so
+    // the CPU-bound contract suite finishes sooner on 4-vCPU CI runners.
+    '-Xms64m', '-Xmx256m', '-XX:TieredStopAtLevel=1', '-jar', settings.jar,
     '--server.address=127.0.0.1', `--server.port=${settings.port}`,
     '--meatbox.compat.enabled=true', `--meatbox.compat.legacy-api-origin=http://${host}:${settings.legacyPort}`,
     `--meatbox.compat.dispatch-data-dir=${settings.dataDirectory}`,

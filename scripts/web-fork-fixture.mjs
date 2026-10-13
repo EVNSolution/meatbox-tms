@@ -100,7 +100,9 @@ async function startKotlin({ apiOrigin, dataDirectory, port, resources, resource
   try { await fs.copyFile(path.join(libraries, jars[0]), fixtureJar, fs.constants.COPYFILE_EXCL); }
   catch (error) { if (error.code !== 'EEXIST') throw error; }
   const child = spawn(java, [
-    '-Xms64m', '-Xmx256m', '-jar', fixtureJar,
+    // C1-only JIT: short-lived fixture JVMs spend ~40% less CPU on startup, so
+    // the CPU-bound contract suite finishes sooner on 4-vCPU CI runners.
+    '-Xms64m', '-Xmx256m', '-XX:TieredStopAtLevel=1', '-jar', fixtureJar,
     '--server.address=127.0.0.1', `--server.port=${port}`,
     '--meatbox.compat.enabled=true', `--meatbox.compat.legacy-api-origin=${apiOrigin}`,
     `--meatbox.compat.dispatch-data-dir=${dataDirectory}`,
