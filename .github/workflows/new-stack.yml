@@ -3,6 +3,12 @@ name: New stack checks
 on:
   pull_request:
     branches: [main]
+    # Docs-only pull requests have nothing to verify or package. Every main
+    # push still runs the full lane because TEST deploys only a main artifact.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.codex/**'
   push:
     branches: [main]
 
