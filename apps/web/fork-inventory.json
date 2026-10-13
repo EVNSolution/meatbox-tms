@@ -2122,8 +2122,8 @@
     {
       "path": "apps/web/scripts/legacy-gateway.mjs",
       "origin": "authored",
-      "sha256": "a538aa869163771d4e5074898d665c43e6939930a5998f2bb93aff8cb2c9d191",
-      "reason": "Serve only allowed built frontend paths, preserve legacy routes and forward cookie/origin/API/WebSocket contracts while the existing Node service remains the writer. Add opt-in exact Kotlin read routing while Node remains the authentication and single business writer. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection.",
+      "sha256": "2936a093d7eaa02030ad2af83da4b9428cfacb6719dd2c085a1af21dfa7d8b2f",
+      "reason": "Serve only allowed built frontend paths, preserve legacy routes and forward cookie/origin/API/WebSocket contracts while the existing Node service remains the writer. Add opt-in exact Kotlin read routing while Node remains the authentication and single business writer. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection. Refuse path parameters and URL fragments before any API owner sees the request.",
       "status": "active"
     },
     {
@@ -2203,8 +2203,8 @@
     {
       "path": "apps/web/test/legacy-gateway.test.mjs",
       "origin": "authored",
-      "sha256": "ba3337f7fa089e990fb64192632f104b29c5f228f500943b26994e6b6cbda140",
-      "reason": "Verify existing API/session/origin/WebSocket forwarding, exact public allowlists and fail-closed protected asset serving. Verify native incorrect-login 401 and invalid-registration 400 HTML responses retain the public portal stylesheet contract. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback.",
+      "sha256": "f37d65d351fb1d666836298d00360390d9f2363ebc68b76e6a259f3d6ba3ae14",
+      "reason": "Verify existing API/session/origin/WebSocket forwarding, exact public allowlists and fail-closed protected asset serving. Verify native incorrect-login 401 and invalid-registration 400 HTML responses retain the public portal stylesheet contract. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Verify that path parameters and fragments never reach the Node or Kotlin API owner.",
       "status": "active"
     },
     {

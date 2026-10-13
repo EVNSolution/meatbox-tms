@@ -263,6 +263,19 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     }
   });
 
+  await t.test('rejects path parameter spellings before the session check', async () => {
+    for (const pathname of [
+      '/api/dispatch-data/manifest;x=1',
+      '/api/dispatch-data/regions;x=1',
+      '/api/resources;x=1',
+      `/api/dispatch-data/days/${fixture.today}/state;x=1`,
+    ]) {
+      const { response, body } = await requestJson(fixture, pathname);
+      assert.equal(response.status, 400, pathname);
+      assert.equal(body.error, 'INVALID_PATH', pathname);
+    }
+  });
+
   await t.test('rejects cross-origin and invalid native authentication requests', async () => {
     const forbidden = await fetch(`${fixture.origin}/login`, {
       method: 'POST', headers: { Origin: 'http://127.0.0.1:1', 'Content-Type': 'application/x-www-form-urlencoded' },
