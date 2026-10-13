@@ -5,7 +5,7 @@ import { vehicleOperations } from './vehicle-operations-model.mjs';
 import { mountDispatchMapLayers } from './dispatch-map-layer.mjs';
 import { PAGE_SIZE, paginate } from './pagination-model.mjs';
 import { bundleDeliveries } from './delivery-bundles.mjs';
-import { geometryBounds, weightText, withZoneVolumes, zoneVolumes } from './zone-volume.mjs';
+import { geometryBounds, volumeLines, weightText, withZoneVolumes, zoneVolumes } from './zone-volume.mjs';
 import { isUnverifiedVehicle, locationLabel, plateLabel } from './vehicle-identity.mjs';
 import { driverNamesText, transferZoneOptions, zoneDrivers } from './zone-transfer.mjs';
 import { addUnits, pointsInRectangle, pruneSelection, summarizeSelection, toggleUnits, transferPreview } from './bulk-selection.mjs';
@@ -89,6 +89,7 @@ export function mountOrderPlanning({
         <div class="order-map-layer" data-order-map-layer></div>
         <div class="order-select-box" data-order-select-box hidden></div>
         <div class="order-map-popup" data-order-popup hidden></div>
+        <div class="order-zone-hover" data-order-zone-hover aria-hidden="true" hidden></div>
         <div class="order-map-status" data-order-map-status role="status"><span data-order-map-status-text>지도 준비 중</span><button type="button" class="button subtle" data-order-map-retry hidden>다시 시도</button></div>
         <section class="order-map-selection" data-order-selection aria-live="polite"><span>선택 주문</span><strong>지도에서 주문을 선택해 주세요.</strong></section>
         <p class="order-map-summary" data-order-map-summary>총 물량 확인 중</p>
@@ -270,6 +271,22 @@ export function mountOrderPlanning({
     node.style.left = `${Math.round(width > half * 2 ? Math.min(Math.max(point.x, half), width - half) : point.x)}px`;
     node.style.top = `${Math.round(above ? point.y - 40 : point.y + 12)}px`;
   }
+  function renderZoneHover(hovered) {
+    const node = query('[data-order-zone-hover]');
+    if (!node) return;
+    const zone = hovered && mapMode === 'regions' ? zoneRows?.rows?.find(row => row.zoneId === hovered.zoneId) : null;
+    if (!zone) { node.hidden = true; return; }
+    const driverNames = new Map(vehiclesFor(data).map(vehicle => [vehicle.id, vehicle.driver || vehicle.id]));
+    const drivers = driverNamesText(zoneDriverMap.get(zone.zoneId), id => driverNames.get(id) || id);
+    node.innerHTML = `<strong>${escapeHtml(zone.label)}</strong>${volumeLines(zone).map(line => `<span>${escapeHtml(line)}</span>`).join('')}<small>주문 ${zone.orders.toLocaleString('ko-KR')}건 · ${escapeHtml(drivers)}</small>`;
+    node.hidden = false;
+    const width = layer.clientWidth || 0;
+    const height = layer.clientHeight || 0;
+    const right = hovered.point.x + 16 + (node.offsetWidth || 160) <= width || !width;
+    const below = hovered.point.y + 16 + (node.offsetHeight || 90) <= height || !height;
+    node.style.left = `${Math.round(right ? hovered.point.x + 16 : hovered.point.x - 16 - (node.offsetWidth || 160))}px`;
+    node.style.top = `${Math.round(below ? hovered.point.y + 16 : hovered.point.y - 16 - (node.offsetHeight || 90))}px`;
+  }
   function renderPopup() {
     const node = query('[data-order-popup]');
     if (!node) return;
@@ -295,7 +312,7 @@ export function mountOrderPlanning({
     setText('[data-order-group-heading]', isSource ? data?.dispatch?.phase === 'unplanned' ? '후보 배송원' : '차량별 배정' : '배차 차량');
     setText('[data-order-group-note]', isSource ? '주문 수신 순서' : '수신 순서');
     setText('[data-order-map-description]', isSource
-      ? multiMode ? '복수 선택 중입니다. 핀을 클릭하거나 지도를 드래그해 배송지를 고릅니다.' : mapMode === 'regions' ? '권역을 누르거나 아래 표에서 고르면 경계와 배송지 핀이 함께 보입니다. 확대하면 권역 중앙에 착지·박스가 표시됩니다.' : '모든 주문 핀을 표시합니다.'
+      ? multiMode ? '복수 선택 중입니다. 핀을 클릭하거나 지도를 드래그해 배송지를 고릅니다.' : mapMode === 'regions' ? '권역에 마우스를 올리면 착지·박스가 보입니다. 권역을 누르거나 아래 표에서 고르면 경계와 배송지 핀이 함께 보입니다.' : '모든 주문 핀을 표시합니다.'
       : '전체 등록 주문과 선택 차량 배정');
     const listPanel = query('[data-order-list-panel]');
     if (listPanel) listPanel.hidden = !isSource;
@@ -573,7 +590,7 @@ export function mountOrderPlanning({
     }
     map.resize?.();
     if (imported()) {
-      if (!pointLayer) pointLayer = layerFactory(map, { onZonePick: pickZone, onPick(ids) { if (multiMode && multiAvailable()) { pickForBulk(ids); return; } overlapIds = ids; selectedDeliveryId = ids[0] || null; if (!selectedDeliveryId) { selectedVehicleId = 'all'; fitVehicleRequested = false; updateVehicles(); } renderScene(); renderOrderList(); if (selectedDeliveryId) onSelect(selectedDeliveryId); }, onError(error) { mapFailure = error?.message || '주문 지도 레이어를 불러오지 못했습니다.'; renderScene(); } });
+      if (!pointLayer) pointLayer = layerFactory(map, { onZonePick: pickZone, onZoneHover: renderZoneHover, onPick(ids) { if (multiMode && multiAvailable()) { pickForBulk(ids); return; } overlapIds = ids; selectedDeliveryId = ids[0] || null; if (!selectedDeliveryId) { selectedVehicleId = 'all'; fitVehicleRequested = false; updateVehicles(); } renderScene(); renderOrderList(); if (selectedDeliveryId) onSelect(selectedDeliveryId); }, onError(error) { mapFailure = error?.message || '주문 지도 레이어를 불러오지 못했습니다.'; renderScene(); } });
       if (sourceData !== data) {
         sourceData = data;
         mapMarkers.splice(0).forEach(marker => marker.remove());

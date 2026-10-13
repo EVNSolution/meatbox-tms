@@ -26,7 +26,7 @@ function fixture() {
     'reassign-close', 'reassign-from', 'reassign-target', 'reassign-preview', 'reassign-error', 'reassign-cancel', 'reassign-confirm',
     'search', 'list', 'list-total', 'page', 'previous', 'next',
     'multi-toggle', 'multi-transfer', 'multi-clear', 'multi-summary', 'select-box',
-    'popup', 'zone-panel', 'zone-total', 'zone-note', 'zone-rows', 'zone-page', 'zone-previous', 'zone-next',
+    'popup', 'zone-hover', 'zone-panel', 'zone-total', 'zone-note', 'zone-rows', 'zone-page', 'zone-previous', 'zone-next',
     'reassign-zone', 'reassign-zone-label',
   ];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
@@ -689,7 +689,7 @@ test('권역·주문 보기는 주문 원본과 카메라를 유지하며 날짜
   nodes['map-mode-control'].listeners.change({ target: { matches: () => true, value: 'regions' } });
   assert.equal(updates.at(-1).mode, 'regions');
   assert.equal(cameras.length, 0);
-  assert.match(nodes['map-description'].textContent, /확대하면/);
+  assert.match(nodes['map-description'].textContent, /마우스를 올리면/);
   assert.equal(nodes.selection.hidden, true);
   assert.deepEqual(input, before);
   planning.destroy();
@@ -964,7 +964,7 @@ function mountZones({ onAssign } = {}) {
       project: ([lng, lat]) => ({ x: Math.round((lng - 127) * 1000), y: Math.round((lat - 37) * 1000) }),
       on: (type, listener) => log.moves.push([type, listener]),
     }),
-    layerFactory: (_map, callbacks) => { log.picks = callbacks.onPick; log.zonePick = callbacks.onZonePick; return { update: value => log.updates.push(value), destroy() {} }; },
+    layerFactory: (_map, callbacks) => { log.picks = callbacks.onPick; log.zonePick = callbacks.onZonePick; log.zoneHover = callbacks.onZoneHover; return { update: value => log.updates.push(value), destroy() {} }; },
   });
   return { planning, nodes, log };
 }
@@ -1213,5 +1213,22 @@ test('타 권역 이관은 보호 묶음이나 다른 권역에 넘길 배송원
   nodes['reassign-target'].value = 'G2'; nodes['reassign-target'].listeners.change();
   assert.match(nodes['reassign-preview'].textContent, /대상 차량 기사 2 \/ 22나 2002 \(미검증\)/, '일반 핀배차의 번호판도 미검증으로 표시한다');
   assert.doesNotMatch(nodes['reassign-preview'].textContent, /대상 권역/);
+  planning.destroy();
+});
+
+test('권역에 마우스를 올리면 Stop·box를 줄마다 보이는 팝오버를 커서 옆에 띄우고 벗어나면 숨긴다', () => {
+  const { planning, nodes, log } = mountZones();
+  planning.update(zonePlanningData(), null);
+  log.zoneHover({ zoneId: 'Z1', point: { x: 40, y: 50 } });
+  const hover = nodes['zone-hover'];
+  assert.equal(hover.hidden, false);
+  assert.match(hover.innerHTML, /<strong>서울 첫 권역<\/strong><span>2 Stop<\/span><span>21 box<\/span><small>주문 3건 · 기사 2, 기사 1<\/small>/);
+  assert.doesNotMatch(hover.innerHTML, /곳 · /, '구분점 없이 줄을 나눈다');
+  assert.equal(hover.style.left, '56px');
+  assert.equal(hover.style.top, '66px');
+  log.zoneHover(null);
+  assert.equal(hover.hidden, true);
+  log.zoneHover({ zoneId: 'unknown', point: { x: 1, y: 1 } });
+  assert.equal(hover.hidden, true, '집계가 없는 권역은 보이지 않는다');
   planning.destroy();
 });

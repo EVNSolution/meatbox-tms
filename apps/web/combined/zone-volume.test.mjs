@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { geometryBounds, volumeLabel, weightText, withZoneVolumes, zoneVolumes } from './zone-volume.mjs';
+import { geometryBounds, volumeLines, weightText, withZoneVolumes, zoneVolumes } from './zone-volume.mjs';
 
 const regions = { type: 'FeatureCollection', features: [
   { type: 'Feature', properties: { zoneId: 'Z1', label: '가 권역' }, geometry: { type: 'Polygon', coordinates: [[[127, 37], [127.2, 37], [127.2, 37.1], [127, 37]]] } },
@@ -57,9 +57,9 @@ test('목록이나 권역이 없어도 0과 빈 표를 돌려주고 입력을 �
 });
 
 test('지도 문구는 착지와 박스를 보이고 중량은 값이 있을 때만 덧붙인다', () => {
-  assert.equal(volumeLabel({ destinations: 12, boxes: 48, weightKg: null }), '12곳 · 48박스');
-  assert.equal(volumeLabel({ destinations: 1, boxes: 1500, weightKg: 320 }), '1곳 · 1,500박스 · 320kg');
-  assert.equal(volumeLabel({ destinations: 2, boxes: null, weightKg: null }), '2곳 · 박스 미확인');
+  assert.deepEqual(volumeLines({ destinations: 12, boxes: 48, weightKg: null }), ['12 Stop', '48 box']);
+  assert.deepEqual(volumeLines({ destinations: 1, boxes: 1500, weightKg: 320 }), ['1 Stop', '1,500 box', '320kg']);
+  assert.deepEqual(volumeLines({ destinations: 2, boxes: null, weightKg: null }), ['2 Stop', 'box 미확인']);
 });
 
 test('권역 경계에는 집계 값만 덧붙이고 원본 경계와 주문 없는 권역은 그대로 둔다', () => {
@@ -67,7 +67,7 @@ test('권역 경계에는 집계 값만 덧붙이고 원본 경계와 주문 없
   const { rows } = zoneVolumes(regions, orders);
   const result = withZoneVolumes(regions, rows);
   assert.deepEqual(regions, before);
-  assert.deepEqual(result.features[0].properties, { zoneId: 'Z1', label: '가 권역', destinationCount: 2, boxes: 21, weightKg: null, volumeLabel: '2곳 · 21박스' });
+  assert.deepEqual(result.features[0].properties, { zoneId: 'Z1', label: '가 권역', destinationCount: 2, boxes: 21, weightKg: null });
   assert.deepEqual(result.features[2], regions.features[2]);
   assert.equal(withZoneVolumes(null, rows), null);
 });
