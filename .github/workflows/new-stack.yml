@@ -1,4 +1,4 @@
-name: "CI · 코드 검증과 릴리스 패키징"
+name: "CI"
 
 on:
   pull_request:
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   verify:
-    name: 검증·패키징
+    name: Verify and package
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:

@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const execFile = promisify(execFileCallback);
 const EXPECTED_WORKFLOW = '.github/workflows/new-stack.yml';
-const EXPECTED_WORKFLOW_NAME = 'CI · 코드 검증과 릴리스 패키징';
+const EXPECTED_WORKFLOW_NAME = 'CI';
 const EXPECTED_ARTIFACT = 'meatbox-test-release';
 const EXPECTED_OWNER_ID = 267003080;
 const EXPECTED_REPOSITORY_ID = 1368015789;
