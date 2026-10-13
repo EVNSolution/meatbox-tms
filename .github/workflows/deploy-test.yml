@@ -1,4 +1,4 @@
-name: "Deploy TEST"
+name: "Deploy Run"
 
 on:
   workflow_run:
