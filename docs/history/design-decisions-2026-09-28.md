@@ -42,7 +42,7 @@
 - Status: Dated dispatch deployed as cec9fc5 on 2026-09-16. Calculation, amendment drafts and driver start/arrival completion are implemented and verified under plan section 33. The 130-vehicle sample is not a fixed product contract.
 - Last refreshed: 2026-09-16.
 - Primary surfaces: combined operator, customer and driver viewers.
-- Evidence: `../design.md`, `../previews/terminal-view/` approved reference and official assets, the current combined viewer, `/Users/jiin/Downloads/미트박스 TMS 역할 요약.docx`, and the user's fleet-operation corrections.
+- Evidence: [`workspace-2026-09/design.md`](workspace-2026-09/design.md), [`workspace-2026-09/previews/terminal-view/`](workspace-2026-09/previews/terminal-view/) approved reference and official assets, the current combined viewer, `/Users/jiin/Downloads/미트박스 TMS 역할 요약.docx`, and the user's fleet-operation corrections.
 - This contract governs the combined demo. Owner snapshots remain unchanged.
 
 ## Brand

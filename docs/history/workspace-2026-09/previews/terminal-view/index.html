@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>미트박스 TMS</title>
+  <link rel="icon" type="image/webp" href="./assets/meatbox-app.webp">
+  <link rel="stylesheet" href="./styles.css?v=20260929-layout">
+  <link rel="stylesheet" href="./design-guide.css?v=20260929-layout-2">
+  <script type="module" src="./app.mjs?v=20260929-mobile"></script>
+</head>
+<body data-page="design" data-viewer="operations">
+  <a class="skip-link" href="#page-heading">본문으로 이동</a>
+  <header class="app-header">
+    <div class="brand"><img class="meatbox-wordmark" src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span class="brand-product">TMS</span></div>
+    <div class="app-title sr-only" id="app-title">디자인 가이드</div>
+  </header>
+
+  <div class="app-shell">
+    <aside class="app-navigation">
+      <nav class="app-nav-links" aria-label="운영 업무 메뉴 구성">
+        <span class="nav-axis-label">운영 메뉴</span>
+        <a aria-disabled="true" tabindex="-1">배차 관리</a>
+        <a aria-disabled="true" tabindex="-1">배송 관제</a>
+        <a aria-disabled="true" tabindex="-1">자원 관리</a>
+        <a class="nav-design" href="#/design" data-page-link="design" aria-current="page">
+          <span class="nav-review-label">검토용</span>
+          <span class="nav-design-label">디자인<br>가이드</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="page-body">
+      <section class="page-intro" aria-labelledby="page-heading">
+        <div><p class="eyebrow">UI 레퍼런스</p><h1 id="page-heading" tabindex="-1">디자인 가이드</h1><p class="intro-copy">미트박스의 브랜드 요소와 운영 UI 구성 원칙을 비교합니다.</p></div>
+      </section>
+      <section id="page-design" class="page-view view-content" data-page="design" aria-label="디자인 가이드"></section>
+    </main>
+  </div>
+</body>
+</html>

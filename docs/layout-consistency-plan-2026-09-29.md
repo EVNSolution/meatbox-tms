@@ -2,7 +2,7 @@
 
 ## 목표와 기준
 
-2026-09-29 전체 화면 점검에서 확인한 정렬, 가림, 오래된 정보 표시를 현행 [DESIGN.md](../DESIGN.md)에 맞춘다. 운영·고객·배송원·인증 화면과 루트 `previews/terminal-view/#/design`의 표본을 검토한다. 보존 원본 `workspaces/`와 주문·배차 데이터 계약은 변경하지 않는다.
+2026-09-29 전체 화면 점검에서 확인한 정렬, 가림, 오래된 정보 표시를 현행 [DESIGN.md](../DESIGN.md)에 맞춘다. 운영·고객·배송원·인증 화면과 `docs/history/workspace-2026-09/previews/terminal-view/#/design`의 표본을 검토한다. 보존 원본 `workspaces/`와 주문·배차 데이터 계약은 변경하지 않는다.
 
 적용 규칙은 다음과 같다.
 

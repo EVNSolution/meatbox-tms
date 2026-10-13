@@ -1613,7 +1613,7 @@
       ],
       "references": [
         {
-          "path": "../previews/terminal-view/design-guide.mjs",
+          "path": "docs/history/workspace-2026-09/previews/terminal-view/design-guide.mjs",
           "role": "read-only design reference; not a copied legacy source"
         },
         {
