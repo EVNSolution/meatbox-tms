@@ -7,6 +7,7 @@
 - [이관 Git 기준점과 독립 검토](release-baseline-2026-10-05.md)
 - [단일 프런트·Kotlin 구조](new-stack-architecture.md), [기능별 파일 책임](project-structure.md)
 - [새 스택 설치·실행·검사](new-stack-development.md), [현재 UI 기준](../DESIGN.md)
+- [기존 UI·기능 이관 완료 범위](ui-migration-completion.md), [다음 기능의 커밋·PR 계획](next-feature-delivery-plan.md)
 - [Kotlin 이관 검증](kotlin-state-migration-result.md), [데모 실제 삭제 결과](demo-removal-result.md)
 - [삭제 파일 전체 목록](demo-removal-inventory.json), [중간 정리와 다음 작업](migration-checkpoint-2026-10-05.md)
 
