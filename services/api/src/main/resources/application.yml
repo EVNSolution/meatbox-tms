@@ -16,6 +16,7 @@ meatbox:
     enabled: ${MEATBOX_AUTH_ENABLED:false}
     access-file: ${MEATBOX_AUTH_ACCESS_FILE:}
     public-origin: ${MEATBOX_PUBLIC_ORIGIN:}
+    session-file: ${MEATBOX_AUTH_SESSION_FILE:}
     admin-command: ${MEATBOX_AUTH_ADMIN_COMMAND:}
     admin-output: ${MEATBOX_AUTH_ADMIN_OUTPUT:}
     admin-username: ${MEATBOX_AUTH_ADMIN_USERNAME:}

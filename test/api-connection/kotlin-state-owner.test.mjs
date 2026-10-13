@@ -382,10 +382,12 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     await compareCommand('calculate_dispatch', { vehicleIds: ['TRUCK-1', 'TRUCK-2'] });
     const beforeRestart = normalized(actualState);
     const previousBoot = actualState.boot;
-    const oldCookie = cookie;
+    const loggedOutCookie = await login(fixture);
+    assert.equal((await postForm(fixture, '/logout', {}, loggedOutCookie)).status, 303);
     await fixture.restart();
-    assert.equal((await requestJson(fixture, '/api/session', { cookie: oldCookie })).response.status, 401);
-    cookie = await login(fixture);
+    // Sessions persist across a restart or blue/green switch; a logged-out session stays dead.
+    assert.equal((await requestJson(fixture, '/api/session', { cookie })).response.status, 200);
+    assert.equal((await requestJson(fixture, '/api/session', { cookie: loggedOutCookie })).response.status, 401);
     actualState = (await requestJson(fixture, `/api/dispatch-data/days/${fixture.today}/state`, { cookie })).body;
     assert.notEqual(actualState.boot, previousBoot);
     assert.deepEqual(normalized(actualState), beforeRestart);

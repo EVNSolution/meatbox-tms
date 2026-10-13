@@ -1,4 +1,0 @@
-# Apply inside the existing https://3.36.96.156 site only.
-# Preserve every existing handler, including the /push-lab route to 127.0.0.1:3300.
-- reverse_proxy 127.0.0.1:3001
-+ reverse_proxy 127.0.0.1:4173

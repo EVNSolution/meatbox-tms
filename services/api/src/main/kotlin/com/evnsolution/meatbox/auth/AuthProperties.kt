@@ -9,6 +9,7 @@ data class AuthProperties(
     val enabled: Boolean = false,
     val accessFile: String = "",
     val publicOrigin: String = "",
+    val sessionFile: String = "",
     val adminCommand: String = "",
     val adminOutput: String = "",
     val adminUsername: String = "",
@@ -16,10 +17,17 @@ data class AuthProperties(
 ) {
     fun settings(): AuthSettings {
         require(enabled) { "Native authentication must be enabled" }
-        return AuthSettings(accessPath(), validatePublicOrigin(publicOrigin))
+        return AuthSettings(accessPath(), validatePublicOrigin(publicOrigin), sessionPath())
     }
 
     fun accessPath(): Path = validateAccessFile(accessFile)
+
+    /** Defaults to sessions.json beside the access file, so existing environments need no new setting. */
+    fun sessionPath(): Path = if (sessionFile.isBlank()) {
+        accessPath().resolveSibling(DEFAULT_SESSION_FILE_NAME)
+    } else {
+        validateAccessFile(sessionFile)
+    }
 
     private fun validateAccessFile(value: String): Path {
         require(value.isNotBlank()) { "meatbox.auth.access-file is required" }
@@ -61,6 +69,7 @@ data class AuthProperties(
         private const val HTTP_PORT = 80
         private const val HTTPS_PORT = 443
         private const val DEFAULT_INVITE_TTL_MILLIS = 24 * 60 * 60 * 1_000L
+        private const val DEFAULT_SESSION_FILE_NAME = "sessions.json"
         private val LOOPBACK_HOSTS = setOf("127.0.0.1", "localhost", "[::1]")
     }
 }
@@ -68,4 +77,5 @@ data class AuthProperties(
 data class AuthSettings(
     val accessFile: Path,
     val publicOrigin: URI,
+    val sessionFile: Path = accessFile.resolveSibling("sessions.json"),
 )
