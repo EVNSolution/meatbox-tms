@@ -62,7 +62,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   let data = null, rows = [], row = null, selectedId = null, sort = 'received', search = '';
   let previousVehicleId = null, previousSelectedId = null, recordFilter = 'all';
   let opened = new Set(), routeData = null, routePromise = null, map = null, markers = [], signature = '';
-  let mapError = '', wheel, observer, destroyed = false, routeEpoch = 0;
+  let mapError = '', wheel, observer, destroyed = false, routeEpoch = 0, factsOpen = false, fitCoords = [];
   const mapElement = find('[data-control-map]');
   const list = find('[data-control-vehicles]');
   const stopList = find('[data-control-stops]');
@@ -87,13 +87,13 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
 
   function renderSummary() {
     const source = Boolean(data?.sourceData);
-    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.driver || '배송원 미등록')}</h2><p>${esc(plateLabel(row.vehicle))}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동·하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}` : '<p class="control-unit-note">미배정</p>';
+    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.driver || '배송원 미등록')}</h2><p>${esc(plateLabel(row.vehicle))}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><details class="control-running-details"${factsOpen ? ' open' : ''}><summary>운행 상세<span>${esc(row.current?.name ? `현재 ${row.current.name} · ETA ${row.current.preciseTimeText || row.current.calculatedEta || '미확인'}` : '현재 배송지 없음')}</span>${referenceIcon('next')}</summary><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동·하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}</details>` : '<p class="control-unit-note">미배정</p>';
     find('[data-control-detail-title]').textContent = row ? `${row.vehicle.driver || row.vehicle.id} 상세` : '차량 상세';
   }
 
   function renderEmptySummary(empty, message) {
     const quantity = empty ? 0 : null;
-    find('[data-control-summary]').innerHTML = `<div class="panel-heading"><div><h2>운행 정보</h2>${empty ? '' : `<p>${esc(message)}</p>`}</div><span class="badge">${empty ? '배차 대기' : '자료 확인 중'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(quantity, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(quantity, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>미확인</strong></div></div><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${empty ? '미배정' : '미확인'}</dd></div><div><dt>현재 도착 ETA</dt><dd>미확인</dd></div><div><dt>고정 출발 기준</dt><dd>미확인</dd></div><div><dt>마지막 도착 ETA</dt><dd>미확인</dd></div><div><dt>전체 인도 완료</dt><dd>미확인</dd></div><div><dt>보류 배송지</dt><dd>${count(quantity, '곳')}</dd></div></dl>`;
+    find('[data-control-summary]').innerHTML = `<div class="panel-heading"><div><h2>운행 정보</h2>${empty ? '' : `<p>${esc(message)}</p>`}</div><span class="badge">${empty ? '배차 대기' : '자료 확인 중'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(quantity, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(quantity, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>미확인</strong></div></div><details class="control-running-details"${factsOpen ? ' open' : ''}><summary>운행 상세<span>${empty ? '배차 대기' : '자료 확인 중'}</span>${referenceIcon('next')}</summary><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${empty ? '미배정' : '미확인'}</dd></div><div><dt>현재 도착 ETA</dt><dd>미확인</dd></div><div><dt>고정 출발 기준</dt><dd>미확인</dd></div><div><dt>마지막 도착 ETA</dt><dd>미확인</dd></div><div><dt>전체 인도 완료</dt><dd>미확인</dd></div><div><dt>보류 배송지</dt><dd>${count(quantity, '곳')}</dd></div></dl></details>`;
     find('[data-control-detail-title]').textContent = '차량 상세';
   }
 
@@ -162,14 +162,34 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
         const vehicleMarker = new maplibregl.Marker({ element: markerElement }).setLngLat(position.coordinates).addTo(map);
         markers.push({ element: markerElement, remove: () => vehicleMarker.remove() });
       }
-      const coords = [...model.mapped.map(item => item.coordinates), ...(position ? [position.coordinates] : [])];
-      if (coords.length === 1) map.jumpTo({ center: coords[0], zoom: 13 });
-      if (coords.length > 1) map.fitBounds([[Math.min(...coords.map(c => c[0])), Math.min(...coords.map(c => c[1]))], [Math.max(...coords.map(c => c[0])), Math.max(...coords.map(c => c[1]))]], { padding: 52, maxZoom: 14, duration: 0 });
+      fitCoords = [...model.mapped.map(item => item.coordinates), ...(position ? [position.coordinates] : [])];
+      fitView();
     }
     markers.forEach(marker => marker.element.setAttribute('aria-pressed', String(marker.element.dataset.orderMarker === selectedId)));
     find('[data-control-map-note]').textContent = mapError || (activeRouteData
       ? `남은 배송지 ${model.mapped.length}곳 표시, 위치 미등록 ${model.unknownCount}곳. ${position ? source ? '차량 기준 위치 표시. 실시간 GPS 미수신.' : '차량은 시뮬레이션 위치입니다. 실제 GPS 미연결.' : '차량 현재 위치 미수신.'}`
       : '배송지 위치 데이터를 불러오고 있습니다. 미등록 건수는 수신 후 확인합니다.');
+  }
+
+  // Floating cards over the map (desktop) count as padding so the stops center in the free area.
+  function mapPadding() {
+    const pad = { top: 24, right: 24, bottom: 24, left: 24 };
+    const canvas = mapElement.getBoundingClientRect?.();
+    if (!canvas || typeof getComputedStyle !== 'function') return pad;
+    for (const node of [find('[data-control-summary]'), find('[data-control-map-note]')]) {
+      if (!node?.getBoundingClientRect || getComputedStyle(node).position !== 'absolute') continue;
+      const rect = node.getBoundingClientRect();
+      if (!rect.height || rect.bottom <= canvas.top || rect.top >= canvas.bottom) continue;
+      if (rect.top - canvas.top < canvas.bottom - rect.bottom) pad.top = Math.max(pad.top, rect.bottom - canvas.top + 16);
+      else pad.bottom = Math.max(pad.bottom, canvas.bottom - rect.top + 16);
+    }
+    if (pad.top + pad.bottom > canvas.height - 120) return { top: 24, right: 24, bottom: 24, left: 24 };
+    return pad;
+  }
+  function fitView() {
+    if (!map || !fitCoords.length) return;
+    const lngs = fitCoords.map(c => c[0]), lats = fitCoords.map(c => c[1]);
+    map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: mapPadding(), maxZoom: fitCoords.length === 1 ? 13 : 14, duration: 0 });
   }
 
   function ensureMap() {
@@ -178,7 +198,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       try {
         map = mapFactory(mapElement);
         wheel = installModifierWheelZoom(map);
-        observer = new ResizeObserver(() => map?.resize());
+        observer = new ResizeObserver(() => { map?.resize(); fitView(); });
         observer.observe(mapElement);
       } catch {
         mapError = '지도를 불러오지 못했습니다. 새로고침해 주세요.';
@@ -252,6 +272,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     setControlsDisabled(true);
   }
 
+  find('[data-control-summary]').addEventListener('toggle', event => { factsOpen = event.target.open; fitView(); }, true);
   find('[data-control-search]').addEventListener('input', event => { if (!data) return; search = event.target.value.trim().toLocaleLowerCase('ko-KR'); renderVehicles(); });
   find('[data-control-sort]').addEventListener('change', event => { if (!data) return; sort = event.target.value; renderVehicles(); });
   list.addEventListener('click', event => {

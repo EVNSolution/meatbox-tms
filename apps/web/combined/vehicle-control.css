@@ -20,7 +20,13 @@
 .control-workload { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 16px; gap: 10px; border-bottom: 1px solid var(--border); }
 .control-workload span { display: block; color: var(--muted); font-size: 11px; white-space: nowrap; }
 .control-workload strong { display: block; margin-top: 6px; font-size: 21px; line-height: 1.3; font-variant-numeric: tabular-nums; }
-.control-running-facts { display: grid; gap: 8px; padding: 14px 16px; margin: 0; font-size: 12px; }
+.control-running-details > summary { display: grid; grid-template-columns: auto minmax(0, 1fr) 16px; align-items: center; gap: 10px; min-height: 40px; padding: 0 16px; list-style: none; font-size: 12px; font-weight: 600; cursor: pointer; }
+.control-running-details > summary::-webkit-details-marker { display: none; }
+.control-running-details > summary span { color: var(--muted); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.control-running-details > summary .reference-icon { width: 16px; height: 16px; transform: rotate(90deg); transition: transform 120ms; }
+.control-running-details[open] > summary .reference-icon { transform: rotate(-90deg); }
+.control-running-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.control-running-facts { display: grid; gap: 8px; padding: 0 16px 14px; margin: 0; font-size: 12px; }
 .control-running-facts > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 8px; align-items: baseline; }
 .control-running-facts dt { color: var(--muted); }
 .control-running-facts dd { margin: 0; overflow-wrap: anywhere; }
@@ -133,7 +139,8 @@
   .control-current .panel-heading p { margin: 0; }
   .control-workload { padding: 8px 14px; gap: 8px; }
   .control-workload strong { margin-top: 2px; font-size: 17px; }
-  .control-running-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 16px; padding: 8px 14px; }
+  .control-running-details > summary { padding: 0 14px; min-height: 36px; }
+  .control-running-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 16px; padding: 0 14px 8px; }
   .control-running-facts > div { grid-template-columns: minmax(0, 1fr); gap: 1px; }
   .control-running-facts dt { font-size: 11px; }
   .control-timing-note { margin: 0; padding: 0 14px 8px; font-size: 11px; }
