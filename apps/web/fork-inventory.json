@@ -1496,7 +1496,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "2fcea50975edb2260f944a003bb3ed17154b73bab96dcdf3a14d37f891ad68dc",
+      "targetSha256": "b046a6124fba66759caeeb7d31821a0a6eff5474d5e5c4d5f4d1c51b0022df86",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1505,7 +1505,8 @@
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
         "Fill the desktop viewport with the control layout so lists and the map scroll on their own.",
         "Bound the desktop control grid row so long vehicle and stop lists scroll inside their panels instead of growing the page.",
-        "Desktop control console: one framed three-column layout with a full-height map, the running summary as a card over the map and the map note as a floating chip."
+        "Desktop control console: one framed three-column layout with a full-height map, the running summary as a card over the map and the map note as a floating chip.",
+        "Style the running-facts toggle row."
       ],
       "status": "active"
     },
@@ -1513,7 +1514,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "6e5edc1038ff04ae01a2dd8308972da648eb1d319a7fb89e26d50536b42cc87a",
+      "targetSha256": "74c19be8769ceb95f6c349c67fd2f877fb5eda5b72376fb2e1ebcb5f7e67867f",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1522,7 +1523,8 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Show the driver name first and mark the synthetic plate as unverified in the heading, list and detail title; use the driver name in the support table",
-        "Mount pickup QR and driver messaging tools in the selected vehicle detail, update their dated context, and clear them with the existing control lifecycle."
+        "Mount pickup QR and driver messaging tools in the selected vehicle detail, update their dated context, and clear them with the existing control lifecycle.",
+        "Collapse the running facts behind a toggle that keeps its state across renders, and fit the map to the stops with padding for the floating cards on every resize or toggle."
       ],
       "status": "active"
     },
