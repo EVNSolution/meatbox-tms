@@ -174,3 +174,13 @@
 .order-zone-hover strong { margin-bottom: 2px; color: var(--text); font-size: 13px; }
 .order-zone-hover span { font-weight: 600; }
 .order-zone-hover small { margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 861px) {
+  #order-planning, [data-dispatch-planning] { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  [data-dispatch-planning][hidden] { display: none; }
+  .order-planning-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); min-height: 520px; }
+  .order-vehicle-panel, .order-map-panel { display: flex; flex-direction: column; min-height: 0; }
+  .order-vehicle-list { flex: 1 1 auto; min-height: 120px; max-height: none; }
+  .order-map-canvas { flex: 1 1 auto; min-height: 240px; }
+  .order-zone-volume[open] { flex: 0 1 auto; min-height: 140px; overflow: auto; }
+  .order-zone-volume[open] > summary { position: sticky; top: 0; z-index: 1; background: #fff; }
+}

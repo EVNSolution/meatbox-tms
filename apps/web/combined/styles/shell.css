@@ -160,3 +160,47 @@ ol {
   color: var(--muted);
   font-size: 14px;
 }
+
+/* Desktop app shell: the work area fills the viewport and each column scrolls on its own. */
+@media (min-width: 861px) {
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-header { flex: none; }
+
+  .app-shell {
+    flex: 1 1 auto;
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .app-nav-links { height: 100%; }
+
+  .page-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .page-intro,
+  .connection-panel { flex: none; }
+
+  #live-pages,
+  .page-view {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  #live-pages[hidden],
+  .page-view[hidden] { display: none; }
+
+  .page-view { width: 100%; }
+}
