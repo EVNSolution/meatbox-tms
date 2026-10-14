@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   scannerHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', padding: 12 },
   scannerTitle: { color: colors.surface, fontSize: 17, fontWeight: '700' },
   closeButton: { minHeight: TOUCH_MIN },
-  stage: { flex: 1 },
+  stage: { flex: 1, overflow: 'hidden' },
   cameraBlocked: { alignItems: 'center', gap: 12, justifyContent: 'center', padding: 24 },
   blockedText: { color: colors.surface, fontSize: 16 },
   noticeWrap: { alignItems: 'center', bottom: SHEET_PEEK + 16, left: 16, position: 'absolute', right: 16 },
