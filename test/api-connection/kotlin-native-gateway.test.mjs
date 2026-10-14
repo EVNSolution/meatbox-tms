@@ -20,7 +20,8 @@ async function availablePorts() {
 
 function request(origin, route, { method = 'GET', headers = {}, body } = {}) {
   return new Promise((resolve, reject) => {
-    const outgoing = http.request(new URL(route, origin), { method, headers }, response => {
+    const framedHeaders = body === undefined ? headers : { ...headers, 'content-length': Buffer.byteLength(body) };
+    const outgoing = http.request(new URL(route, origin), { method, headers: framedHeaders }, response => {
       const chunks = [];
       response.on('data', chunk => chunks.push(chunk));
       response.on('error', reject);
@@ -115,6 +116,63 @@ test('native gateway remains usable after the legacy Node backend is removed', {
     }
     const status = await rejectedUpgrade(`${fixture.origin.replace('http:', 'ws:')}/ws/simulation`, { cookie, origin: fixture.origin });
     assert.equal(status, 410);
+  });
+
+  await t.test('protects driver tokens and persists two-way messages through the Kotlin gateway', async () => {
+    const base = `/api/dispatch-data/days/${fixture.today}`;
+    const call = (route, method, body, headers = {}) => request(fixture.origin, route, {
+      method,
+      headers: { cookie, origin: fixture.origin, 'content-type': 'application/json', ...headers },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    let state = json(await get(`${base}/state`));
+    for (const command of [
+      { type: 'calculate_dispatch', vehicleIds: ['TRUCK-1'] },
+      { type: 'publish_dispatch' },
+    ]) {
+      const response = await call(`${base}/commands`, 'POST', {
+        ...command, expectedBoot: state.boot, expectedRevision: state.revision,
+        ...(command.type === 'publish_dispatch' ? { draftVersion: state.dispatch.draftVersion } : {}),
+      });
+      assert.equal(response.status, 200, response.body.toString());
+      state = json(response).state;
+    }
+    const messages = `${base}/driver/messages`;
+    const tokens = `${base}/driver/push-token`;
+    const tokenBody = { vehicleId: 'TRUCK-1', token: 'synthetic-device-token-never-deliver', platform: 'android', deviceId: 'fixture-device' };
+    for (const [route, method, body] of [
+      [`${messages}?vehicleId=TRUCK-1`, 'GET'],
+      [tokens, 'PUT', tokenBody],
+      [tokens, 'DELETE', { token: tokenBody.token }],
+      [messages, 'POST', { vehicleId: 'TRUCK-1', from: 'ops', body: '합성 메시지' }],
+    ]) {
+      const denied = await call(route, method, body, { cookie: '' });
+      assert.equal(denied.status, 401, `${method} ${route}`);
+      assert.equal(denied.headers['x-meatbox-dispatch-owner'], 'kotlin');
+    }
+    for (const [route, method, body] of [
+      [tokens, 'PUT', tokenBody],
+      [tokens, 'DELETE', { token: tokenBody.token }],
+      [messages, 'POST', { vehicleId: 'TRUCK-1', from: 'ops', body: '합성 메시지' }],
+    ]) {
+      assert.equal((await call(route, method, body, { origin: 'https://wrong.invalid' })).status, 403);
+    }
+    assert.ok([200, 204].includes((await call(tokens, 'PUT', tokenBody)).status));
+    for (const from of ['ops', 'driver']) {
+      const saved = await call(messages, 'POST', { vehicleId: 'TRUCK-1', from, body: `${from} 합성 메시지` });
+      assert.equal(saved.status, 200, saved.body.toString());
+      const value = json(saved);
+      assert.equal(value.message.from, from);
+      assert.ok(value.message.id);
+      assert.ok(['unconfigured', 'no-device', 'not-requested'].includes(value.push.status));
+    }
+    const listed = await get(`${messages}?vehicleId=TRUCK-1`);
+    assert.equal(listed.status, 200);
+    assert.deepEqual(json(listed).messages.map(message => message.from), ['ops', 'driver']);
+    assert.ok(!listed.body.toString().includes(tokenBody.token), 'device tokens stay private');
+    assert.equal((await call(messages, 'POST', { vehicleId: 'TRUCK-1', from: 'ops', body: ' ' })).status, 400);
+    assert.equal((await call(messages, 'POST', { vehicleId: 'TRUCK-1', from: 'ops', body: 'x'.repeat(1001) })).status, 400);
+    assert.ok([200, 204].includes((await call(tokens, 'DELETE', { token: tokenBody.token })).status));
   });
 
   await t.test('returns Kotlin 404 for unknown APIs instead of falling back to Node', async () => {

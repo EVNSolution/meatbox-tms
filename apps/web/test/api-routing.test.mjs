@@ -378,6 +378,12 @@ test("native auth and dispatch selection retains their exact owner boundaries", 
   assert.equal(usesKotlinDispatch("HEAD", "/api/dispatch-data/days/2026-10-05/state?revision=1"), true);
   assert.equal(usesKotlinDispatch("GET", "/api/dispatch-data/days/2026-10-05/commandsX"), false);
   assert.equal(usesKotlinDispatch("PUT", "/api/dispatch-data/days/2026-10-05/state"), false);
+  assert.equal(usesKotlinDispatch("PUT", "/api/dispatch-data/days/2026-10-05/driver/push-token"), true);
+  assert.equal(usesKotlinDispatch("DELETE", "/api/dispatch-data/days/2026-10-05/driver/push-token"), true);
+  assert.equal(usesKotlinDispatch("POST", "/api/dispatch-data/days/2026-10-05/driver/messages"), true);
+  assert.equal(usesKotlinDispatch("GET", "/api/dispatch-data/days/2026-10-05/driver/messages?vehicleId=TRUCK-1"), true);
+  assert.equal(usesKotlinDispatch("DELETE", "/api/dispatch-data/days/2026-10-05/driver/messages"), false);
+  assert.equal(usesKotlinDispatch("PUT", "/api/dispatch-data/days/2026-10-05/driver/push-token/other"), false);
 });
 
 test("native proxy overwrites client identity using the closest trusted proxy address", async t => {

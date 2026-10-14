@@ -6,11 +6,13 @@ setup-new-stack:
 	npm ci
 	npm --prefix tools/oxlint/anti-slop ci
 	npm --prefix apps/web ci
+	npm --prefix apps/driver ci
 	./services/api/gradlew -p services/api --no-daemon classes
 
 check-modules:
 	./services/api/gradlew -p services/api --no-daemon check bootJar
 	npm --prefix apps/web run check
+	npm --prefix apps/driver run check
 
 check-new-stack: check-modules
 	node --test test/web-fork-baseline.test.mjs test/web-fork-legacy/*.test.mjs

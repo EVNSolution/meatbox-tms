@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 99,
-  "authoredFileCount": 33,
+  "authoredFileCount": 36,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -778,7 +778,7 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "36e64c146c195057b8bd17ea3d037f7f744eee3ccdb4ddfcd029355ff06ae701",
+      "targetSha256": "d488820d062697003ede915051729f61f8065891f26ad737376bc8fb4834a613",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -786,7 +786,8 @@
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Load operational date-picker styling directly after retiring the demo shell.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Load the driver messaging and printable pickup QR stylesheet inside the existing operational frontend."
       ],
       "status": "active"
     },
@@ -1486,7 +1487,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "61df9716d085dc9947364ae843fa17eb6f01ba91c77fdd9d70850e3c1841bb76",
+      "targetSha256": "6e5edc1038ff04ae01a2dd8308972da648eb1d319a7fb89e26d50536b42cc87a",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1494,7 +1495,8 @@
         "Preserve fleet, workload, map and details containers without data; clear old records, dialogs and map responses and recover on valid data.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
-        "Show the driver name first and mark the synthetic plate as unverified in the heading, list and detail title; use the driver name in the support table"
+        "Show the driver name first and mark the synthetic plate as unverified in the heading, list and detail title; use the driver name in the support table",
+        "Mount pickup QR and driver messaging tools in the selected vehicle detail, update their dated context, and clear them with the existing control lifecycle."
       ],
       "status": "active"
     },
@@ -2171,15 +2173,15 @@
     {
       "path": "apps/web/package-lock.json",
       "origin": "authored",
-      "sha256": "257f2ef2c89d4c451ed2e5f4ae92ab1adb8313bda96c60b3f7e4c677a2b94ee2",
-      "reason": "Lock the independently owned frontend build and validation dependency tree for reproducible installation.",
+      "sha256": "a23903a3ea2220e5bb41cc504ddd28919f41a6f5fb20d1f9465c6e9a32491bfb",
+      "reason": "Lock the independently owned frontend build and validation dependency tree for reproducible installation. Pin the qrcode 1.5.4 and @types/qrcode 1.5.6 dependency trees for local QR generation without a third-party data service.",
       "status": "active"
     },
     {
       "path": "apps/web/package.json",
       "origin": "authored",
-      "sha256": "eb0c48c89e04dfd35a217a6f34bca7258d860d067ccbbb780bebe1e2085c5f35",
-      "reason": "Own one frontend package with pinned toolchain and explicit build, recursive regression and artifact verification commands.",
+      "sha256": "fb904ea2ae7491f24a984a733bb1717e961d8000d02c7c9172a92b3eceb4adfe",
+      "reason": "Own one frontend package with pinned toolchain and explicit build, recursive regression and artifact verification commands. Pin qrcode 1.5.4 and @types/qrcode 1.5.6 for browser pickup QR generation.",
       "status": "active"
     },
     {
@@ -2192,8 +2194,8 @@
     {
       "path": "apps/web/scripts/api-routing.mjs",
       "origin": "authored",
-      "sha256": "b3de7777466b7702f3f2771e852ca12d5f8f031f2f27d77ca2c3e691d73016dc",
-      "reason": "Share exact optional Kotlin GET/HEAD routing for gateway and Vite, preserve all legacy writer paths, and force reader/failure headers without automatic fallback. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection.",
+      "sha256": "f51be7ad1dbb33d6684afaa3bb1184ad98fea7113a8928213ae6bd84c74cc7d8",
+      "reason": "Share exact optional Kotlin GET/HEAD routing for gateway and Vite, preserve all legacy writer paths, and force reader/failure headers without automatic fallback. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Native auth and operational dispatch can route to Kotlin with the Node API stopped; preserve fail-closed owner selection. Route the bounded dated driver token and message endpoints to the selected Kotlin dispatch owner; retain method restrictions and no-fallback behavior.",
       "status": "active"
     },
     {
@@ -2259,8 +2261,8 @@
     {
       "path": "apps/web/test/api-routing.test.mjs",
       "origin": "authored",
-      "sha256": "042835fa7c312c0f5ec174f2559f8783fe4aab71e471d307f90f91bb6e425519",
-      "reason": "Verify real HTTP routing, error/no-fallback boundaries, direct writer methods, query/body/headers and Vite middleware behavior. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Verify native owner routing and trusted client-address forwarding, including rejection of spoofed headers and exact loopback boundaries.",
+      "sha256": "af864b80064e6d5eb1fc2fb502faeececbafee4d7e7d3517ef5ce9a6e59ae6b0",
+      "reason": "Verify real HTTP routing, error/no-fallback boundaries, direct writer methods, query/body/headers and Vite middleware behavior. Extend four source reads, explicit Kotlin resource ownership and exact HTTPS public origin with private loopback transport, preserving authentication and rollback. Verify native owner routing and trusted client-address forwarding, including rejection of spoofed headers and exact loopback boundaries. Verify dated driver token and message routing, allowed methods, Kotlin ownership, and no fallback at the HTTP boundary.",
       "status": "active"
     },
     {
@@ -2287,8 +2289,8 @@
     {
       "path": "apps/web/tsconfig.json",
       "origin": "authored",
-      "sha256": "2fdbfaa9ddb7a2e1a0204a90587611d34b745a24aa4a8dcbff89c956b9b9f0a1",
-      "reason": "Apply strict checking to new TypeScript and keep forked legacy JavaScript outside an unsupported whole-codebase typecheck claim.",
+      "sha256": "3f39f5f44c1ae76125cefba1aa63b613baebf25706eb75d6e3a3f238a7bfcdcc",
+      "reason": "Apply strict checking to new TypeScript and keep forked legacy JavaScript outside an unsupported whole-codebase typecheck claim. Include the new operational driver-tools TypeScript module in strict frontend checking.",
       "status": "active"
     },
     {
@@ -2339,6 +2341,27 @@
       "reason": "Verify gateway startup explains its selected Kotlin or comparison owners without instructing a second writer.",
       "status": "active",
       "sha256": "065a1488db6c73b26a0fb7f649066d7eb0c62fc5fd405a928b0bd997d2329d15"
+    },
+    {
+      "path": "apps/web/combined/driver-tools.ts",
+      "origin": "authored",
+      "reason": "Generate a QR for every assigned order and exchange authenticated date-and-vehicle driver messages; distinguish stored messages from FCM results, reject stale print snapshots, and preserve read-only history.",
+      "status": "active",
+      "sha256": "4752a9af6d6dff3feaafa768edcfabc14cb66cf2fac502f13318982f88f4e83e"
+    },
+    {
+      "path": "apps/web/combined/driver-tools.css",
+      "origin": "authored",
+      "reason": "Style the existing vehicle-detail driver tools and accessible dialogs with printable per-order QR cards using the shared operational design tokens. Exclude non-print content from layout and flatten the dialog ancestry during printing so QR cards paginate without blank operational pages. Keep the print document canvas white without changing screen backgrounds.",
+      "status": "active",
+      "sha256": "5600b47e307fa1472ac7533329bffca1934a412217f30053aa96ccbb938430e3"
+    },
+    {
+      "path": "apps/web/combined/driver-tools.test.mjs",
+      "origin": "authored",
+      "reason": "Verify individual-order QR payloads, print invalidation and late QR results, authenticated message contracts, read-only history, safe rendering, duplicate sends, and separate storage and push outcomes.",
+      "status": "active",
+      "sha256": "0670d26d9b972302e7000ca7f9f0517e34a26e11fa92c6f0de20930dc07a52e7"
     }
   ],
   "historicalTargetFileCount": 163,

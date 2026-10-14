@@ -140,6 +140,7 @@ class DispatchController(
         private val COMMANDS = setOf(
             "calculate_dispatch", "reassign", "publish_dispatch",
             "begin_dispatch_revision", "discard_dispatch_revision", "set_route_order",
+            "start_route", "arrive_stop", "complete_stop",
         )
     }
 }

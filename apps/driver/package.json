@@ -1,0 +1,65 @@
+{
+  "name": "meatbox-driver",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/run-tests.mjs",
+    "check": "npm run typecheck && npm run test && npm run lint",
+    "prebuild:android": "expo prebuild --platform android --no-install --template expo-template-bare-minimum@56.0.37"
+  },
+  "dependencies": {
+    "@maplibre/maplibre-react-native": "11.3.4",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~56.0.21",
+    "expo-application": "~56.0.3",
+    "expo-camera": "~56.0.8",
+    "expo-font": "~56.0.7",
+    "expo-haptics": "~56.0.3",
+    "expo-notifications": "~56.0.25",
+    "expo-secure-store": "~56.0.4",
+    "expo-status-bar": "~56.0.4",
+    "expo-system-ui": "56.0.5",
+    "react": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-gesture-handler": "~2.31.1",
+    "react-native-reanimated": "4.3.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4",
+    "react-native-worklets": "0.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/react": "~19.2.14",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~56.0.4",
+    "tsx": "^4.22.4",
+    "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": ">=20.19.4"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.12",
+    "js-yaml": "4.3.2",
+    "postcss": "8.5.23",
+    "minimatch": "10.2.6",
+    "minimatch@10.2.6": {
+      "brace-expansion": "5.0.12"
+    },
+    "uuid": "11.1.1",
+    "ws": "8.21.0",
+    "shell-quote": "1.11.0"
+  },
+  "expo": {
+    "doctor": {
+      "appConfigFieldsNotSyncedCheck": {
+        "enabled": false
+      }
+    }
+  }
+}

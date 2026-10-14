@@ -18,8 +18,12 @@
     "test:artifact": "node --test test/fork-artifact.check.mjs"
   },
   "devDependencies": {
+    "@types/qrcode": "1.5.6",
     "oxlint": "1.86.0",
     "typescript": "7.0.2",
     "vite": "8.3.2"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4"
   }
 }

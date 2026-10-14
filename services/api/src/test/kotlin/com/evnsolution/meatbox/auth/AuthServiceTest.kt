@@ -29,6 +29,26 @@ class AuthServiceTest {
     }
 
     @Test
+    fun `checks device session digests against username logout expiry and account disable`() {
+        val file = accountFile()
+        var now = 1_000_000L
+        val service = AuthService(AuthSettings(file, URI("http://127.0.0.1:4173")), { now })
+        val login = service.login(LoginInput("tester", "correct horse battery staple"))
+        val digest = AuthService.digest(login.token)
+        assertThat(service.isSessionActive(digest, "tester")).isTrue()
+        assertThat(service.isSessionActive(digest, "different")).isFalse()
+        assertThat(service.isSessionActive(login.token, "tester")).isFalse()
+        service.logout(login.token)
+        assertThat(service.isSessionActive(digest, "tester")).isFalse()
+        val expiring = service.login(LoginInput("tester", "correct horse battery staple"))
+        now += AuthService.SESSION_TTL_MILLIS
+        assertThat(service.isSessionActive(AuthService.digest(expiring.token), "tester")).isFalse()
+        val disabled = service.login(LoginInput("tester", "correct horse battery staple"))
+        Files.writeString(file, Files.readString(file).replace("\"disabled\":false", "\"disabled\":true"))
+        assertThat(service.isSessionActive(AuthService.digest(disabled.token), "tester")).isFalse()
+    }
+
+    @Test
     fun `uses dummy password work and one generic error for unknown wrong and disabled accounts`() {
         val file = accountFile()
         val service = AuthService(AuthSettings(file, URI("http://127.0.0.1:4173")))

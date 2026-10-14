@@ -81,13 +81,64 @@ class DispatchPlanTest {
         val before = plan.exportCheckpoint()
         assertThatThrownBy { plan.command(objectNode("type" to "calculate_dispatch", "expectedRevision" to 9).apply { set("vehicleIds", strings("G1")) }) }
             .isInstanceOf(DispatchException::class.java).extracting("code").isEqualTo("REVISION_CONFLICT")
-        assertThatThrownBy { send(plan, objectNode("type" to "arrive_stop")) }
+        assertThatThrownBy { send(plan, objectNode("type" to "set_scenario")) }
             .isInstanceOf(DispatchException::class.java).extracting("code").isEqualTo("INVALID_COMMAND")
         assertThat(plan.exportCheckpoint()).isEqualTo(before)
 
         val invalid = copyObject(before).apply { put("sourceId", "csv-b") }
         assertThatThrownBy { DispatchPlan(day(), "csv-a", { 0 }, invalid) }
             .isInstanceOf(DispatchException::class.java).extracting("code").isEqualTo("INVALID_CHECKPOINT")
+    }
+
+    @Test
+    fun `driver commands require a published plan and a writable date`() {
+        var now = Instant.parse("2026-09-16T01:00:00Z").toEpochMilli()
+        val plan = DispatchPlan(day(), "csv-a", { now })
+        val commands = listOf("start_route", "arrive_stop", "complete_stop")
+        fun rejectsWith(code: String) {
+            val before = plan.exportCheckpoint()
+            commands.forEach { type ->
+                assertThatThrownBy { send(plan, objectNode("type" to type, "vehicleId" to "G1", "orderId" to "O1")) }
+                    .isInstanceOf(DispatchException::class.java).extracting("code").isEqualTo(code)
+                assertThat(plan.exportCheckpoint()).isEqualTo(before)
+            }
+        }
+        rejectsWith("DISPATCH_NOT_PUBLISHED")
+        send(plan, objectNode("type" to "calculate_dispatch").apply { set("vehicleIds", strings("G1")) })
+        rejectsWith("DISPATCH_NOT_PUBLISHED")
+        send(plan, objectNode("type" to "publish_dispatch", "draftVersion" to 1))
+        send(plan, objectNode("type" to "start_route", "vehicleId" to "G1"))
+
+        now = Instant.parse("2026-09-16T15:00:00Z").toEpochMilli()
+        rejectsWith("DATE_READ_ONLY")
+    }
+
+    @Test
+    fun `driver progress continues during amendment and newly protected bundles block republishing`() {
+        val plan = draftPlan()
+        moveTo(plan, "G1", "O1", "O3", "O4")
+        send(plan, objectNode("type" to "publish_dispatch", "draftVersion" to plan.snapshot().at("/dispatch/draftVersion").asLong()))
+        send(plan, objectNode("type" to "begin_dispatch_revision"))
+        val first = plan.snapshot()["fleetDeliveries"].first { it["vehicleId"].asString() == "G1" }["id"].asString()
+        moveTo(plan, "G2", first)
+        send(plan, objectNode("type" to "start_route", "vehicleId" to "G1"))
+        assertThat(plan.snapshot().at("/dispatch/phase").asString()).isEqualTo("amending")
+        val inProgress = plan.exportCheckpoint()
+        val draftVersion = plan.snapshot().at("/dispatch/draftVersion").asLong()
+        assertThatThrownBy { send(plan, objectNode("type" to "publish_dispatch", "draftVersion" to draftVersion)) }
+            .isInstanceOf(DispatchException::class.java).extracting("code").isEqualTo("PROTECTED_DESTINATION")
+        assertThat(plan.exportCheckpoint()).isEqualTo(inProgress)
+
+        send(plan, objectNode("type" to "arrive_stop", "vehicleId" to "G1", "orderId" to first))
+        send(plan, objectNode("type" to "complete_stop", "vehicleId" to "G1", "orderId" to first))
+        send(plan, objectNode("type" to "discard_dispatch_revision"))
+        send(plan, objectNode("type" to "begin_dispatch_revision"))
+        val completed = plan.exportCheckpoint()
+        assertThatThrownBy { send(plan, objectNode("type" to "reassign", "targetVehicleId" to "G2").apply { set("orderIds", strings(first)) }) }
+            .isInstanceOf(DispatchException::class.java).extracting("code").isEqualTo("PROTECTED_DESTINATION")
+        assertThat(plan.exportCheckpoint()).isEqualTo(completed)
+        val restored = DispatchPlan(day(), "csv-a", { Instant.parse("2026-09-16T01:00:00Z").toEpochMilli() }, completed)
+        assertThat(restored.snapshot()).isEqualTo(plan.snapshot())
     }
 
     @Test

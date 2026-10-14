@@ -4,6 +4,7 @@ import { createOrderMap, createOrderMarker, orderMapModel } from '../src/shared/
 import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 import { locationLabel, plateLabel } from './vehicle-identity.mjs';
 import { vehicleOperations, sortVehicleOperations, resolveDefaultControlVehicle, resolveControlDelivery, vehicleEvents, deliveryRecords, controlPosition } from './vehicle-operations-model.mjs';
+import { driverToolsMarkup, mountDriverTools } from './driver-tools.ts';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const count = (value, unit = '') => value === null || value === undefined ? '미확인' : `${value.toLocaleString('ko-KR')}${unit}`;
@@ -42,6 +43,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     </section>
     <aside class="panel control-details" aria-label="선택 차량 상세">
       <div class="panel-heading"><h2 data-control-detail-title>차량 상세</h2></div>
+      ${driverToolsMarkup()}
       <div class="detail-tabs control-tabs" role="tablist" aria-label="관제 관리"><button type="button" role="tab" id="tab-monitor" aria-selected="true" aria-controls="monitor-list-panel" data-control-tab="monitor">배송지 상세</button><button type="button" role="tab" id="tab-management" aria-selected="false" aria-controls="control-management-panel" tabindex="-1" data-control-tab="management">배송 관리</button></div>
       <section id="monitor-list-panel" role="tabpanel" aria-labelledby="tab-monitor"><p class="control-unit-note">배송지를 펼쳐 배송 정보와 요청사항을 확인하세요.</p><div data-control-stops class="control-stop-list"></div></section>
       <section id="control-management-panel" role="tabpanel" aria-labelledby="tab-management" hidden>
@@ -66,6 +68,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   const stopList = find('[data-control-stops]');
   const support = find('[data-support-dialog]');
   const recordList = find('[data-control-records]');
+  const driverTools = mountDriverTools({ element });
 
   function replacePreservingFocus(target, markup, selector) {
     if (target.innerHTML === markup) return;
@@ -223,6 +226,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   }
 
   function clear({ empty = false, message = '배송 자료를 확인하고 있습니다.' } = {}) {
+    driverTools.update(null, null);
     data = null; rows = []; row = null; selectedId = null;
     previousVehicleId = null; previousSelectedId = null;
     search = ''; sort = 'received'; opened = new Set(); recordFilter = 'all';
@@ -300,6 +304,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       if (!rows.length) { clear({ empty: true, message: '확정된 배차가 없습니다.' }); return null; }
       const preferredDeliveryId = deliveryId ?? data?.sourceData?.defaultStopId;
       row = resolveDefaultControlVehicle(data, rows, vehicleId, preferredDeliveryId); selectedId = preferredDeliveryId;
+      driverTools.update(data, row);
       if (!map) mapElement.innerHTML = '';
       setControlsDisabled(false);
       if (previousVehicleId !== row?.vehicle.id) { opened = new Set(); recordFilter = 'all'; showRecords(); }
@@ -311,6 +316,6 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       if (support.open) renderSupport();
       return row;
     },
-    destroy() { destroyed = true; if (support.open) support.close(); removeMap(); },
+    destroy() { destroyed = true; driverTools.destroy(); if (support.open) support.close(); removeMap(); },
   };
 }

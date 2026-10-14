@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "미트박스 배송",
+    "slug": "meatbox-driver",
+    "version": "0.1.0",
+    "icon": "./assets/branding/app-icon.png",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.evnsolution.meatbox.driver",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "배송 지도에서 현재 위치를 표시하기 위해 위치 권한을 사용합니다."
+      }
+    },
+    "android": {
+      "package": "com.evnsolution.meatbox.driver",
+      "versionCode": 2,
+      "predictiveBackGestureEnabled": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/branding/app-icon-foreground.png",
+        "backgroundColor": "#E60028"
+      },
+      "softwareKeyboardLayoutMode": "resize",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-status-bar",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Pretendard.ttf"
+          ]
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "meatbox-driver",
+          "color": "#E60028"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "상품 수령 확인 QR을 스캔하기 위해 카메라를 사용합니다.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      "@maplibre/maplibre-react-native"
+    ]
+  }
+}

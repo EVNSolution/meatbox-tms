@@ -341,7 +341,7 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
       assert.equal(result.response.status, status);
       assert.equal(result.body.error, code);
     }
-    for (const type of ['set_scenario', 'arrive_stop', 'complete_stop', 'toggle_skip', 'set_delivery_tip', 'send_customer_notice', 'reset']) {
+    for (const type of ['set_scenario', 'toggle_skip', 'set_delivery_tip', 'send_customer_notice', 'reset']) {
       const result = await requestJson(fixture, `/api/dispatch-data/days/${fixture.today}/commands`, {
         method: 'POST', cookie, body: commandFor(before, type),
       });
@@ -466,6 +466,109 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     assert.deepEqual(normalized(actualState), expected);
     const checkpoint = JSON.parse(await fs.readFile(path.join(fixture.stateDirectory, `${fixture.today}.json`), 'utf8'));
     assert.deepEqual(normalized(checkpoint), normalized(demoFreeGolden(golden)));
+  });
+
+  await t.test('executes driver bundles with conflict guards atomic saves and arrival restoration', async () => {
+    const statePath = `/api/dispatch-data/days/${fixture.today}/state`;
+    const commandPath = `/api/dispatch-data/days/${fixture.today}/commands`;
+    const vehicleId = targetVehicleId;
+    const route = () => actualState.fleetDeliveries.filter(order => order.vehicleId === vehicleId);
+    async function send(type, extra = {}) {
+      const response = await requestJson(fixture, commandPath, {
+        method: 'POST', cookie, body: commandFor(actualState, type, { vehicleId, ...extra }),
+      });
+      assert.equal(response.response.status, 200, JSON.stringify(response.body));
+      actualState = response.body.state;
+      return response.body.result;
+    }
+    async function rejects(type, extra, status, code) {
+      const before = actualState;
+      const response = await requestJson(fixture, commandPath, {
+        method: 'POST', cookie, body: commandFor(actualState, type, { vehicleId, ...extra }),
+      });
+      assert.equal(response.response.status, status, JSON.stringify(response.body));
+      if (code) assert.equal(response.body.error, code);
+      assert.deepEqual((await requestJson(fixture, statePath, { cookie })).body, before);
+    }
+
+    // Start with the two-order destination to exercise canonical stop IDs through the HTTP boundary.
+    const bundle = route().filter(order => order.id.startsWith('BUNDLE-'));
+    assert.equal(bundle.length, 2);
+    const bundleFirst = [...bundle, ...route().filter(order => !bundle.includes(order))].map(order => order.id);
+    if (bundleFirst.some((id, index) => id !== route()[index].id)) {
+      await send('set_route_order', {
+        order: bundleFirst, expectedOrder: route().map(order => order.id),
+        expectedStatuses: route().map(order => order.status), expectedPhase: 'idle',
+      });
+    }
+    await rejects('start_route', { expectedBoot: 'stale-driver-boot' }, 409, 'BOOT_MISMATCH');
+    await rejects('start_route', { expectedRevision: actualState.revision - 1 }, 409, 'REVISION_CONFLICT');
+    await rejects('start_route', { vehicleId: 'UNKNOWN' }, 400, 'INVALID_OPERATION');
+    const started = await send('start_route');
+    assert.deepEqual(started.orderIds, bundle.map(order => order.id));
+    assert.equal(actualState.vehicleStates[vehicleId].phase, 'delivering');
+    assert.equal(actualState.vehicleStates[vehicleId].truck.toId, bundle[0].id);
+    await rejects('start_route', {}, 409);
+    await rejects('complete_stop', { orderId: bundle[0].id }, 409);
+    await rejects('arrive_stop', { orderId: route().find(order => order.status === 'pending').id }, 409);
+    await rejects('arrive_stop', { orderId: bundle[0].id, vehicleId: ['TRUCK-1', 'TRUCK-2'].find(id => id !== vehicleId) }, 400);
+
+    const arrived = await send('arrive_stop', { orderId: bundle[1].id });
+    assert.equal(arrived.stopId, bundle[0].id);
+    assert.deepEqual(arrived.orderIds, bundle.map(order => order.id));
+    for (const order of route().filter(order => arrived.orderIds.includes(order.id))) {
+      assert.equal(order.status, 'current');
+      assert.equal(order.customerStatus.key, 'arrived');
+      assert.match(order.arrivedAt, /^\d{2}:\d{2}$/);
+    }
+    assert.equal(actualState.vehicleStates[vehicleId].truck.toId, null);
+    assert.equal(actualState.vehicleStates[vehicleId].truck.atStopId, bundle[0].id);
+    await rejects('arrive_stop', { orderId: bundle[1].id }, 409);
+
+    const checkpoint = path.join(fixture.stateDirectory, `${fixture.today}.json`);
+    const saved = `${checkpoint}.saved`;
+    const outside = path.join(fixture.stateDirectory, 'driver-save-sentinel.json');
+    await fs.writeFile(outside, '{"untouched":true}\n', { mode: 0o600 });
+    await fs.rename(checkpoint, saved);
+    try {
+      await fs.symlink(outside, checkpoint);
+      await rejects('complete_stop', { orderId: bundle[1].id }, 500, 'DISPATCH_STATE_WRITE_FAILED');
+      assert.deepEqual(JSON.parse(await fs.readFile(outside, 'utf8')), { untouched: true });
+    } finally {
+      await fs.rm(checkpoint, { force: true });
+      await fs.rename(saved, checkpoint);
+    }
+    const beforeRestart = actualState;
+    await fixture.restart();
+    actualState = (await requestJson(fixture, statePath, { cookie })).body;
+    assert.notEqual(actualState.boot, beforeRestart.boot);
+    assert.deepEqual(normalized(actualState), normalized(beforeRestart));
+    await rejects('complete_stop', { orderId: bundle[1].id, expectedBoot: beforeRestart.boot }, 409, 'BOOT_MISMATCH');
+
+    const completed = await send('complete_stop', { orderId: bundle[1].id });
+    assert.deepEqual(completed.orderIds, bundle.map(order => order.id));
+    assert.equal(actualState.vehicleStates[vehicleId].kpi.stopsDone, 2);
+    assert.equal(actualState.vehicleStates[vehicleId].truck.toId, completed.nextStopId);
+    for (const order of route().filter(order => completed.orderIds.includes(order.id))) {
+      assert.equal(order.status, 'done');
+      assert.equal(order.customerStatus.key, 'delivered');
+      assert.match(order.completedAt, /^\d{2}:\d{2}$/);
+    }
+    await rejects('complete_stop', { orderId: bundle[0].id }, 409);
+    await rejects('arrive_stop', { orderId: bundle[0].id }, 409);
+    await rejects('set_route_order', {
+      order: [...route().filter(order => !completed.orderIds.includes(order.id)), ...route().filter(order => completed.orderIds.includes(order.id))].map(order => order.id),
+      expectedOrder: route().map(order => order.id), expectedStatuses: route().map(order => order.status), expectedPhase: 'delivering',
+    }, 400);
+
+    for (let current = route().find(order => order.status === 'current'); current; current = route().find(order => order.status === 'current')) {
+      await send('arrive_stop', { orderId: current.id });
+      await send('complete_stop', { orderId: current.id });
+    }
+    assert.equal(route().every(order => order.status === 'done'), true);
+    assert.equal(actualState.vehicleStates[vehicleId].phase, 'done');
+    assert.equal(actualState.vehicleStates[vehicleId].truck.toId, null);
+    assert.equal(actualState.vehicleStates[vehicleId].truck.dwelling, false);
   });
 
   await t.test('rejects a checkpoint symlink without mutating the future-date state', async () => {

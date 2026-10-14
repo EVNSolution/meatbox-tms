@@ -153,6 +153,9 @@ class OperationalState(
         val result = when (command["type"]?.takeIf(JsonNode::isString)?.asString()) {
             "set_route_order" -> reorder(command)
             "reassign" -> reassign(command)
+            "start_route" -> startRoute(command)
+            "arrive_stop" -> arriveStop(command)
+            "complete_stop" -> completeStop(command)
             else -> invalid("지원하지 않는 운행 명령입니다.")
         }
         mutableRevision += 1
@@ -276,6 +279,109 @@ class OperationalState(
             put("type", "set_route_order")
             put("vehicleId", vehicleId)
             set("order", stringArray(requested))
+        }
+    }
+
+    // Driver progress follows the legacy Node engine (lib/source-operations.mjs): one destination bundle is one stop,
+    // start makes the first pending bundle current, arrive marks it dwelling, complete finishes it and moves on.
+    private fun startRoute(command: ObjectNode): ObjectNode {
+        val vehicleId = requireVehicle(command.string("vehicleId"))
+        val state = states.getValue(vehicleId)
+        if (state["phase"].asString() !in setOf("idle", "preparing")) conflict("이미 배송을 시작했습니다.")
+        val firstId = routes.getValue(vehicleId).firstOrNull { orders.getValue(it)["status"].asString() == "pending" }
+            ?: conflict("배송할 주문이 없습니다.")
+        val (primary, bundle) = makeCurrent(vehicleId, orders.getValue(firstId), arrived = false)
+        state.put("phase", "delivering")
+        return progressResult("start_route", "shipping", vehicleId, primary, bundle, "배송 출발")
+    }
+
+    private fun arriveStop(command: ObjectNode): ObjectNode {
+        val vehicleId = requireVehicle(command.string("vehicleId"))
+        val requested = requireStop(command.string("orderId"))
+        if (requested["vehicleId"].asString() != vehicleId) invalid("이 차량의 배송지가 아닙니다.")
+        val bundle = bundleFor(requested)
+        val primaryId = bundle.first()["id"].asString()
+        val truck = states.getValue(vehicleId)["truck"] as ObjectNode
+        val notCurrent = bundle.any { it["status"].asString() != "current" }
+        val travellingHere = truck["toId"]?.takeIf(JsonNode::isString)?.asString() == primaryId && !truck["dwelling"].asBoolean()
+        if (states.getValue(vehicleId)["phase"].asString() != "delivering" || notCurrent || !travellingHere) {
+            conflict("현재 이동 중인 배송지만 도착 처리할 수 있습니다.")
+        }
+        val (primary, _) = makeCurrent(vehicleId, requested, arrived = true)
+        val arrivedAt = clock()
+        bundle.forEach { it.put("arrivedAt", arrivedAt) }
+        return progressResult("arrive_stop", "arrived", vehicleId, primary, bundle, "배송지 도착")
+    }
+
+    private fun completeStop(command: ObjectNode): ObjectNode {
+        val vehicleId = requireVehicle(command.string("vehicleId"))
+        val requested = requireStop(command.string("orderId"))
+        if (requested["vehicleId"].asString() != vehicleId) invalid("이 차량의 배송지가 아닙니다.")
+        val bundle = bundleFor(requested)
+        val primary = bundle.first()
+        val state = states.getValue(vehicleId)
+        val truck = state["truck"] as ObjectNode
+        val arrivedHere = truck["atStopId"]?.takeIf(JsonNode::isString)?.asString() == primary["id"].asString() && truck["dwelling"].asBoolean()
+        if (state["phase"].asString() != "delivering" || bundle.any { it["status"].asString() != "current" } || !arrivedHere) {
+            conflict("도착한 현재 배송지만 완료할 수 있습니다.")
+        }
+        val completedAt = clock()
+        bundle.forEach { order ->
+            order.put("status", "done")
+            order.put("customerStage", "completed")
+            order.put("completedAt", completedAt)
+        }
+        val nextId = routes.getValue(vehicleId).firstOrNull { orders.getValue(it)["status"].asString() == "pending" }
+        val result = progressResult("complete_stop", "completed", vehicleId, primary, bundle, "배송 완료")
+        if (nextId != null) {
+            val (next, _) = makeCurrent(vehicleId, orders.getValue(nextId), arrived = false)
+            truck.put("fromId", primary["id"].asString())
+            result.put("nextStopId", next["id"].asString())
+        } else {
+            truck.put("fromId", primary["id"].asString()); truck.putNull("toId"); truck.put("atStopId", primary["id"].asString())
+            truck.put("dwelling", false)
+            truck.put("dwellRemaining", 0)
+            val allDone = routes.getValue(vehicleId).all { orders.getValue(it)["status"].asString() == "done" }
+            state.put("phase", if (allDone) "done" else "delivering")
+            result.putNull("nextStopId")
+        }
+        return result
+    }
+
+    private fun makeCurrent(vehicleId: String, order: ObjectNode, arrived: Boolean): Pair<ObjectNode, List<ObjectNode>> {
+        val bundle = bundleFor(order)
+        val primary = bundle.first()
+        bundle.forEach { member ->
+            member.put("status", "current")
+            member.put("customerStage", if (arrived) "arrived" else "shipping")
+        }
+        val state = states.getValue(vehicleId)
+        state.put("phase", "delivering")
+        (state["truck"] as ObjectNode).apply {
+            if (arrived) {
+                put("fromId", primary["id"].asString())
+                putNull("toId")
+            } else {
+                put("toId", primary["id"].asString())
+            }
+            if (arrived) put("atStopId", primary["id"].asString()) else putNull("atStopId")
+            put("dwelling", arrived)
+            if (arrived) putNull("dwellRemaining") else put("dwellRemaining", 0)
+        }
+        return primary to bundle
+    }
+
+    private fun progressResult(type: String, action: String, vehicleId: String, primary: ObjectNode, bundle: List<ObjectNode>, label: String): ObjectNode {
+        val stopId = primary["id"].asString()
+        val state = states.getValue(vehicleId)
+        state.put("scenarioPreset", action)
+        state.put("scenarioStopId", stopId)
+        record(action, vehicleId, stopId, "${primary["name"].asString()} $label", bundle.map { it["id"].asString() })
+        return dispatchMapper.createObjectNode().apply {
+            put("type", type)
+            put("vehicleId", vehicleId)
+            put("stopId", stopId)
+            set("orderIds", stringArray(bundle.map { it["id"].asString() }))
         }
     }
 
@@ -727,7 +833,7 @@ class OperationalState(
         return routes.getValue(order["vehicleId"].asString()).map(orders::getValue).filter { destinationKey(it) == key }
     }
 
-    private fun record(action: String, vehicleId: String, stopId: String?, message: String) {
+    private fun record(action: String, vehicleId: String, stopId: String?, message: String, orderIds: List<String>? = null) {
         stateTimestamp = clock()
         events += dispatchMapper.createObjectNode().apply {
             put("id", nextEventId++)
@@ -735,6 +841,7 @@ class OperationalState(
             put("time", clockText(stateTimestamp))
             put("vehicleId", vehicleId)
             if (stopId != null) put("stopId", stopId)
+            if (orderIds != null) set("orderIds", stringArray(orderIds))
             put("action", action)
             put("type", "driver")
             put("message", message)
