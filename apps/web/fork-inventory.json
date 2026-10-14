@@ -1496,7 +1496,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "b3904c0d1c1deaa76495e1a497583c7201b3d4fccd9dbc36534b80aa39df33a3",
+      "targetSha256": "2fcea50975edb2260f944a003bb3ed17154b73bab96dcdf3a14d37f891ad68dc",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1504,7 +1504,8 @@
         "Use the existing map container and theme tokens for empty delivery control status.",
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
         "Fill the desktop viewport with the control layout so lists and the map scroll on their own.",
-        "Bound the desktop control grid row so long vehicle and stop lists scroll inside their panels instead of growing the page."
+        "Bound the desktop control grid row so long vehicle and stop lists scroll inside their panels instead of growing the page.",
+        "Desktop control console: one framed three-column layout with a full-height map, the running summary as a card over the map and the map note as a floating chip."
       ],
       "status": "active"
     },

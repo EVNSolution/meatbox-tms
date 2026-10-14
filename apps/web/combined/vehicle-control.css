@@ -116,11 +116,28 @@
 .support-data td small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
 @media (min-width: 1271px) {
   #vehicle-control { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-  .vehicle-control-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); min-height: 700px; align-items: stretch; }
-  .control-fleet, .control-details, .control-map-panel { display: flex; flex-direction: column; min-height: 0; }
-  .control-vehicle-list, .control-stop-list { flex: 1 1 auto; min-height: 120px; max-height: none; }
-  .control-map-workspace { grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+  .vehicle-control-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); gap: 0; min-height: 520px; align-items: stretch; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+  .vehicle-control-layout > .panel { border: 0; border-radius: 0; box-shadow: none; }
+  .control-fleet { border-right: 1px solid var(--border); }
+  .control-details { border-left: 1px solid var(--border); }
+  .control-fleet, .control-details, .control-map-workspace, .control-map-panel { display: flex; flex-direction: column; min-height: 0; }
+  .control-map-workspace { position: relative; gap: 0; }
+  .control-map-panel { flex: 1 1 auto; }
   .control-map-canvas { flex: 1 1 auto; height: auto; min-height: 240px; }
+  .control-map-note { position: absolute; top: 85px; left: 12px; z-index: 2; margin: 0; padding: 6px 10px; border-radius: 6px; background: #ffffffe6; box-shadow: 0 1px 3px #00000014; font-size: 11px; line-height: 1.4; }
+  .control-map-note:empty { display: none; }
+  .control-current { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3; border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px #1b263314; }
+  .control-current .panel-heading { padding: 8px 14px; min-height: 0; }
+  .control-current .panel-heading div { display: flex; align-items: baseline; gap: 8px; }
+  .control-current .panel-heading h2 { font-size: 14px; line-height: 20px; }
+  .control-current .panel-heading p { margin: 0; }
+  .control-workload { padding: 8px 14px; gap: 8px; }
+  .control-workload strong { margin-top: 2px; font-size: 17px; }
+  .control-running-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 16px; padding: 8px 14px; }
+  .control-running-facts > div { grid-template-columns: minmax(0, 1fr); gap: 1px; }
+  .control-running-facts dt { font-size: 11px; }
+  .control-timing-note { margin: 0; padding: 0 14px 8px; font-size: 11px; }
+  .control-vehicle-list, .control-stop-list { flex: 1 1 auto; min-height: 120px; max-height: none; }
   #monitor-list-panel { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
   #control-management-panel { flex: 1 1 auto; min-height: 0; overflow: auto; }
   #monitor-list-panel[hidden] { display: none; }
