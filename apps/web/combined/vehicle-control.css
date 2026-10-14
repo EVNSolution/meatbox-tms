@@ -116,7 +116,7 @@
 .support-data td small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
 @media (min-width: 1271px) {
   #vehicle-control { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-  .vehicle-control-layout { flex: 1 1 auto; align-items: stretch; }
+  .vehicle-control-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); min-height: 700px; align-items: stretch; }
   .control-fleet, .control-details, .control-map-panel { display: flex; flex-direction: column; min-height: 0; }
   .control-vehicle-list, .control-stop-list { flex: 1 1 auto; min-height: 120px; max-height: none; }
   .control-map-workspace { grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
