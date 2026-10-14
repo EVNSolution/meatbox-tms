@@ -25,8 +25,11 @@
 }
 
 .app-nav-links a {
+  display: grid;
+  place-items: center;
   min-height: 40px;
   padding: 10px 8px;
+  text-align: center;
   color: var(--muted);
   border-radius: var(--radius);
   font-size: 12px;
@@ -37,7 +40,7 @@
 
 .app-nav-links a:hover {
   color: var(--action);
-  background: #f5f6f8;
+  background: #edf0f4;
 }
 
 .app-nav-links a[aria-current] {
@@ -113,13 +116,18 @@ ol {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
   color: var(--brand);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: -0.03em;
   white-space: nowrap;
   text-decoration: none;
 }
+
+.brand img { display: block; width: 126px; height: 30px; }
 
 .brand strong,
 .brand b,

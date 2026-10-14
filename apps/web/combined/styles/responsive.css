@@ -1,4 +1,5 @@
 @media (max-width: 860px) {
+  .brand img { width: 105px; height: 25px; }
   body {
     font-size: 14px;
   }
