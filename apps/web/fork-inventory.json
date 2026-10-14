@@ -28,14 +28,15 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "242159e261823378cecb302184fa9aa635f08df57787f584d21906dd289cc1be",
+      "targetSha256": "ed417d2f73fbc018a0dbe09d995de393f14dc920ee379f6dc5fe6592b67c9a6a",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Keep delivery control containers and tabs visible without data; distinguish confirmed empty and unknown counts and reset previous date selections, notices and route drafts.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Share the date navigation markup with dispatch management and step the control date through the registered date list."
       ],
       "status": "active"
     },
@@ -388,31 +389,36 @@
       "source": "apps/combined/date-summary-toolbar.mjs",
       "sourceSha256": "a37923e8f65437be1808ce9b5d011c8b444bef7694e161dd195ab9a7d2e9caff",
       "target": "apps/web/combined/date-summary-toolbar.mjs",
-      "targetSha256": "a37923e8f65437be1808ce9b5d011c8b444bef7694e161dd195ab9a7d2e9caff",
+      "targetSha256": "9f7d96499a1f44526a654baac33d892ea20e81e07b1f0b595adf1a0d348cb406",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
-      "changes": [],
+      "changes": [
+        "Provide the shared date navigation markup used by dispatch management and delivery control."
+      ],
       "status": "active"
     },
     {
       "source": "apps/combined/date-summary-toolbar.test.mjs",
       "sourceSha256": "55bd07b865d77cbc6713ad464054aaacb880863c507f5be5fc2039a985100b4a",
       "target": "apps/web/combined/date-summary-toolbar.test.mjs",
-      "targetSha256": "55bd07b865d77cbc6713ad464054aaacb880863c507f5be5fc2039a985100b4a",
+      "targetSha256": "f20a4f5611dc780eb9d2d98680bcd910037e4fc70f98b419b44d682eb189359e",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
-      "changes": [],
+      "changes": [
+        "Expect the two-count date summary."
+      ],
       "status": "active"
     },
     {
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "30f97e4cc448b47c81c7ccdd96658a5b6e8702fd7c2149b8d5acb834abb86a9b",
+      "targetSha256": "0b3f5c8177adf3a347c292910b7a8c456f81c9174d73a7168d62947e9b01fb28",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Remove unused escaping helper, selection value and catch binding; retain update argument position",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Name the connected state for operational data without changing source or command contracts."
+        "Name the connected state for operational data without changing source or command contracts.",
+        "Use the shared date navigation with a today shortcut and drop the candidate-vehicle count from the date summary."
       ],
       "status": "active"
     },
@@ -420,11 +426,12 @@
       "source": "apps/combined/dated-dispatch.test.mjs",
       "sourceSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c",
       "target": "apps/web/combined/dated-dispatch.test.mjs",
-      "targetSha256": "8950c06e9893f80515393280157bfcb7726652f9b5dbd9e92b04ff855e66596b",
+      "targetSha256": "91eac2e814f927e64c351bd5b764a7c0e58fbcdd9b9cfcbdc8fa494e020709db",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Use one transient empty-data notification while retaining work areas and persistent errors."
+        "Use one transient empty-data notification while retaining work areas and persistent errors.",
+        "Resolve shared date navigation selectors and expect the two-count date summary."
       ],
       "status": "active"
     },
@@ -895,12 +902,13 @@
       "source": "apps/combined/operations.css",
       "sourceSha256": "97acc70d352b0fe56833669611ef10b4ffbdab2f56a79e3f891ac9af4dc86b4b",
       "target": "apps/web/combined/operations.css",
-      "targetSha256": "8db9b2d9d55e88e993229fa937e14d94bbf5c9e1b66c45c268d57e08b9f764f2",
+      "targetSha256": "0a4cc62da5c286b9cbe37d50272f9ab2f04f1714022968c7e631fe22806b22fd",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Use the shared 6px --radius for the customer-notice textarea instead of 4px; retain dense row and utility control dimensions",
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Remove control date rules now owned by date-summary-toolbar.css."
       ],
       "status": "active"
     },
@@ -908,7 +916,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "96c5a794f79e3767d7fa1ff3933da974ab3a286652d1bb0d76f962a0afa3537c",
+      "targetSha256": "24f3a2172bd55af05be4070787e3b399715e1423c3e80f67a8f87a3ea3acca00",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -917,7 +925,8 @@
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
         "Style the multi-select controls and the drag rectangle",
         "Style the zone volume table and the delivery popup",
-        "Style the zone drivers column and the two popup buttons"
+        "Style the zone drivers column and the two popup buttons",
+        "Remove dispatch date rules now owned by date-summary-toolbar.css and let the desktop planning layout fill the viewport with internal scrolling."
       ],
       "status": "active"
     },
@@ -1295,12 +1304,13 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/shell.css",
-      "targetSha256": "a1911fe6168e595f67978ea3f1946876402f4acc0fb99357ba32925fafa91379",
+      "targetSha256": "3c5f5823c81ee564db0cf716dd6b7accedbe32803835e2e0b57f51ecec7fb386",
       "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 57-344 into a dedicated stylesheet",
         "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Align the brand with the portal header, center navigation labels, and fill the desktop viewport with the app shell so each work area scrolls on its own."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1377,11 +1387,12 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/responsive.css",
-      "targetSha256": "f76d7d9b1efa7c3a0472f1742c32140e642b16054899d806af5dd9ae3d396f36",
+      "targetSha256": "85ca10db61164c9f603b5128ecabbaa1ce786cbaab973596244ec9d1b92436f1",
       "reason": "Derive the responsive stylesheet from original lines 1306-1449; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1306-1449 into a dedicated stylesheet",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Scale the brand logo on narrow screens to match the portal header."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1454,11 +1465,12 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/date-summary-toolbar.css",
-      "targetSha256": "4a8ff064b50623282dec8969afe97ac9d8b2f1b7befab1ea64951def65cf7718",
+      "targetSha256": "0b6004057aaec1bb7e6070aadd35997c90bd244fca6c4dadc640de903a949a7c",
       "reason": "Derive the date-summary-toolbar stylesheet from original lines 268-323; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 268-323 into a dedicated stylesheet",
-        "Center date controls and summary cards using the shared component tokens."
+        "Center date controls and summary cards using the shared component tokens.",
+        "Own the shared date navigation layout (label, previous/next, picker, today) for both operational screens."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1473,13 +1485,14 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "6e1be390ef8d6c7a019883c1b50764c4cc20fed5728ffafbac55f5872bf9f908",
+      "targetSha256": "cb9b1fc9255f1d133851bc335ccfaff18e62f1600eca627cf360b80bea7dae82",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Use the shared 44px --control-height for the management target selector instead of 42px; retain dense row and utility control dimensions",
         "Use the existing map container and theme tokens for empty delivery control status.",
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Fill the desktop viewport with the control layout so lists and the map scroll on their own."
       ],
       "status": "active"
     },

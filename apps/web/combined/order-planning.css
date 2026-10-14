@@ -69,11 +69,6 @@
 .order-location-info > summary { min-height: 44px; align-content: center; cursor: pointer; }
 .order-location-info > p { margin: 0 0 14px; line-height: 1.6; }
 
-.dispatch-date-picker { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
-.dispatch-date-picker > span { margin-right: 8px; font-weight: 600; }
-.dispatch-date-picker .button { display: inline-grid; place-items: center; width: 44px; min-width: 44px; height: 44px; padding: 0; }
-.dispatch-date-picker [data-dispatch-prev] svg { transform: rotate(180deg); }
-.dispatch-date-picker [data-dispatch-date] { min-width: 0; }
 .dispatch-readonly { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: #7a4e11; background: #fffaf0; border-left: 2px solid #d6a443; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .dispatch-source-info { position: relative; margin-left: auto; font-size: 12px; }
 .dispatch-source-info > summary { padding: 12px 0; cursor: pointer; }
@@ -109,9 +104,6 @@
 [data-order-list] > button > b { text-align: right; }
 .order-list-pages { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 12px; font-size: 12px; }
 @media (max-width: 700px) {
-  .dispatch-date-picker { display: grid; grid-template-columns: 32px minmax(0, 1fr) 32px; width: 100%; gap: 6px; }
-  .dispatch-date-picker > span { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 11px; }
-  .dispatch-date-picker .button { width: 32px; min-width: 32px; height: 44px; }
   .dispatch-source-info { font-size: 11px; }
   .dispatch-source-info > div { top: 36px; }
   .order-map-heading { gap: 10px; padding: 12px; }
@@ -182,3 +174,13 @@
 .order-zone-hover strong { margin-bottom: 2px; color: var(--text); font-size: 13px; }
 .order-zone-hover span { font-weight: 600; }
 .order-zone-hover small { margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 861px) {
+  #order-planning, [data-dispatch-planning] { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  [data-dispatch-planning][hidden] { display: none; }
+  .order-planning-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); min-height: 520px; }
+  .order-vehicle-panel, .order-map-panel { display: flex; flex-direction: column; min-height: 0; }
+  .order-vehicle-list { flex: 1 1 auto; min-height: 120px; max-height: none; }
+  .order-map-canvas { flex: 1 1 auto; min-height: 240px; }
+  .order-zone-volume[open] { flex: 0 1 auto; min-height: 140px; overflow: auto; }
+  .order-zone-volume[open] > summary { position: sticky; top: 0; z-index: 1; background: #fff; }
+}
