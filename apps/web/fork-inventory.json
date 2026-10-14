@@ -1485,14 +1485,15 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "cb9b1fc9255f1d133851bc335ccfaff18e62f1600eca627cf360b80bea7dae82",
+      "targetSha256": "b3904c0d1c1deaa76495e1a497583c7201b3d4fccd9dbc36534b80aa39df33a3",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Use the shared 44px --control-height for the management target selector instead of 42px; retain dense row and utility control dimensions",
         "Use the existing map container and theme tokens for empty delivery control status.",
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
-        "Fill the desktop viewport with the control layout so lists and the map scroll on their own."
+        "Fill the desktop viewport with the control layout so lists and the map scroll on their own.",
+        "Bound the desktop control grid row so long vehicle and stop lists scroll inside their panels instead of growing the page."
       ],
       "status": "active"
     },
