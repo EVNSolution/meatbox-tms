@@ -12,6 +12,11 @@ export const colors = {
   amber: '#a15c00',
   error: '#b42318',
   done: '#9aa0a8',
+  greenTint: '#eaf6ee',
+  amberTint: '#fdf3e1',
+  errorTint: '#fcebeb',
+  greenOnDark: '#4ade80',
+  overlay: 'rgba(17, 24, 20, 0.62)',
   scrim: 'rgba(33, 35, 34, 0.42)',
 } as const;
 
