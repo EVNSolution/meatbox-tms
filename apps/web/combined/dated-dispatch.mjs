@@ -68,7 +68,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     host.hidden = false; workflowHost.hidden = false;
     planning.clear({ empty, message: text });
     workflow.update(null, false, { date: selectedDate, empty });
-    if (empty) toolbarSummary.update([['주문', 0], ['박스', 0], ['후보 차량', 0]]);
+    if (empty) toolbarSummary.update([['주문', 0], ['박스', 0]]);
     else toolbarSummary.clear();
   }
   function display() {
@@ -88,8 +88,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   function renderSummary() {
     if (loading || !current) { toolbarSummary.clear(); return; }
     const { orders, boxes } = current.summary;
-    const groups = Number.isFinite(current.summary.groups) ? current.summary.groups : current.groups.length;
-    toolbarSummary.update([['주문', orders], ['박스', boxes], ['후보 차량', groups]]);
+    toolbarSummary.update([['주문', orders], ['박스', boxes]]);
   }
   function setNavigation(date) {
     const today = now();

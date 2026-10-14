@@ -14,9 +14,9 @@ test('두 운영 화면은 같은 날짜 툴바 구조에 날짜 동작과 집�
 test('날짜 집계는 항목을 갱신하고 로딩 또는 빈 상태에서 이전 수치를 지운다', () => {
   const summary = { hidden: true, innerHTML: '' };
   const toolbar = mountDateSummaryToolbar({ querySelector: selector => selector === '[data-date-summary]' ? summary : null });
-  toolbar.update([['주문', 1234], ['박스', 5678], ['후보 차량', 31]]);
+  toolbar.update([['주문', 1234], ['박스', 5678]]);
   assert.equal(summary.hidden, false);
-  assert.match(summary.innerHTML, /주문.*1,234.*박스.*5,678.*후보 차량.*31/);
+  assert.match(summary.innerHTML, /주문.*1,234.*박스.*5,678/);
   toolbar.clear();
   assert.equal(summary.hidden, true);
   assert.equal(summary.innerHTML, '');

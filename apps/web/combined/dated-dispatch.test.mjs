@@ -189,7 +189,7 @@ test('초기 갱신은 manifest, 권역, 기본일을 한 번만 읽고 미배�
   assert.doesNotMatch(element.innerHTML, /type="date"|data-dispatch-weekday|data-dispatch-date-count/);
   assert.equal(dated.summary(), source.summary);
   assert.equal(nodes.summary.hidden, false);
-  assert.match(nodes.summary.innerHTML, /주문.*1.*박스.*2.*후보 차량.*1/);
+  assert.match(nodes.summary.innerHTML, /주문.*1.*박스.*2/);
   assert.match(replaced.at(-1), /\?date=2025-09-15$/);
   dated.destroy();
 });
@@ -244,7 +244,7 @@ test('빠른 날짜 변경은 늦게 끝난 이전 응답을 버리고 최신 �
   assert.equal(planning.mounts[0].updates.at(-1)[0].dispatchSource.date, '2025-09-17');
   assert.equal(dated.summary().orders, 1);
   assert.equal(nodes.summary.hidden, false);
-  assert.match(nodes.summary.innerHTML, /주문.*1.*박스.*2.*후보 차량.*5/);
+  assert.match(nodes.summary.innerHTML, /주문.*1.*박스.*2/);
   dated.destroy();
 });
 
@@ -295,7 +295,7 @@ test('준비되지 않은 날짜는 이전 주문을 지우고 빈 배차 영역
   assert.equal(calls.length, before);
   assert.equal(nodes.planning.hidden, false);
   assert.equal(nodes.summary.hidden, false);
-  assert.match(nodes.summary.innerHTML, /주문.*0.*박스.*0.*후보 차량.*0/);
+  assert.match(nodes.summary.innerHTML, /주문.*0.*박스.*0/);
   assert.equal(planning.mounts[0].cleared.at(-1).empty, true);
   assert.equal(nodes.status.hidden, true);
   assert.equal(nodes.status.textContent, '');
@@ -343,7 +343,7 @@ test('관제에서 자료 없는 날짜로 바꾼 뒤 배차로 돌아오면 이
   await waitFor(() => dated.status().empty);
   assert.equal(nodes.date.value, '2026-09-28');
   assert.equal(nodes.summary.hidden, false);
-  assert.match(nodes.summary.innerHTML, /주문.*0.*박스.*0.*후보 차량.*0/);
+  assert.match(nodes.summary.innerHTML, /주문.*0.*박스.*0/);
   assert.equal(nodes.planning.hidden, false);
   assert.equal(calls.length, before);
   dated.destroy();
