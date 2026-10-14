@@ -3,10 +3,12 @@ export function mountStatusNotification({ element, duration = 5000, clock = {
   setTimeout: (callback, delay) => setTimeout(callback, delay),
   clearTimeout: timer => clearTimeout(timer),
 } }) {
-  element.innerHTML = '<p data-status-message role="status" aria-live="polite" aria-atomic="true"></p><button type="button" data-status-close aria-label="알림 닫기">×</button>';
+  element.innerHTML = '<p data-status-message role="status" aria-live="polite" aria-atomic="true"></p><button type="button" class="button subtle" data-status-action hidden></button><button type="button" data-status-close aria-label="알림 닫기">×</button>';
   element.hidden = true;
   const messageNode = element.querySelector('[data-status-message]');
   const closeButton = element.querySelector('[data-status-close]');
+  const actionButton = element.querySelector('[data-status-action]');
+  let action = null;
   let context, lastKey, timer = null, deadline = 0, remaining = duration, destroyed = false;
   const paused = new Set();
   const listeners = [];
@@ -19,10 +21,12 @@ export function mountStatusNotification({ element, duration = 5000, clock = {
     cancelTimer();
     element.hidden = true;
     messageNode.textContent = '';
+    action = null; actionButton.hidden = true; actionButton.textContent = '';
+    delete element.dataset.tone;
     paused.clear();
   }
   function schedule() {
-    if (destroyed || element.hidden || paused.size || timer !== null) return;
+    if (destroyed || element.hidden || paused.size || timer !== null || !duration) return;
     deadline = clock.now() + remaining;
     timer = clock.setTimeout(() => { timer = null; dismiss(); }, remaining);
   }
@@ -37,8 +41,9 @@ export function mountStatusNotification({ element, duration = 5000, clock = {
   listen(element, 'focusin', () => pause('focus'));
   listen(element, 'focusout', event => { if (!element.contains(event.relatedTarget)) resume('focus'); });
   listen(closeButton, 'click', dismiss);
+  listen(actionButton, 'click', () => action?.());
   return {
-    update({ context: nextContext, key, message = '' }) {
+    update({ context: nextContext, key, message = '', action: nextAction = null, tone = '' }) {
       if (destroyed) return;
       if (context !== nextContext) { dismiss(); context = nextContext; lastKey = undefined; }
       if (!message || !key) { dismiss(); return; }
@@ -46,6 +51,10 @@ export function mountStatusNotification({ element, duration = 5000, clock = {
       dismiss(); lastKey = key; remaining = duration;
       element.hidden = false;
       messageNode.textContent = message;
+      action = nextAction?.run || null;
+      actionButton.hidden = !nextAction;
+      actionButton.textContent = nextAction?.label || '';
+      if (tone) element.dataset.tone = tone; else delete element.dataset.tone;
       if (element.matches?.(':hover')) paused.add('hover');
       if (element.contains(element.ownerDocument?.activeElement)) paused.add('focus');
       schedule();

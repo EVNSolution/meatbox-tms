@@ -30,10 +30,7 @@
       <section class="page-intro" aria-labelledby="page-heading">
         <div><h1 id="page-heading" tabindex="-1">배차 관리</h1><p class="intro-copy" id="page-description">차량별 배정과 전체 주문 위치</p></div>
       </section>
-      <div id="status-notification" class="status-notification" hidden></div>
-      <section class="connection-panel view-content" id="connection-panel" aria-live="polite">
-        <div class="panel loading-state"><span class="loading-dot" aria-hidden="true"></span><div><strong id="connection-title">배송 정보를 불러오고 있습니다.</strong><p id="connection-detail">잠시만 기다려 주세요.</p></div><button type="button" class="button" id="retry-connection" hidden>다시 연결</button></div>
-      </section>
+      <div class="toast-stack"><div id="progress-notification" class="status-notification" hidden></div><div id="status-notification" class="status-notification" hidden></div></div>
       <div id="live-pages" hidden>
         <section id="page-deliveries" class="page-view view-content" data-page="deliveries" aria-label="자원 관리">
           <div id="resource-management"></div>
@@ -43,7 +40,6 @@
         </section>
         <section id="page-control" class="page-view view-content" data-page="control" aria-label="배송 관제" hidden>
           <div id="control-date-toolbar"></div>
-          <p class="control-empty panel" id="control-empty" hidden></p>
           <div id="vehicle-control"></div>
         </section>
       </div>

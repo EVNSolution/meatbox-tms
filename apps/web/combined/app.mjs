@@ -37,6 +37,8 @@ function mountOperationalShell() {
 }
 mountOperationalShell();
 const statusNotification = mountStatusNotification({ element: byId('status-notification') });
+const progressNotification = mountStatusNotification({ element: byId('progress-notification'), duration: 0 });
+const reloadAction = { label: '다시 연결', run: () => location.reload() };
 document.querySelectorAll('[data-field-icon]').forEach(element => { element.innerHTML = referenceIcon(element.dataset.fieldIcon); });
 byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'date-nav', summaryLabel: '선택 관제일 요약', actions: dateNavActions('조회 날짜', 'id="control-date-picker"'), context: '<span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span>' });
 const controlSummaryToolbar = mountDateSummaryToolbar(byId('control-date-toolbar'));
@@ -74,7 +76,8 @@ const orderPlanning = mountDatedDispatch({ element: byId('order-planning'), onSe
     const result = await operations.send('reassign', extra);
     if (!result) throw new Error('배정을 변경하지 못했습니다. 현재 주문 상태를 확인해 주세요.');
     return { ...result, shared: true };
-  }, onContextChange: () => { if (state.data) { renderSummary(); syncDispatchContext(); } renderStatusNotification(); } });
+  }, onContextChange: () => { if (state.data) { renderSummary(); syncDispatchContext(); } renderStatusNotification(); },
+  notify: notice => { state.dispatchNotice = notice.message ? notice : null; renderProgress(); } });
 mountResourceManagement({ element: byId('resource-management'), onEmptyChange: empty => { resourcesEmpty = empty; renderStatusNotification(); } });
 function selectDelivery(id) {
   state.selectedId = id;
@@ -104,20 +107,13 @@ const operations = connectOperations({
   onStatus(connected, message) {
     state.connected = connected;
     state.connectionMessage = message;
-    byId('connection-panel').hidden = connected || state.page === 'deliveries';
+    state.errorNotice = '';
     byId('live-pages').hidden = false;
-    byId('connection-title').textContent = message;
-    byId('retry-connection').hidden = connected;
-    byId('connection-detail').textContent = connected ? '' : '연결이 복구되면 같은 진행 상태를 이어갑니다.';
     syncDispatchContext();
     render();
   },
   onError: message => {
-    if (!routeEditor.showError(message)) {
-      byId('connection-title').textContent = message;
-      byId('retry-connection').hidden = false;
-      byId('connection-panel').hidden = false;
-    }
+    if (!routeEditor.showError(message)) { state.errorNotice = message; renderProgress(); }
   },
 });
 
@@ -130,9 +126,9 @@ function render() {
   renderPage();
   renderControlDate();
   renderStatusNotification();
+  renderProgress();
   byId('vehicle-control').hidden = false;
   byId('live-pages').hidden = false;
-  byId('connection-panel').hidden = state.connected || state.page === 'deliveries';
   if (state.page === 'orders') orderPlanning.update(state.data, state.selectedId, state.dateContext?.date);
   if (!state.data) {
     const presentation = controlDataPresentation(state.dateContext, state.connectionMessage);
@@ -195,10 +191,18 @@ function renderControlDate() {
   controlDateButton('prev').disabled = !context || index <= 0;
   controlDateButton('next').disabled = !context || index < 0 || index >= dates.length - 1;
   byId('control-readonly').hidden = !(validOperatingDate(date) && date < today || state.data?.dispatch?.readOnly);
-  const empty = byId('control-empty');
-  const presentation = controlDataPresentation(context, state.connectionMessage);
-  empty.hidden = Boolean(state.data) || presentation.empty;
-  empty.textContent = empty.hidden ? '' : presentation.message;
+}
+
+function renderProgress() {
+  let notice = null;
+  if (state.errorNotice) notice = { message: state.errorNotice, action: reloadAction, tone: 'error' };
+  else if (!state.connected && state.page !== 'deliveries') notice = { message: state.connectionMessage, action: reloadAction };
+  else if (state.page === 'orders' && state.dispatchNotice) notice = { message: state.dispatchNotice.message, action: state.dispatchNotice.retry ? { label: '다시 불러오기', run: state.dispatchNotice.retry } : null, tone: state.dispatchNotice.failed ? 'error' : '' };
+  else if (state.page === 'control' && !state.data) {
+    const presentation = controlDataPresentation(state.dateContext, state.connectionMessage);
+    if (!presentation.empty) notice = { message: presentation.message };
+  }
+  progressNotification.update({ context: 'progress', key: notice ? `${notice.message}|${notice.action?.label || ''}` : undefined, message: notice?.message || '', action: notice?.action || null, tone: notice?.tone || '' });
 }
 
 function renderStatusNotification() {
@@ -268,12 +272,12 @@ window.addEventListener('hashchange', () => {
 window.addEventListener('pagehide', event => {
   if (event.persisted) return;
   statusNotification.destroy();
+  progressNotification.destroy();
   operations.close();
   orderPlanning.destroy();
   vehicleControl.destroy();
   controlDatePicker.destroy();
 });
-byId('retry-connection').addEventListener('click', () => location.reload());
 document.querySelector('.skip-link').addEventListener('click', event => { event.preventDefault(); byId('page-heading').focus(); });
 normalizeRoute();
 
