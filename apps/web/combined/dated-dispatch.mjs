@@ -38,15 +38,13 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   const response = await fetch(url, { signal });
   if (!response.ok) { const error = new Error('자료를 불러오지 못했습니다.'); error.status = response.status; throw error; }
   return response.json();
-}, planningFactory = mountOrderPlanning, datePickerFactory = mountDatePicker, workflowFactory = mountDispatchWorkflow }) {
-  element.innerHTML = `${dateSummaryToolbar({ label: '배차 날짜', actionsClass: 'date-nav', attributes: 'data-dispatch-toolbar hidden', summaryLabel: '선택 배차일 요약', actions: dateNavActions('배차일', 'data-dispatch-date'), context: '<span class="dispatch-readonly" data-dispatch-readonly hidden>이력 조회 · 읽기 전용</span>' })}<p class="dispatch-data-message" data-dispatch-status role="status">배차 정보를 확인하고 있습니다.</p><button type="button" class="button" data-dispatch-retry hidden>다시 불러오기</button><div data-dispatch-workflow hidden></div><div data-dispatch-planning hidden></div>`;
+}, planningFactory = mountOrderPlanning, datePickerFactory = mountDatePicker, workflowFactory = mountDispatchWorkflow, notify = () => {} }) {
+  element.innerHTML = `${dateSummaryToolbar({ label: '배차 날짜', actionsClass: 'date-nav', attributes: 'data-dispatch-toolbar hidden', summaryLabel: '선택 배차일 요약', actions: dateNavActions('배차일', 'data-dispatch-date'), context: '<span class="dispatch-readonly" data-dispatch-readonly hidden>이력 조회 · 읽기 전용</span>' })}<div data-dispatch-workflow hidden></div><div data-dispatch-planning hidden></div>`;
   const query = selector => element.querySelector(selector);
   const toolbar = query('[data-dispatch-toolbar]');
   const toolbarSummary = mountDateSummaryToolbar(toolbar);
   let selectedDate = null, externalDate;
   const datePicker = datePickerFactory({ element: query('[data-dispatch-date]'), label: '배차일', onChange: date => { if (regions) selectDate(date); } });
-  const status = query('[data-dispatch-status]');
-  const retry = query('[data-dispatch-retry]');
   const host = query('[data-dispatch-planning]');
   const workflowHost = query('[data-dispatch-workflow]');
   const readOnly = query('[data-dispatch-readonly]');
@@ -82,8 +80,9 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     workflowHost.hidden = !operational?.dispatch;
     workflow.update(operational, Boolean(operational));
   }
+  function retryLoad() { if (regions && manifest) selectDate(selectedDate); else start(); }
   function message(text, failed = false) {
-    status.textContent = text; status.hidden = !text; status.dataset.error = String(failed); retry.hidden = !failed;
+    notify({ message: text, failed, retry: failed ? retryLoad : null });
   }
   function renderSummary() {
     if (loading || !current) { toolbarSummary.clear(); return; }
@@ -170,7 +169,6 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   listen(previous, 'click', () => { const index = manifest.dates.findIndex(item => item.date === selectedDate); if (index > 0) selectDate(manifest.dates[index - 1].date); });
   listen(next, 'click', () => { const index = manifest.dates.findIndex(item => item.date === selectedDate); if (index >= 0 && index < manifest.dates.length - 1) selectDate(manifest.dates[index + 1].date); });
   listen(todayButton, 'click', () => selectDate(now()));
-  listen(retry, 'click', () => { if (regions && manifest) selectDate(selectedDate); else start(); });
   return {
     update(data, _selectedId, contextDate) {
       operationalData = data;
@@ -187,6 +185,6 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     usesSource: () => available !== false,
     status: () => ({ date: selectedDate, empty: confirmedEmpty && !loading }),
     summary: () => loading ? null : current?.summary || null,
-    destroy() { destroyed = true; epoch++; controller?.abort(); planning?.destroy(); workflow.destroy(); datePicker.destroy(); listeners.forEach(remove => remove()); },
+    destroy() { destroyed = true; epoch++; controller?.abort(); notify({ message: '', failed: false, retry: null }); planning?.destroy(); workflow.destroy(); datePicker.destroy(); listeners.forEach(remove => remove()); },
   };
 }

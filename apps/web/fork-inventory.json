@@ -10,7 +10,7 @@
   ],
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
-  "targetFileCount": 99,
+  "targetFileCount": 98,
   "authoredFileCount": 36,
   "records": [
     {
@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "ed417d2f73fbc018a0dbe09d995de393f14dc920ee379f6dc5fe6592b67c9a6a",
+      "targetSha256": "fb640ecb0f67e652c38e3925d97a48654cf5ba7e9bb28abd83b3d55b1645f194",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -36,7 +36,8 @@
         "Keep delivery control containers and tabs visible without data; distinguish confirmed empty and unknown counts and reset previous date selections, notices and route drafts.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
-        "Share the date navigation markup with dispatch management and step the control date through the registered date list."
+        "Share the date navigation markup with dispatch management and step the control date through the registered date list.",
+        "Show connection, dispatch loading and control loading notices in a sticky top toast with reload/retry actions instead of in-flow panels."
       ],
       "status": "active"
     },
@@ -411,14 +412,15 @@
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "0b3f5c8177adf3a347c292910b7a8c456f81c9174d73a7168d62947e9b01fb28",
+      "targetSha256": "3c31d3a2137aae06df18fa2cad4f71234bc9209701c30194980ddfce5daaaf8c",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Remove unused escaping helper, selection value and catch binding; retain update argument position",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Name the connected state for operational data without changing source or command contracts.",
-        "Use the shared date navigation with a today shortcut and drop the candidate-vehicle count from the date summary."
+        "Use the shared date navigation with a today shortcut and drop the candidate-vehicle count from the date summary.",
+        "Report loading and failure notices through a notify callback instead of an in-flow message and retry button."
       ],
       "status": "active"
     },
@@ -426,12 +428,13 @@
       "source": "apps/combined/dated-dispatch.test.mjs",
       "sourceSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c",
       "target": "apps/web/combined/dated-dispatch.test.mjs",
-      "targetSha256": "91eac2e814f927e64c351bd5b764a7c0e58fbcdd9b9cfcbdc8fa494e020709db",
+      "targetSha256": "fd1108cf1f05b9383113484149d5c2ba3d87008e7d25394c5b29575462444b1a",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Resolve shared date navigation selectors and expect the two-count date summary."
+        "Resolve shared date navigation selectors and expect the two-count date summary.",
+        "Route notices through the notify callback in the DOM fixture."
       ],
       "status": "active"
     },
@@ -785,7 +788,7 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "d488820d062697003ede915051729f61f8065891f26ad737376bc8fb4834a613",
+      "targetSha256": "4a2356ef64b7ec4927ba5f945f3f10ebdd5a85446edeaa09a184e38b1c6a594c",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -794,7 +797,8 @@
         "Load operational date-picker styling directly after retiring the demo shell.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
-        "Load the driver messaging and printable pickup QR stylesheet inside the existing operational frontend."
+        "Load the driver messaging and printable pickup QR stylesheet inside the existing operational frontend.",
+        "Replace the in-flow connection panel and control notice with a fixed toast stack."
       ],
       "status": "active"
     },
@@ -902,13 +906,14 @@
       "source": "apps/combined/operations.css",
       "sourceSha256": "97acc70d352b0fe56833669611ef10b4ffbdab2f56a79e3f891ac9af4dc86b4b",
       "target": "apps/web/combined/operations.css",
-      "targetSha256": "0a4cc62da5c286b9cbe37d50272f9ab2f04f1714022968c7e631fe22806b22fd",
+      "targetSha256": "4569cf7b9f6fadc67d87daa8f925704a8c5e25a798eab8c4e894d1950b328dea",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Use the shared 6px --radius for the customer-notice textarea instead of 4px; retain dense row and utility control dimensions",
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
-        "Remove control date rules now owned by date-summary-toolbar.css."
+        "Remove control date rules now owned by date-summary-toolbar.css.",
+        "Remove the in-flow control notice rule replaced by the toast."
       ],
       "status": "active"
     },
@@ -916,7 +921,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "24f3a2172bd55af05be4070787e3b399715e1423c3e80f67a8f87a3ea3acca00",
+      "targetSha256": "c1d2adfc5df4cecddbe433db215eeafcc31d8423c4be063aea897445b549e337",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -926,7 +931,8 @@
         "Style the multi-select controls and the drag rectangle",
         "Style the zone volume table and the delivery popup",
         "Style the zone drivers column and the two popup buttons",
-        "Remove dispatch date rules now owned by date-summary-toolbar.css and let the desktop planning layout fill the viewport with internal scrolling."
+        "Remove dispatch date rules now owned by date-summary-toolbar.css and let the desktop planning layout fill the viewport with internal scrolling.",
+        "Remove the in-flow dispatch message rules replaced by the toast."
       ],
       "status": "active"
     },
@@ -1273,11 +1279,12 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles.css",
-      "targetSha256": "d569f0053e0a761b424d92f096be3ee95ed1a87aa37759125a4ef24db2799852",
+      "targetSha256": "5fa54c9e14a571c0cbe8705b28d776f7480a1fc682b64b7a716970880bcb144b",
       "reason": "Replace the monolithic CSS entry with explicit original-order imports; fragments preserve complete original line-range provenance and reviewed shared-theme/date-toolbar changes.",
       "changes": [
         "Split the original complete CSS cascade into explicit responsibility fragments while preserving their import order",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Stop importing the retired live-state fragment."
       ],
       "status": "active"
     },
@@ -1304,13 +1311,14 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/shell.css",
-      "targetSha256": "3c5f5823c81ee564db0cf716dd6b7accedbe32803835e2e0b57f51ecec7fb386",
+      "targetSha256": "9ada8475784e853a8030be59f1d247ca14f11422fd45e1bbf30db1c3c17d0015",
       "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 57-344 into a dedicated stylesheet",
         "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
-        "Align the brand with the portal header, center navigation labels, and fill the desktop viewport with the app shell so each work area scrolls on its own."
+        "Align the brand with the portal header, center navigation labels, and fill the desktop viewport with the app shell so each work area scrolls on its own.",
+        "Drop the connection panel from the desktop app shell."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1411,7 +1419,8 @@
       "reason": "Derive the live stylesheet from original lines 1450-1525; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1450-1525 into a dedicated stylesheet",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Removed with the in-flow connection panel; loading state moved to the toast."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1420,7 +1429,9 @@
         "extractedSha256": "b2e39051b3caba138c58d9c85437300f7e88723f2f7df57ec445fae78af59282",
         "evidence": "apps/web/.runtime/design-proof/css-split-proof.json"
       },
-      "status": "active"
+      "status": "removed",
+      "removalReason": "Retired the in-flow loading/connection panel; its loading state now appears in the fixed toast stack.",
+      "removedOn": "2026-10-14"
     },
     {
       "source": "apps/combined/styles.css",
@@ -2324,22 +2335,22 @@
     {
       "path": "apps/web/src/shared/ui/status-notification.mjs",
       "origin": "authored",
-      "sha256": "433c416e256fa99230c36784b9bd65e5654d967d14f82b8b20cdc64d1e25211a",
-      "reason": "Own transient, dismissible empty-data notifications with duplicate suppression and hover or focus pause.",
+      "sha256": "28d20e5889b3ecb80ffff701b041a9aacda739ecb59fdff22715fb0bee58064e",
+      "reason": "Own transient, dismissible empty-data notifications with duplicate suppression and hover or focus pause. Support a sticky duration, an action button and an error tone.",
       "status": "active"
     },
     {
       "path": "apps/web/src/shared/ui/status-notification.test.mjs",
       "origin": "authored",
-      "sha256": "5a70285f22ed16a606142c3455fbf4f8ab4f0f9b6d57e21ed58dddf3d4ae428b",
-      "reason": "Verify notification timing, context changes, dismissal, pause and lifecycle cleanup with a controlled clock.",
+      "sha256": "d9149bc6dae4d8e9aab6341022d5c48c927d664e71d8b2f0f59ebe58a6e01222",
+      "reason": "Verify notification timing, context changes, dismissal, pause and lifecycle cleanup with a controlled clock. Cover the sticky toast with an action button.",
       "status": "active"
     },
     {
       "path": "apps/web/combined/status-notification.css",
       "origin": "authored",
-      "sha256": "70bec8cb7a7f5961b8f57a3fac3f7cb50490ca2ee3646f53f660fd1fdf92620d",
-      "reason": "Position and size the shared top notification without replacing operational work areas.",
+      "sha256": "cad5eda532fce85cfb2c64d25e94acb8c33bad8c99d39033c57911eb8eaf87ab",
+      "reason": "Position and size the shared top notification without replacing operational work areas. Stack toasts in one fixed container and style the action button and error tone.",
       "status": "active"
     },
     {

@@ -47,4 +47,3 @@
   .detail-tabs [role="tab"] { padding-inline: 10px; font-size: 12px; }
 }
 .control-readonly { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: #7a4e11; background: #fffaf0; border-left: 2px solid #d6a443; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.control-empty { padding: 24px; color: var(--muted); }

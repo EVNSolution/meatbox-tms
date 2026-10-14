@@ -188,8 +188,7 @@ ol {
     overflow: auto;
   }
 
-  .page-intro,
-  .connection-panel { flex: none; }
+  .page-intro { flex: none; }
 
   #live-pages,
   .page-view {

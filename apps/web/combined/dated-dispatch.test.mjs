@@ -59,6 +59,7 @@ function domFixture() {
   nodes.toolbar.querySelector = selector => selector === '[data-date-summary]' ? nodes.summary : null;
   const element = new FakeNode();
   element.querySelector = selector => nodes[selector.match(/data-(?:dispatch|date)-([^\]]+)/)?.[1]];
+  element.notify = ({ message, failed }) => { nodes.status.textContent = message; nodes.status.hidden = !message; nodes.retry.hidden = !failed; };
   return { element, nodes };
 }
 
@@ -168,7 +169,7 @@ test('초기 갱신은 manifest, 권역, 기본일을 한 번만 읽고 미배�
     return source;
   };
   const selected = [];
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory, onSelect: id => selected.push(id) });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory, onSelect: id => selected.push(id) });
   const simulation = { fleetDeliveries: [{ id: 'S1' }] };
   const before = structuredClone(simulation);
   dated.update(simulation, 'S1');
@@ -197,7 +198,7 @@ test('초기 갱신은 manifest, 권역, 기본일을 한 번만 읽고 미배�
 test('과거 배차 조회는 날짜 툴바에 읽기 전용 상태를 표시한다', async t => {
   installBrowserGlobals(t, '?date=2025-09-15');
   const { element, nodes } = domFixture();
-  const dated = mountDatedDispatch({ element, fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day('2025-09-15'), planningFactory: planningSpy().factory, now: () => '2025-09-16' });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day('2025-09-15'), planningFactory: planningSpy().factory, now: () => '2025-09-16' });
   dated.update({}, null);
   await waitFor(() => nodes.summary.hidden === false);
   assert.equal(nodes.readonly.hidden, false);
@@ -207,7 +208,7 @@ test('과거 배차 조회는 날짜 툴바에 읽기 전용 상태를 표시한
 test('오늘 배차 조회는 읽기 전용 상태를 표시하지 않는다', async t => {
   installBrowserGlobals(t, '?date=2025-09-15');
   const { element, nodes } = domFixture();
-  const dated = mountDatedDispatch({ element, fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day('2025-09-15'), planningFactory: planningSpy().factory, now: () => '2025-09-15' });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day('2025-09-15'), planningFactory: planningSpy().factory, now: () => '2025-09-15' });
   dated.update({}, null);
   await waitFor(() => nodes.summary.hidden === false);
   assert.equal(nodes.readonly.hidden, true);
@@ -229,7 +230,7 @@ test('빠른 날짜 변경은 늦게 끝난 이전 응답을 버리고 최신 �
     if (url.endsWith('/2025-09-17')) return pending17.promise;
     return day('2025-09-15');
   };
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory });
   dated.update({}, null);
   await waitFor(() => planning.mounts[0]?.updates.length === 1);
   nodes.date.value = '2025-09-16'; nodes.date.dispatch('change');
@@ -259,7 +260,7 @@ test('로컬 날짜 조회 중 같은 관제 문맥의 갱신은 취소하지 �
     if (url.endsWith('/2025-09-16')) return pending16.promise;
     return day(url.split('/').at(-1));
   };
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory });
   dated.update({}, null, '2025-09-15');
   await waitFor(() => nodes.summary.hidden === false);
   nodes.date.value = '2025-09-16'; nodes.date.dispatch('change');
@@ -286,7 +287,7 @@ test('준비되지 않은 날짜는 이전 주문을 지우고 빈 배차 영역
     if (url.endsWith('/regions')) return regions;
     return day(manifest.defaultDate);
   };
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory });
   dated.update({}, null);
   await waitFor(() => planning.mounts[0]?.updates.length === 1);
   const before = calls.length;
@@ -309,7 +310,7 @@ test('원본에 등록된 날짜의 주문이 0건이면 중앙 안내 없이 �
   installBrowserGlobals(t);
   const { element, nodes } = domFixture();
   const planning = planningSpy();
-  const dated = mountDatedDispatch({ element, planningFactory: planning.factory,
+  const dated = mountDatedDispatch({ element, notify: element.notify, planningFactory: planning.factory,
     fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day(manifest.defaultDate, [], []),
   });
   dated.update(null, null);
@@ -335,7 +336,7 @@ test('관제에서 자료 없는 날짜로 바꾼 뒤 배차로 돌아오면 이
     if (url.endsWith('/regions')) return regions;
     return day(url.split('/').at(-1));
   };
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory });
   dated.update({}, null);
   await waitFor(() => nodes.summary.hidden === false);
   const before = calls.length;
@@ -354,7 +355,7 @@ test('자료 없는 날짜 선택도 운영 날짜에 전달하고 늦은 빈 �
   const { element, nodes } = domFixture();
   const planning = planningSpy(), workflow = planningSpy();
   const emptyResponse = deferred(), selected = [];
-  const dated = mountDatedDispatch({ element, planningFactory: planning.factory, workflowFactory: workflow.factory,
+  const dated = mountDatedDispatch({ element, notify: element.notify, planningFactory: planning.factory, workflowFactory: workflow.factory,
     fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day(url.split('/').at(-1)),
     onDateChange: date => {
       selected.push(date);
@@ -385,7 +386,7 @@ test('날짜 조회 실패 시 이전 날짜의 집계를 남기지 않는다', 
     if (url.endsWith('/2025-09-16')) throw new Error('timeout');
     return day('2025-09-15');
   };
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory });
   dated.update({}, null);
   await waitFor(() => nodes.summary.hidden === false);
   nodes.date.value = '2025-09-16'; nodes.date.dispatch('change');
@@ -403,7 +404,7 @@ test('초기 연결보다 주문이 먼저 도착해도 같은 날짜의 운영 
   const planning = planningSpy();
   const operational = { sourceData: { date: manifest.defaultDate }, dispatch: { phase: 'unplanned' }, fleetDeliveries: [] };
   let selections = 0, dayFetches = 0;
-  const dated = mountDatedDispatch({ element, planningFactory: planning.factory,
+  const dated = mountDatedDispatch({ element, notify: element.notify, planningFactory: planning.factory,
     onDateChange: async () => ++selections === 1 ? null : operational,
     fetchJSON: async url => {
       if (url.endsWith('/manifest')) return manifest;
@@ -433,7 +434,7 @@ test('manifest 404에서도 이전 시나리오를 표시하지 않는다', asyn
   const planning = planningSpy();
   const selected = [];
   const fetchJSON = async () => { const error = new Error('not installed'); error.status = 404; throw error; };
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory, onSelect: id => selected.push(id) });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory, onSelect: id => selected.push(id) });
   const simulation = { fleetDeliveries: [{ id: 'S1' }] };
   dated.update(simulation, 'S1');
   await waitFor(() => nodes.retry.hidden === false);
@@ -455,7 +456,7 @@ test('형식 오류와 시간 초과는 가짜 기존 시나리오로 바꾸지 
   ]) {
     const { element, nodes } = domFixture();
     const planning = planningSpy();
-    const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+    const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory });
     dated.update({ fleetDeliveries: [{ id: 'S1' }] }, 'S1');
     await waitFor(() => nodes.retry.hidden === false);
     assert.equal(planning.mounts.length, 1);
@@ -476,7 +477,7 @@ test('날짜 전환은 전달받은 시뮬레이션과 날짜 원본을 변경�
   const simulation = { vehicle: { id: 'V1' }, fleetDeliveries: [{ id: 'S1', boxes: 8 }] };
   const beforeSimulation = structuredClone(simulation);
   const fetchJSON = async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : days[url.split('/').at(-1)];
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory });
   dated.update(simulation, 'S1');
   await waitFor(() => planning.mounts[0]?.updates.length === 1);
   nodes.date.value = '2025-09-17'; nodes.date.dispatch('change');
@@ -500,7 +501,7 @@ test('URL 없이 다시 열면 세션 과거 날짜 대신 실제 오늘의 빈 
   };
   const { element, nodes } = domFixture();
   const planning = planningSpy();
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory, now: () => '2026-09-27' });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory, now: () => '2026-09-27' });
   dated.update(null, null);
   await waitFor(() => nodes.toolbar.hidden === false && dated.status().empty);
   assert.deepEqual(requested, []);
@@ -530,7 +531,7 @@ test('URL 날짜는 저장된 날짜보다 우선한다', async t => {
     requested.push(url.split('/').at(-1));
     return day(url.split('/').at(-1));
   };
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory });
   dated.update({}, null);
   await waitFor(() => planning.mounts[0]?.updates.length === 1);
   assert.deepEqual(requested, ['2025-09-16']);
@@ -551,7 +552,7 @@ test('저장 날짜가 있어도 URL 없이 실제 오늘을 선택한다', asyn
     requested.push(url.split('/').at(-1));
     return day(url.split('/').at(-1));
   };
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory, now: () => '2026-09-27' });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory, now: () => '2026-09-27' });
   dated.update(null, null);
   await waitFor(() => dated.status().empty);
   assert.deepEqual(requested, []);
@@ -566,7 +567,7 @@ test('세션 저장소 접근이 차단되어도 날짜 자료와 URL 갱신은 
   const { element, nodes } = domFixture();
   const planning = planningSpy();
   const fetchJSON = async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day(manifest.defaultDate);
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory });
   dated.update({}, null);
   await waitFor(() => planning.mounts[0]?.updates.length === 1);
   assert.equal(nodes.date.value, manifest.defaultDate);
@@ -584,7 +585,7 @@ test('운영 상태가 없으면 CSV 기사 배정과 이전 세션 배정을 �
   const fetchJSON = async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : source;
   const { element } = domFixture();
   const planning = planningSpy();
-  const dated = mountDatedDispatch({ element, fetchJSON, planningFactory: planning.factory });
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON, planningFactory: planning.factory });
   dated.update({ vehicle: { id: 'V1' } }, 'S1');
   await waitFor(() => planning.mounts[0]?.updates.length === 1);
   const mounted = planning.mounts[0];
@@ -609,7 +610,7 @@ test('운영자 지도는 미확정 전체 주문을 유지하며 뷰어용 확�
   const { element, nodes } = domFixture();
   const planning = planningSpy(), workflow = planningSpy();
   const commands = [];
-  const dated = mountDatedDispatch({ element, planningFactory: planning.factory, workflowFactory: workflow.factory,
+  const dated = mountDatedDispatch({ element, notify: element.notify, planningFactory: planning.factory, workflowFactory: workflow.factory,
     onDateChange: async () => operational,
     onCommand: (...args) => commands.push(args),
     fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : source,

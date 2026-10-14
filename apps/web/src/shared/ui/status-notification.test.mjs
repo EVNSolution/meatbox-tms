@@ -11,11 +11,12 @@ function fixture() {
     removeEventListener(event) { this.listeners.delete(event); },
     dispatch(event, detail = {}) { this.listeners.get(event)?.(detail); },
   });
-  const message = node(), close = node(), element = node();
+  const message = node(), close = node(), action = node(), element = node();
+  element.dataset = {};
   element.ownerDocument = { activeElement: null };
   element.contains = target => target === close;
   element.matches = () => false;
-  element.querySelector = selector => selector === '[data-status-message]' ? message : close;
+  element.querySelector = selector => selector === '[data-status-message]' ? message : selector === '[data-status-action]' ? action : close;
   const clock = {
     now: () => now,
     setTimeout(callback, delay) { const id = ++sequence; timers.set(id, { callback, at: now + delay }); return id; },
@@ -30,7 +31,7 @@ function fixture() {
     }
     now = end;
   }
-  return { element, message, close, timers, advance, notification: mountStatusNotification({ element, clock }) };
+  return { element, message, close, action, timers, advance, clock, notification: mountStatusNotification({ element, clock }) };
 }
 const empty = (context = 'orders:2026-10-06') => ({ context, key: `${context}:empty`, message: '2026-10-06에 등록된 주문이 없습니다.' });
 
@@ -98,4 +99,28 @@ test('해제하면 타이머와 이벤트를 제거하고 이후 갱신을 무�
   assert.equal(element.hidden, true); assert.equal(timers.size, 0);
   assert.equal(element.listeners.size, 0); assert.equal(close.listeners.size, 0);
   notification.update(empty('orders:2026-10-07')); assert.equal(element.hidden, true);
+});
+
+test('고정 알림은 시간이 지나도 남고 동작 버튼을 실행하며 닫으면 버튼도 사라진다', () => {
+  const { element, message, close, action, advance, clock, timers } = fixture();
+  const sticky = mountStatusNotification({ element, clock, duration: 0 });
+  let runs = 0;
+  sticky.update({ context: 'progress', key: 'loading', message: '불러오는 중', action: { label: '다시 연결', run: () => { runs += 1; } }, tone: 'error' });
+  assert.equal(element.hidden, false);
+  assert.equal(message.textContent, '불러오는 중');
+  assert.equal(action.hidden, false);
+  assert.equal(action.textContent, '다시 연결');
+  assert.equal(element.dataset.tone, 'error');
+  assert.equal(timers.size, 0);
+  advance(60_000);
+  assert.equal(element.hidden, false);
+  action.dispatch('click');
+  assert.equal(runs, 1);
+  close.dispatch('click');
+  assert.equal(element.hidden, true);
+  assert.equal(action.hidden, true);
+  assert.equal('tone' in element.dataset, false);
+  sticky.update({ context: 'progress', key: 'done', message: '완료' });
+  assert.equal(action.hidden, true);
+  sticky.destroy();
 });
