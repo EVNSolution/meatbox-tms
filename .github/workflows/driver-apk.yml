@@ -1,0 +1,172 @@
+name: "Driver APK"
+
+# Manual only: an Android release build takes 15-20 minutes of the private-repository
+# Actions allowance, so no push, pull request, schedule or workflow_run starts it.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: driver-apk
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build signed TEST APK
+    # The android-test environment also allows only main; both checks must hold
+    # before any signing secret is exposed to the job.
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: android-test
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/driver
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      EXPECTED_PACKAGE: com.evnsolution.meatbox.driver
+      EXPECTED_ABI: arm64-v8a
+      # Public certificate fingerprint of the dedicated driver signing key (not a secret).
+      EXPECTED_CERT_SHA256: 88ecc3efd7f56f88f679a57bba6004a6feb389ff3705e47c067b72e8a99f27c1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: apps/driver/.nvmrc
+          cache: npm
+          cache-dependency-path: apps/driver/package-lock.json
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+      # Caches only GRADLE_USER_HOME. Signing values travel as step environment
+      # variables and files under RUNNER_TEMP, so they never enter the cache.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Install locked app dependencies
+        run: npm ci
+      - name: Check app and Expo dependency versions
+        run: |
+          npm run check
+          npx expo install --check
+      - name: Restore Firebase config and signing key
+        env:
+          GOOGLE_SERVICES_CONTENT: ${{ secrets.DRIVER_GOOGLE_SERVICES_JSON }}
+          KEYSTORE_BASE64: ${{ secrets.DRIVER_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          [ -n "${GOOGLE_SERVICES_CONTENT:-}" ] || { echo '::error::Secret DRIVER_GOOGLE_SERVICES_JSON is missing.'; exit 1; }
+          [ -n "${KEYSTORE_BASE64:-}" ] || { echo '::error::Secret DRIVER_KEYSTORE_BASE64 is missing.'; exit 1; }
+          dir="$RUNNER_TEMP/driver-credentials"
+          rm -rf "$dir"
+          mkdir -p "$dir"
+          printf '%s' "$GOOGLE_SERVICES_CONTENT" > "$dir/google-services.json"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$dir/release.p12"
+          [ -s "$dir/release.p12" ] || { echo '::error::Secret DRIVER_KEYSTORE_BASE64 did not decode to a keystore.'; exit 1; }
+          # Same validation app.config.js runs: valid JSON, Android config (not a
+          # service account) and an entry for this package.
+          node -e 'require("./scripts/firebase-config.cjs").googleServicesPath(process.cwd(), process.argv[1], process.argv[2])' \
+            "$dir/google-services.json" "$EXPECTED_PACKAGE"
+          {
+            echo "DRIVER_CREDENTIAL_DIR=$dir"
+            echo "GOOGLE_SERVICES_JSON=$dir/google-services.json"
+            echo "MEATBOX_DRIVER_KEYSTORE_FILE=$dir/release.p12"
+          } >> "$GITHUB_ENV"
+      - name: Generate Android project
+        run: |
+          npm run prebuild:android
+          test -s android/app/google-services.json || { echo '::error::Prebuild did not apply the Firebase config.'; exit 1; }
+      - name: Build signed release APK
+        working-directory: apps/driver/android
+        env:
+          MEATBOX_DRIVER_KEYSTORE_PASSWORD: ${{ secrets.DRIVER_KEYSTORE_PASSWORD }}
+          MEATBOX_DRIVER_KEY_ALIAS: ${{ secrets.DRIVER_KEY_ALIAS }}
+          MEATBOX_DRIVER_KEY_PASSWORD: ${{ secrets.DRIVER_KEY_PASSWORD }}
+          NODE_OPTIONS: --max-old-space-size=4096
+        # The hosted runner has 16 GB, so the 8 GB laptop limits in the README are not applied here.
+        run: |
+          ./gradlew --no-daemon --max-workers=4 \
+            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
+            -PreactNativeArchitectures="$EXPECTED_ABI" \
+            --init-script ../scripts/android-release-signing.gradle \
+            :app:assembleRelease
+      - name: Verify package, version, ABI and signing certificate
+        id: verify
+        env:
+          GIT_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          test -s "$apk"
+          tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          "$tools/apksigner" verify --verbose --print-certs "$apk" > "$RUNNER_TEMP/apk-certs.txt"
+          signers="$(grep -c '^Signer #[0-9]* certificate SHA-256 digest:' "$RUNNER_TEMP/apk-certs.txt")"
+          cert="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/apk-certs.txt" | tr -d ':' | tr 'A-F' 'a-f')"
+          [ "$signers" = 1 ] || { echo "::error::Expected one signer, found $signers."; exit 1; }
+          [ "$cert" = "$EXPECTED_CERT_SHA256" ] || { echo "::error::APK is not signed with the driver key (got $cert)."; exit 1; }
+          "$tools/aapt2" dump badging "$apk" > "$RUNNER_TEMP/apk-badging.txt"
+          package="$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/apk-badging.txt")"
+          version_code="$(sed -n "s/^package: .* versionCode='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/apk-badging.txt")"
+          version_name="$(sed -n "s/^package: .* versionName='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/apk-badging.txt")"
+          abis="$(sed -n "s/^native-code: //p" "$RUNNER_TEMP/apk-badging.txt" | tr -d "'")"
+          [ "$package" = "$EXPECTED_PACKAGE" ] || { echo "::error::Unexpected package $package."; exit 1; }
+          [ "$abis" = "$EXPECTED_ABI" ] || { echo "::error::Unexpected ABIs: $abis."; exit 1; }
+          [ -n "$version_code" ] && [ -n "$version_name" ] || { echo '::error::APK version is missing.'; exit 1; }
+          name="meatbox-driver-${version_name}-${version_code}-${EXPECTED_ABI}-${GIT_SHA:0:12}.apk"
+          out="$RUNNER_TEMP/driver-apk"
+          rm -rf "$out"
+          mkdir -p "$out"
+          cp "$apk" "$out/$name"
+          (cd "$out" && sha256sum "$name" > SHA256SUMS)
+          apk_sha256="$(cut -d' ' -f1 "$out/SHA256SUMS")"
+          PACKAGE="$package" VERSION_CODE="$version_code" VERSION_NAME="$version_name" ABIS="$abis" \
+            CERT="$cert" APK_NAME="$name" APK_SHA256="$apk_sha256" node -e '
+              const e = process.env;
+              const metadata = {
+                format: 1,
+                apk: e.APK_NAME,
+                apkSha256: e.APK_SHA256,
+                package: e.PACKAGE,
+                versionName: e.VERSION_NAME,
+                versionCode: Number(e.VERSION_CODE),
+                abis: e.ABIS.split(" ").filter(Boolean),
+                signingCertificateSha256: e.CERT,
+                git: { sha: e.GIT_SHA, ref: e.GITHUB_REF },
+                github: { repository: e.GITHUB_REPOSITORY, runId: e.RUN_ID, runAttempt: Number(e.RUN_ATTEMPT) },
+              };
+              require("fs").writeFileSync(process.argv[1], JSON.stringify(metadata, null, 2) + "\n");
+            ' "$out/metadata.json"
+          {
+            echo '## Driver TEST APK'
+            echo
+            echo "- APK: \`$name\`"
+            echo "- SHA-256: \`$apk_sha256\`"
+            echo "- Package: \`$package\` $version_name ($version_code), ABI \`$abis\`"
+            echo "- Signing certificate SHA-256: \`$cert\`"
+            echo '- Test build only. FCM delivery and device behaviour are not verified by this job.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "directory=$out" >> "$GITHUB_OUTPUT"
+      - name: Upload signed APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: meatbox-driver-apk-run${{ github.run_id }}-${{ github.sha }}
+          path: ${{ steps.verify.outputs.directory }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Remove restored credentials
+        if: ${{ always() }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          rm -rf "${RUNNER_TEMP:?}/driver-credentials" apps/driver/android/app/google-services.json
+          test ! -e "$RUNNER_TEMP/driver-credentials"
+          test ! -e apps/driver/android/app/google-services.json
