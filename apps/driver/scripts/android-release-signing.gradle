@@ -1,0 +1,28 @@
+// Signs the release build with the PKCS12 key named by the environment. The Expo template wires
+// the release build type to the public debug keystore, so a missing value must stop the build
+// instead of silently producing a debug-signed APK. Values are read here, never logged.
+def required = { String name ->
+    def value = System.getenv(name)
+    if (!value) throw new GradleException("${name} is required for a signed release build.")
+    value
+}
+
+allprojects { project ->
+    project.plugins.withId('com.android.application') {
+        def keystore = new File(required('MEATBOX_DRIVER_KEYSTORE_FILE'))
+        if (!keystore.isFile()) throw new GradleException('MEATBOX_DRIVER_KEYSTORE_FILE does not point to a file.')
+        def storePassword = required('MEATBOX_DRIVER_KEYSTORE_PASSWORD')
+        def keyAlias = required('MEATBOX_DRIVER_KEY_ALIAS')
+        def keyPassword = required('MEATBOX_DRIVER_KEY_PASSWORD')
+        // finalizeDsl runs after build.gradle, so it overrides the template's debug signing.
+        project.extensions.getByName('androidComponents').finalizeDsl { android ->
+            def release = android.signingConfigs.create('meatboxRelease')
+            release.storeFile = keystore
+            release.storeType = 'pkcs12'
+            release.storePassword = storePassword
+            release.keyAlias = keyAlias
+            release.keyPassword = keyPassword
+            android.buildTypes.getByName('release').signingConfig = release
+        }
+    }
+}

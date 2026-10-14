@@ -22,7 +22,19 @@ npm run android
 
 Firebase Android 앱의 `google-services.json`을 `.private/google-services.json`에 저장하거나 `GOOGLE_SERVICES_JSON` 경로를 지정합니다. 서비스 계정 키는 앱에 넣지 않습니다. 서버의 FCM 설정에만 사용합니다. 설정 파일의 Android package가 일치해야 합니다. 명시한 파일이 없거나 서비스 계정 키이면 prebuild를 중단합니다. 설정이 없거나 알림 권한/토큰 등록이 실패하면 앱에 푸시 연결 실패가 표시됩니다. 메시지는 앱에서 서버를 조회해 확인할 수 있습니다.
 
-## 기기 설치 없는 TEST APK 빌드
+## GitHub Actions TEST APK 빌드
+
+기본 빌드 경로입니다. Actions의 **Driver APK** workflow를 `main`에서 수동 실행합니다. 다른 브랜치나 태그에서는 실행되지 않습니다.
+
+- `android-test` 환경의 Secret 5개를 사용합니다: `DRIVER_GOOGLE_SERVICES_JSON`, `DRIVER_KEYSTORE_BASE64`, `DRIVER_KEYSTORE_PASSWORD`, `DRIVER_KEY_ALIAS`, `DRIVER_KEY_PASSWORD`.
+- 배송원 전용 PKCS12 키로 서명합니다. 인증서 SHA-256이 workflow의 `EXPECTED_CERT_SHA256`과 다르면 실패합니다. debug keystore로 대체하지 않습니다.
+- Secret이 없거나 Firebase 설정이 이 패키지와 맞지 않으면 실패합니다.
+- 결과는 artifact `meatbox-driver-apk-run<실행 ID>-<Git SHA>`이며 14일 보관합니다. APK, `SHA256SUMS`, 비밀값 없는 `metadata.json`이 들어 있습니다.
+- 복원한 Firebase 설정과 keystore는 성공·실패와 관계없이 마지막 단계에서 지웁니다.
+
+전용 키 APK는 debug 서명 APK와 서명이 달라 그 위에 업데이트로 설치되지 않습니다. 기존 debug APK를 지운 뒤 설치합니다.
+
+## 로컬 TEST APK 빌드 (비상용)
 
 Android SDK와 JDK 21을 준비한 뒤 앱 디렉터리에서 실행합니다. SDK 56 템플릿을 고정하며 네이티브 생성물은 Git에 넣지 않습니다.
 
