@@ -921,7 +921,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "c1d2adfc5df4cecddbe433db215eeafcc31d8423c4be063aea897445b549e337",
+      "targetSha256": "6c1210ca60129e6d86bb7b228a8de02761b245dda0b6f6027dd9722ccece92de",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -932,7 +932,8 @@
         "Style the zone volume table and the delivery popup",
         "Style the zone drivers column and the two popup buttons",
         "Remove dispatch date rules now owned by date-summary-toolbar.css and let the desktop planning layout fill the viewport with internal scrolling.",
-        "Remove the in-flow dispatch message rules replaced by the toast."
+        "Remove the in-flow dispatch message rules replaced by the toast.",
+        "Let the dispatch page flow again: viewport-proportional map and vehicle list heights, a scrolling zone table with a sticky header, no viewport-fill squeeze."
       ],
       "status": "active"
     },
