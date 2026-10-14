@@ -34,6 +34,7 @@ export function PickupScreen({
   const [loaded, setLoaded] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [latestId, setLatestId] = useState<string | null>(null);
   const vehicleOrderIds = useMemo(() => new Set(deliveries.map((d) => d.id)), [deliveries]);
   const confirmedCount = deliveries.filter((d) => scanned.has(d.id)).length;
   const allConfirmed = loaded && deliveries.length > 0 && confirmedCount === deliveries.length;
@@ -60,6 +61,7 @@ export function PickupScreen({
     const label = delivery ? `${delivery.name} ${delivery.orderNumber ?? ''}`.trim() : undefined;
     if (result.kind === 'ok') {
       update(new Set(scanRef.current).add(result.orderId));
+      setLatestId(result.orderId);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       setFeedback({ tone: 'ok', text: `✓ ${pickupScanMessage(result, label)}` });
     } else if (result.kind === 'already') {
@@ -89,12 +91,14 @@ export function PickupScreen({
 
         {deliveries.map((delivery) => {
           const checked = scanned.has(delivery.id);
+          const scanNumber = checked ? [...scanned].indexOf(delivery.id) + 1 : 0;
           return (
             <View
               key={delivery.id}
               style={[styles.row, checked && styles.rowChecked]}
             >
               <T style={[styles.check, checked && styles.checkOn]}>{checked ? '✓' : '○'}</T>
+              {checked ? <T style={styles.scanNumber}>#{scanNumber}</T> : null}
               <View style={styles.rowCopy}>
                 <T numberOfLines={1} style={styles.rowTitle}>{delivery.name}</T>
                 <T style={styles.rowMeta}>{delivery.orderNumber ?? delivery.id} · {delivery.boxes}박스</T>
@@ -114,26 +118,34 @@ export function PickupScreen({
       </View>
       {scannerOpen ? (
         <QrScanner
+          deliveries={deliveries}
           feedback={feedback}
+          latestId={latestId}
           onClose={() => setScannerOpen(false)}
           onScan={handleScan}
-          progress={`${confirmedCount} / ${deliveries.length} 주문`}
+          scanned={scanned}
         />
       ) : null}
     </View>
   );
 }
 
+// Scanning is never throttled: several QR codes in view are all accepted. The panel makes the
+// result legible instead, listing confirmed orders newest first with the order they were scanned in.
 function QrScanner({
   onScan,
   onClose,
   feedback,
-  progress,
+  deliveries,
+  scanned,
+  latestId,
 }: {
   onScan(raw: string): PickupScanResult;
   onClose(): void;
   feedback: Feedback | null;
-  progress: string;
+  deliveries: FleetDelivery[];
+  scanned: ReadonlySet<string>;
+  latestId: string | null;
 }) {
   const [permission, requestPermission] = useCameraPermissions();
   const last = useRef<{ raw: string; at: number } | null>(null);
@@ -141,6 +153,11 @@ function QrScanner({
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) void requestPermission();
   }, [permission, requestPermission]);
+
+  const byId = useMemo(() => new Map(deliveries.map((d) => [d.id, d])), [deliveries]);
+  const confirmed = [...scanned].filter((id) => byId.has(id));
+  const remaining = deliveries.filter((d) => !scanned.has(d.id));
+  const complete = deliveries.length > 0 && remaining.length === 0;
 
   function onBarcodeScanned(result: BarcodeScanningResult) {
     const now = Date.now();
@@ -154,7 +171,7 @@ function QrScanner({
     <Modal animationType="slide" onRequestClose={onClose} visible>
       <SafeAreaView style={styles.scanner}>
         <View style={styles.scannerHeader}>
-          <T style={styles.scannerTitle}>QR 스캔 · {progress}</T>
+          <T style={styles.scannerTitle}>수령 QR 스캔</T>
           <Button label="닫기" onPress={onClose} style={styles.closeButton} tone="secondary" />
         </View>
         {permission?.granted ? (
@@ -165,15 +182,50 @@ function QrScanner({
             style={styles.camera}
           />
         ) : (
-          <View style={styles.cameraBlocked}>
+          <View style={[styles.camera, styles.cameraBlocked]}>
             <T style={styles.blockedText}>카메라 권한이 필요합니다.</T>
             <Button label="권한 허용" onPress={() => void requestPermission()} tone="action" />
           </View>
         )}
-        <View style={styles.scannerFooter}>
-          <T style={[styles.scannerFeedback, feedback ? feedbackColor[feedback.tone] : null]}>
-            {feedback?.text ?? '상자의 주문 QR을 화면 가운데에 맞춰 주세요.'}
-          </T>
+        <View style={styles.panel}>
+          <View style={styles.panelHead}>
+            <T style={[styles.counter, complete && styles.counterDone]}>{confirmed.length}<T style={styles.counterTotal}> / {deliveries.length}</T></T>
+            <T style={[styles.counterLabel, complete && styles.counterDone]}>{complete ? '모두 확인됨' : `남은 주문 ${remaining.length}`}</T>
+          </View>
+          <View style={styles.bar}>
+            <View style={[styles.barFill, { flex: confirmed.length }]} />
+            <View style={{ flex: remaining.length }} />
+          </View>
+          {feedback && feedback.tone !== 'ok' ? (
+            <T style={[styles.notice, feedback.tone === 'error' ? styles.noticeError : styles.noticeNote]}>{feedback.text}</T>
+          ) : null}
+          <ScrollView contentContainerStyle={styles.panelList}>
+            {confirmed.length ? <T style={styles.section}>확인됨 · 최근 순</T> : <T style={styles.hint}>상자의 주문 QR을 비추면 여기에 확인한 순서대로 쌓입니다.</T>}
+            {confirmed.slice().reverse().map((id) => {
+              const delivery = byId.get(id)!;
+              const latest = id === latestId;
+              return (
+                <View key={id} style={[styles.scanRow, latest && styles.scanRowLatest]}>
+                  <T style={styles.scanBadge}>#{confirmed.indexOf(id) + 1}</T>
+                  <View style={styles.rowCopy}>
+                    <T numberOfLines={1} style={styles.rowTitle}>{delivery.name}</T>
+                    <T style={styles.rowMeta}>{delivery.orderNumber ?? delivery.id} · {delivery.boxes}박스</T>
+                  </View>
+                  <T style={styles.scanDone}>{latest ? '방금' : '✓'}</T>
+                </View>
+              );
+            })}
+            {remaining.length ? <T style={styles.section}>남은 주문 · 배송 순서</T> : null}
+            {remaining.map((delivery) => (
+              <View key={delivery.id} style={styles.scanRow}>
+                <T style={styles.pendingBadge}>○</T>
+                <View style={styles.rowCopy}>
+                  <T numberOfLines={1} style={[styles.rowTitle, styles.pendingTitle]}>{delivery.name}</T>
+                  <T style={styles.rowMeta}>{delivery.orderNumber ?? delivery.id} · {delivery.boxes}박스</T>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
         </View>
       </SafeAreaView>
     </Modal>
@@ -227,9 +279,26 @@ const styles = StyleSheet.create({
   scannerHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', padding: 12 },
   scannerTitle: { color: colors.surface, fontSize: 17, fontWeight: '700' },
   closeButton: { minHeight: TOUCH_MIN },
-  camera: { flex: 1 },
-  cameraBlocked: { alignItems: 'center', flex: 1, gap: 12, justifyContent: 'center', padding: 24 },
+  camera: { flex: 45 },
+  cameraBlocked: { alignItems: 'center', gap: 12, justifyContent: 'center', padding: 24 },
   blockedText: { color: colors.surface, fontSize: 16 },
-  scannerFooter: { backgroundColor: colors.surface, minHeight: 72, justifyContent: 'center', padding: 16 },
-  scannerFeedback: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  panel: { backgroundColor: colors.surface, borderTopLeftRadius: radius.card * 2, borderTopRightRadius: radius.card * 2, flex: 55, gap: 8, marginTop: -16, paddingHorizontal: 16, paddingTop: 16 },
+  panelHead: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between' },
+  counter: { fontSize: 34, fontWeight: '800' },
+  counterTotal: { color: colors.muted, fontSize: 20, fontWeight: '700' },
+  counterLabel: { color: colors.muted, fontSize: 15, fontWeight: '700' },
+  counterDone: { color: colors.green },
+  notice: { borderRadius: radius.control, fontSize: 14, fontWeight: '700', overflow: 'hidden', paddingHorizontal: 12, paddingVertical: 8 },
+  noticeNote: { backgroundColor: colors.amberTint, color: colors.amber },
+  noticeError: { backgroundColor: colors.errorTint, color: colors.error },
+  panelList: { gap: 6, paddingBottom: 24 },
+  section: { color: colors.muted, fontSize: 12, fontWeight: '700', marginTop: 6 },
+  hint: { color: colors.muted, fontSize: 14, paddingVertical: 12, textAlign: 'center' },
+  scanRow: { alignItems: 'center', borderColor: colors.border, borderRadius: radius.card, borderWidth: 1, flexDirection: 'row', gap: 10, minHeight: 56, paddingHorizontal: 12 },
+  scanRowLatest: { backgroundColor: colors.greenTint, borderColor: colors.green, borderWidth: 2 },
+  scanBadge: { color: colors.green, fontSize: 15, fontWeight: '800', minWidth: 32 },
+  scanDone: { color: colors.green, fontSize: 13, fontWeight: '800' },
+  pendingBadge: { color: colors.done, fontSize: 18, minWidth: 32 },
+  pendingTitle: { color: colors.muted },
+  scanNumber: { color: colors.green, fontSize: 12, fontWeight: '800' },
 });
