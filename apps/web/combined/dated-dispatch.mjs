@@ -1,10 +1,9 @@
 import { mountDatePicker } from './date-picker.mjs';
 import { mountOrderPlanning } from './order-planning.mjs';
-import { referenceIcon } from './reference-icons.mjs';
 import { createDispatchFleet } from './dispatch-assignment.mjs';
 import { mountDispatchWorkflow } from './dispatch-workflow.mjs';
 import { seoulToday, validOperatingDate } from './operating-date.mjs';
-import { dateSummaryToolbar, mountDateSummaryToolbar } from './date-summary-toolbar.mjs';
+import { dateNavActions, dateSummaryToolbar, mountDateSummaryToolbar } from './date-summary-toolbar.mjs';
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -40,7 +39,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   if (!response.ok) { const error = new Error('자료를 불러오지 못했습니다.'); error.status = response.status; throw error; }
   return response.json();
 }, planningFactory = mountOrderPlanning, datePickerFactory = mountDatePicker, workflowFactory = mountDispatchWorkflow }) {
-  element.innerHTML = `${dateSummaryToolbar({ label: '배차 날짜', actionsClass: 'dispatch-date-picker', attributes: 'data-dispatch-toolbar hidden', summaryLabel: '선택 배차일 요약', actions: `<span>배차일</span><button type="button" class="button subtle" data-dispatch-prev aria-label="이전 배차일">${referenceIcon('next')}</button><div data-dispatch-date></div><button type="button" class="button subtle" data-dispatch-next aria-label="다음 배차일">${referenceIcon('next')}</button>`, context: '<span class="dispatch-readonly" data-dispatch-readonly hidden>이력 조회 · 읽기 전용</span>' })}<p class="dispatch-data-message" data-dispatch-status role="status">배차 정보를 확인하고 있습니다.</p><button type="button" class="button" data-dispatch-retry hidden>다시 불러오기</button><div data-dispatch-workflow hidden></div><div data-dispatch-planning hidden></div>`;
+  element.innerHTML = `${dateSummaryToolbar({ label: '배차 날짜', actionsClass: 'date-nav', attributes: 'data-dispatch-toolbar hidden', summaryLabel: '선택 배차일 요약', actions: dateNavActions('배차일', 'data-dispatch-date'), context: '<span class="dispatch-readonly" data-dispatch-readonly hidden>이력 조회 · 읽기 전용</span>' })}<p class="dispatch-data-message" data-dispatch-status role="status">배차 정보를 확인하고 있습니다.</p><button type="button" class="button" data-dispatch-retry hidden>다시 불러오기</button><div data-dispatch-workflow hidden></div><div data-dispatch-planning hidden></div>`;
   const query = selector => element.querySelector(selector);
   const toolbar = query('[data-dispatch-toolbar]');
   const toolbarSummary = mountDateSummaryToolbar(toolbar);
@@ -52,8 +51,9 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   const workflowHost = query('[data-dispatch-workflow]');
   const readOnly = query('[data-dispatch-readonly]');
   const workflow = workflowFactory({ element: workflowHost, onCommand });
-  const previous = query('[data-dispatch-prev]');
-  const next = query('[data-dispatch-next]');
+  const previous = query('[data-date-prev]');
+  const next = query('[data-date-next]');
+  const todayButton = query('[data-date-today]');
   let manifest = null, regions = null, planning = null, operationalData = null;
   let started = false, available = null, loading = true, current = null, epoch = 0, controller = null, destroyed = false, confirmedEmpty = false;
   const cache = new Map();
@@ -95,6 +95,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     const today = now();
     const index = manifest.dates.findIndex(item => item.date === date);
     previous.disabled = !regions || index <= 0; next.disabled = !regions || index < 0 || index >= manifest.dates.length - 1;
+    todayButton.disabled = !regions || date === today;
     datePicker.update({ value: date, dates: [...manifest.dates, { date: today }], disabled: !regions });
     readOnly.hidden = !(validOperatingDate(date) && date < today);
   }
@@ -169,6 +170,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   }
   listen(previous, 'click', () => { const index = manifest.dates.findIndex(item => item.date === selectedDate); if (index > 0) selectDate(manifest.dates[index - 1].date); });
   listen(next, 'click', () => { const index = manifest.dates.findIndex(item => item.date === selectedDate); if (index >= 0 && index < manifest.dates.length - 1) selectDate(manifest.dates[index + 1].date); });
+  listen(todayButton, 'click', () => selectDate(now()));
   listen(retry, 'click', () => { if (regions && manifest) selectDate(selectedDate); else start(); });
   return {
     update(data, _selectedId, contextDate) {

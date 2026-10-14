@@ -10,7 +10,7 @@ import { mountResourceManagement } from './resource-management.mjs';
 import { sourceVehicleContext } from './source-context.mjs';
 import { mountDatePicker } from './date-picker.mjs';
 import { seoulToday, validOperatingDate } from './operating-date.mjs';
-import { dateSummaryToolbar, mountDateSummaryToolbar } from './date-summary-toolbar.mjs';
+import { dateNavActions, dateSummaryToolbar, mountDateSummaryToolbar } from './date-summary-toolbar.mjs';
 import { mountStatusNotification } from '../src/shared/ui/status-notification.mjs';
 
 const pages = {
@@ -38,10 +38,18 @@ function mountOperationalShell() {
 mountOperationalShell();
 const statusNotification = mountStatusNotification({ element: byId('status-notification') });
 document.querySelectorAll('[data-field-icon]').forEach(element => { element.innerHTML = referenceIcon(element.dataset.fieldIcon); });
-byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'control-date-actions', summaryLabel: '선택 관제일 요약', actions: '<span>조회 날짜</span><div id="control-date-picker"></div><button type="button" class="button subtle" id="control-today">오늘</button>', context: '<span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span>' });
+byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'date-nav', summaryLabel: '선택 관제일 요약', actions: dateNavActions('조회 날짜', 'id="control-date-picker"'), context: '<span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span>' });
 const controlSummaryToolbar = mountDateSummaryToolbar(byId('control-date-toolbar'));
 const controlDatePicker = mountDatePicker({ element: byId('control-date-picker'), label: '관제 조회 날짜', onChange: date => operations.selectDate(date) });
-byId('control-today').addEventListener('click', () => operations.selectDate(seoulToday()));
+const controlDateButton = name => byId('control-date-toolbar').querySelector(`[data-date-${name}]`);
+const stepControlDate = offset => {
+  const dates = state.dateContext?.dates || [];
+  const index = dates.findIndex(item => item.date === state.dateContext?.date);
+  if (index >= 0 && dates[index + offset]) operations.selectDate(dates[index + offset].date);
+};
+controlDateButton('today').addEventListener('click', () => operations.selectDate(seoulToday()));
+controlDateButton('prev').addEventListener('click', () => stepControlDate(-1));
+controlDateButton('next').addEventListener('click', () => stepControlDate(1));
 const vehicleControl = mountVehicleControl({ element: byId('vehicle-control'),
   onSelectVehicle: id => {
     const row = vehicleOperations(state.data).find(item => item.vehicle.id === id);
@@ -182,7 +190,10 @@ function renderControlDate() {
   const today = seoulToday();
   const dates = context?.dates || [];
   controlDatePicker.update({ value: validOperatingDate(date) ? date : '', dates: [...dates, { date: today }], disabled: !context });
-  byId('control-today').disabled = !context || date === today;
+  const index = dates.findIndex(item => item.date === date);
+  controlDateButton('today').disabled = !context || date === today;
+  controlDateButton('prev').disabled = !context || index <= 0;
+  controlDateButton('next').disabled = !context || index < 0 || index >= dates.length - 1;
   byId('control-readonly').hidden = !(validOperatingDate(date) && date < today || state.data?.dispatch?.readOnly);
   const empty = byId('control-empty');
   const presentation = controlDataPresentation(context, state.connectionMessage);

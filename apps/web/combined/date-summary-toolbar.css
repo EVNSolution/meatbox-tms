@@ -47,10 +47,17 @@
 .date-summary-actions { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 44px; font-size: 13px; }
 .date-summary-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
 .date-summary-toolbar .summary-counts { width: auto; max-width: 100%; }
+.date-nav > span { margin-right: 8px; font-weight: 600; }
+.date-nav .button { min-height: 44px; font-size: 13px; }
+.date-nav .date-step { display: inline-grid; place-items: center; width: 44px; min-width: 44px; height: 44px; padding: 0; }
+.date-nav .date-step-prev svg { transform: rotate(180deg); }
 
 @media (max-width: 700px) {
   .date-summary-toolbar { gap: 6px; padding: 10px; }
   .date-summary-meta { margin-left: 0; }
   .date-summary-toolbar .summary-counts { flex: 0 1 auto; }
+  .date-nav { display: grid; grid-template-columns: 32px minmax(0, 1fr) 32px auto; width: 100%; gap: 6px; }
+  .date-nav > span { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 11px; }
+  .date-nav .date-step { width: 32px; min-width: 32px; }
 }
 

@@ -50,7 +50,7 @@ function assignmentDay(date) {
 }
 
 function domFixture() {
-  const names = ['toolbar', 'date', 'summary', 'status', 'retry', 'planning', 'workflow', 'prev', 'next', 'readonly', 'source-info'];
+  const names = ['toolbar', 'date', 'summary', 'status', 'retry', 'planning', 'workflow', 'prev', 'next', 'today', 'readonly', 'source-info'];
   const nodes = Object.fromEntries(names.map(name => [name, new FakeNode()]));
   nodes.toolbar.hidden = true;
   nodes.summary.hidden = true;
@@ -58,7 +58,7 @@ function domFixture() {
   nodes.planning.hidden = true;
   nodes.toolbar.querySelector = selector => selector === '[data-date-summary]' ? nodes.summary : null;
   const element = new FakeNode();
-  element.querySelector = selector => nodes[selector.match(/data-dispatch-([^\]]+)/)?.[1]];
+  element.querySelector = selector => nodes[selector.match(/data-(?:dispatch|date)-([^\]]+)/)?.[1]];
   return { element, nodes };
 }
 
