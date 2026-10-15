@@ -128,7 +128,7 @@
   .control-map-workspace > .panel { border: 0; border-radius: 0; box-shadow: none; }
   .control-map-workspace > .control-current { border-bottom: 1px solid var(--border); }
   .vehicle-control-layout > .control-fleet { border-right: 1px solid var(--border); }
-  .vehicle-control-layout > .control-details { position: relative; border-left: 1px solid var(--border); }
+  .vehicle-control-layout > .control-details { position: relative; }
   /* QR / message actions sit in the heading row instead of two full-width bars. */
   .control-details .control-driver-tools { position: absolute; top: 0; right: 16px; z-index: 2; height: 63px; flex-wrap: nowrap; align-items: center; gap: 8px; padding: 0; }
   .control-details .control-driver-tools .button { flex: none; min-height: 36px; padding: 0 12px; }
