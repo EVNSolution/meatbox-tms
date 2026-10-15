@@ -260,3 +260,14 @@
 
 /* A disabled primary action must not read as a selected tab. */
 .order-map-tools .button.primary:disabled { color: var(--muted); background: #fff; border-color: var(--border); opacity: .6; }
+
+/* Zone volume list: fixed column widths and tabular numerals so rows read as straight lines. */
+.order-zone-table { table-layout: fixed; min-width: 760px; }
+.order-zone-table th:nth-child(1) { width: auto; }
+.order-zone-table th:nth-child(2), .order-zone-table th:nth-child(4) { width: 96px; }
+.order-zone-table th:nth-child(3), .order-zone-table th:nth-child(5) { width: 128px; }
+.order-zone-table th:nth-child(6) { width: 240px; }
+.order-zone-table td { font-variant-numeric: tabular-nums; }
+.order-zone-table tbody tr:hover > * { background: #f7f8fa; }
+.order-zone-table tbody tr > * { height: 48px; }
+.order-zone-table td.order-zone-drivers { overflow: hidden; text-overflow: ellipsis; }
