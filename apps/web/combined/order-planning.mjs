@@ -559,8 +559,8 @@ export function mountOrderPlanning({
       fitVehicleRequested = false;
       if (coordinates.length === 1) map.jumpTo({ center: coordinates[0], zoom: 15 });
       if (coordinates.length > 1) {
-        // Overview fits the middle 90% so a few far-away stops do not zoom the map out to the whole country.
-        const trim = values => { const sorted = values.slice().sort((a, b) => a - b); const cut = sorted.length >= 20 && selectedVehicleId === 'all' ? Math.floor(sorted.length * 0.05) : 0; return [sorted[cut], sorted[sorted.length - 1 - cut]]; };
+        // Overview fits the middle 80% so a few far-away stops do not zoom the map out to the whole country.
+        const trim = values => { const sorted = values.slice().sort((a, b) => a - b); const cut = sorted.length >= 20 && selectedVehicleId === 'all' ? Math.floor(sorted.length * 0.1) : 0; return [sorted[cut], sorted[sorted.length - 1 - cut]]; };
         const [west, east] = trim(coordinates.map(point => point[0]));
         const [south, north] = trim(coordinates.map(point => point[1]));
         map.fitBounds([[west, south], [east, north]], { padding: { top: 72, bottom: 92, left: 48, right: 48 }, maxZoom: 15, duration: 0 });
