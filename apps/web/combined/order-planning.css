@@ -47,7 +47,7 @@
 .order-map-marker[data-selected-vehicle="true"] { z-index: 5; }
 .order-map-marker[data-selected-vehicle="true"]::before { filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 2px #111); }
 .order-map-marker[data-selected-vehicle="true"]::after { position: absolute; left: 50%; bottom: 35px; min-width: 18px; max-width: 92px; overflow: hidden; padding: 2px 5px; border: 1px solid #111; border-radius: 9px; background: #fff; color: #111; content: attr(data-order-label); font-size: 9px; font-weight: 700; line-height: 13px; text-overflow: ellipsis; white-space: nowrap; transform: translateX(-50%); }
-.order-map-marker[aria-pressed="true"]::before { filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 3px #0066cc); }
+.order-map-marker[aria-pressed="true"]::before { filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 3px #1b2633); }
 .order-map-marker:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 .order-map-selection { left: 12px; bottom: 12px; max-width: min(430px, calc(100% - 24px)); padding: 12px 14px; border-radius: var(--radius); }
 .order-map-selection span { display: block; color: var(--muted); font-size: 10px; font-weight: 600; }

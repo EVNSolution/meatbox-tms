@@ -99,9 +99,11 @@
       "source": "apps/combined/assets/maps/README.md",
       "sourceSha256": "428bbdf31ddcf0bf131d472bca0c1741485c1410e2df162bfec34574e591ccf1",
       "target": "apps/web/public/combined/assets/maps/README.md",
-      "targetSha256": "428bbdf31ddcf0bf131d472bca0c1741485c1410e2df162bfec34574e591ccf1",
+      "targetSha256": "7975796dc26d58ebabdcc3c6a7fafae9021848d8773c69d5713505465a24c3ad",
       "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
-      "changes": [],
+      "changes": [
+        "Restyle the destination pin as a Kakao-map style droplet in Meatbox red with a white inner dot and soft shadow."
+      ],
       "status": "active"
     },
     {
@@ -119,9 +121,11 @@
       "source": "apps/combined/assets/maps/dsv-destination-marker.svg",
       "sourceSha256": "5f0ef8bc2ee43180de43101b26c4abd8d13cdfead5c31cf032e59554df870a46",
       "target": "apps/web/public/combined/assets/maps/dsv-destination-marker.svg",
-      "targetSha256": "5f0ef8bc2ee43180de43101b26c4abd8d13cdfead5c31cf032e59554df870a46",
+      "targetSha256": "16060cf2ce90ab0bf4b3ca3f1c93c1a415a1cde5e342a3c644a86bcf2f91ea45",
       "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
-      "changes": [],
+      "changes": [
+        "Restyle the destination pin as a Kakao-map style droplet in Meatbox red with a white inner dot and soft shadow."
+      ],
       "status": "active"
     },
     {
@@ -934,7 +938,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "0c194c6b1fc26061c2a6f30fec4a3482438258f52315f7a5bea9f3bccb444201",
+      "targetSha256": "a97f745f582be39e295104e3a83a711cca1bf2dc507d39369856c6768679a62c",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -951,7 +955,8 @@
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
         "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
-        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps."
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
+        "Restyle the destination pin as a Kakao-map style droplet in Meatbox red with a white inner dot and soft shadow."
       ],
       "status": "active"
     },
