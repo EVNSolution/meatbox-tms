@@ -1079,11 +1079,12 @@
       "source": "apps/combined/resource-management.css",
       "sourceSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
       "target": "apps/web/combined/resource-management.css",
-      "targetSha256": "3dbad1e883af2956a212a1a81c55b7120eec8227361d300b200f45977a93f214",
+      "targetSha256": "5025599799c426a79b39d51bb92fd8fc4b98feb5cc91d386947d4e94e4927c9d",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px."
       ],
       "status": "active"
     },
@@ -1344,7 +1345,7 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/shell.css",
-      "targetSha256": "77b0d65a5a0de163be39a21abdddcdf3c9c12e3fc4b6ba0549cb623b95f4df71",
+      "targetSha256": "7da4132aa87a67d52f90ed59b5150f9dc5d03c426118e36d58350f9bdf55d94c",
       "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 57-344 into a dedicated stylesheet",
@@ -1354,7 +1355,8 @@
         "Drop the connection panel from the desktop app shell.",
         "Tighten the page intro now that it holds only the title.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
-        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs."
+        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
+        "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px."
       ],
       "derivation": {
         "kind": "css-line-range",

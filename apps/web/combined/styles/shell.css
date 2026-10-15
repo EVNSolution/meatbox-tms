@@ -154,7 +154,7 @@ ol {
   outline-offset: 4px;
 }
 
-.page-intro { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding-block: 10px; }
+.page-intro { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding-block: 10px; min-height: 57px; box-sizing: border-box; }
 .page-intro h1 { margin: 0; font-size: 22px; }
 .subtabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; }
 .subtabs[hidden] { display: none; }
