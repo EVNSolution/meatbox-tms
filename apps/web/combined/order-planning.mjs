@@ -559,9 +559,11 @@ export function mountOrderPlanning({
       fitVehicleRequested = false;
       if (coordinates.length === 1) map.jumpTo({ center: coordinates[0], zoom: 15 });
       if (coordinates.length > 1) {
-        const lngs = coordinates.map(point => point[0]);
-        const lats = coordinates.map(point => point[1]);
-        map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: { top: 72, bottom: 92, left: 48, right: 48 }, maxZoom: 15, duration: 0 });
+        // Overview fits the middle 90% so a few far-away stops do not zoom the map out to the whole country.
+        const trim = values => { const sorted = values.slice().sort((a, b) => a - b); const cut = sorted.length >= 20 && selectedVehicleId === 'all' ? Math.floor(sorted.length * 0.05) : 0; return [sorted[cut], sorted[sorted.length - 1 - cut]]; };
+        const [west, east] = trim(coordinates.map(point => point[0]));
+        const [south, north] = trim(coordinates.map(point => point[1]));
+        map.fitBounds([[west, south], [east, north]], { padding: { top: 72, bottom: 92, left: 48, right: 48 }, maxZoom: 15, duration: 0 });
       }
     }
     count.textContent = `지도 ${model.mapped.length.toLocaleString('ko-KR')}곳 / 전체 위치 미등록 ${model.unknownCount.toLocaleString('ko-KR')}곳 / 선택 차량 미등록 ${selectedModel.unknownCount.toLocaleString('ko-KR')}곳`;

@@ -1,5 +1,5 @@
 // Sidebar account actions use the official Lucide icon set (https://lucide.dev), tree-shaken to three icons.
-import { LogOut, Settings, UserRound } from 'lucide';
+import { LogOut, Maximize, Settings, UserRound } from 'lucide';
 
 const attributes = attrs => Object.entries(attrs).map(([name, value]) => `${name}="${value}"`).join(' ');
 
@@ -11,3 +11,4 @@ function svg(nodes) {
 export const settingsIcon = svg(Settings);
 export const accountIcon = svg(UserRound);
 export const logoutIcon = svg(LogOut);
+export const fitIcon = svg(Maximize);
