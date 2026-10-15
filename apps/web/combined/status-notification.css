@@ -2,7 +2,7 @@
 
 .toast-stack {
   position: fixed;
-  top: calc(var(--header-height, 56px) + 12px);
+  bottom: 16px;
   right: 16px;
   z-index: 50;
   display: flex;

@@ -1534,7 +1534,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "165b1b35b629c9206eb61d5a591eb79e8af2d00c3282897c52131403f667651e",
+      "targetSha256": "5959bd1a76b8f3305c80e0b326e569434f292dcc57ba0109c55282ca0f1bca54",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1551,7 +1551,8 @@
         "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
         "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
         "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
-        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work."
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
+        "Remove card overlaps: dock the control running summary above the map and anchor toasts to the bottom right."
       ],
       "status": "active"
     },
@@ -2402,8 +2403,8 @@
     {
       "path": "apps/web/combined/status-notification.css",
       "origin": "authored",
-      "sha256": "c232a74f29cb63b98b6b358a09b1072195e39b10590be4760ac0228726d3ad4e",
-      "reason": "Position and size the shared top notification without replacing operational work areas. Stack toasts in one fixed container and style the action button and error tone. Anchor the toast stack to the top right so it never covers the sub-tabs.",
+      "sha256": "5673524c47404c4ba75883267b298eaaf178620cee17a3d1bb02d6adcf6fa9cb",
+      "reason": "Position and size the shared top notification without replacing operational work areas. Stack toasts in one fixed container and style the action button and error tone. Anchor the toast stack to the top right so it never covers the sub-tabs. Remove card overlaps: dock the control running summary above the map and anchor toasts to the bottom right.",
       "status": "active"
     },
     {
