@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := check-new-stack
 
-.PHONY: setup-new-stack check-modules check-new-stack check-release run-api run-web dev-web preview-web run-fork-fixture run-connected-fixture run-native-fixture check-api-connection package-new-stack
+.PHONY: setup-new-stack check-api check-web-app check-driver-app check-root-tests check-api-contracts check-modules check-new-stack check-release run-api run-web dev-web preview-web run-fork-fixture run-connected-fixture run-native-fixture check-api-connection package-new-stack
 
 setup-new-stack:
 	npm ci
@@ -9,17 +9,28 @@ setup-new-stack:
 	npm --prefix apps/driver ci
 	./services/api/gradlew -p services/api --no-daemon classes
 
-check-modules:
+# Independent lanes; CI runs `make -j4 -Otarget check-release` to overlap them.
+check-api:
 	./services/api/gradlew -p services/api --no-daemon check bootJar
+
+check-web-app:
 	npm --prefix apps/web run check
+
+check-driver-app:
 	npm --prefix apps/driver run check
+
+check-root-tests:
+	npm test
+
+check-api-contracts: check-api
+	node --test test/api-connection/*.test.mjs
+
+check-modules: check-api check-web-app check-driver-app
 
 check-new-stack: check-modules
 	node --test test/web-fork-baseline.test.mjs test/web-fork-legacy/*.test.mjs
 
-check-release: check-modules
-	npm test
-	node --test test/api-connection/*.test.mjs
+check-release: check-modules check-root-tests check-api-contracts
 
 run-api:
 	./services/api/gradlew -p services/api --no-daemon bootRun

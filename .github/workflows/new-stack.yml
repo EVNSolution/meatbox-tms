@@ -61,7 +61,8 @@ jobs:
           npm --prefix apps/driver ci & pids+=($!)
           for pid in "${pids[@]}"; do wait "$pid"; done
       - name: Verify Kotlin, frontend, golden and API contracts
-        run: make check-release
+        # Lanes are independent; api-connection waits only for the Kotlin jar.
+        run: make -j4 -Otarget check-release
       - name: Package verified immutable release
         env:
           EVENT_NAME: ${{ github.event_name }}
