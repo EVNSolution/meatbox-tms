@@ -1534,7 +1534,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "50a3b14dfe54db92258be879e9a2a2aceb15551e0793fe77b64a5ee8ed3d66cf",
+      "targetSha256": "2b69055a0f64fbfa182bf6ee7ada1b67d3535962698ea8d7af8b32d979bc1bfc",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1555,7 +1555,8 @@
         "Remove card overlaps: dock the control running summary above the map and anchor toasts to the bottom right.",
         "Align the fleet column: 16px side padding for filters, header and rows, and 12px below the filters.",
         "Draw the control console as one framed container: no inner card borders or radii, a single divider under the running summary.",
-        "Give the first row of every control column the same 64px height so the horizontal dividers line up."
+        "Give the first row of every control column the same 64px height so the horizontal dividers line up.",
+        "Restore the column divider, compact QR/message actions into the heading row, one-row stop picker and unified 16px inner padding in the control detail column."
       ],
       "status": "active"
     },

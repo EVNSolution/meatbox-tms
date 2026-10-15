@@ -13,7 +13,7 @@
 .control-vehicle-row { width: 100%; min-height: 58px; color: var(--text); background: white; border: 0; border-bottom: 1px solid var(--border); font: inherit; font-size: 12px; cursor: pointer; }
 .control-vehicle-row strong, .control-vehicle-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .control-vehicle-row small { margin-top: 4px; color: var(--muted); }
-.control-vehicle-row[aria-pressed="true"] { background: var(--selected); box-shadow: inset 0 0 0 1px #E60028; }
+.control-vehicle-row[aria-pressed="true"] { background: var(--selected); box-shadow: inset 3px 0 0 var(--brand); }
 .control-vehicle-row:hover { background: #f4f5f7; }
 .control-map-workspace { display: grid; gap: 14px; }
 .control-current .panel-heading p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
@@ -42,13 +42,13 @@
 .control-details .control-tabs { border-top: 1px solid var(--border); }
 .control-stop-list { max-height: min(67vh, 700px); overflow: auto; overscroll-behavior: contain; }
 .control-stop { border-bottom: 1px solid var(--border); }
-.control-stop > summary { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 20px; align-items: center; gap: 7px; list-style: none; min-height: 48px; padding: 9px 12px; cursor: pointer; font-size: 13px; }
+.control-stop > summary { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 20px; align-items: center; gap: 7px; list-style: none; min-height: 48px; padding: 9px 16px; cursor: pointer; font-size: 13px; }
 .control-stop > summary::-webkit-details-marker { display: none; }
 .control-stop > summary > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .control-stop[open] > summary { background: var(--selected); }
 .control-stop[open] > summary > .reference-icon { transform: rotate(180deg); }
 .control-stop-sequence { color: var(--muted); text-align: center; }
-.control-stop-body { padding: 0 14px 16px; font-size: 12px; }
+.control-stop-body { padding: 0 16px 16px; font-size: 12px; }
 .control-stop-body h4 { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 15px 0 8px; }
 .control-stop-body p { line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
 .control-stop-facts { display: flex; flex-wrap: wrap; gap: 16px; }
@@ -92,15 +92,15 @@
 }
 
 .control-open-records { width: 100%; margin-top: 14px; font-size: 12px; }
-.control-management-target { padding: 14px; border-bottom: 1px solid var(--border); }
+.control-management-target { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
 .control-management-target .field { display: grid; min-width: 0; }
 .control-management-target select { width: 100%; min-width: 0; height: var(--control-height); font: inherit; font-size: 13px; }
-.control-management-actions { display: flex; gap: 8px; margin-top: 10px; }
-.control-management-actions .button { flex: 1; min-height: var(--control-height); padding-inline: 8px; font-size: 12px; white-space: nowrap; }
-.control-record-filters { display: flex; gap: 4px; margin: 12px 14px 0; padding: 3px; background: var(--workspace); border-radius: 100px; }
+.control-management-actions { display: flex; gap: 8px; margin: 0; }
+.control-management-actions .button { flex: none; min-height: var(--control-height); padding-inline: 14px; font-size: 13px; white-space: nowrap; }
+.control-record-filters { display: flex; gap: 4px; margin: 12px 16px 0; padding: 3px; background: var(--workspace); border-radius: 100px; }
 .control-record-filters button { flex: 1; border: 0; border-radius: 100px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; min-height: var(--control-height); cursor: pointer; }
 .control-record-filters button[aria-pressed="true"] { background: white; color: var(--brand); box-shadow: 0 1px 3px #00000012; font-weight: 600; }
-.control-record-list { list-style: none; padding: 0 14px; margin: 0; max-height: min(55vh, 550px); overflow: auto; overscroll-behavior: contain; }
+.control-record-list { list-style: none; padding: 0 16px; margin: 0; max-height: min(55vh, 550px); overflow: auto; overscroll-behavior: contain; }
 .control-record { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; border-bottom: 1px solid var(--border); padding: 10px 0; font-size: 12px; }
 .control-record > time { text-align: center; padding-top: 1px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .control-record > div { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 6px; align-items: baseline; }
@@ -127,8 +127,11 @@
   .vehicle-control-layout > .panel { border: 0; border-radius: 0; box-shadow: none; }
   .control-map-workspace > .panel { border: 0; border-radius: 0; box-shadow: none; }
   .control-map-workspace > .control-current { border-bottom: 1px solid var(--border); }
-  .control-fleet { border-right: 1px solid var(--border); }
-  .control-details { border-left: 1px solid var(--border); }
+  .vehicle-control-layout > .control-fleet { border-right: 1px solid var(--border); }
+  .vehicle-control-layout > .control-details { position: relative; border-left: 1px solid var(--border); }
+  /* QR / message actions sit in the heading row instead of two full-width bars. */
+  .control-details .control-driver-tools { position: absolute; top: 0; right: 16px; z-index: 2; height: 63px; flex-wrap: nowrap; align-items: center; gap: 8px; padding: 0; }
+  .control-details .control-driver-tools .button { flex: none; min-height: 36px; padding: 0 12px; }
   .control-fleet, .control-details, .control-map-workspace, .control-map-panel { display: flex; flex-direction: column; min-height: 0; }
   .control-map-workspace { position: relative; gap: 0; }
   .control-map-panel { flex: 1 1 auto; }
