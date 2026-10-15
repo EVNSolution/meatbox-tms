@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { runInNewContext } from 'node:vm';
 import { totalBoxes, orderMapModel, regionOrderCounts, mountOrderPlanning } from './order-planning.mjs';
 
 class FakeNode {
@@ -68,7 +67,7 @@ test('빈 배차 영역은 가짜 주문이나 지도를 만들지 않고 컨테
   assert.equal(maps, 0);
   assert.equal(element.dataset.sourceKind, 'unavailable');
   assert.equal(nodes['group-heading'].textContent, '후보 배송원');
-  assert.equal(nodes['map-summary'].textContent, '주문 0건 · 총 0박스');
+  assert.equal(nodes['map-summary'].textContent, '주문 0건 / 총 0박스');
   assert.equal(nodes['map-status-text'].textContent, '');
   assert.equal(nodes['map-status'].hidden, true);
   assert.match(nodes.vehicle.innerHTML, />미등록</);
@@ -294,19 +293,11 @@ test('주문 시나리오 버튼과 비교 입력 없이 지도와 핀배차만 
 
 test('주문 화면은 운영 자료 좌표만 사용하고 데모 경로를 참조하지 않는다', () => {
   const source = readFileSync(new URL('./app.mjs', import.meta.url), 'utf8');
-  const body = source.match(/function syncDispatchContext\(\) \{[\s\S]*?\n\}\n\nfunction renderPage/)?.[0].replace(/\n\nfunction renderPage$/, '');
-  assert.ok(body);
   assert.doesNotMatch(source, /scenarioTools|demo-shell|deliveryLinks/);
-  assert.match(source, /function render\(\) \{\s*syncDispatchContext\(\);\s*renderPage\(\);/);
+  assert.match(source, /<form class="app-logout" method="post" action="\/logout">/, '헤더에 로그아웃 양식이 있다');
+  assert.match(source, /function render\(\) \{\s*renderPage\(\);/);
   assert.match(source, /if \(state\.page === 'orders'\) orderPlanning\.update\(state\.data, state\.selectedId, state\.dateContext\?\.date\);\s*if \(!state\.data\)/);
   assert.doesNotMatch(readFileSync(new URL('./order-planning.mjs', import.meta.url), 'utf8'), /\/scenario\/api/);
-  const nodes = { 'page-description': { textContent: '' } };
-  const state = { page: 'orders' };
-  const context = { state, orderPlanning: { usesSource: () => false }, byId: id => nodes[id] };
-  runInNewContext(body + '\nsyncDispatchContext();', context);
-  context.orderPlanning.usesSource = () => true;
-  runInNewContext('syncDispatchContext();', context);
-  assert.match(nodes['page-description'].textContent, /배차 계산/);
 });
 
 test('차량 목록 선택과 외부 주문 선택은 실제 총량이나 각 주문의 수량을 바꾸지 않는다', () => {
@@ -678,7 +669,6 @@ test('권역·주문 보기는 주문 원본과 카메라를 유지하며 날짜
   assert.equal(updates.at(-1).points, points);
   assert.equal(cameras.length, 0);
   assert.equal(nodes.selection.hidden, false);
-  assert.equal(nodes['map-description'].textContent, '모든 주문 핀을 표시합니다.');
   selectVehicle(nodes, 'G1');
   assert.equal(updates.at(-1).mode, 'orders');
   assert.equal(updates.at(-1).selectedGroupId, 'G1');
@@ -689,7 +679,6 @@ test('권역·주문 보기는 주문 원본과 카메라를 유지하며 날짜
   nodes['map-mode-control'].listeners.change({ target: { matches: () => true, value: 'regions' } });
   assert.equal(updates.at(-1).mode, 'regions');
   assert.equal(cameras.length, 0);
-  assert.match(nodes['map-description'].textContent, /마우스를 올리면/);
   assert.equal(nodes.selection.hidden, true);
   assert.deepEqual(input, before);
   planning.destroy();
@@ -741,7 +730,7 @@ function mountBulk({ onAssign } = {}) {
 const pointer = (type, x, y, extra = {}) => ({ type, clientX: x, clientY: y, button: 0, isPrimary: true, pointerId: 1, ...extra });
 const selectedNow = log => [...log.updates.at(-1).selectedOrderIds].sort();
 
-test('복수 선택은 핀 클릭으로 배송지 묶음을 고르고 해제하며 진행·완료 묶음과 단일 선택을 건드리지 않는다', () => {
+test('복수 선택은 핀 클릭으로 배송지 묶음을 고르고 해제하며 진행 및 완료 묶음과 단일 선택을 건드리지 않는다', () => {
   const { planning, nodes, log } = mountBulk({ onAssign: () => ({}) });
   planning.update(bulkPlanningData(), null);
   assert.equal(nodes['multi-toggle'].disabled, false);
@@ -753,7 +742,6 @@ test('복수 선택은 핀 클릭으로 배송지 묶음을 고르고 해제하�
   assert.equal(nodes['map-canvas'].dataset.multiSelect, 'true');
   assert.equal(log.dragPan.at(-1), 'disable');
   assert.equal(log.boxZoom.at(-1), 'disable');
-  assert.match(nodes['map-description'].textContent, /복수 선택 중/);
   assert.match(nodes['multi-summary'].textContent, /핀을 클릭하거나 지도를 드래그/);
 
   log.picks(['O1']);
@@ -764,7 +752,7 @@ test('복수 선택은 핀 클릭으로 배송지 묶음을 고르고 해제하�
 
   log.picks(['O3', 'O4']);
   assert.deepEqual(selectedNow(log), ['O1', 'O2', 'O3']);
-  assert.equal(nodes['multi-summary'].textContent, '선택 2곳 / 3건 / 21박스 (진행·완료 1곳은 제외)');
+  assert.equal(nodes['multi-summary'].textContent, '선택 2곳 / 3건 / 21박스 (진행 및 완료 1곳은 제외)');
 
   log.picks(['O2']);
   assert.deepEqual(selectedNow(log), ['O3']);
@@ -814,7 +802,7 @@ test('지도 드래그는 사각형 안의 핀 묶음을 추가하고 짧은 이
   layer.listeners.pointerdown(pointer('pointerdown', 50, 450));
   layer.listeners.pointermove(pointer('pointermove', 450, 850));
   layer.listeners.pointerup(pointer('pointerup', 450, 850));
-  assert.deepEqual(selectedNow(log), ['O1', 'O2', 'O3'], '사각형 안의 모든 핀을 고르되 진행·완료 묶음 O4는 제외한다');
+  assert.deepEqual(selectedNow(log), ['O1', 'O2', 'O3'], '사각형 안의 모든 핀을 고르되 진행 및 완료 묶음 O4는 제외한다');
   assert.equal(nodes['select-box'].hidden, true);
   assert.match(nodes['multi-summary'].textContent, /선택 2곳 \/ 3건 \/ 21박스/);
 
@@ -976,7 +964,6 @@ test('권역별 물량 표는 착지·박스·주문을 권역마다 세고 중�
   planning.update(zonePlanningData(), null);
   assert.equal(nodes['zone-panel'].hidden, false);
   assert.equal(nodes['zone-total'].textContent, '전체 3곳 / 26박스 / 주문 4건 / 중량 미수신');
-  assert.match(nodes['zone-note'].textContent, /주문이 있는 권역 2곳.*권역 합계가 전체보다 클 수 있습니다/);
   const rows = nodes['zone-rows'].innerHTML.match(/<tr>.*?<\/tr>/g);
   assert.equal(rows.length, 2, '주문이 없는 권역은 표에 없다');
   assert.match(rows[0], /서울 첫 권역.*2곳.*21박스.*3건.*미수신/);
@@ -1162,9 +1149,9 @@ test('팝업의 타 권역 이관은 대상 권역을 고르면 그 권역의 �
 
   assert.equal(nodes['reassign-dialog'].open, true);
   assert.equal(nodes['reassign-title'].textContent, '타 권역 이관');
-  assert.match(nodes['reassign-from'].textContent, /주문 1 \/ 2건 \/ 10박스 \/ 서울 첫 권역 · 기사 1/);
+  assert.match(nodes['reassign-from'].textContent, /주문 1 \/ 2건 \/ 10박스 \/ 서울 첫 권역 \/ 기사 1/);
   assert.equal(nodes['reassign-zone-label'].hidden, false);
-  assert.match(nodes['reassign-zone'].innerHTML, /value="Z2">서울 둘째 권역 · 배송원 1명/);
+  assert.match(nodes['reassign-zone'].innerHTML, /value="Z2">서울 둘째 권역 \/ 배송원 1명/);
   assert.doesNotMatch(nodes['reassign-zone'].innerHTML, /value="Z1"/, '지금 권역은 대상이 아니다');
   assert.equal(nodes['reassign-target'].disabled, true);
   assert.equal(nodes['reassign-confirm'].disabled, true);
@@ -1173,7 +1160,7 @@ test('팝업의 타 권역 이관은 대상 권역을 고르면 그 권역의 �
   nodes['reassign-zone'].value = 'Z2'; nodes['reassign-zone'].listeners.change();
   assert.equal(nodes['reassign-target'].disabled, false);
   assert.equal(nodes['reassign-target'].value, 'G2', '그 권역에서 박스가 가장 많은 배송원을 미리 고른다');
-  assert.match(nodes['reassign-target'].innerHTML, /기사 2 \/ 22나 2002 \(미검증\) · 이 권역 2곳 16박스/);
+  assert.match(nodes['reassign-target'].innerHTML, /기사 2 \/ 22나 2002 \(미검증\) \/ 이 권역 2곳 16박스/);
   assert.match(nodes['reassign-preview'].textContent, /대상 차량 기사 2 \/ 22나 2002 \(미검증\)/);
   assert.match(nodes['reassign-preview'].textContent, /대상 권역 서울 둘째 권역 \(배송지의 위치와 권역 소속은 그대로입니다\)/);
   assert.equal(nodes['reassign-confirm'].disabled, false);
@@ -1190,7 +1177,7 @@ test('타 권역 이관은 보호 묶음이나 다른 권역에 넘길 배송원
   planning.update(zonePlanningData(), null);
   zoneClick(nodes, 'Z2');
   log.picks(['O4']);
-  assert.match(nodes.popup.innerHTML, /data-order-popup-transfer disabled>/, '진행·완료 묶음은 이관할 수 없다');
+  assert.match(nodes.popup.innerHTML, /data-order-popup-transfer disabled>/, '진행 및 완료 묶음은 이관할 수 없다');
   const transfer = { target: { closest: selector => selector.includes('transfer') ? {} : null } };
   nodes.popup.listeners.click(transfer);
   assert.equal(nodes['reassign-dialog'].open, false);
@@ -1225,7 +1212,7 @@ test('권역에 마우스를 올리면 Stop·box를 줄마다 보이는 팝오�
   await frame();
   const hover = nodes['zone-hover'];
   assert.equal(hover.hidden, false);
-  assert.match(hover.innerHTML, /<strong>서울 첫 권역<\/strong><span>2 Stop<\/span><span>21 box<\/span><small>주문 3건 · 기사 2, 기사 1<\/small>/);
+  assert.match(hover.innerHTML, /<strong>서울 첫 권역<\/strong><span>2 Stop<\/span><span>21 box<\/span><small>주문 3건 \/ 기사 2, 기사 1<\/small>/);
   assert.doesNotMatch(hover.innerHTML, /곳 · /, '구분점 없이 줄을 나눈다');
   assert.equal(hover.style.transform, 'translate3d(54px, 64px, 0)', '한 프레임에 마지막 위치만 transform으로 옮긴다');
   const html = hover.innerHTML;

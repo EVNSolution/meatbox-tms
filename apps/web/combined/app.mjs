@@ -3,7 +3,8 @@ import { connectOperations } from './operations-client.mjs';
 import { mountDatedDispatch } from './dated-dispatch.mjs';
 import { mountRouteEditor } from './route-editor.mjs';
 import { referenceIcon } from './reference-icons.mjs';
-import { operatorRoute, controlDataPresentation, resolveDeliverySelection } from './operations-model.mjs';
+import { accountIcon, logoutIcon, settingsIcon } from './account-icons.mjs';
+import { operatorRoute, routeHash, subtabs, controlDataPresentation, resolveDeliverySelection } from './operations-model.mjs';
 import { mountVehicleControl } from './vehicle-control.mjs';
 import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from './vehicle-operations-model.mjs';
 import { mountResourceManagement } from './resource-management.mjs';
@@ -14,9 +15,9 @@ import { dateNavActions, dateSummaryToolbar, mountDateSummaryToolbar } from './d
 import { mountStatusNotification } from '../src/shared/ui/status-notification.mjs';
 
 const pages = {
-  orders: { title: '배차 관리', description: '주문 확인, 배송원 선택과 배차 전송' },
-  deliveries: { title: '자원 관리', description: '차량별 지역 코드 관리' },
-  control: { title: '배송 관제', description: '차량별 남은 업무와 현재 운행, 배송지별 처리 이력' },
+  orders: { title: '배차 관리' },
+  deliveries: { title: '자원 관리' },
+  control: { title: '배송 관제' },
 };
 let pointerRouteTarget = null;
 let resourcesEmpty = false;
@@ -33,14 +34,18 @@ const byId = id => document.getElementById(id);
 function mountOperationalShell() {
   document.body.dataset.viewer = 'operator';
   byId('app-header').innerHTML = '<a class="brand" href="/combined/"><img src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a>';
-  byId('app-navigation').innerHTML = '<nav class="app-nav-links" aria-label="운영 업무"><a href="#/orders" data-page-link="orders">배차 관리</a><a href="#/control" data-page-link="control">배송 관제</a><a href="#/deliveries" data-page-link="deliveries">자원 관리</a></nav>';
+  byId('app-navigation').innerHTML = '<nav class="app-nav-links" aria-label="운영 업무"><a href="#/orders" data-page-link="orders">배차 관리</a><a href="#/control" data-page-link="control">배송 관제</a><a href="#/deliveries" data-page-link="deliveries">자원 관리</a><div class="app-nav-account" role="group" aria-label="계정">'
+    + `<button type="button" class="app-icon-button" aria-disabled="true" aria-label="설정" title="설정 (준비 중)">${settingsIcon}</button>`
+    + `<button type="button" class="app-icon-button" aria-disabled="true" aria-label="내 계정" title="내 계정 (준비 중)">${accountIcon}</button>`
+    + `<form class="app-logout" method="post" action="/logout"><button type="submit" class="app-icon-button" aria-label="로그아웃" title="로그아웃">${logoutIcon}</button></form>`
+    + '</div></nav>';
 }
 mountOperationalShell();
 const statusNotification = mountStatusNotification({ element: byId('status-notification') });
 const progressNotification = mountStatusNotification({ element: byId('progress-notification'), duration: 0 });
 const reloadAction = { label: '다시 연결', run: () => location.reload() };
 document.querySelectorAll('[data-field-icon]').forEach(element => { element.innerHTML = referenceIcon(element.dataset.fieldIcon); });
-byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'date-nav', summaryLabel: '선택 관제일 요약', actions: dateNavActions('조회 날짜', 'id="control-date-picker"'), context: '<span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span>' });
+byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'date-nav', summaryLabel: '선택 관제일 요약', actions: dateNavActions('조회 날짜', 'id="control-date-picker"'), context: '<span id="control-readonly" class="control-readonly" hidden>이력 조회 (읽기 전용)</span>' });
 const controlSummaryToolbar = mountDateSummaryToolbar(byId('control-date-toolbar'));
 const controlDatePicker = mountDatePicker({ element: byId('control-date-picker'), label: '관제 조회 날짜', onChange: date => operations.selectDate(date) });
 const controlDateButton = name => byId('control-date-toolbar').querySelector(`[data-date-${name}]`);
@@ -76,7 +81,7 @@ const orderPlanning = mountDatedDispatch({ element: byId('order-planning'), onSe
     const result = await operations.send('reassign', extra);
     if (!result) throw new Error('배정을 변경하지 못했습니다. 현재 주문 상태를 확인해 주세요.');
     return { ...result, shared: true };
-  }, onContextChange: () => { if (state.data) { renderSummary(); syncDispatchContext(); } renderStatusNotification(); },
+  }, onContextChange: () => { if (state.data) renderSummary(); renderStatusNotification(); },
   notify: notice => { state.dispatchNotice = notice.message ? notice : null; renderProgress(); } });
 mountResourceManagement({ element: byId('resource-management'), onEmptyChange: empty => { resourcesEmpty = empty; renderStatusNotification(); } });
 function selectDelivery(id) {
@@ -85,7 +90,6 @@ function selectDelivery(id) {
   if (selected) state.controlVehicleId = selected.vehicleId;
   render();
 }
-syncDispatchContext();
 const operations = connectOperations({
   onDateContext(context) {
     if ((state.dateContext && context.date !== state.dateContext.date) || context.empty || context.invalid) {
@@ -109,7 +113,6 @@ const operations = connectOperations({
     state.connectionMessage = message;
     state.errorNotice = '';
     byId('live-pages').hidden = false;
-    syncDispatchContext();
     render();
   },
   onError: message => {
@@ -122,7 +125,6 @@ function selectedDelivery() {
 }
 
 function render() {
-  syncDispatchContext();
   renderPage();
   renderControlDate();
   renderStatusNotification();
@@ -158,12 +160,6 @@ function render() {
     routeEditor.update({ ...state.data, deliveries: row?.deliveries || [], vehicle: row?.vehicle || { live: false }, customerStopId: row?.vehicle.live ? state.data.customerStopId : null }, selected?.id, state.connected && !state.data.dispatch?.readOnly);
     renderTabs();
   }
-  syncDispatchContext();
-}
-
-function syncDispatchContext() {
-  const ordersPage = state.page === 'orders';
-  if (ordersPage && orderPlanning.usesSource()) byId('page-description').textContent = '주문 확인 → 배송원 선택 → 배차 계산 → 전체 배차 전송';
 }
 
 function renderPage() {
@@ -174,10 +170,20 @@ function renderPage() {
     else link.removeAttribute('aria-current');
   });
   byId('page-heading').textContent = page.title;
+  const tabs = subtabs[state.page] || [];
+  const nav = byId('subtabs');
+  nav.hidden = !tabs.length;
+  const navKey = `${state.page}:${state.subtab}`;
+  if (nav.dataset.key !== navKey) {
+    nav.dataset.key = navKey;
+    nav.innerHTML = tabs.map(([id, label]) => `<a href="${routeHash(state.page, id)}"${id === state.subtab ? ' aria-current="page"' : ''}>${label}</a>`).join('');
+  }
+  const pageRoot = document.querySelector(`[data-page="${state.page}"]`);
+  if (pageRoot) pageRoot.dataset.subtab = state.subtab;
+  if (state.page === 'orders' && state.subtab === 'list') { const list = document.querySelector('.order-source-list'); if (list) list.open = true; }
   try {
     sessionStorage.setItem('meatbox.operator.page', state.page);
   } catch {}
-  byId('page-description').textContent = page.description;
 }
 
 function renderControlDate() {
@@ -252,6 +258,10 @@ function renderTabs() {
 
 }
 
+byId('subtabs').addEventListener('click', event => {
+  const link = event.target.closest('a');
+  if (link && event.detail > 0) pointerRouteTarget = new URL(link.href).hash;
+});
 byId('app-navigation').addEventListener('click', event => {
   const link = event.target.closest('[data-page-link]');
   if (link && event.detail > 0) {
@@ -282,15 +292,16 @@ document.querySelector('.skip-link').addEventListener('click', event => { event.
 normalizeRoute();
 
 function normalizeRoute() {
-  const hash = state.page === 'control' && state.controlTab === 'management' ? '#/control/manage' : `#/${state.page}`;
+  const hash = routeHash(state.page, state.subtab);
   if (location.hash !== hash) history.replaceState(null, '', hash);
 }
 
 function activateControlTab(tab) {
   state.controlTab = tab;
-  const hash = tab === 'management' ? '#/control/manage' : '#/control';
+  state.subtab = tab === 'management' ? 'records' : 'stops';
+  const hash = routeHash('control', state.subtab);
   if (location.hash !== hash) history.pushState(null, '', hash);
-  renderTabs();
+  render();
 }
 
 const controlTabs = [...document.querySelectorAll('[data-control-tab]')];

@@ -136,7 +136,7 @@ ol {
 }
 
 .page-intro {
-  padding: 24px 24px 20px;
+  padding: 18px 24px;
   padding-inline: max(24px, calc((100% - 1600px) / 2 + 24px));
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -153,6 +153,14 @@ ol {
   outline: 2px solid var(--brand);
   outline-offset: 4px;
 }
+
+.page-intro { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding-block: 10px; min-height: 57px; box-sizing: border-box; }
+.page-intro h1 { margin: 0; font-size: 22px; }
+.subtabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; }
+.subtabs[hidden] { display: none; }
+.subtabs a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 100px; color: var(--muted); font-size: 13px; font-weight: 600; text-decoration: none; }
+.subtabs a:hover { color: var(--text); background: var(--surface-hover); }
+.subtabs a[aria-current="page"] { color: var(--text); background: #edf0f4; }
 
 .intro-copy {
   max-width: 760px;
@@ -203,3 +211,13 @@ ol {
 
   .page-view { width: 100%; }
 }
+
+/* Account actions sit at the bottom of the sidebar: 설정, 내 계정, then 로그아웃 last. */
+.app-nav-account { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
+.app-logout { margin: 0; }
+.app-icon-button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius); color: var(--muted); background: transparent; cursor: pointer; }
+.app-icon-button:hover { color: var(--action); background: var(--surface-hover); }
+.app-icon-button[aria-disabled="true"] { cursor: default; opacity: .5; }
+.app-icon-button[aria-disabled="true"]:hover { color: var(--muted); background: transparent; }
+.app-icon-button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-icon { display: block; width: 22px; height: 22px; }

@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 36,
+  "authoredFileCount": 37,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "fb640ecb0f67e652c38e3925d97a48654cf5ba7e9bb28abd83b3d55b1645f194",
+      "targetSha256": "529bbab206b7e28c21d1e0c66439217535a4a6ff94930bc2baba1d011778df71",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -37,7 +37,11 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Share the date navigation markup with dispatch management and step the control date through the registered date list.",
-        "Show connection, dispatch loading and control loading notices in a sticky top toast with reload/retry actions instead of in-flow panels."
+        "Show connection, dispatch loading and control loading notices in a sticky top toast with reload/retry actions instead of in-flow panels.",
+        "Drop the page description writer and the empty dispatch-context sync.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
+        "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only."
       ],
       "status": "active"
     },
@@ -97,9 +101,11 @@
       "source": "apps/combined/assets/maps/README.md",
       "sourceSha256": "428bbdf31ddcf0bf131d472bca0c1741485c1410e2df162bfec34574e591ccf1",
       "target": "apps/web/public/combined/assets/maps/README.md",
-      "targetSha256": "428bbdf31ddcf0bf131d472bca0c1741485c1410e2df162bfec34574e591ccf1",
+      "targetSha256": "7975796dc26d58ebabdcc3c6a7fafae9021848d8773c69d5713505465a24c3ad",
       "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
-      "changes": [],
+      "changes": [
+        "Restyle the destination pin as a Kakao-map style droplet in Meatbox red with a white inner dot and soft shadow."
+      ],
       "status": "active"
     },
     {
@@ -117,9 +123,11 @@
       "source": "apps/combined/assets/maps/dsv-destination-marker.svg",
       "sourceSha256": "5f0ef8bc2ee43180de43101b26c4abd8d13cdfead5c31cf032e59554df870a46",
       "target": "apps/web/public/combined/assets/maps/dsv-destination-marker.svg",
-      "targetSha256": "5f0ef8bc2ee43180de43101b26c4abd8d13cdfead5c31cf032e59554df870a46",
+      "targetSha256": "16060cf2ce90ab0bf4b3ca3f1c93c1a415a1cde5e342a3c644a86bcf2f91ea45",
       "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
-      "changes": [],
+      "changes": [
+        "Restyle the destination pin as a Kakao-map style droplet in Meatbox red with a white inner dot and soft shadow."
+      ],
       "status": "active"
     },
     {
@@ -135,9 +143,11 @@
       "source": "apps/combined/assets/maps/dsv-vehicle-marker.svg",
       "sourceSha256": "dac8f0b0bc172d8fecdfce13c306ea53ec9395655f2c84896b5b0a48bc3ea7ad",
       "target": "apps/web/public/combined/assets/maps/dsv-vehicle-marker.svg",
-      "targetSha256": "dac8f0b0bc172d8fecdfce13c306ea53ec9395655f2c84896b5b0a48bc3ea7ad",
+      "targetSha256": "34ea06e42dd0c9a226f402dbfcafc452e52eb251fc01309f5a753dcf9f6e7343",
       "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
-      "changes": [],
+      "changes": [
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker."
+      ],
       "status": "active"
     },
     {
@@ -311,9 +321,11 @@
       "source": "apps/combined/customer-requests.css",
       "sourceSha256": "ff0b5b153d8242395dcd2d89081721a0ba3781220089c84b33faff28f50a2a9d",
       "target": "apps/web/combined/customer-requests.css",
-      "targetSha256": "ff0b5b153d8242395dcd2d89081721a0ba3781220089c84b33faff28f50a2a9d",
+      "targetSha256": "7983b3bce2ff5fb1c6094c76bdd1cd1897102d5e89b0a3e7b4496c1a482ad064",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
-      "changes": [],
+      "changes": [
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
+      ],
       "status": "active"
     },
     {
@@ -412,7 +424,7 @@
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "3c31d3a2137aae06df18fa2cad4f71234bc9209701c30194980ddfce5daaaf8c",
+      "targetSha256": "496812b30611186ca946a871602b0774c4223b45efcbd7a7ec0703593e3688cf",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Remove unused escaping helper, selection value and catch binding; retain update argument position",
@@ -420,7 +432,8 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Name the connected state for operational data without changing source or command contracts.",
         "Use the shared date navigation with a today shortcut and drop the candidate-vehicle count from the date summary.",
-        "Report loading and failure notices through a notify callback instead of an in-flow message and retry button."
+        "Report loading and failure notices through a notify callback instead of an in-flow message and retry button.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -548,13 +561,14 @@
       "source": "apps/combined/dispatch-map-layer.mjs",
       "sourceSha256": "944304bc83934f094fa317494e7d5ed047ba0b0f432cae91d247fd7a71dcf56d",
       "target": "apps/web/combined/dispatch-map-layer.mjs",
-      "targetSha256": "c8246da1a077b80bb967951a42ceb28433b0f5f86f6bfb7fe60b8d0b1529d9df",
+      "targetSha256": "ed77fd334491fc8ac60466eccbd597b9a8b7877c4a37a3e9752b693e7ab9539a",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Add a circle layer that highlights the orders picked for a bulk transfer",
         "Draw the pins of a selected zone in a separate layer, route zone and pin clicks in zone view and label zones with destinations and boxes",
-        "Replace always-on zone volume labels with a hovered zone that rises (opaque fill, outline and shadow) and report the hovered zone"
+        "Replace always-on zone volume labels with a hovered zone that rises (opaque fill, outline and shadow) and report the hovered zone",
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps."
       ],
       "status": "active"
     },
@@ -583,11 +597,13 @@
       "source": "apps/combined/dispatch-workflow.css",
       "sourceSha256": "d3c042a43e3ae08a4eac46590b3bc9f662d90ba11a909fb5a4c4b5b99ea00a13",
       "target": "apps/web/combined/dispatch-workflow.css",
-      "targetSha256": "7bd6f3b15492e0b1c826bfd76a7748cea2d2cb7512e5ae75920908dbc92531c7",
+      "targetSha256": "96cc0ecc415024c535d7cfcc4cd1006c23dfef582ca161d162fe0806895359bd",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Drop the inner input focus ring so the search field shows one focus outline.",
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
       ],
       "status": "active"
     },
@@ -595,13 +611,15 @@
       "source": "apps/combined/dispatch-workflow.mjs",
       "sourceSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59",
       "target": "apps/web/combined/dispatch-workflow.mjs",
-      "targetSha256": "6622fcc930ac47e6634ea86b78f9046ceea888c06f3e9150ad0bb08d153914c4",
+      "targetSha256": "db7961a5d8eb80c995f40ae9d3bee994900ac759402ac4da0881ffcd7e133e76",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
-        "Mark a synthetic plate as unverified in the candidate list"
+        "Mark a synthetic plate as unverified in the candidate list",
+        "Drop the server-confirmation hint under the dispatch actions.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -609,11 +627,12 @@
       "source": "apps/combined/dispatch-workflow.test.mjs",
       "sourceSha256": "1e721931eec18bce6266d669083e65ab096947ca61a4bf9c3637bf549156f0f2",
       "target": "apps/web/combined/dispatch-workflow.test.mjs",
-      "targetSha256": "308975d3c8fde9b9723baee28565de4eb306c98fd078da74b509f9de07bf783f",
+      "targetSha256": "6eae812e544ffede61eebd1991bf2036329a8d81962a005bef5f86104c612abf",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Drop the hint assertion."
       ],
       "status": "active"
     },
@@ -788,7 +807,7 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "4a2356ef64b7ec4927ba5f945f3f10ebdd5a85446edeaa09a184e38b1c6a594c",
+      "targetSha256": "801aa6609f404d5ec4b62966630e4b0a9a169b942895ccaa89148551abf04eed",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -798,7 +817,9 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Load the driver messaging and printable pickup QR stylesheet inside the existing operational frontend.",
-        "Replace the in-flow connection panel and control notice with a fixed toast stack."
+        "Replace the in-flow connection panel and control notice with a fixed toast stack.",
+        "Drop the page description under the title.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
       ],
       "status": "active"
     },
@@ -882,11 +903,13 @@
       "source": "apps/combined/operations-model.mjs",
       "sourceSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
       "target": "apps/web/combined/operations-model.mjs",
-      "targetSha256": "df6b1b5bc3a2e7a360816b32b1227c886075038fa0b3f3484fba1a714422aaad",
+      "targetSha256": "76d5d1fe299bbfcb8d1fbb1c2fe5e64ad222a5aeada9a9c239831a3aa5b37cf7",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Distinguish confirmed empty delivery dates from loading, failed reads and invalid dates without creating operational state."
+        "Distinguish confirmed empty delivery dates from loading, failed reads and invalid dates without creating operational state.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work."
       ],
       "status": "active"
     },
@@ -894,11 +917,12 @@
       "source": "apps/combined/operations-model.test.mjs",
       "sourceSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732",
       "target": "apps/web/combined/operations-model.test.mjs",
-      "targetSha256": "f7ea7489e8270a302cb15d0cd6f2a3c45c1fd85e933adb78ea76ffb5da878934",
+      "targetSha256": "904bfb44f71ba1a200e9c98061c931571bbc1dbf664dcbc80e11f6a3c954bfdb",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Verify control empty-date presentation does not turn loading, failures or invalid dates into confirmed absence."
+        "Verify control empty-date presentation does not turn loading, failures or invalid dates into confirmed absence.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
       ],
       "status": "active"
     },
@@ -921,7 +945,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "c1d2adfc5df4cecddbe433db215eeafcc31d8423c4be063aea897445b549e337",
+      "targetSha256": "177e45ed585699ed733f0e18a9ec6cb10e04fa3de6e5bbc0c7d0f21211cf4dd0",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -932,7 +956,20 @@
         "Style the zone volume table and the delivery popup",
         "Style the zone drivers column and the two popup buttons",
         "Remove dispatch date rules now owned by date-summary-toolbar.css and let the desktop planning layout fill the viewport with internal scrolling.",
-        "Remove the in-flow dispatch message rules replaced by the toast."
+        "Remove the in-flow dispatch message rules replaced by the toast.",
+        "Let the dispatch page flow again: viewport-proportional map and vehicle list heights, a scrolling zone table with a sticky header, no viewport-fill squeeze.",
+        "Style the floating map tools, mode switch and location chip; stack them on narrow screens.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
+        "Restyle the destination pin as a Kakao-map style droplet in Meatbox red with a white inner dot and soft shadow.",
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
+        "Single-layer pill for the 권역/주문 단위 switch over the map.",
+        "Dispatch tabs polish: aligned zone-table columns and card padding, order list without disclosure marker, outlined disabled primary action.",
+        "Zone volume list: fixed column widths, tabular numerals, 48px rows and row hover.",
+        "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it.",
+        "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only."
       ],
       "status": "active"
     },
@@ -940,7 +977,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "6a0cf27cb3cf5bf008be9d77db4505ee7a19a0c3ca590f99c0934576d02ee3fc",
+      "targetSha256": "94f9fa0ad95dd8a204d8b14c01e469634b9324cc4cf8d9551f68a7a379d1b9de",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -955,7 +992,10 @@
         "Add the zone volume table, zone selection with boundary and pins together and the delivery popup",
         "Stop stripping the generator's unverified disclosure from vehicle location text, drop raw coordinates for unverified vehicles, and mark synthetic plates as unverified",
         "Add the zone drivers column and the zone transfer dialog that hands a delivery bundle to a driver serving another zone, and mark the plate in the reassign preview",
-        "Show the hovered zone volume as a popover beside the cursor instead of overlapping map labels"
+        "Show the hovered zone volume as a popover beside the cursor instead of overlapping map labels",
+        "Remove map, region and vehicle explanations; move pin/multi-select actions, the map mode switch and the location count onto the map as floating tools.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -985,7 +1025,7 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "fe4ed1890335bb32914d0b54cfe32c7d5203ce2b4eecb63657bc470ab00b6ba5",
+      "targetSha256": "40f9d577803d9d5f4f0ae98f176b2af58e8b63b858862d9a0a8b9ba2e4adc667",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -994,7 +1034,9 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Cover multi-select, drag selection and bulk transfer",
         "Cover the zone volume table, zone selection and the delivery popup",
-        "Cover the zone drivers column and the zone transfer dialog"
+        "Cover the zone drivers column and the zone transfer dialog",
+        "Drop assertions on removed explanation copy and the retired app sync body.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -1029,9 +1071,11 @@
       "source": "apps/combined/resource-client.mjs",
       "sourceSha256": "d4d51b50f7fb8c55961f33c5bc9b2e3c4511b38bb98574e4725394ef31a9f9f2",
       "target": "apps/web/combined/resource-client.mjs",
-      "targetSha256": "d4d51b50f7fb8c55961f33c5bc9b2e3c4511b38bb98574e4725394ef31a9f9f2",
+      "targetSha256": "eb0174a3c0361c8047450f15fa4f17ac689477ba7ac0bcd1f0296f57d5b5dea6",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
-      "changes": [],
+      "changes": [
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
+      ],
       "status": "active"
     },
     {
@@ -1047,11 +1091,13 @@
       "source": "apps/combined/resource-management.css",
       "sourceSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
       "target": "apps/web/combined/resource-management.css",
-      "targetSha256": "3dbad1e883af2956a212a1a81c55b7120eec8227361d300b200f45977a93f214",
+      "targetSha256": "b36b582b1ffa324e6d32c8e8675af2d24364cee5b4a8e8436100c40692e63aac",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px.",
+        "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it."
       ],
       "status": "active"
     },
@@ -1059,11 +1105,13 @@
       "source": "apps/combined/resource-management.mjs",
       "sourceSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
       "target": "apps/web/combined/resource-management.mjs",
-      "targetSha256": "7dd5a631395fc96cc9ecacb02059f31953f3aaaeb3df0772b425bcf5d597a7cb",
+      "targetSha256": "412cfa2ff368461fdc5309421aaf2ab7ebc43e2450c887a8afdf2e5f2e26aab3",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events.",
-        "Mark every listed plate as unverified and add a screen note until a real vehicle registry exists"
+        "Mark every listed plate as unverified and add a screen note until a real vehicle registry exists",
+        "Drop the unverified-plate explanation note.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -1071,10 +1119,11 @@
       "source": "apps/combined/resource-management.test.mjs",
       "sourceSha256": "44615c6e7c1e03176b84950823376125d3913f946b27b745932d83f5de7b54f5",
       "target": "apps/web/combined/resource-management.test.mjs",
-      "targetSha256": "60b5676f7db6f43ee1af9469fd8769c73617285500c50133fc08a1bf5d523d81",
+      "targetSha256": "7b7dcb57374cb13aabeb82fb0dce16755fc0084064a4cc2d62a858ebf2d2e037",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
-        "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events."
+        "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -1311,14 +1360,20 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/shell.css",
-      "targetSha256": "9ada8475784e853a8030be59f1d247ca14f11422fd45e1bbf30db1c3c17d0015",
+      "targetSha256": "9ef4a9082991d3a663bf14e3a4f7d3f94131d9ac877db2239a933f72aaac0da6",
       "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 57-344 into a dedicated stylesheet",
         "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
         "Align the brand with the portal header, center navigation labels, and fill the desktop viewport with the app shell so each work area scrolls on its own.",
-        "Drop the connection panel from the desktop app shell."
+        "Drop the connection panel from the desktop app shell.",
+        "Tighten the page intro now that it holds only the title.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
+        "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
+        "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1456,12 +1511,13 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/composition.css",
-      "targetSha256": "809fa3759edfe9dab5a37b8f7a952932de7a9a911ddaa7f9fbde8e85a359fb9d",
+      "targetSha256": "fb9eddf20333de43b810e01a4a53e105467d50a1f267732d40c69a4630329f66",
       "reason": "Derive the composition stylesheet from original lines 1574-1843; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1574-1843 into a dedicated stylesheet",
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1476,12 +1532,13 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/date-summary-toolbar.css",
-      "targetSha256": "0b6004057aaec1bb7e6070aadd35997c90bd244fca6c4dadc640de903a949a7c",
+      "targetSha256": "980e0e0f5772becc2e23d5e0d866b0bbdc0d3e44d5391390b5771ffcc7c433b9",
       "reason": "Derive the date-summary-toolbar stylesheet from original lines 268-323; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 268-323 into a dedicated stylesheet",
         "Center date controls and summary cards using the shared component tokens.",
-        "Own the shared date navigation layout (label, previous/next, picker, today) for both operational screens."
+        "Own the shared date navigation layout (label, previous/next, picker, today) for both operational screens.",
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1496,7 +1553,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "b046a6124fba66759caeeb7d31821a0a6eff5474d5e5c4d5f4d1c51b0022df86",
+      "targetSha256": "80a91e2a5abcd2f47c98c1d28f0b4f57cf4dfa201c4708be2bda25e077bf3b29",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1506,7 +1563,20 @@
         "Fill the desktop viewport with the control layout so lists and the map scroll on their own.",
         "Bound the desktop control grid row so long vehicle and stop lists scroll inside their panels instead of growing the page.",
         "Desktop control console: one framed three-column layout with a full-height map, the running summary as a card over the map and the map note as a floating chip.",
-        "Style the running-facts toggle row."
+        "Style the running-facts toggle row.",
+        "Position the floating support button and move the map chip to the top-left corner.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
+        "Remove card overlaps: dock the control running summary above the map and anchor toasts to the bottom right.",
+        "Align the fleet column: 16px side padding for filters, header and rows, and 12px below the filters.",
+        "Draw the control console as one framed container: no inner card borders or radii, a single divider under the running summary.",
+        "Give the first row of every control column the same 64px height so the horizontal dividers line up.",
+        "Restore the column divider, compact QR/message actions into the heading row, one-row stop picker and unified 16px inner padding in the control detail column.",
+        "Draw the fleet/detail column divider once (fleet border-right only)."
       ],
       "status": "active"
     },
@@ -1514,7 +1584,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "74c19be8769ceb95f6c349c67fd2f877fb5eda5b72376fb2e1ebcb5f7e67867f",
+      "targetSha256": "d656a20754e90db72246b39a683692bbe7991e7d256f10eb1e8b6406b9cdf58d",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1524,7 +1594,12 @@
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Show the driver name first and mark the synthetic plate as unverified in the heading, list and detail title; use the driver name in the support table",
         "Mount pickup QR and driver messaging tools in the selected vehicle detail, update their dated context, and clear them with the existing control lifecycle.",
-        "Collapse the running facts behind a toggle that keeps its state across renders, and fit the map to the stops with padding for the floating cards on every resize or toggle."
+        "Collapse the running facts behind a toggle that keeps its state across renders, and fit the map to the stops with padding for the floating cards on every resize or toggle.",
+        "Remove list hints and the map heading; float the support-dispatch button over the map.",
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -1532,13 +1607,14 @@
       "source": "apps/combined/vehicle-control.test.mjs",
       "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
       "target": "apps/web/combined/vehicle-control.test.mjs",
-      "targetSha256": "d1949b74b174308620adc7a0fa01d8fc84947c3e6e7e29e9ca4cdd3631891074",
+      "targetSha256": "cd6aff4cf07dca1423d9a687c25411d1db2becdd6096b29bd70e67c240c33fff",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Verify confirmed empty versus unknown control state, loaded-empty-loaded recovery and stale asynchronous map responses.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work."
       ],
       "status": "active"
     },
@@ -1576,13 +1652,14 @@
       "source": "apps/portal/pages.js",
       "sourceSha256": "282476702f5db4d6e47ac87506176130b36a9538964caf49cb8175c931c0207a",
       "target": "apps/web/login/index.html",
-      "targetSha256": "7736911a4059f37bc8a9b42eb9ab41d9942465c79b010a132a479830d66bbec0",
+      "targetSha256": "6b05d307789c8f03be2b49dd6af94faf2653963ff88b5e6536aea09d51afd12b",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Materialize login markup and frontend-managed next, registered and authentication feedback",
         "Load the standalone portal authentication entry; keep authentication and session writes on the existing API",
         "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions",
-        "Remove the redundant direct theme link; receive the shared public foundation through portal.css, matching native API authentication error pages"
+        "Remove the redundant direct theme link; receive the shared public foundation through portal.css, matching native API authentication error pages",
+        "Login page: drop the eyebrow and intro lines, add inert 아이디 찾기 / 비밀번호 찾기 links, a legal footer (개인정보 처리방침, 위치기반서비스 이용약관) and the 주식회사 이브이앤솔루션 copyright."
       ],
       "status": "active"
     },
@@ -1604,12 +1681,13 @@
       "source": "apps/portal/portal.css",
       "sourceSha256": "f60b1133cba63152770ed6a6df3db8dbc648beb6680bfb0609c4ca60be8ea01c",
       "target": "apps/web/public/portal.css",
-      "targetSha256": "3550ca7cf2bde1ea3b0d6f4ed6e19f49127858fdb02c21b9e25910707645c97b",
+      "targetSha256": "b1b6ab9226e472074cd8e77d21d705799eb080454fa84f9d58ff0cd7bd32b12a",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Remove unused landing/workspace styles and duplicate overrides; retain authentication layout and feedback using the shared theme tokens",
         "Import /theme.css from the public portal stylesheet so native API POST error HTML that links only portal.css retains the same authentication colors, font and dimensions",
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Login page: drop the eyebrow and intro lines, add inert 아이디 찾기 / 비밀번호 찾기 links, a legal footer (개인정보 처리방침, 위치기반서비스 이용약관) and the 주식회사 이브이앤솔루션 copyright."
       ],
       "status": "active"
     },
@@ -2201,22 +2279,22 @@
     {
       "path": "apps/web/package-lock.json",
       "origin": "authored",
-      "sha256": "a23903a3ea2220e5bb41cc504ddd28919f41a6f5fb20d1f9465c6e9a32491bfb",
-      "reason": "Lock the independently owned frontend build and validation dependency tree for reproducible installation. Pin the qrcode 1.5.4 and @types/qrcode 1.5.6 dependency trees for local QR generation without a third-party data service.",
+      "sha256": "29bf3402ad63124145d4d595db797fb338bd59272bb771639c8dc993ce8f4b2a",
+      "reason": "Lock the independently owned frontend build and validation dependency tree for reproducible installation. Pin the qrcode 1.5.4 and @types/qrcode 1.5.6 dependency trees for local QR generation without a third-party data service. Add the lucide icon dependency for sidebar account icons.",
       "status": "active"
     },
     {
       "path": "apps/web/package.json",
       "origin": "authored",
-      "sha256": "fb904ea2ae7491f24a984a733bb1717e961d8000d02c7c9172a92b3eceb4adfe",
-      "reason": "Own one frontend package with pinned toolchain and explicit build, recursive regression and artifact verification commands. Pin qrcode 1.5.4 and @types/qrcode 1.5.6 for browser pickup QR generation.",
+      "sha256": "464f3bb728cadf91aab5edf49acb0189245d1e686a3d1be4fa6565e87a46ccee",
+      "reason": "Own one frontend package with pinned toolchain and explicit build, recursive regression and artifact verification commands. Pin qrcode 1.5.4 and @types/qrcode 1.5.6 for browser pickup QR generation. Add the lucide icon dependency for sidebar account icons.",
       "status": "active"
     },
     {
       "path": "apps/web/public/theme.css",
       "origin": "authored",
-      "sha256": "40205364ea54eda9ef5b5b216ed2db6b5d6bb15fd9282e4c90c71bc05bd64ab0",
-      "reason": "Author the shared public font, brand and dimension foundation using approved DESIGN.md decisions without exposing protected UI code or business data.",
+      "sha256": "0dc153a6dba0a573fe9e74e2e23e5fdac1bd52b09b7c1aa857494c64660ef368",
+      "reason": "Author the shared public font, brand and dimension foundation using approved DESIGN.md decisions without exposing protected UI code or business data. Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
       "status": "active"
     },
     {
@@ -2331,8 +2409,8 @@
     {
       "path": "apps/web/public/components.css",
       "origin": "authored",
-      "sha256": "3bd57849525a415b00d64c669f547d3af1eacc1b07b06ce188827a66d84ebd75",
-      "reason": "Own shared buttons, fields, cards, tabs, focus and dialog appearance across product, guide and authentication pages.",
+      "sha256": "a3b3187c0b97aed12a7d9fb3cc800c9e07cefc51e142ef828c7de7b37688deab",
+      "reason": "Own shared buttons, fields, cards, tabs, focus and dialog appearance across product, guide and authentication pages. Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
       "status": "active"
     },
     {
@@ -2352,8 +2430,8 @@
     {
       "path": "apps/web/combined/status-notification.css",
       "origin": "authored",
-      "sha256": "cad5eda532fce85cfb2c64d25e94acb8c33bad8c99d39033c57911eb8eaf87ab",
-      "reason": "Position and size the shared top notification without replacing operational work areas. Stack toasts in one fixed container and style the action button and error tone.",
+      "sha256": "5673524c47404c4ba75883267b298eaaf178620cee17a3d1bb02d6adcf6fa9cb",
+      "reason": "Position and size the shared top notification without replacing operational work areas. Stack toasts in one fixed container and style the action button and error tone. Anchor the toast stack to the top right so it never covers the sub-tabs. Remove card overlaps: dock the control running summary above the map and anchor toasts to the bottom right.",
       "status": "active"
     },
     {
@@ -2373,16 +2451,16 @@
     {
       "path": "apps/web/combined/driver-tools.ts",
       "origin": "authored",
-      "reason": "Generate a QR for every assigned order and exchange authenticated date-and-vehicle driver messages; distinguish stored messages from FCM results, reject stale print snapshots, and preserve read-only history.",
+      "reason": "Generate a QR for every assigned order and exchange authenticated date-and-vehicle driver messages; distinguish stored messages from FCM results, reject stale print snapshots, and preserve read-only history. Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
       "status": "active",
-      "sha256": "4752a9af6d6dff3feaafa768edcfabc14cb66cf2fac502f13318982f88f4e83e"
+      "sha256": "c18a57f83a7a4fead00d3e8eb72b7b899949efb9c3fdcc0f192d9db58a636b20"
     },
     {
       "path": "apps/web/combined/driver-tools.css",
       "origin": "authored",
-      "reason": "Style the existing vehicle-detail driver tools and accessible dialogs with printable per-order QR cards using the shared operational design tokens. Exclude non-print content from layout and flatten the dialog ancestry during printing so QR cards paginate without blank operational pages. Keep the print document canvas white without changing screen backgrounds.",
+      "reason": "Style the existing vehicle-detail driver tools and accessible dialogs with printable per-order QR cards using the shared operational design tokens. Exclude non-print content from layout and flatten the dialog ancestry during printing so QR cards paginate without blank operational pages. Keep the print document canvas white without changing screen backgrounds. Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
       "status": "active",
-      "sha256": "5600b47e307fa1472ac7533329bffca1934a412217f30053aa96ccbb938430e3"
+      "sha256": "1092aa5eaa697751df9e4551e313876e76c39f6a23bf907b8248eda46150dc26"
     },
     {
       "path": "apps/web/combined/driver-tools.test.mjs",
@@ -2390,6 +2468,13 @@
       "reason": "Verify individual-order QR payloads, print invalidation and late QR results, authenticated message contracts, read-only history, safe rendering, duplicate sends, and separate storage and push outcomes.",
       "status": "active",
       "sha256": "0670d26d9b972302e7000ca7f9f0517e34a26e11fa92c6f0de20930dc07a52e7"
+    },
+    {
+      "path": "apps/web/combined/account-icons.mjs",
+      "origin": "authored",
+      "sha256": "328c41762230d546b267e1596442f4ca3c55bf6198cdc77e4034a8b6b8d43ba4",
+      "reason": "Render the sidebar account icons (settings, account, logout) from the official Lucide icon data, tree-shaken to three icons.",
+      "status": "active"
     }
   ],
   "historicalTargetFileCount": 163,

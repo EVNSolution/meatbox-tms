@@ -52,7 +52,7 @@ test('initial loading and failed lookup keep the table and actions without repor
     createRegionCode: async () => { writeCalls += 1; },
   };
   const { element, instance, submit } = fixture(client);
-  assert.match(element.innerHTML, /표시 미확인 \/ 전체 미확인 · 미지정 미확인/);
+  assert.match(element.innerHTML, /표시 미확인 \/ 전체 미확인 \/ 미지정 미확인/);
   assert.match(element.innerHTML, /aria-busy="true"[\s\S]*<table[\s\S]*resource-actionbar/);
   assert.match(element.innerHTML, /data-resource-search[^>]*disabled/);
   await submit({ dataset: { resourceForm: 'create' }, elements: { code: { value: 'QA77' } } });
@@ -63,7 +63,7 @@ test('initial loading and failed lookup keep the table and actions without repor
   assert.match(element.innerHTML, /data-resource-action="refresh" >다시 불러오기/);
   assert.match(element.innerHTML, /표시 미확인[\s\S]*<table[\s\S]*resource-actionbar/);
   await instance.refresh();
-  assert.match(element.innerHTML, /표시 3 \/ 전체 3대 · 미지정 1대/);
+  assert.match(element.innerHTML, /표시 3 \/ 전체 3대 \/ 미지정 1대/);
   assert.doesNotMatch(element.innerHTML, /data-resource-search[^>]*disabled/);
 });
 
@@ -73,7 +73,7 @@ test('successful empty catalog reports zero; a filtered empty result does not re
   const client = { snapshot: null, async load() { this.snapshot = loadedSnapshot; return loadedSnapshot; } };
   const { element, instance, input } = fixture(client, { onEmptyChange: empty => emptyChanges.push(empty) });
   await tick();
-  assert.match(element.innerHTML, /표시 0 \/ 전체 0대 · 미지정 0대/);
+  assert.match(element.innerHTML, /표시 0 \/ 전체 0대 \/ 미지정 0대/);
   assert.match(element.innerHTML, /<td class="resource-empty" colspan="4">미등록<\/td>/);
   assert.match(element.innerHTML, /<table[\s\S]*resource-actionbar/);
   assert.deepEqual(emptyChanges, [false, true]);

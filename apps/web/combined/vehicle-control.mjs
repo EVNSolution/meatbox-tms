@@ -33,31 +33,30 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     <section class="panel control-fleet" aria-labelledby="control-fleet-heading">
       <div class="panel-heading"><h2 id="control-fleet-heading">차량별 남은 업무</h2><span data-control-count class="muted"></span></div>
       <div class="control-filters"><label class="field"><span>차량 검색</span><input type="search" data-control-search placeholder="차량번호 또는 배송원"></label><label class="field"><span>정렬</span><select data-control-sort><option value="received">주문 수신 순서<option value="stops">남은 배송지 많은 순<option value="boxes">남은 박스 많은 순<option value="duration">예상 소요 시간 긴 순</option></select></label></div>
-      <p class="control-unit-note">확정된 배차의 남은 업무입니다. 보류 배송지도 포함합니다.</p>
       <div class="control-vehicle-columns" aria-hidden="true"><span>차량 / 배송원</span><span>배송지</span><span>박스</span><span>소요</span></div>
       <div class="control-vehicle-list" data-control-vehicles tabindex="0" aria-label="차량별 잔여량 비교"></div>
     </section>
     <section class="control-map-workspace" aria-label="선택 차량 운행">
       <div class="panel control-current" data-control-summary aria-live="polite"></div>
-      <section class="panel control-map-panel" aria-labelledby="control-map-heading"><div class="panel-heading"><h2 id="control-map-heading">남은 배송지</h2><button type="button" class="button" data-control-support>${referenceIcon('support')}지원배차</button></div><div class="control-map-canvas" data-control-map></div><p class="control-map-note" data-control-map-note role="status"></p></section>
+      <section class="panel control-map-panel" aria-labelledby="control-map-heading"><h2 id="control-map-heading" class="sr-only">남은 배송지</h2><div class="control-map-canvas" data-control-map></div><button type="button" class="button control-map-support" data-control-support>${referenceIcon('support')}지원배차</button><p class="control-map-note" data-control-map-note role="status"></p></section>
     </section>
     <aside class="panel control-details" aria-label="선택 차량 상세">
       <div class="panel-heading"><h2 data-control-detail-title>차량 상세</h2></div>
       ${driverToolsMarkup()}
       <div class="detail-tabs control-tabs" role="tablist" aria-label="관제 관리"><button type="button" role="tab" id="tab-monitor" aria-selected="true" aria-controls="monitor-list-panel" data-control-tab="monitor">배송지 상세</button><button type="button" role="tab" id="tab-management" aria-selected="false" aria-controls="control-management-panel" tabindex="-1" data-control-tab="management">배송 관리</button></div>
-      <section id="monitor-list-panel" role="tabpanel" aria-labelledby="tab-monitor"><p class="control-unit-note">배송지를 펼쳐 배송 정보와 요청사항을 확인하세요.</p><div data-control-stops class="control-stop-list"></div></section>
+      <section id="monitor-list-panel" role="tabpanel" aria-labelledby="tab-monitor"><div data-control-stops class="control-stop-list"></div></section>
       <section id="control-management-panel" role="tabpanel" aria-labelledby="tab-management" hidden>
         <div data-control-records-view>
           <div class="control-management-target"><label class="field"><span>선택 배송지</span><select data-control-record-stop aria-label="관리할 배송지"></select></label><div class="control-management-actions"><button type="button" class="button" data-control-route>배송 순서 관리</button></div></div>
           <div class="control-record-filters" role="group" aria-label="기록 유형"><button type="button" data-control-record-filter="all" aria-pressed="true">전체</button><button type="button" data-control-record-filter="history" aria-pressed="false">처리 이력</button><button type="button" data-control-record-filter="notice" aria-pressed="false">고객 알림</button></div>
-          <p class="control-unit-note">수신된 최근 기록을 시간순으로 표시합니다.</p><ol class="control-record-list" data-control-records tabindex="0" aria-label="선택 배송지 이력과 알림"></ol>
-          <details class="control-common-events" data-control-common><summary>차량 공통 사건 이력</summary><p class="muted">대상 배송지가 지정되지 않은 최근 기록입니다.</p><ol class="control-fact-list" data-control-events></ol></details>
+          <ol class="control-record-list" data-control-records tabindex="0" aria-label="선택 배송지 이력과 알림"></ol>
+          <details class="control-common-events" data-control-common><summary>차량 공통 사건 이력</summary><ol class="control-fact-list" data-control-events></ol></details>
         </div>
         <div data-control-route-view hidden><div id="route-editor"></div></div>
       </section>
     </aside>
   </div>
-  <dialog class="support-dispatch-dialog" data-support-dialog aria-labelledby="support-title"><div class="support-heading"><h2 id="support-title">지원배차</h2><button type="button" class="button icon-button" data-support-close aria-label="지원배차 닫기">${referenceIcon('close')}</button></div><p>예상 완료시간과 실제 완수 속도를 바탕으로 지원할 차량을 판단합니다.</p><p class="support-waiting">실제 위치가 연결되지 않아 주변 차량을 확인할 수 없습니다. 안정 레벨의 상·중·하 기준과 호출·수락·재배정 연결을 기다리고 있습니다.</p><div class="support-data" data-support-data></div><div class="support-actions"><button type="button" class="button" disabled>호출 대기</button><button type="button" class="button primary" disabled>지원 지시 대기</button></div></dialog>`;
+  <dialog class="support-dispatch-dialog" data-support-dialog aria-labelledby="support-title"><div class="support-heading"><h2 id="support-title">지원배차</h2><button type="button" class="button icon-button" data-support-close aria-label="지원배차 닫기">${referenceIcon('close')}</button></div><p>예상 완료시간과 실제 완수 속도를 바탕으로 지원할 차량을 판단합니다.</p><p class="support-waiting">실제 위치가 연결되지 않아 주변 차량을 확인할 수 없습니다. 안정 레벨의 상, 중, 하 기준과 호출, 수락, 재배정 연결을 기다리고 있습니다.</p><div class="support-data" data-support-data></div><div class="support-actions"><button type="button" class="button" disabled>호출 대기</button><button type="button" class="button primary" disabled>지원 지시 대기</button></div></dialog>`;
   const find = selector => element.querySelector(selector);
   let data = null, rows = [], row = null, selectedId = null, sort = 'received', search = '';
   let previousVehicleId = null, previousSelectedId = null, recordFilter = 'all';
@@ -87,7 +86,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
 
   function renderSummary() {
     const source = Boolean(data?.sourceData);
-    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.driver || '배송원 미등록')}</h2><p>${esc(plateLabel(row.vehicle))}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><details class="control-running-details"${factsOpen ? ' open' : ''}><summary>운행 상세<span>${esc(row.current?.name ? `현재 ${row.current.name} · ETA ${row.current.preciseTimeText || row.current.calculatedEta || '미확인'}` : '현재 배송지 없음')}</span>${referenceIcon('next')}</summary><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동·하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}</details>` : '<p class="control-unit-note">미배정</p>';
+    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.driver || '배송원 미등록')}</h2><p>${esc(plateLabel(row.vehicle))}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><details class="control-running-details"${factsOpen ? ' open' : ''}><summary>운행 상세<span>${esc(row.current?.name ? `현재 ${row.current.name}, ETA ${row.current.preciseTimeText || row.current.calculatedEta || '미확인'}` : '현재 배송지 없음')}</span>${referenceIcon('next')}</summary><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동과 하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}</details>` : '<p class="control-unit-note">미배정</p>';
     find('[data-control-detail-title]').textContent = row ? `${row.vehicle.driver || row.vehicle.id} 상세` : '차량 상세';
   }
 
@@ -98,7 +97,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   }
 
   function stopContents(stop) {
-    return `<div class="control-stop-body"><p class="muted">${esc(stop.address || '주소 미등록')}</p><dl class="control-stop-facts"><div><dt>배정 박스</dt><dd>${count(stop.boxes, '박스')}</dd></div><div><dt>도착 ETA</dt><dd>${esc(stop.preciseTimeText || stop.calculatedEta || '미확인')}</dd></div></dl><section class="control-request">${renderCustomerRequests(stop)}</section><section class="control-tip"><h4>배송원 팁</h4><p>${esc(stop.tip?.body || '등록된 배송팁이 없습니다.')}</p>${stop.tip ? `<small>${esc(stop.tip.author)}${stop.tip.updatedAt ? ` (${esc(stop.tip.updatedAt)})` : ''}</small>` : ''}</section><button type="button" class="button control-open-records" data-control-manage="${esc(stop.id)}">이력·알림 보기</button></div>`;
+    return `<div class="control-stop-body"><p class="muted">${esc(stop.address || '주소 미등록')}</p><dl class="control-stop-facts"><div><dt>배정 박스</dt><dd>${count(stop.boxes, '박스')}</dd></div><div><dt>도착 ETA</dt><dd>${esc(stop.preciseTimeText || stop.calculatedEta || '미확인')}</dd></div></dl><section class="control-request">${renderCustomerRequests(stop)}</section><section class="control-tip"><h4>배송원 팁</h4><p>${esc(stop.tip?.body || '등록된 배송팁이 없습니다.')}</p>${stop.tip ? `<small>${esc(stop.tip.author)}${stop.tip.updatedAt ? ` (${esc(stop.tip.updatedAt)})` : ''}</small>` : ''}</section><button type="button" class="button control-open-records" data-control-manage="${esc(stop.id)}">기록 보기</button></div>`;
   }
 
   function renderStops() {
@@ -152,7 +151,15 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     if (signature !== nextSignature) {
       signature = nextSignature;
       markers.splice(0).forEach(marker => marker.remove());
-      markers = model.mapped.map(item => markerFactory(map, item.delivery, item.coordinates));
+      markers = model.mapped.map(item => {
+        const marker = markerFactory(map, item.delivery, item.coordinates);
+        // The control map shows the visit order inside the pin; the shared pin builder stays untouched.
+        if (Number.isFinite(item.delivery.sequence) && marker.element?.classList) {
+          marker.element.classList.add('order-map-marker-numbered');
+          marker.element.textContent = String(item.delivery.sequence);
+        }
+        return marker;
+      });
       if (position) {
         const markerElement = document.createElement('div');
         markerElement.className = 'control-map-vehicle';
@@ -166,6 +173,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       fitView();
     }
     markers.forEach(marker => marker.element.setAttribute('aria-pressed', String(marker.element.dataset.orderMarker === selectedId)));
+    { const note = find('[data-control-map-note]'); if (note.dataset) { note.dataset.error = String(Boolean(mapError)); note.dataset.empty = 'false'; } }
     find('[data-control-map-note]').textContent = mapError || (activeRouteData
       ? `남은 배송지 ${model.mapped.length}곳 표시, 위치 미등록 ${model.unknownCount}곳. ${position ? source ? '차량 기준 위치 표시. 실시간 GPS 미수신.' : '차량은 시뮬레이션 위치입니다. 실제 GPS 미연결.' : '차량 현재 위치 미수신.'}`
       : '배송지 위치 데이터를 불러오고 있습니다. 미등록 건수는 수신 후 확인합니다.');
@@ -192,20 +200,32 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: mapPadding(), maxZoom: fitCoords.length === 1 ? 13 : 14, duration: 0 });
   }
 
+  function createMap() {
+    if (mapError || map) return;
+    try {
+      map = mapFactory(mapElement);
+      wheel = installModifierWheelZoom(map);
+      observer = new ResizeObserver(() => { map?.resize(); fitView(); });
+      observer.observe(mapElement);
+    } catch {
+      mapError = '지도를 불러오지 못했습니다. 새로고침해 주세요.';
+      find('[data-control-map-note]').textContent = mapError;
+      if (find('[data-control-map-note]').dataset) find('[data-control-map-note]').dataset.error = 'true';
+    }
+  }
+
+  // Without work the map still shows, empty, with the reason in a chip over it.
+  function resetMap() {
+    routeEpoch += 1;
+    markers.splice(0).forEach(marker => marker.remove());
+    signature = ''; fitCoords = [];
+    createMap();
+  }
+
   function ensureMap() {
     if (mapError) return;
-    if (!map) {
-      try {
-        map = mapFactory(mapElement);
-        wheel = installModifierWheelZoom(map);
-        observer = new ResizeObserver(() => { map?.resize(); fitView(); });
-        observer.observe(mapElement);
-      } catch {
-        mapError = '지도를 불러오지 못했습니다. 새로고침해 주세요.';
-        find('[data-control-map-note]').textContent = mapError;
-        return;
-      }
-    }
+    createMap();
+    if (!map) return;
     map.resize();
     if (data?.sourceData) return;
     if (typeof loadRouteData !== 'function') {
@@ -255,7 +275,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     find('[data-control-sort]').value = 'received';
     if (support.open) support.close();
     showRecords();
-    removeMap();
+    resetMap();
     find('[data-control-count]').textContent = empty ? '0대' : '미확인';
     list.innerHTML = `<p class="control-unit-note">${empty ? '미배정' : '미확인'}</p>`;
     renderEmptySummary(empty, message);
@@ -267,8 +287,9 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     find('[data-support-data]').innerHTML = '';
     find('[data-control-common]').hidden = false;
     element.querySelectorAll('[data-control-record-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.controlRecordFilter === 'all')));
-    mapElement.innerHTML = empty ? '' : `<div class="control-map-empty" role="status">${esc(message)}</div>`;
-    find('[data-control-map-note]').textContent = empty ? '미배정' : message;
+    const note = find('[data-control-map-note]');
+    note.textContent = mapError || message;
+    if (note.dataset) note.dataset.empty = 'true';
     setControlsDisabled(true);
   }
 

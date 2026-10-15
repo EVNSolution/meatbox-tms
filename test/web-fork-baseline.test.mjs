@@ -45,6 +45,7 @@ const authoredPaths = [
   'apps/web/combined/zone-volume.mjs', 'apps/web/combined/zone-volume.test.mjs',
   'apps/web/combined/vehicle-identity.mjs', 'apps/web/combined/vehicle-identity.test.mjs',
   'apps/web/combined/zone-transfer.mjs', 'apps/web/combined/zone-transfer.test.mjs',
+  'apps/web/combined/account-icons.mjs',
   'apps/web/combined/driver-tools.ts', 'apps/web/combined/driver-tools.css',
   'apps/web/combined/driver-tools.test.mjs',
 ].sort();

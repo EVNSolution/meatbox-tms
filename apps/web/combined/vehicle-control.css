@@ -2,18 +2,18 @@
 .vehicle-control-layout > *, .control-map-workspace { min-width: 0; }
 .vehicle-control-layout .panel-heading { padding: 14px 16px; gap: 8px; }
 .vehicle-control-layout .panel-heading h2 { font-size: 16px; line-height: 24px; }
-.control-filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px 14px 0; }
+.control-filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px 16px; }
 .control-filters .field { min-width: 0; }
 .control-filters input, .control-filters select { min-width: 0; width: 100%; height: var(--control-height); }
 .control-unit-note { margin: 10px 14px; color: var(--muted); font-size: 12px; line-height: 1.6; }
-.control-vehicle-columns, .control-vehicle-row { display: grid; grid-template-columns: minmax(0, 1fr) 43px 45px 47px; align-items: center; gap: 6px; padding: 10px 12px; text-align: right; }
+.control-vehicle-columns, .control-vehicle-row { display: grid; grid-template-columns: minmax(0, 1fr) 43px 45px 47px; align-items: center; gap: 6px; padding: 10px 16px; text-align: right; }
 .control-vehicle-columns { background: #f8f9fa; border-block: 1px solid var(--border); color: var(--muted); font-size: 11px; }
 .control-vehicle-columns > :first-child, .control-vehicle-row > :first-child { text-align: left; }
 .control-vehicle-list { max-height: min(66vh, 690px); overflow: auto; overscroll-behavior: contain; }
 .control-vehicle-row { width: 100%; min-height: 58px; color: var(--text); background: white; border: 0; border-bottom: 1px solid var(--border); font: inherit; font-size: 12px; cursor: pointer; }
 .control-vehicle-row strong, .control-vehicle-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .control-vehicle-row small { margin-top: 4px; color: var(--muted); }
-.control-vehicle-row[aria-pressed="true"] { background: var(--selected); box-shadow: inset 0 0 0 1px #E60028; }
+.control-vehicle-row[aria-pressed="true"] { background: var(--selected); box-shadow: inset 3px 0 0 var(--brand); }
 .control-vehicle-row:hover { background: #f4f5f7; }
 .control-map-workspace { display: grid; gap: 14px; }
 .control-current .panel-heading p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
@@ -30,31 +30,32 @@
 .control-running-facts > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 8px; align-items: baseline; }
 .control-running-facts dt { color: var(--muted); }
 .control-running-facts dd { margin: 0; overflow-wrap: anywhere; }
-.control-map-panel { overflow: hidden; }
+.control-map-panel { position: relative; overflow: hidden; }
+.control-map-support { position: absolute; top: 12px; right: 12px; z-index: 3; box-shadow: 0 4px 16px #17203316; }
 .control-map-panel .panel-heading { flex-wrap: wrap; }
 .control-map-panel .button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: var(--control-height); padding-inline: 10px; white-space: nowrap; }
 .control-map-canvas { height: 400px; position: relative; }
 .control-map-empty { display: grid; place-items: center; height: 100%; padding: 24px; color: var(--muted); background: #f8f9fa; text-align: center; }
 .control-map-note { padding: 10px 14px; margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
-.control-map-vehicle { width: 44px; height: 44px; background: url('/combined/assets/maps/dsv-vehicle-marker.svg') center / 34px 34px no-repeat; }
+.control-map-vehicle { width: 48px; height: 48px; background: url('/combined/assets/maps/dsv-vehicle-marker.svg') center / 48px 48px no-repeat; }
 .control-details { overflow: hidden; }
 .control-details .control-tabs { border-top: 1px solid var(--border); }
 .control-stop-list { max-height: min(67vh, 700px); overflow: auto; overscroll-behavior: contain; }
 .control-stop { border-bottom: 1px solid var(--border); }
-.control-stop > summary { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 20px; align-items: center; gap: 7px; list-style: none; min-height: 48px; padding: 9px 12px; cursor: pointer; font-size: 13px; }
+.control-stop > summary { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 20px; align-items: center; gap: 7px; list-style: none; min-height: 48px; padding: 9px 16px; cursor: pointer; font-size: 13px; }
 .control-stop > summary::-webkit-details-marker { display: none; }
 .control-stop > summary > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .control-stop[open] > summary { background: var(--selected); }
 .control-stop[open] > summary > .reference-icon { transform: rotate(180deg); }
 .control-stop-sequence { color: var(--muted); text-align: center; }
-.control-stop-body { padding: 0 14px 16px; font-size: 12px; }
+.control-stop-body { padding: 0 16px 16px; font-size: 12px; }
 .control-stop-body h4 { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 15px 0 8px; }
 .control-stop-body p { line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
 .control-stop-facts { display: flex; flex-wrap: wrap; gap: 16px; }
 .control-stop-facts > div { display: flex; gap: 8px; }
 .control-stop-facts dt { color: var(--muted); }
 .control-stop-facts dd { margin: 0; }
-.control-request { padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; }
+.control-request { padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius); }
 .control-request h4 { margin-top: 10px; }
 .control-fact-list { padding: 0; margin: 0; list-style: none; max-height: 240px; overflow: auto; }
 .control-fact-list li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 8px 0; border-bottom: 1px solid #f0f1f3; line-height: 1.5; }
@@ -67,7 +68,7 @@
 .support-heading h2 { margin: 0; font-size: 20px; }
 .support-heading .icon-button { width: 44px; height: 44px; display: inline-grid; place-items: center; padding: 0; }
 .support-dispatch-dialog p { font-size: 13px; line-height: 1.7; }
-.support-waiting { padding: 12px; background: #fff8e8; border-radius: 6px; }
+.support-waiting { padding: 12px; background: #fff8e8; border-radius: var(--radius); }
 .support-data h3 { font-size: 15px; }
 .support-table-scroll { max-height: 360px; overflow: auto; }
 .support-table-scroll table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 12px; }
@@ -91,15 +92,15 @@
 }
 
 .control-open-records { width: 100%; margin-top: 14px; font-size: 12px; }
-.control-management-target { padding: 14px; border-bottom: 1px solid var(--border); }
+.control-management-target { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
 .control-management-target .field { display: grid; min-width: 0; }
 .control-management-target select { width: 100%; min-width: 0; height: var(--control-height); font: inherit; font-size: 13px; }
-.control-management-actions { display: flex; gap: 8px; margin-top: 10px; }
-.control-management-actions .button { flex: 1; min-height: var(--control-height); padding-inline: 8px; font-size: 12px; white-space: nowrap; }
-.control-record-filters { display: flex; gap: 4px; margin: 12px 14px 0; padding: 3px; background: #f4f5f7; border-radius: 6px; }
-.control-record-filters button { flex: 1; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; min-height: var(--control-height); cursor: pointer; }
+.control-management-actions { display: flex; gap: 8px; margin: 0; }
+.control-management-actions .button { flex: none; min-height: var(--control-height); padding-inline: 14px; font-size: 13px; white-space: nowrap; }
+.control-record-filters { display: flex; gap: 4px; margin: 12px 16px 0; padding: 3px; background: var(--workspace); border-radius: 100px; }
+.control-record-filters button { flex: 1; border: 0; border-radius: 100px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; min-height: var(--control-height); cursor: pointer; }
 .control-record-filters button[aria-pressed="true"] { background: white; color: var(--brand); box-shadow: 0 1px 3px #00000012; font-weight: 600; }
-.control-record-list { list-style: none; padding: 0 14px; margin: 0; max-height: min(55vh, 550px); overflow: auto; overscroll-behavior: contain; }
+.control-record-list { list-style: none; padding: 0 16px; margin: 0; max-height: min(55vh, 550px); overflow: auto; overscroll-behavior: contain; }
 .control-record { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; border-bottom: 1px solid var(--border); padding: 10px 0; font-size: 12px; }
 .control-record > time { text-align: center; padding-top: 1px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .control-record > div { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 6px; align-items: baseline; }
@@ -122,18 +123,30 @@
 .support-data td small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
 @media (min-width: 1271px) {
   #vehicle-control { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-  .vehicle-control-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); gap: 0; min-height: 520px; align-items: stretch; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+  .vehicle-control-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); gap: 0; min-height: 520px; align-items: stretch; overflow: hidden; border: 1px solid var(--border); border-radius: var(--meatbox-radius-card); background: #fff; }
   .vehicle-control-layout > .panel { border: 0; border-radius: 0; box-shadow: none; }
-  .control-fleet { border-right: 1px solid var(--border); }
-  .control-details { border-left: 1px solid var(--border); }
+  .control-map-workspace > .panel { border: 0; border-radius: 0; box-shadow: none; }
+  .control-map-workspace > .control-current { border-bottom: 1px solid var(--border); }
+  .vehicle-control-layout > .control-fleet { border-right: 1px solid var(--border); }
+  .vehicle-control-layout > .control-details { position: relative; }
+  /* QR / message actions sit in the heading row instead of two full-width bars. */
+  .control-details .control-driver-tools { position: absolute; top: 0; right: 16px; z-index: 2; height: 63px; flex-wrap: nowrap; align-items: center; gap: 8px; padding: 0; }
+  .control-details .control-driver-tools .button { flex: none; min-height: 36px; padding: 0 12px; }
   .control-fleet, .control-details, .control-map-workspace, .control-map-panel { display: flex; flex-direction: column; min-height: 0; }
   .control-map-workspace { position: relative; gap: 0; }
   .control-map-panel { flex: 1 1 auto; }
   .control-map-canvas { flex: 1 1 auto; height: auto; min-height: 240px; }
-  .control-map-note { position: absolute; top: 85px; left: 12px; z-index: 2; margin: 0; padding: 6px 10px; border-radius: 6px; background: #ffffffe6; box-shadow: 0 1px 3px #00000014; font-size: 11px; line-height: 1.4; }
+  .control-map-note { position: absolute; top: 12px; left: 12px; z-index: 2; margin: 0; padding: 6px 10px; border-radius: var(--radius); background: #ffffffe6; box-shadow: 0 1px 3px #00000014; font-size: 11px; line-height: 1.4; }
   .control-map-note:empty { display: none; }
-  .control-current { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3; border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px #1b263314; }
-  .control-current .panel-heading { padding: 8px 14px; min-height: 0; }
+  /* The running summary is docked above the map: one slim row, details below it. Nothing floats over the map card. */
+  /* Every column starts with a 64px row (63px + 1px divider) so the dividers line up across the frame. */
+  .vehicle-control-layout .panel-heading { min-height: 64px; box-sizing: border-box; }
+  .control-current { display: grid; grid-template-columns: minmax(180px, auto) minmax(0, 1fr); grid-template-rows: 63px auto; align-items: center; flex: none; border-bottom: 1px solid var(--border); }
+  .control-current .panel-heading { grid-column: 1; border-bottom: 0; }
+  .control-current .control-workload { grid-column: 2; border-bottom: 0; }
+  .control-current .control-running-details { grid-column: 1 / -1; border-top: 1px solid var(--border); }
+  .control-current .panel-heading { padding: 0 16px; min-height: 0; height: 63px; }
+  .control-current .control-workload { padding: 0 16px; height: 63px; align-items: center; }
   .control-current .panel-heading div { display: flex; align-items: baseline; gap: 8px; }
   .control-current .panel-heading h2 { font-size: 14px; line-height: 20px; }
   .control-current .panel-heading p { margin: 0; }
@@ -149,3 +162,26 @@
   #control-management-panel { flex: 1 1 auto; min-height: 0; overflow: auto; }
   #monitor-list-panel[hidden] { display: none; }
 }
+
+/* Sub-tabs: 관제 (map), 배송지 (stops), 이력·알림 (records) share one fleet list. */
+.control-tabs { display: none; }
+[data-page="control"][data-subtab="map"] .control-details,
+[data-page="control"][data-subtab="stops"] .control-map-workspace,
+[data-page="control"][data-subtab="records"] .control-map-workspace { display: none; }
+@media (min-width: 1271px) {
+  [data-page="control"] .vehicle-control-layout { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); }
+  [data-page="control"][data-subtab="map"] .control-fleet,
+  [data-page="control"][data-subtab="stops"] .control-fleet,
+  [data-page="control"][data-subtab="records"] .control-fleet { min-width: 0; }
+}
+
+/* 관제: the date bar is a single slim strip, like 배차. */
+[data-page="control"] .date-summary-toolbar { margin-bottom: 8px; padding: 4px 8px; gap: 4px 12px; }
+[data-page="control"] .date-summary-toolbar .date-summary-actions { min-height: 40px; }
+[data-page="control"] .date-summary-toolbar .button { min-height: 36px; }
+[data-page="control"] .date-summary-toolbar .date-step { width: 36px; min-width: 36px; height: 36px; }
+[data-page="control"] .date-summary-toolbar .summary-counts > * { min-width: 56px; padding: 3px 10px; }
+[data-page="control"] .date-summary-toolbar .summary-counts strong { font-size: 15px; }
+
+/* Map explanations are hidden unless the map failed. */
+.control-map-note:not([data-error="true"]):not([data-empty="true"]) { display: none; }

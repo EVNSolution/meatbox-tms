@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { operatorRoute, controlDataPresentation, filterFleetDeliveries, normalizeVehicleFilter, resolveDeliverySelection } from './operations-model.mjs';
+import { operatorRoute, routeHash, controlDataPresentation, filterFleetDeliveries, normalizeVehicleFilter, resolveDeliverySelection } from './operations-model.mjs';
 
 test('관제의 로딩과 조회 실패는 확인된 자료 없음과 구분한다', () => {
   assert.deepEqual(controlDataPresentation(null), { empty: false, message: '배송 자료를 확인하고 있습니다.' });
@@ -16,11 +16,16 @@ test('관제의 로딩과 조회 실패는 확인된 자료 없음과 구분한�
 
 test('known operator links retain their page and control tab', () => {
   const expectedRoutes = new Map([
-    ['#/orders', {page:'orders', controlTab:'monitor'}],
-    ['#/deliveries', {page:'deliveries', controlTab:'monitor'}],
-    ['#/control', {page:'control', controlTab:'monitor'}],
-    ['#/control/manage', {page:'control', controlTab:'management'}],
-    ['#/manage', {page:'control', controlTab:'management'}],
+    ['#/orders', {page:'orders', subtab:'plan', controlTab:'monitor'}],
+    ['#/orders/zones', {page:'orders', subtab:'zones', controlTab:'monitor'}],
+    ['#/orders/list', {page:'orders', subtab:'list', controlTab:'monitor'}],
+    ['#/orders/nope', {page:'orders', subtab:'plan', controlTab:'monitor'}],
+    ['#/deliveries', {page:'deliveries', subtab:'', controlTab:'monitor'}],
+    ['#/control', {page:'control', subtab:'map', controlTab:'monitor'}],
+    ['#/control/stops', {page:'control', subtab:'stops', controlTab:'monitor'}],
+    ['#/control/records', {page:'control', subtab:'records', controlTab:'management'}],
+    ['#/control/manage', {page:'control', subtab:'records', controlTab:'management'}],
+    ['#/manage', {page:'control', subtab:'records', controlTab:'management'}],
   ]);
 
   for (const [hash, expected] of expectedRoutes) assert.deepEqual(operatorRoute(hash), expected);
@@ -28,7 +33,7 @@ test('known operator links retain their page and control tab', () => {
 
 test('missing and unknown operator links open dispatch orders', () => {
   for (const hash of [undefined, '', '#', '#/', '#/unknown']) {
-    assert.deepEqual(operatorRoute(hash), {page:'orders', controlTab:'monitor'});
+    assert.deepEqual(operatorRoute(hash), {page:'orders', subtab:'plan', controlTab:'monitor'});
   }
 });
 
@@ -62,4 +67,16 @@ test('filtered-out and unreceived selections remain stable across operator pages
   assert.equal(resolveDeliverySelection(data, 'V2-S1').id, 'V2-S1');
   assert.equal(resolveDeliverySelection(data, 'S5').id, 'S5');
   assert.equal(resolveDeliverySelection(data, null).id, 'S5');
+});
+
+test('route hashes omit the default sub-tab and round-trip the others', () => {
+  assert.equal(routeHash('orders', 'plan'), '#/orders');
+  assert.equal(routeHash('orders', 'zones'), '#/orders/zones');
+  assert.equal(routeHash('control', 'map'), '#/control');
+  assert.equal(routeHash('control', 'records'), '#/control/records');
+  assert.equal(routeHash('deliveries', ''), '#/deliveries');
+  for (const hash of ['#/orders', '#/orders/zones', '#/orders/list', '#/control', '#/control/stops', '#/control/records']) {
+    const route = operatorRoute(hash);
+    assert.equal(routeHash(route.page, route.subtab), hash);
+  }
 });

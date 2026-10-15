@@ -1,17 +1,18 @@
 @import url('./dispatch-workflow.css');
-.order-planning-layout { display: grid; grid-template-columns: minmax(250px, 300px) minmax(0, 1fr); gap: 12px; }
+.order-planning-layout { display: grid; grid-template-columns: minmax(250px, 300px) minmax(0, 1fr); gap: 16px; }
 .order-vehicle-heading, .order-map-heading { display: flex; align-items: center; justify-content: space-between; min-height: 62px; padding: 20px; border-bottom: 1px solid var(--border); }
 .order-vehicle-heading h2, .order-map-heading h2 { margin: 0; font-size: 18px; font-weight: 600; }
 .order-vehicle-heading p, .order-map-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
 .order-map-heading { flex-wrap: wrap; gap: 8px 16px; }
+.order-map-heading > div { flex: 1 1 320px; min-width: 0; }
 .order-map-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 16px; }
-.order-map-mode { display: inline-flex; margin: 0; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius); background: #f3f4f6; }
+.order-map-mode { display: inline-flex; margin: 0; padding: 3px; border: 1px solid var(--border); border-radius: 100px; background: #fff; box-shadow: 0 4px 16px #17203316; }
 .order-map-mode label { position: relative; cursor: pointer; }
 .order-map-mode input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.order-map-mode span { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 12px; border-radius: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
-.order-map-mode input:checked + span { color: var(--text); background: #fff; box-shadow: 0 1px 3px #17203320; font-weight: 600; }
+.order-map-mode span { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 14px; border-radius: 100px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.order-map-mode input:checked + span { color: var(--text); background: #edf0f4; font-weight: 600; }
 .order-map-mode input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: -2px; }
-.order-vehicle-list { max-height: min(608px, calc(100vh - 328px)); min-height: 280px; overflow: auto; }
+.order-vehicle-list { min-height: 280px; max-height: 608px; overflow: auto; }
 .order-vehicle-list > button { display: grid; width: 100%; min-height: 104px; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--border); background: #fff; color: var(--text); text-align: left; cursor: pointer; }
 .order-vehicle-list > button:hover { background: #f7f8fa; }
 .order-vehicle-list > button[aria-pressed="true"] { background: #fff1f3; }
@@ -26,18 +27,29 @@
 .order-region-note { margin: 0; padding: 12px 14px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11px; line-height: 1.5; }
 .order-region-note strong { display: block; color: var(--text); }
 .order-vehicle-empty { margin: 0; padding: 20px; color: var(--muted); font-size: 12px; }
-.order-map-canvas { position: relative; min-height: min(700px, calc(100vh - 236px)); overflow: hidden; background: #f5f6f7; }
+.order-map-canvas { position: relative; min-height: 480px; overflow: hidden; background: #f5f6f7; }
 .order-map-layer { position: absolute; inset: 0; }
-.order-map-status { position: absolute; z-index: 2; top: 50%; left: 50%; margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fffffff0; color: var(--muted); font-size: 12px; transform: translate(-50%, -50%); }
-.order-map-selection, .order-map-summary { position: absolute; z-index: 3; border: 1px solid var(--border); background: #fff; }
+.order-map-status { position: absolute; z-index: 2; top: 50%; left: 50%; margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: #fffffff0; color: var(--muted); font-size: 12px; transform: translate(-50%, -50%); }
+.order-map-selection, .order-map-summary, .order-map-count, .order-map-tools, .order-map-mode-wrap { position: absolute; z-index: 3; border: 1px solid var(--border); background: #fff; }
+.order-map-tools { top: 12px; left: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: calc(100% - 24px); padding: 6px; border-radius: var(--meatbox-radius-card); box-shadow: 0 4px 16px #17203316; }
+.order-map-tools .order-dispatch-actions { display: contents; }
+.order-map-tools .order-dispatch-actions[hidden] { display: none; }
+.order-map-tools .order-dispatch-actions .order-multi-actions { display: flex; gap: 6px; }
+.order-map-tools .order-dispatch-actions .button { min-height: 36px; padding-inline: 12px; font-size: 12px; }
+.order-map-tools .order-multi-summary { margin: 0 6px; font-size: 12px; color: var(--muted); }
+.order-map-tools .order-multi-summary:empty, .order-map-tools .order-dispatch-context:empty { display: none; }
+.order-map-tools .order-dispatch-context { flex-basis: 100%; margin: 0 6px 4px; font-size: 11px; color: var(--muted); }
+.order-map-mode-wrap { top: 12px; right: 12px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.order-map-mode-wrap:has(> [hidden]) { display: none; }
+.order-map-count { right: 12px; bottom: 60px; margin: 0; padding: 6px 10px; border-radius: var(--radius); color: var(--muted); font-size: 11px; }
 .order-map-marker { z-index: 2; display: flex; width: 44px; height: 44px; padding: 0; align-items: flex-end; justify-content: center; border: 0; background: transparent; cursor: pointer; }
 .order-map-marker::before { width: 24.8px; height: 32.24px; background: url('/combined/assets/maps/dsv-destination-marker.svg') center / contain no-repeat; content: ''; }
 .order-map-marker[data-selected-vehicle="true"] { z-index: 5; }
 .order-map-marker[data-selected-vehicle="true"]::before { filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 2px #111); }
 .order-map-marker[data-selected-vehicle="true"]::after { position: absolute; left: 50%; bottom: 35px; min-width: 18px; max-width: 92px; overflow: hidden; padding: 2px 5px; border: 1px solid #111; border-radius: 9px; background: #fff; color: #111; content: attr(data-order-label); font-size: 9px; font-weight: 700; line-height: 13px; text-overflow: ellipsis; white-space: nowrap; transform: translateX(-50%); }
-.order-map-marker[aria-pressed="true"]::before { filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 3px #0066cc); }
+.order-map-marker[aria-pressed="true"]::before { filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 3px #1b2633); }
 .order-map-marker:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
-.order-map-selection { left: 12px; bottom: 12px; max-width: min(430px, calc(100% - 24px)); padding: 12px 14px; border-radius: 6px; }
+.order-map-selection { left: 12px; bottom: 12px; max-width: min(430px, calc(100% - 24px)); padding: 12px 14px; border-radius: var(--radius); }
 .order-map-selection span { display: block; color: var(--muted); font-size: 10px; font-weight: 600; }
 .order-map-selection strong { display: block; margin-top: 2px; font-size: 13px; }
 .order-map-selection p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
@@ -47,7 +59,7 @@
 .order-dialog-heading { display: flex; justify-content: space-between; gap: 16px; }
 .order-dialog-heading h2 { margin: 2px 0 0; font-size: 22px; }
 .order-dialog-description { margin: 12px 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
-.order-dialog-close { display: inline-grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text); cursor: pointer; }
+.order-dialog-close { display: inline-grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; color: var(--text); cursor: pointer; }
 .order-dialog-close:hover { background: #f2f4f7; }
 .order-map-summary, .order-map-selection p { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 @media (max-width: 900px) { .order-planning-layout { grid-template-columns: 220px minmax(0, 1fr); } }
@@ -58,7 +70,7 @@
   .order-map-heading { min-height: 58px; padding: 20px; }
   .order-map-heading p { max-width: 180px; }
   .order-map-canvas { display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; min-height: max(500px, calc(100dvh - 250px)); padding: 8px; }
-  .order-map-selection, .order-map-summary { position: relative; left: auto; right: auto; bottom: auto; width: 100%; max-width: none; }
+  .order-map-selection, .order-map-summary, .order-map-count, .order-map-tools, .order-map-mode-wrap { position: relative; top: auto; left: auto; right: auto; bottom: auto; width: 100%; max-width: none; }
   .order-dialog-body { padding: 16px; }
 }
 @media (max-width: 420px) {
@@ -72,7 +84,7 @@
 .dispatch-readonly { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: #7a4e11; background: #fffaf0; border-left: 2px solid #d6a443; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .dispatch-source-info { position: relative; margin-left: auto; font-size: 12px; }
 .dispatch-source-info > summary { padding: 12px 0; cursor: pointer; }
-.dispatch-source-info > div { position: absolute; z-index: 9; right: 0; top: 40px; width: min(360px, calc(100vw - 130px)); padding: 12px 16px; border: 1px solid var(--border); border-radius: 6px; background: #fff; box-shadow: 0 4px 16px #17203316; line-height: 1.7; }
+.dispatch-source-info > div { position: absolute; z-index: 9; right: 0; top: 40px; width: min(360px, calc(100vw - 130px)); padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; box-shadow: 0 4px 16px #17203316; line-height: 1.7; }
 .dispatch-source-info p { margin: 0 0 8px; }
 .dispatch-source-info p:last-child { margin: 0; }
 [data-source-kind="file"] .order-vehicle-heading { min-height: 44px; padding: 8px 12px; }
@@ -89,7 +101,7 @@
 [data-source-kind="file"] .order-map-selection { max-width: min(370px, calc(100% - 24px)); max-height: 240px; overflow: auto; }
 .order-overlap-picker { display: grid; gap: 5px; margin-top: 10px; color: var(--muted); font-size: 11px; }
 .order-overlap-picker select { max-width: 100%; }
-.order-source-list { margin-top: 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+.order-source-list { margin-top: 12px; border: 1px solid var(--border); border-radius: var(--meatbox-radius-card); background: #fff; }
 .order-source-list > summary { min-height: 48px; padding: 14px 16px; font-size: 13px; cursor: pointer; }
 .order-source-list > summary > span { margin-left: 8px; color: var(--muted); font-size: 12px; }
 .order-source-list-content { padding: 0 16px 16px; }
@@ -116,14 +128,13 @@
   [data-order-list] > button > b { grid-column: 2; grid-row: 1 / 3; }
 }
 
-.order-dispatch-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--border); }
 .order-dispatch-actions .button { min-height: var(--control-height); font-size: 12px; }
 .order-dispatch-actions p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .order-dispatch-actions [data-order-dispatch-result] { color: #245845; }
 .order-pin-action { margin-top: 8px; min-height: var(--control-height); font-size: 12px; }
 .order-reassign-target { display: grid; gap: 8px; margin-top: 16px; font-size: 13px; font-weight: 600; }
 .order-reassign-target select { width: 100%; min-width: 0; min-height: 44px; font: inherit; }
-.order-reassign-preview { margin: 14px 0; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: #f6f8f7; font-size: 13px; line-height: 1.9; white-space: pre-line; overflow-wrap: anywhere; }
+.order-reassign-preview { margin: 14px 0; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: #f6f8f7; font-size: 13px; line-height: 1.9; white-space: pre-line; overflow-wrap: anywhere; }
 .order-reassign-footer { display: flex; justify-content: flex-end; gap: 8px; }
 .order-reassign-error { color: #a23220; font-size: 12px; }
 .order-vehicle-name small { flex-shrink: 0; }
@@ -140,21 +151,21 @@
 .order-select-box[hidden] { display: none; }
 .order-map-canvas[data-multi-select="true"] .order-map-layer { cursor: crosshair; touch-action: none; user-select: none; }
 .order-zone-volume { border-top: 1px solid var(--border); }
-.order-zone-volume > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 44px; padding: 8px 20px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.order-zone-volume > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 48px; padding: 8px 16px; cursor: pointer; font-size: 14px; font-weight: 600; }
 .order-zone-volume > summary span { color: var(--muted); font-size: 12px; font-weight: 400; }
 .order-zone-volume > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.order-zone-body { padding: 0 20px 16px; }
+.order-zone-body { padding: 0 16px 16px; }
 .order-zone-note { margin: 0 0 8px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .order-zone-table-wrap { overflow-x: auto; }
 .order-zone-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.order-zone-table th, .order-zone-table td { padding: 2px 8px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+.order-zone-table th, .order-zone-table td { padding: 2px 12px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
 .order-zone-table thead th { color: var(--muted); font-weight: 600; }
 .order-zone-table thead th:first-child, .order-zone-table tbody th { text-align: left; font-weight: 400; }
-.order-zone-table button { min-height: 44px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.order-zone-table button { min-height: 44px; margin-left: -8px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .order-zone-table button:hover { background: #f2f4f7; }
 .order-zone-table button[aria-pressed="true"] { background: #e3f1ea; color: #174c3b; font-weight: 600; }
 .order-zone-table button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.order-map-popup { position: absolute; z-index: 4; width: min(300px, calc(100% - 24px)); padding: 12px 14px; border: 1px solid var(--border); border-radius: 6px; background: #fff; box-shadow: 0 6px 20px #17203333; transform: translate(-50%, -100%); }
+.order-map-popup { position: absolute; z-index: 4; width: min(300px, calc(100% - 24px)); padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; box-shadow: 0 6px 20px #17203333; transform: translate(-50%, -100%); }
 .order-map-popup[data-placement="below"] { transform: translate(-50%, 0); }
 .order-map-popup[hidden] { display: none; }
 .order-popup-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
@@ -165,7 +176,7 @@
 .order-map-popup dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 .order-zone-table td.order-zone-drivers { max-width: 190px; overflow: hidden; text-align: left; text-overflow: ellipsis; }
 .order-map-popup > .button { margin-right: 6px; }
-.order-zone-hover { position: absolute; top: 0; left: 0; z-index: 3; display: grid; gap: 1px; min-width: 120px; max-width: 220px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 4px 14px #0d2b2026; color: #174c3b; font-size: 12px; line-height: 1.4; pointer-events: none; contain: layout paint; will-change: transform, opacity; opacity: 1; transition: opacity 120ms ease-out; }
+.order-zone-hover { position: absolute; top: 0; left: 0; z-index: 3; display: grid; gap: 1px; min-width: 120px; max-width: 220px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--meatbox-radius-card); background: #fff; box-shadow: 0 4px 14px #0d2b2026; color: #174c3b; font-size: 12px; line-height: 1.4; pointer-events: none; contain: layout paint; will-change: transform, opacity; opacity: 1; transition: opacity 120ms ease-out; }
 @starting-style { .order-zone-hover { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .order-zone-hover { transition: none; } }
 .order-zone-hover[hidden] { display: none; }
@@ -173,12 +184,102 @@
 .order-zone-hover span { font-weight: 600; }
 .order-zone-hover small { margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 @media (min-width: 861px) {
-  #order-planning, [data-dispatch-planning] { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-  [data-dispatch-planning][hidden] { display: none; }
-  .order-planning-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); min-height: 520px; }
-  .order-vehicle-panel, .order-map-panel { display: flex; flex-direction: column; min-height: 0; }
-  .order-vehicle-list { flex: 1 1 auto; min-height: 120px; max-height: none; }
-  .order-map-canvas { flex: 1 1 auto; min-height: 240px; }
-  .order-zone-volume[open] { flex: 0 1 auto; min-height: 140px; overflow: auto; }
-  .order-zone-volume[open] > summary { position: sticky; top: 0; z-index: 1; background: #fff; }
+  .order-planning-layout { align-items: start; }
+  .order-map-canvas { min-height: clamp(480px, 62dvh, 760px); }
+  .order-vehicle-list { max-height: clamp(360px, 52dvh, 640px); }
+  .order-zone-body { max-height: 440px; overflow: auto; }
+  .order-zone-table thead th { position: sticky; top: 0; z-index: 1; background: #fff; }
 }
+
+/* Sub-tabs: one concern per tab, same DOM. */
+[data-page="orders"][data-subtab="zones"] [data-dispatch-workflow],
+[data-page="orders"][data-subtab="zones"] .order-vehicle-panel,
+[data-page="orders"][data-subtab="zones"] .order-map-panel > :not(.order-zone-volume),
+[data-page="orders"][data-subtab="zones"] .order-source-list,
+[data-page="orders"][data-subtab="list"] [data-dispatch-workflow],
+[data-page="orders"][data-subtab="list"] .order-planning-layout,
+[data-page="orders"][data-subtab="plan"] .order-zone-volume,
+[data-page="orders"][data-subtab="plan"] .order-source-list { display: none; }
+[data-page="orders"][data-subtab="zones"] .order-planning-layout { grid-template-columns: minmax(0, 1fr); }
+[data-page="orders"][data-subtab="zones"] .order-zone-body { max-height: none; }
+[data-page="orders"][data-subtab="list"] .order-source-list { margin-top: 0; }
+
+/* 배차 tab: date and dispatch stage share one slim strip; the map takes the rest of the viewport. */
+[data-page="orders"][data-subtab="plan"] #order-planning { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar { flex: 0 0 auto; margin: 0; padding: 4px 8px; gap: 4px 12px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar .date-summary-actions { min-height: 40px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar .button { min-height: 36px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar .date-step { width: 36px; min-width: 36px; height: 36px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-meta { margin-left: 0; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar .summary-counts > * { min-width: 56px; padding: 3px 10px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar .summary-counts strong { font-size: 15px; }
+[data-page="orders"][data-subtab="plan"] [data-dispatch-workflow] { flex: 1 1 360px; min-width: 0; }
+[data-page="orders"][data-subtab="plan"] [data-dispatch-planning] { flex: 1 1 100%; min-width: 0; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow { margin: 0; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-toolbar { align-items: center; padding: 4px 10px; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-overview { display: flex; align-items: center; gap: 12px; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-phase { flex-direction: row; align-items: baseline; gap: 8px; }
+[data-page="orders"][data-subtab="plan"] [data-dispatch-summary] { display: none; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-actions { flex-direction: row; align-items: center; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-actions .button { min-height: 36px; }
+@media (min-width: 861px) {
+  [data-page="orders"][data-subtab="plan"] .order-map-canvas { min-height: clamp(480px, calc(100dvh - 232px), 900px); }
+  [data-page="orders"][data-subtab="plan"] .order-vehicle-list { max-height: clamp(280px, calc(100dvh - 330px), 800px); }
+}
+
+/* 배차 tab polish: matching strip cards, equal-height columns, no explanatory text on the map. */
+.order-map-count, .order-map-summary, .order-map-tools .order-dispatch-context { display: none; }
+[data-page="orders"][data-subtab="plan"] #order-planning { align-items: stretch; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar,
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow { min-height: 56px; border-radius: var(--meatbox-radius-card); }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar { align-items: center; padding: 6px 12px; }
+[data-page="orders"][data-subtab="plan"] [data-dispatch-workflow] { display: flex; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow { display: flex; flex: 1; align-items: center; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-toolbar { flex: 1; padding: 6px 16px; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-phase span { font-size: 12px; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-phase strong { font-size: 16px; }
+[data-page="orders"][data-subtab="plan"] .order-planning-layout { align-items: stretch; }
+[data-page="orders"][data-subtab="plan"] .order-vehicle-panel { display: flex; flex-direction: column; }
+[data-page="orders"][data-subtab="plan"] .order-vehicle-list { flex: 1 1 auto; max-height: none; }
+
+/* Numbered pins (관제): the visit order sits in the pin head; the selected pin grows. */
+.order-map-marker-numbered { position: relative; isolation: isolate; font: 700 12px/1 var(--meatbox-font); color: #fff; }
+.order-map-marker-numbered::before { position: absolute; z-index: -1; left: 50%; bottom: 0; width: 31px; height: 40px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='52' viewBox='0 0 40 52' fill='none'%3E%3Cpath d='M20 49C20 49 5.5 32.5 5.5 19.5a14.5 14.5 0 0 1 29 0C34.5 32.5 20 49 20 49Z' fill='%23e60028' stroke='%23fff' stroke-width='2.5' stroke-linejoin='round'/%3E%3C/svg%3E"); background-position: center; background-size: contain; background-repeat: no-repeat; transform: translateX(-50%); }
+.order-map-marker-numbered { padding-bottom: 19px; align-items: flex-end; }
+.order-map-marker-numbered[data-selected-vehicle="true"]::after { display: none; }
+.order-map-marker-numbered[aria-pressed="true"] { z-index: 6; transform-origin: 50% 100%; }
+.order-map-marker-numbered[aria-pressed="true"]::before { width: 38px; height: 49px; filter: drop-shadow(0 0 0 #fff) drop-shadow(0 2px 3px #1b263340); }
+
+/* Aligned columns: header and value text share one left edge, driver names read as their own column. */
+.order-zone-table thead th:first-child, .order-zone-table tbody th { padding-left: 12px; }
+.order-zone-table thead th:last-child, .order-zone-table td.order-zone-drivers { padding-left: 32px; text-align: left; }
+/* Order list inside its own tab: the summary is the title, so no disclosure triangle, and rows share its left edge. */
+[data-page="orders"][data-subtab="list"] .order-source-list > summary { list-style: none; cursor: default; pointer-events: none; font-weight: 600; }
+[data-page="orders"][data-subtab="list"] .order-source-list > summary::-webkit-details-marker { display: none; }
+[data-order-list] > button { margin-inline: -16px; width: calc(100% + 32px); padding-inline: 16px; }
+
+/* A disabled primary action must not read as a selected tab. */
+.order-map-tools .button.primary:disabled { color: var(--muted); background: #fff; border-color: var(--border); opacity: .6; }
+
+/* Zone volume list: fixed column widths and tabular numerals so rows read as straight lines. */
+.order-zone-table { table-layout: fixed; min-width: 760px; }
+.order-zone-table th:nth-child(1) { width: auto; }
+.order-zone-table th:nth-child(2), .order-zone-table th:nth-child(4) { width: 96px; }
+.order-zone-table th:nth-child(3), .order-zone-table th:nth-child(5) { width: 128px; }
+.order-zone-table th:nth-child(6) { width: 240px; }
+.order-zone-table td { font-variant-numeric: tabular-nums; }
+.order-zone-table tbody tr:hover > * { background: #f7f8fa; }
+.order-zone-table tbody tr > * { height: 48px; }
+.order-zone-table td.order-zone-drivers { overflow: hidden; text-overflow: ellipsis; }
+
+/* The date card may shrink and, when the strip wraps, takes the full row like the stage card. */
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+@media (max-width: 1000px) {
+  [data-page="orders"][data-subtab="plan"] .date-summary-toolbar { flex: 1 1 100%; }
+}
+
+/* The stage label never wraps; when the strip is tight the buttons drop below it. */
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-phase, [data-page="orders"][data-subtab="plan"] .dispatch-workflow-phase * { white-space: nowrap; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-overview { flex: 0 0 auto; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-toolbar { flex-wrap: wrap; gap: 6px 16px; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-actions { margin-left: auto; }

@@ -93,7 +93,7 @@ export function createDriverMessageClient(fetchImpl: typeof fetch = fetch) {
 export function driverToolsMarkup(): string {
   return `<div class="control-driver-tools"><button type="button" class="button" data-driver-pickup disabled>수령 QR 출력</button><button type="button" class="button" data-driver-messages disabled>배송원 메시지</button></div>
   <dialog class="driver-dialog driver-pickup-dialog" data-pickup-dialog aria-labelledby="pickup-dialog-title"><div class="driver-dialog-heading"><h2 id="pickup-dialog-title">차량별 수령 QR</h2><button type="button" class="button" data-pickup-close>닫기</button></div><p data-pickup-context></p><p class="muted">각 주문의 QR을 배송원 앱으로 스캔하세요. QR에는 배송일과 주문 번호만 포함합니다.</p><p data-pickup-status role="status"></p><div data-pickup-sheet></div><div class="driver-dialog-actions"><button type="button" class="button primary" data-pickup-print disabled>인쇄</button></div></dialog>
-  <dialog class="driver-dialog driver-message-dialog" data-message-dialog aria-labelledby="message-dialog-title"><div class="driver-dialog-heading"><h2 id="message-dialog-title">배송원 메시지</h2><button type="button" class="button" data-message-close>닫기</button></div><p data-message-context></p><p class="muted">메시지를 저장하고 배송원 앱에 알림을 요청합니다. 기기 수신·읽음 여부는 확인되지 않습니다.</p><div class="driver-message-toolbar"><span class="muted">열려 있는 동안 5초마다 갱신</span><button type="button" class="button" data-message-refresh>새로고침</button></div><p data-message-load-status role="status"></p><ol class="driver-message-list" data-message-list aria-label="운영자와 배송원 메시지"></ol><form data-message-form><label class="field"><span>배송원에게 보낼 메시지</span><textarea data-message-body maxlength="${messageLimit}" rows="3" required placeholder="배송원에게 전달할 내용을 입력하세요."></textarea></label><p data-message-readonly class="muted" hidden>이력 조회 · 읽기 전용</p><p data-message-send-status role="status" aria-live="polite"></p><div class="driver-dialog-actions"><span class="muted">최대 ${messageLimit.toLocaleString('ko-KR')}자</span><button type="submit" class="button primary" data-message-send>메시지 전송</button></div></form></dialog>`;
+  <dialog class="driver-dialog driver-message-dialog" data-message-dialog aria-labelledby="message-dialog-title"><div class="driver-dialog-heading"><h2 id="message-dialog-title">배송원 메시지</h2><button type="button" class="button" data-message-close>닫기</button></div><p data-message-context></p><p class="muted">메시지를 저장하고 배송원 앱에 알림을 요청합니다. 기기 수신과 읽음 여부는 확인되지 않습니다.</p><div class="driver-message-toolbar"><span class="muted">열려 있는 동안 5초마다 갱신</span><button type="button" class="button" data-message-refresh>새로고침</button></div><p data-message-load-status role="status"></p><ol class="driver-message-list" data-message-list aria-label="운영자와 배송원 메시지"></ol><form data-message-form><label class="field"><span>배송원에게 보낼 메시지</span><textarea data-message-body maxlength="${messageLimit}" rows="3" required placeholder="배송원에게 전달할 내용을 입력하세요."></textarea></label><p data-message-readonly class="muted" hidden>이력 조회 (읽기 전용)</p><p data-message-send-status role="status" aria-live="polite"></p><div class="driver-dialog-actions"><span class="muted">최대 ${messageLimit.toLocaleString('ko-KR')}자</span><button type="submit" class="button primary" data-message-send>메시지 전송</button></div></form></dialog>`;
 }
 
 export function mountDriverTools({ element, client = createDriverMessageClient(), qrCode = QRCode.toDataURL,
@@ -114,7 +114,7 @@ export function mountDriverTools({ element, client = createDriverMessageClient()
   let pickupEpoch = 0, pickupSignature = '';
   let messages: DriverMessage[] = [], messageRevision = 0, timer: ReturnType<typeof setTimeout> | undefined;
 
-  function contextLabel(current: Context) { return `${current.date} · ${current.vehicle.plate || current.vehicle.id} · ${current.vehicle.driver || '배송원 미등록'}`; }
+  function contextLabel(current: Context) { return `${current.date} / ${current.vehicle.plate || current.vehicle.id} / ${current.vehicle.driver || '배송원 미등록'}`; }
   function setSendAvailability() {
     const readOnly = !context || context.readOnly || context.date < today();
     body.disabled = readOnly || sending || !context?.connected;
@@ -160,7 +160,7 @@ export function mountDriverTools({ element, client = createDriverMessageClient()
       }));
       if (requestEpoch !== pickupEpoch || destroyed || !pickupDialog.open) return;
       sheet.innerHTML = `<div class="pickup-grid">${cards.join('')}</div>`;
-      find('[data-pickup-status]').textContent = `주문 ${current.orders.length}건 · QR ${cards.length}개`;
+      find('[data-pickup-status]').textContent = `주문 ${current.orders.length}건 / QR ${cards.length}개`;
       printButton.disabled = false;
     } catch {
       if (requestEpoch === pickupEpoch && !destroyed && pickupDialog.open) find('[data-pickup-status]').textContent = '수령 QR을 만들지 못했습니다. 닫은 뒤 다시 시도해 주세요.';
