@@ -193,7 +193,7 @@ export function mountOrderPlanning({
   }
   function changeBulk(result) {
     bulkSelection = result.selection;
-    bulkNotice = result.skippedProtected ? ` (진행·완료 ${result.skippedProtected.toLocaleString('ko-KR')}곳은 제외)` : '';
+    bulkNotice = result.skippedProtected ? ` (진행 및 완료 ${result.skippedProtected.toLocaleString('ko-KR')}곳은 제외)` : '';
     renderScene();
     renderOrderList();
   }
@@ -287,7 +287,7 @@ export function mountOrderPlanning({
     if (zone.zoneId !== hoverZoneId || node.hidden) {
       const driverNames = new Map(vehiclesFor(data).map(vehicle => [vehicle.id, vehicle.driver || vehicle.id]));
       const drivers = driverNamesText(zoneDriverMap.get(zone.zoneId), id => driverNames.get(id) || id);
-      node.innerHTML = `<strong>${escapeHtml(zone.label)}</strong>${volumeLines(zone).map(line => `<span>${escapeHtml(line)}</span>`).join('')}<small>주문 ${zone.orders.toLocaleString('ko-KR')}건 · ${escapeHtml(drivers)}</small>`;
+      node.innerHTML = `<strong>${escapeHtml(zone.label)}</strong>${volumeLines(zone).map(line => `<span>${escapeHtml(line)}</span>`).join('')}<small>주문 ${zone.orders.toLocaleString('ko-KR')}건 / ${escapeHtml(drivers)}</small>`;
       hoverZoneId = zone.zoneId;
       node.hidden = false;
     }
@@ -392,9 +392,9 @@ export function mountOrderPlanning({
     const fromZone = zoneRows.rows.find(row => row.zoneId === selectedZoneId)?.label || selectedZoneId;
     pendingAssignment = { date: data.dispatchSource.date, fromGroupId: chosen.vehicleId, orderIds: selected.map(item => item.id), boxes: totalBoxes(selected), zoneOptions: options };
     setText('[data-order-reassign-title]', '타 권역 이관');
-    setText('[data-order-reassign-from]', `${chosen.name} / ${selected.length}건 / ${boxesText(pendingAssignment.boxes)} / ${fromZone} · ${from?.driver || '배차 대기'}`);
+    setText('[data-order-reassign-from]', `${chosen.name} / ${selected.length}건 / ${boxesText(pendingAssignment.boxes)} / ${fromZone} / ${from?.driver || '배차 대기'}`);
     const zoneSelect = query('[data-order-reassign-zone]');
-    zoneSelect.innerHTML = '<option value="">권역을 선택해 주세요</option>' + options.map(option => `<option value="${escapeHtml(option.zoneId)}">${escapeHtml(option.label)} · 배송원 ${option.loads.length}명</option>`).join('');
+    zoneSelect.innerHTML = '<option value="">권역을 선택해 주세요</option>' + options.map(option => `<option value="${escapeHtml(option.zoneId)}">${escapeHtml(option.label)} / 배송원 ${option.loads.length}명</option>`).join('');
     zoneSelect.value = '';
     query('[data-order-reassign-zone-label]').hidden = false;
     const select = query('[data-order-reassign-target]');
@@ -411,7 +411,7 @@ export function mountOrderPlanning({
     select.disabled = !option;
     select.innerHTML = option ? option.loads.map(load => {
       const vehicle = vehiclesFor(data).find(item => item.id === load.vehicleId);
-      return `<option value="${escapeHtml(load.vehicleId)}">${escapeHtml(vehicle?.driver || load.vehicleId)} / ${escapeHtml(plateLabel(vehicle))} · 이 권역 ${load.destinations.toLocaleString('ko-KR')}곳 ${boxesText(load.boxes)}</option>`;
+      return `<option value="${escapeHtml(load.vehicleId)}">${escapeHtml(vehicle?.driver || load.vehicleId)} / ${escapeHtml(plateLabel(vehicle))} / 이 권역 ${load.destinations.toLocaleString('ko-KR')}곳 ${boxesText(load.boxes)}</option>`;
     }).join('') : '<option value="">권역을 먼저 선택해 주세요</option>';
     select.value = option ? option.loads[0].vehicleId : '';
     updateAssignmentPreview();
@@ -804,7 +804,7 @@ export function mountOrderPlanning({
       vehicleSelect.innerHTML = `<p class="order-vehicle-empty">${empty ? '미등록' : '미확인'}</p>`;
       query('[data-order-dispatch-actions]').hidden = false;
       query('[data-order-dispatch-pin]').disabled = true;
-      setText('[data-order-dispatch-context]', '주문·계산안 준비 전');
+      setText('[data-order-dispatch-context]', '주문과 계산안 준비 전');
       query('[data-order-dispatch-result]').hidden = true;
       query('[data-order-map-mode-control]').hidden = false;
       query('[data-order-map-mode-control]').querySelectorAll('input').forEach(input => { input.disabled = true; });
@@ -812,7 +812,7 @@ export function mountOrderPlanning({
       count.textContent = empty ? '위치 미등록' : '위치 미확인';
       selection.hidden = true;
       selection.innerHTML = '';
-      summary.textContent = empty ? '주문 0건 · 총 0박스' : '주문 수량 확인 전';
+      summary.textContent = empty ? '주문 0건 / 총 0박스' : '주문 수량 확인 전';
       delete canvas.dataset.orderPointCount; delete canvas.dataset.orderDate;
       const listPanel = query('[data-order-list-panel]');
       listPanel.hidden = false; listPanel.open = true;

@@ -6,7 +6,7 @@ const errors = {
 const codeErrors = {
   REGION_CODE_EXISTS: '이미 등록된 지역 코드입니다.',
   REGION_CODE_NOT_FOUND: '지역 코드를 찾을 수 없습니다. 다시 불러와 주세요.',
-  INVALID_REGION_CODE: '영문자로 시작하는 영문·숫자 지역 코드를 입력해 주세요.',
+  INVALID_REGION_CODE: '영문자로 시작하는 영문과 숫자 지역 코드를 입력해 주세요.',
   RESOURCE_REVISION_CONFLICT: errors[409],
 };
 

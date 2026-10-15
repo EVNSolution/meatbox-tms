@@ -129,6 +129,12 @@ ol {
 
 .brand img { display: block; width: 126px; height: 30px; }
 
+.app-account { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.app-user { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.app-user[hidden] { display: none; }
+.app-logout { margin: 0; }
+.app-logout .button { min-height: 36px; padding-inline: 12px; font-size: 13px; }
+
 .brand strong,
 .brand b,
 .brand span {

@@ -32,7 +32,13 @@ const state = {
 const byId = id => document.getElementById(id);
 function mountOperationalShell() {
   document.body.dataset.viewer = 'operator';
-  byId('app-header').innerHTML = '<a class="brand" href="/combined/"><img src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a>';
+  byId('app-header').innerHTML = '<a class="brand" href="/combined/"><img src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a><div class="app-account"><span class="app-user" id="app-user" hidden></span><form class="app-logout" method="post" action="/logout"><button type="submit" class="button subtle">로그아웃</button></form></div>';
+  // The signed-in name is a convenience; the logout form works without it.
+  fetch('/api/session', { credentials: 'same-origin' }).then(response => response.ok ? response.json() : null).then(body => {
+    const user = body?.user;
+    const label = user?.displayName || user?.username || '';
+    if (label) { const node = byId('app-user'); node.textContent = label; node.hidden = false; }
+  }).catch(() => {});
   byId('app-navigation').innerHTML = '<nav class="app-nav-links" aria-label="운영 업무"><a href="#/orders" data-page-link="orders">배차 관리</a><a href="#/control" data-page-link="control">배송 관제</a><a href="#/deliveries" data-page-link="deliveries">자원 관리</a></nav>';
 }
 mountOperationalShell();
@@ -40,7 +46,7 @@ const statusNotification = mountStatusNotification({ element: byId('status-notif
 const progressNotification = mountStatusNotification({ element: byId('progress-notification'), duration: 0 });
 const reloadAction = { label: '다시 연결', run: () => location.reload() };
 document.querySelectorAll('[data-field-icon]').forEach(element => { element.innerHTML = referenceIcon(element.dataset.fieldIcon); });
-byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'date-nav', summaryLabel: '선택 관제일 요약', actions: dateNavActions('조회 날짜', 'id="control-date-picker"'), context: '<span id="control-readonly" class="control-readonly" hidden>이력 조회 · 읽기 전용</span>' });
+byId('control-date-toolbar').innerHTML = dateSummaryToolbar({ label: '관제 조회 날짜', actionsClass: 'date-nav', summaryLabel: '선택 관제일 요약', actions: dateNavActions('조회 날짜', 'id="control-date-picker"'), context: '<span id="control-readonly" class="control-readonly" hidden>이력 조회 (읽기 전용)</span>' });
 const controlSummaryToolbar = mountDateSummaryToolbar(byId('control-date-toolbar'));
 const controlDatePicker = mountDatePicker({ element: byId('control-date-picker'), label: '관제 조회 날짜', onChange: date => operations.selectDate(date) });
 const controlDateButton = name => byId('control-date-toolbar').querySelector(`[data-date-${name}]`);

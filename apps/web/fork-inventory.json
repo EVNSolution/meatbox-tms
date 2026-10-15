@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "04acf8da1d8de3047b5581ef8307cdfd2f12e5ee1eacfd4a8dc2d5881e37a935",
+      "targetSha256": "c8b036d35bbfc91fdc1107fb5bb4290284ab1a9f5b0a6d1e233bf2282848fd0d",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -39,7 +39,8 @@
         "Share the date navigation markup with dispatch management and step the control date through the registered date list.",
         "Show connection, dispatch loading and control loading notices in a sticky top toast with reload/retry actions instead of in-flow panels.",
         "Drop the page description writer and the empty dispatch-context sync.",
-        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -422,7 +423,7 @@
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "3c31d3a2137aae06df18fa2cad4f71234bc9209701c30194980ddfce5daaaf8c",
+      "targetSha256": "496812b30611186ca946a871602b0774c4223b45efcbd7a7ec0703593e3688cf",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Remove unused escaping helper, selection value and catch binding; retain update argument position",
@@ -430,7 +431,8 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Name the connected state for operational data without changing source or command contracts.",
         "Use the shared date navigation with a today shortcut and drop the candidate-vehicle count from the date summary.",
-        "Report loading and failure notices through a notify callback instead of an in-flow message and retry button."
+        "Report loading and failure notices through a notify callback instead of an in-flow message and retry button.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -608,14 +610,15 @@
       "source": "apps/combined/dispatch-workflow.mjs",
       "sourceSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59",
       "target": "apps/web/combined/dispatch-workflow.mjs",
-      "targetSha256": "82d089ba5f03d93c62569f29210f9a73a9db68265f51a0a46296fe718572624e",
+      "targetSha256": "db7961a5d8eb80c995f40ae9d3bee994900ac759402ac4da0881ffcd7e133e76",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Mark a synthetic plate as unverified in the candidate list",
-        "Drop the server-confirmation hint under the dispatch actions."
+        "Drop the server-confirmation hint under the dispatch actions.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -972,7 +975,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "8abf0afa1153afd5a2b4e58facc03a0ff25874f503901a7a2395a39dcf021eb4",
+      "targetSha256": "94f9fa0ad95dd8a204d8b14c01e469634b9324cc4cf8d9551f68a7a379d1b9de",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -989,7 +992,8 @@
         "Add the zone drivers column and the zone transfer dialog that hands a delivery bundle to a driver serving another zone, and mark the plate in the reassign preview",
         "Show the hovered zone volume as a popover beside the cursor instead of overlapping map labels",
         "Remove map, region and vehicle explanations; move pin/multi-select actions, the map mode switch and the location count onto the map as floating tools.",
-        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -1019,7 +1023,7 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "da3a0e3281ade40248220381ef706ef89d50c13b0c0fc01c7cdcb2a0b8f31d32",
+      "targetSha256": "40f9d577803d9d5f4f0ae98f176b2af58e8b63b858862d9a0a8b9ba2e4adc667",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -1029,7 +1033,8 @@
         "Cover multi-select, drag selection and bulk transfer",
         "Cover the zone volume table, zone selection and the delivery popup",
         "Cover the zone drivers column and the zone transfer dialog",
-        "Drop assertions on removed explanation copy and the retired app sync body."
+        "Drop assertions on removed explanation copy and the retired app sync body.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -1064,9 +1069,11 @@
       "source": "apps/combined/resource-client.mjs",
       "sourceSha256": "d4d51b50f7fb8c55961f33c5bc9b2e3c4511b38bb98574e4725394ef31a9f9f2",
       "target": "apps/web/combined/resource-client.mjs",
-      "targetSha256": "d4d51b50f7fb8c55961f33c5bc9b2e3c4511b38bb98574e4725394ef31a9f9f2",
+      "targetSha256": "eb0174a3c0361c8047450f15fa4f17ac689477ba7ac0bcd1f0296f57d5b5dea6",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
-      "changes": [],
+      "changes": [
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
+      ],
       "status": "active"
     },
     {
@@ -1096,12 +1103,13 @@
       "source": "apps/combined/resource-management.mjs",
       "sourceSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
       "target": "apps/web/combined/resource-management.mjs",
-      "targetSha256": "9d54d0e8a3e6c0ea63f6f74ad9c82218313c83db8143e8e663a31c5499866e7b",
+      "targetSha256": "412cfa2ff368461fdc5309421aaf2ab7ebc43e2450c887a8afdf2e5f2e26aab3",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events.",
         "Mark every listed plate as unverified and add a screen note until a real vehicle registry exists",
-        "Drop the unverified-plate explanation note."
+        "Drop the unverified-plate explanation note.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -1109,10 +1117,11 @@
       "source": "apps/combined/resource-management.test.mjs",
       "sourceSha256": "44615c6e7c1e03176b84950823376125d3913f946b27b745932d83f5de7b54f5",
       "target": "apps/web/combined/resource-management.test.mjs",
-      "targetSha256": "60b5676f7db6f43ee1af9469fd8769c73617285500c50133fc08a1bf5d523d81",
+      "targetSha256": "7b7dcb57374cb13aabeb82fb0dce16755fc0084064a4cc2d62a858ebf2d2e037",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
-        "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events."
+        "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -1349,7 +1358,7 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/shell.css",
-      "targetSha256": "7da4132aa87a67d52f90ed59b5150f9dc5d03c426118e36d58350f9bdf55d94c",
+      "targetSha256": "e0d8965901ff0f7ae260cc2bf230a50399aad553b2d8419968feaf24f8b8e224",
       "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 57-344 into a dedicated stylesheet",
@@ -1360,7 +1369,8 @@
         "Tighten the page intro now that it holds only the title.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
-        "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px."
+        "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1571,7 +1581,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "6d34fac1b8fa8648490fcf7a69ac2907672ce990da67696f3c07b7e016d0baf0",
+      "targetSha256": "d656a20754e90db72246b39a683692bbe7991e7d256f10eb1e8b6406b9cdf58d",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1585,7 +1595,8 @@
         "Remove list hints and the map heading; float the support-dispatch button over the map.",
         "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
         "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
-        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work."
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
       ],
       "status": "active"
     },
@@ -2435,9 +2446,9 @@
     {
       "path": "apps/web/combined/driver-tools.ts",
       "origin": "authored",
-      "reason": "Generate a QR for every assigned order and exchange authenticated date-and-vehicle driver messages; distinguish stored messages from FCM results, reject stale print snapshots, and preserve read-only history.",
+      "reason": "Generate a QR for every assigned order and exchange authenticated date-and-vehicle driver messages; distinguish stored messages from FCM results, reject stale print snapshots, and preserve read-only history. Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
       "status": "active",
-      "sha256": "4752a9af6d6dff3feaafa768edcfabc14cb66cf2fac502f13318982f88f4e83e"
+      "sha256": "c18a57f83a7a4fead00d3e8eb72b7b899949efb9c3fdcc0f192d9db58a636b20"
     },
     {
       "path": "apps/web/combined/driver-tools.css",
