@@ -940,7 +940,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "14fb2599124bce5abdfa5882397628c8b63c1e919636a175380bb65a8fd4ebd6",
+      "targetSha256": "282b84992db22f668d3e9bc5059ca1ba9e56d7e8208827ac7d55ba57c009c6f0",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -959,7 +959,8 @@
         "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
         "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
         "Restyle the destination pin as a Kakao-map style droplet in Meatbox red with a white inner dot and soft shadow.",
-        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker."
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
+        "Single-layer pill for the 권역/주문 단위 switch over the map."
       ],
       "status": "active"
     },
