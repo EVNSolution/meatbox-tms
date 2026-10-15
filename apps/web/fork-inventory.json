@@ -977,7 +977,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "a8a21fcdf1fa5c7fe3fe380253455474685a2e8ec409b880d3435954985abda8",
+      "targetSha256": "bb5400282f5e28c8fcb4adb0ca0db55071b82d159c58c17dd693c9393fa40e6f",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -996,7 +996,7 @@
         "Remove map, region and vehicle explanations; move pin/multi-select actions, the map mode switch and the location count onto the map as floating tools.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
-        "Overview map fits the middle 90% of stops so far-away outliers do not zoom out to the whole country."
+        "Overview map fits the middle 80% of stops so far-away outliers do not zoom out to the whole country."
       ],
       "status": "active"
     },
