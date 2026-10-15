@@ -977,7 +977,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "94f9fa0ad95dd8a204d8b14c01e469634b9324cc4cf8d9551f68a7a379d1b9de",
+      "targetSha256": "a8a21fcdf1fa5c7fe3fe380253455474685a2e8ec409b880d3435954985abda8",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -995,7 +995,8 @@
         "Show the hovered zone volume as a popover beside the cursor instead of overlapping map labels",
         "Remove map, region and vehicle explanations; move pin/multi-select actions, the map mode switch and the location count onto the map as floating tools.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
-        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
+        "Overview map fits the middle 90% of stops so far-away outliers do not zoom out to the whole country."
       ],
       "status": "active"
     },
@@ -1553,7 +1554,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "80a91e2a5abcd2f47c98c1d28f0b4f57cf4dfa201c4708be2bda25e077bf3b29",
+      "targetSha256": "405ce3bdd7a12464e1a9c9b39972607855a8576259b7fe4292991d31c3bca612",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1576,7 +1577,8 @@
         "Draw the control console as one framed container: no inner card borders or radii, a single divider under the running summary.",
         "Give the first row of every control column the same 64px height so the horizontal dividers line up.",
         "Restore the column divider, compact QR/message actions into the heading row, one-row stop picker and unified 16px inner padding in the control detail column.",
-        "Draw the fleet/detail column divider once (fleet border-right only)."
+        "Draw the fleet/detail column divider once (fleet border-right only).",
+        "Group the fit and support buttons in a floating map toolbar."
       ],
       "status": "active"
     },
@@ -1584,7 +1586,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "d656a20754e90db72246b39a683692bbe7991e7d256f10eb1e8b6406b9cdf58d",
+      "targetSha256": "929df0c016ab0e176b4b6ca2dede82293ef81375fdeff7008c288d0f6fa5e1b5",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1599,7 +1601,8 @@
         "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
         "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
         "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
-        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
+        "Add a Zoom to fit button that also frames the vehicle; the default view frames the stops only."
       ],
       "status": "active"
     },
@@ -2472,7 +2475,7 @@
     {
       "path": "apps/web/combined/account-icons.mjs",
       "origin": "authored",
-      "sha256": "328c41762230d546b267e1596442f4ca3c55bf6198cdc77e4034a8b6b8d43ba4",
+      "sha256": "a8face3495fac88a7e17b48c451d35ca3199cbe2106c1a41a63389b87e86dab7",
       "reason": "Render the sidebar account icons (settings, account, logout) from the official Lucide icon data, tree-shaken to three icons.",
       "status": "active"
     }

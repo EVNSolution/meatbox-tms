@@ -1,4 +1,5 @@
 import { referenceIcon } from './reference-icons.mjs';
+import { fitIcon } from './account-icons.mjs';
 import { renderCustomerRequests } from './customer-requests.mjs';
 import { createOrderMap, createOrderMarker, orderMapModel } from '../src/shared/maps/order-map.mjs';
 import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
@@ -38,7 +39,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     </section>
     <section class="control-map-workspace" aria-label="선택 차량 운행">
       <div class="panel control-current" data-control-summary aria-live="polite"></div>
-      <section class="panel control-map-panel" aria-labelledby="control-map-heading"><h2 id="control-map-heading" class="sr-only">남은 배송지</h2><div class="control-map-canvas" data-control-map></div><button type="button" class="button control-map-support" data-control-support>${referenceIcon('support')}지원배차</button><p class="control-map-note" data-control-map-note role="status"></p></section>
+      <section class="panel control-map-panel" aria-labelledby="control-map-heading"><h2 id="control-map-heading" class="sr-only">남은 배송지</h2><div class="control-map-canvas" data-control-map></div><div class="control-map-tools"><button type="button" class="button" data-control-fit>${fitIcon}전체 보기</button><button type="button" class="button" data-control-support>${referenceIcon('support')}지원배차</button></div><p class="control-map-note" data-control-map-note role="status"></p></section>
     </section>
     <aside class="panel control-details" aria-label="선택 차량 상세">
       <div class="panel-heading"><h2 data-control-detail-title>차량 상세</h2></div>
@@ -61,7 +62,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   let data = null, rows = [], row = null, selectedId = null, sort = 'received', search = '';
   let previousVehicleId = null, previousSelectedId = null, recordFilter = 'all';
   let opened = new Set(), routeData = null, routePromise = null, map = null, markers = [], signature = '';
-  let mapError = '', wheel, observer, destroyed = false, routeEpoch = 0, factsOpen = false, fitCoords = [];
+  let mapError = '', wheel, observer, destroyed = false, routeEpoch = 0, factsOpen = false, fitCoords = [], fitAllCoords = [];
   const mapElement = find('[data-control-map]');
   const list = find('[data-control-vehicles]');
   const stopList = find('[data-control-stops]');
@@ -169,7 +170,9 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
         const vehicleMarker = new maplibregl.Marker({ element: markerElement }).setLngLat(position.coordinates).addTo(map);
         markers.push({ element: markerElement, remove: () => vehicleMarker.remove() });
       }
-      fitCoords = [...model.mapped.map(item => item.coordinates), ...(position ? [position.coordinates] : [])];
+      fitCoords = model.mapped.map(item => item.coordinates);
+      fitAllCoords = [...fitCoords, ...(position ? [position.coordinates] : [])];
+      if (!fitCoords.length) fitCoords = fitAllCoords;
       fitView();
     }
     markers.forEach(marker => marker.element.setAttribute('aria-pressed', String(marker.element.dataset.orderMarker === selectedId)));
@@ -194,10 +197,11 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     if (pad.top + pad.bottom > canvas.height - 120) return { top: 24, right: 24, bottom: 24, left: 24 };
     return pad;
   }
-  function fitView() {
-    if (!map || !fitCoords.length) return;
-    const lngs = fitCoords.map(c => c[0]), lats = fitCoords.map(c => c[1]);
-    map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: mapPadding(), maxZoom: fitCoords.length === 1 ? 13 : 14, duration: 0 });
+  // Default view frames the stops; the button also frames the vehicle, which can sit far from them.
+  function fitView(coords = fitCoords) {
+    if (!map || !coords.length) return;
+    const lngs = coords.map(c => c[0]), lats = coords.map(c => c[1]);
+    map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: mapPadding(), maxZoom: coords.length === 1 ? 13 : 14, duration: 0 });
   }
 
   function createMap() {
@@ -218,7 +222,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   function resetMap() {
     routeEpoch += 1;
     markers.splice(0).forEach(marker => marker.remove());
-    signature = ''; fitCoords = [];
+    signature = ''; fitCoords = []; fitAllCoords = [];
     createMap();
   }
 
@@ -333,6 +337,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     const marker = event.target.closest('[data-order-marker]');
     if (marker) onSelectDelivery(marker.dataset.orderMarker);
   });
+  find('[data-control-fit]').addEventListener('click', () => fitView(fitAllCoords));
   find('[data-control-support]').addEventListener('click', () => { if (!data || !row) return; renderSupport(); support.showModal(); });
   find('[data-support-close]').addEventListener('click', () => support.close());
   support.addEventListener('close', () => find('[data-control-support]').focus());

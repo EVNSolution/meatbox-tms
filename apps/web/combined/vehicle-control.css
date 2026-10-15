@@ -31,7 +31,9 @@
 .control-running-facts dt { color: var(--muted); }
 .control-running-facts dd { margin: 0; overflow-wrap: anywhere; }
 .control-map-panel { position: relative; overflow: hidden; }
-.control-map-support { position: absolute; top: 12px; right: 12px; z-index: 3; box-shadow: 0 4px 16px #17203316; }
+.control-map-tools { position: absolute; top: 12px; right: 12px; z-index: 3; display: flex; gap: 8px; }
+.control-map-tools .button { box-shadow: 0 4px 16px #17203316; }
+.control-map-tools .app-icon { width: 16px; height: 16px; }
 .control-map-panel .panel-heading { flex-wrap: wrap; }
 .control-map-panel .button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: var(--control-height); padding-inline: 10px; white-space: nowrap; }
 .control-map-canvas { height: 400px; position: relative; }
