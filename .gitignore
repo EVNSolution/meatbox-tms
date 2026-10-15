@@ -8,3 +8,6 @@ users.json
 .runtime/
 .omx/
 __pycache__/
+
+# Claude Code local settings and worktrees
+.claude/
