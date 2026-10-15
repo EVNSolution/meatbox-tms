@@ -226,3 +226,18 @@
   [data-page="orders"][data-subtab="plan"] .order-map-canvas { min-height: clamp(480px, calc(100dvh - 232px), 900px); }
   [data-page="orders"][data-subtab="plan"] .order-vehicle-list { max-height: clamp(280px, calc(100dvh - 330px), 800px); }
 }
+
+/* 배차 tab polish: matching strip cards, equal-height columns, no explanatory text on the map. */
+.order-map-count, .order-map-summary, .order-map-tools .order-dispatch-context { display: none; }
+[data-page="orders"][data-subtab="plan"] #order-planning { align-items: stretch; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar,
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow { min-height: 56px; border-radius: var(--meatbox-radius-card); }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar { align-items: center; padding: 6px 12px; }
+[data-page="orders"][data-subtab="plan"] [data-dispatch-workflow] { display: flex; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow { display: flex; flex: 1; align-items: center; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-toolbar { flex: 1; padding: 6px 16px; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-phase span { font-size: 12px; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-phase strong { font-size: 16px; }
+[data-page="orders"][data-subtab="plan"] .order-planning-layout { align-items: stretch; }
+[data-page="orders"][data-subtab="plan"] .order-vehicle-panel { display: flex; flex-direction: column; }
+[data-page="orders"][data-subtab="plan"] .order-vehicle-list { flex: 1 1 auto; max-height: none; }

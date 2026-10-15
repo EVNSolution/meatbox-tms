@@ -165,6 +165,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       fitView();
     }
     markers.forEach(marker => marker.element.setAttribute('aria-pressed', String(marker.element.dataset.orderMarker === selectedId)));
+    { const note = find('[data-control-map-note]'); if (note.dataset) note.dataset.error = String(Boolean(mapError)); }
     find('[data-control-map-note]').textContent = mapError || (activeRouteData
       ? `남은 배송지 ${model.mapped.length}곳 표시, 위치 미등록 ${model.unknownCount}곳. ${position ? source ? '차량 기준 위치 표시. 실시간 GPS 미수신.' : '차량은 시뮬레이션 위치입니다. 실제 GPS 미연결.' : '차량 현재 위치 미수신.'}`
       : '배송지 위치 데이터를 불러오고 있습니다. 미등록 건수는 수신 후 확인합니다.');
@@ -202,6 +203,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       } catch {
         mapError = '지도를 불러오지 못했습니다. 새로고침해 주세요.';
         find('[data-control-map-note]').textContent = mapError;
+        if (find('[data-control-map-note]').dataset) find('[data-control-map-note]').dataset.error = 'true';
         return;
       }
     }

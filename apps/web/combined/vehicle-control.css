@@ -170,3 +170,6 @@
 [data-page="control"] .date-summary-toolbar .date-step { width: 36px; min-width: 36px; height: 36px; }
 [data-page="control"] .date-summary-toolbar .summary-counts > * { min-width: 56px; padding: 3px 10px; }
 [data-page="control"] .date-summary-toolbar .summary-counts strong { font-size: 15px; }
+
+/* Map explanations are hidden unless the map failed. */
+.control-map-note:not([data-error="true"]) { display: none; }

@@ -99,7 +99,7 @@ function addLayers(map, markerImage, ownedLayers, ownedSources) {
   addLayer({
     id: ids.zonePinLayer, type: 'symbol', source: ids.zonePins,
     layout: {
-      'icon-image': ids.marker, 'icon-size': 0.55, 'icon-anchor': 'bottom',
+      'icon-image': ids.marker, 'icon-size': 0.3, 'icon-anchor': 'bottom',
       'icon-allow-overlap': true, 'icon-ignore-placement': true,
     },
   });
@@ -159,6 +159,10 @@ export function mountDispatchMapLayers(map, { onPick = () => {}, onZonePick = ()
     map.setFilter(ids.zonePinSelected, equals('orderId', latest.selectedOrderId));
     map.setPaintProperty(ids.allPoints, 'icon-opacity', latest.selectedGroupId ? 0.5 : 1);
     map.setFilter(ids.selectedRegion, includes('zoneId', latest.selectedZoneIds));
+    // With a selected zone, its fill reads stronger and every other zone steps back.
+    map.setPaintProperty(ids.regionFill, 'fill-opacity', latest.selectedZoneIds.length
+      ? ['case', ['in', ['get', 'zoneId'], ['literal', latest.selectedZoneIds]], 0.36, 0.08]
+      : 0.18);
     const regionVisibility = latest.mode === 'regions' ? 'visible' : 'none';
     if (latest.mode !== 'regions' && hoveredZoneId) hover(null);
     const pointVisibility = latest.mode === 'orders' ? 'visible' : 'none';

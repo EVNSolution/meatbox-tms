@@ -552,13 +552,14 @@
       "source": "apps/combined/dispatch-map-layer.mjs",
       "sourceSha256": "944304bc83934f094fa317494e7d5ed047ba0b0f432cae91d247fd7a71dcf56d",
       "target": "apps/web/combined/dispatch-map-layer.mjs",
-      "targetSha256": "c8246da1a077b80bb967951a42ceb28433b0f5f86f6bfb7fe60b8d0b1529d9df",
+      "targetSha256": "ed77fd334491fc8ac60466eccbd597b9a8b7877c4a37a3e9752b693e7ab9539a",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
         "Add a circle layer that highlights the orders picked for a bulk transfer",
         "Draw the pins of a selected zone in a separate layer, route zone and pin clicks in zone view and label zones with destinations and boxes",
-        "Replace always-on zone volume labels with a hovered zone that rises (opaque fill, outline and shadow) and report the hovered zone"
+        "Replace always-on zone volume labels with a hovered zone that rises (opaque fill, outline and shadow) and report the hovered zone",
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps."
       ],
       "status": "active"
     },
@@ -933,7 +934,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "a4b948c18ebfffa0d51b2e4ef097720144636dec41fe4d5bc15d7f81fde7318e",
+      "targetSha256": "0c194c6b1fc26061c2a6f30fec4a3482438258f52315f7a5bea9f3bccb444201",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -949,7 +950,8 @@
         "Style the floating map tools, mode switch and location chip; stack them on narrow screens.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
-        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps."
       ],
       "status": "active"
     },
@@ -1522,7 +1524,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "bc47d6947bd06a55b021cff3d66abcb58aaae6297afadf6f35311ce5fd11b949",
+      "targetSha256": "ad729090ebc082709c7c4682abffe99cd6610bd4e2b01be054da770fa022ffea",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1536,7 +1538,8 @@
         "Position the floating support button and move the map chip to the top-left corner.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
-        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps."
       ],
       "status": "active"
     },
@@ -1544,7 +1547,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "289e394754679a02cdff348556038e59ca10cb1ca12574442271b3c9108b0738",
+      "targetSha256": "343cfe18bc33b643c617a06fb7f9cae4dcb8ece67de420398ec87c710bb86a54",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1555,7 +1558,8 @@
         "Show the driver name first and mark the synthetic plate as unverified in the heading, list and detail title; use the driver name in the support table",
         "Mount pickup QR and driver messaging tools in the selected vehicle detail, update their dated context, and clear them with the existing control lifecycle.",
         "Collapse the running facts behind a toggle that keeps its state across renders, and fit the map to the stops with padding for the floating cards on every resize or toggle.",
-        "Remove list hints and the map heading; float the support-dispatch button over the map."
+        "Remove list hints and the map heading; float the support-dispatch button over the map.",
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps."
       ],
       "status": "active"
     },
