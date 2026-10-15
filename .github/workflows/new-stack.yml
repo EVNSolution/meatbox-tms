@@ -33,6 +33,14 @@ jobs:
         with:
           node-version: '26.3.1'
           package-manager-cache: false
+          # Keeps the npm download cache keyed by the four lockfiles; npm ci
+          # still installs from the lockfile, so the artifact is unchanged.
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tools/oxlint/anti-slop/package-lock.json
+            apps/web/package-lock.json
+            apps/driver/package-lock.json
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
@@ -45,10 +53,13 @@ jobs:
           cache-read-only: false
       - name: Install locked Node dependencies
         run: |
-          npm ci
-          npm --prefix tools/oxlint/anti-slop ci
-          npm --prefix apps/web ci
-          npm --prefix apps/driver ci
+          # The four trees are independent; install them concurrently.
+          pids=()
+          npm ci & pids+=($!)
+          npm --prefix tools/oxlint/anti-slop ci & pids+=($!)
+          npm --prefix apps/web ci & pids+=($!)
+          npm --prefix apps/driver ci & pids+=($!)
+          for pid in "${pids[@]}"; do wait "$pid"; done
       - name: Verify Kotlin, frontend, golden and API contracts
         run: make check-release
       - name: Package verified immutable release
