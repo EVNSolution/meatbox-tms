@@ -313,9 +313,11 @@
       "source": "apps/combined/customer-requests.css",
       "sourceSha256": "ff0b5b153d8242395dcd2d89081721a0ba3781220089c84b33faff28f50a2a9d",
       "target": "apps/web/combined/customer-requests.css",
-      "targetSha256": "ff0b5b153d8242395dcd2d89081721a0ba3781220089c84b33faff28f50a2a9d",
+      "targetSha256": "7983b3bce2ff5fb1c6094c76bdd1cd1897102d5e89b0a3e7b4496c1a482ad064",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
-      "changes": [],
+      "changes": [
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
+      ],
       "status": "active"
     },
     {
@@ -585,12 +587,13 @@
       "source": "apps/combined/dispatch-workflow.css",
       "sourceSha256": "d3c042a43e3ae08a4eac46590b3bc9f662d90ba11a909fb5a4c4b5b99ea00a13",
       "target": "apps/web/combined/dispatch-workflow.css",
-      "targetSha256": "2392e5f74388fa66c6bbef4229d81aee032014b29f4cbaf7da7ab7119451fd63",
+      "targetSha256": "96cc0ecc415024c535d7cfcc4cd1006c23dfef582ca161d162fe0806895359bd",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
-        "Drop the inner input focus ring so the search field shows one focus outline."
+        "Drop the inner input focus ring so the search field shows one focus outline.",
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
       ],
       "status": "active"
     },
@@ -930,7 +933,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "1e8d55199d4026f806b5031a725f333fb8cfdf372eca1fd7961099bcc814a756",
+      "targetSha256": "a4b948c18ebfffa0d51b2e4ef097720144636dec41fe4d5bc15d7f81fde7318e",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -945,7 +948,8 @@
         "Let the dispatch page flow again: viewport-proportional map and vehicle list heights, a scrolling zone table with a sticky header, no viewport-fill squeeze.",
         "Style the floating map tools, mode switch and location chip; stack them on narrow screens.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
-        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs."
+        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
       ],
       "status": "active"
     },
@@ -1476,12 +1480,13 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/composition.css",
-      "targetSha256": "809fa3759edfe9dab5a37b8f7a952932de7a9a911ddaa7f9fbde8e85a359fb9d",
+      "targetSha256": "fb9eddf20333de43b810e01a4a53e105467d50a1f267732d40c69a4630329f66",
       "reason": "Derive the composition stylesheet from original lines 1574-1843; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 1574-1843 into a dedicated stylesheet",
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1496,12 +1501,13 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/date-summary-toolbar.css",
-      "targetSha256": "0b6004057aaec1bb7e6070aadd35997c90bd244fca6c4dadc640de903a949a7c",
+      "targetSha256": "980e0e0f5772becc2e23d5e0d866b0bbdc0d3e44d5391390b5771ffcc7c433b9",
       "reason": "Derive the date-summary-toolbar stylesheet from original lines 268-323; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 268-323 into a dedicated stylesheet",
         "Center date controls and summary cards using the shared component tokens.",
-        "Own the shared date navigation layout (label, previous/next, picker, today) for both operational screens."
+        "Own the shared date navigation layout (label, previous/next, picker, today) for both operational screens.",
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1516,7 +1522,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "3c56ebf5e30c8196b3f35eb46b5ad13d4acdf15d41a97695a15256a96ace7ecd",
+      "targetSha256": "bc47d6947bd06a55b021cff3d66abcb58aaae6297afadf6f35311ce5fd11b949",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1529,7 +1535,8 @@
         "Style the running-facts toggle row.",
         "Position the floating support button and move the map chip to the top-left corner.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
-        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs."
+        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
+        "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps."
       ],
       "status": "active"
     },
@@ -2239,8 +2246,8 @@
     {
       "path": "apps/web/public/theme.css",
       "origin": "authored",
-      "sha256": "40205364ea54eda9ef5b5b216ed2db6b5d6bb15fd9282e4c90c71bc05bd64ab0",
-      "reason": "Author the shared public font, brand and dimension foundation using approved DESIGN.md decisions without exposing protected UI code or business data.",
+      "sha256": "0dc153a6dba0a573fe9e74e2e23e5fdac1bd52b09b7c1aa857494c64660ef368",
+      "reason": "Author the shared public font, brand and dimension foundation using approved DESIGN.md decisions without exposing protected UI code or business data. Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
       "status": "active"
     },
     {
@@ -2355,8 +2362,8 @@
     {
       "path": "apps/web/public/components.css",
       "origin": "authored",
-      "sha256": "3bd57849525a415b00d64c669f547d3af1eacc1b07b06ce188827a66d84ebd75",
-      "reason": "Own shared buttons, fields, cards, tabs, focus and dialog appearance across product, guide and authentication pages.",
+      "sha256": "a3b3187c0b97aed12a7d9fb3cc800c9e07cefc51e142ef828c7de7b37688deab",
+      "reason": "Own shared buttons, fields, cards, tabs, focus and dialog appearance across product, guide and authentication pages. Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
       "status": "active"
     },
     {
@@ -2404,9 +2411,9 @@
     {
       "path": "apps/web/combined/driver-tools.css",
       "origin": "authored",
-      "reason": "Style the existing vehicle-detail driver tools and accessible dialogs with printable per-order QR cards using the shared operational design tokens. Exclude non-print content from layout and flatten the dialog ancestry during printing so QR cards paginate without blank operational pages. Keep the print document canvas white without changing screen backgrounds.",
+      "reason": "Style the existing vehicle-detail driver tools and accessible dialogs with printable per-order QR cards using the shared operational design tokens. Exclude non-print content from layout and flatten the dialog ancestry during printing so QR cards paginate without blank operational pages. Keep the print document canvas white without changing screen backgrounds. Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
       "status": "active",
-      "sha256": "5600b47e307fa1472ac7533329bffca1934a412217f30053aa96ccbb938430e3"
+      "sha256": "1092aa5eaa697751df9e4551e313876e76c39f6a23bf907b8248eda46150dc26"
     },
     {
       "path": "apps/web/combined/driver-tools.test.mjs",

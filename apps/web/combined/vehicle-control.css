@@ -55,7 +55,7 @@
 .control-stop-facts > div { display: flex; gap: 8px; }
 .control-stop-facts dt { color: var(--muted); }
 .control-stop-facts dd { margin: 0; }
-.control-request { padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; }
+.control-request { padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius); }
 .control-request h4 { margin-top: 10px; }
 .control-fact-list { padding: 0; margin: 0; list-style: none; max-height: 240px; overflow: auto; }
 .control-fact-list li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 8px 0; border-bottom: 1px solid #f0f1f3; line-height: 1.5; }
@@ -68,7 +68,7 @@
 .support-heading h2 { margin: 0; font-size: 20px; }
 .support-heading .icon-button { width: 44px; height: 44px; display: inline-grid; place-items: center; padding: 0; }
 .support-dispatch-dialog p { font-size: 13px; line-height: 1.7; }
-.support-waiting { padding: 12px; background: #fff8e8; border-radius: 6px; }
+.support-waiting { padding: 12px; background: #fff8e8; border-radius: var(--radius); }
 .support-data h3 { font-size: 15px; }
 .support-table-scroll { max-height: 360px; overflow: auto; }
 .support-table-scroll table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 12px; }
@@ -97,8 +97,8 @@
 .control-management-target select { width: 100%; min-width: 0; height: var(--control-height); font: inherit; font-size: 13px; }
 .control-management-actions { display: flex; gap: 8px; margin-top: 10px; }
 .control-management-actions .button { flex: 1; min-height: var(--control-height); padding-inline: 8px; font-size: 12px; white-space: nowrap; }
-.control-record-filters { display: flex; gap: 4px; margin: 12px 14px 0; padding: 3px; background: #f4f5f7; border-radius: 6px; }
-.control-record-filters button { flex: 1; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; min-height: var(--control-height); cursor: pointer; }
+.control-record-filters { display: flex; gap: 4px; margin: 12px 14px 0; padding: 3px; background: var(--workspace); border-radius: 100px; }
+.control-record-filters button { flex: 1; border: 0; border-radius: 100px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; min-height: var(--control-height); cursor: pointer; }
 .control-record-filters button[aria-pressed="true"] { background: white; color: var(--brand); box-shadow: 0 1px 3px #00000012; font-weight: 600; }
 .control-record-list { list-style: none; padding: 0 14px; margin: 0; max-height: min(55vh, 550px); overflow: auto; overscroll-behavior: contain; }
 .control-record { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; border-bottom: 1px solid var(--border); padding: 10px 0; font-size: 12px; }
@@ -123,7 +123,7 @@
 .support-data td small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
 @media (min-width: 1271px) {
   #vehicle-control { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-  .vehicle-control-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); gap: 0; min-height: 520px; align-items: stretch; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+  .vehicle-control-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); gap: 0; min-height: 520px; align-items: stretch; overflow: hidden; border: 1px solid var(--border); border-radius: var(--meatbox-radius-card); background: #fff; }
   .vehicle-control-layout > .panel { border: 0; border-radius: 0; box-shadow: none; }
   .control-fleet { border-right: 1px solid var(--border); }
   .control-details { border-left: 1px solid var(--border); }
@@ -131,9 +131,9 @@
   .control-map-workspace { position: relative; gap: 0; }
   .control-map-panel { flex: 1 1 auto; }
   .control-map-canvas { flex: 1 1 auto; height: auto; min-height: 240px; }
-  .control-map-note { position: absolute; top: 12px; left: 12px; z-index: 2; margin: 0; padding: 6px 10px; border-radius: 6px; background: #ffffffe6; box-shadow: 0 1px 3px #00000014; font-size: 11px; line-height: 1.4; }
+  .control-map-note { position: absolute; top: 12px; left: 12px; z-index: 2; margin: 0; padding: 6px 10px; border-radius: var(--radius); background: #ffffffe6; box-shadow: 0 1px 3px #00000014; font-size: 11px; line-height: 1.4; }
   .control-map-note:empty { display: none; }
-  .control-current { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3; border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px #1b263314; }
+  .control-current { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3; border: 1px solid var(--border); border-radius: var(--meatbox-radius-card); background: #fff; box-shadow: 0 8px 24px #1b263314; }
   .control-current .panel-heading { padding: 8px 14px; min-height: 0; }
   .control-current .panel-heading div { display: flex; align-items: baseline; gap: 8px; }
   .control-current .panel-heading h2 { font-size: 14px; line-height: 20px; }
