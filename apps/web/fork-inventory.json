@@ -930,7 +930,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "dee1efe71762694d2a216ad937196870b75f15e24fb59b48a3e02b03018b329f",
+      "targetSha256": "1e8d55199d4026f806b5031a725f333fb8cfdf372eca1fd7961099bcc814a756",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -944,7 +944,8 @@
         "Remove the in-flow dispatch message rules replaced by the toast.",
         "Let the dispatch page flow again: viewport-proportional map and vehicle list heights, a scrolling zone table with a sticky header, no viewport-fill squeeze.",
         "Style the floating map tools, mode switch and location chip; stack them on narrow screens.",
-        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs."
       ],
       "status": "active"
     },
@@ -1327,7 +1328,7 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/shell.css",
-      "targetSha256": "d314dbfa9ed0b4aee016b7bd361a4535c7e0e6250c16625ce8c7cd8f538b9aac",
+      "targetSha256": "77b0d65a5a0de163be39a21abdddcdf3c9c12e3fc4b6ba0549cb623b95f4df71",
       "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 57-344 into a dedicated stylesheet",
@@ -1336,7 +1337,8 @@
         "Align the brand with the portal header, center navigation labels, and fill the desktop viewport with the app shell so each work area scrolls on its own.",
         "Drop the connection panel from the desktop app shell.",
         "Tighten the page intro now that it holds only the title.",
-        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1514,7 +1516,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "be3d8eeaeaab79b0990fcaf6f3e928b1ff327185d1880d34b8521239f083ab9a",
+      "targetSha256": "3c56ebf5e30c8196b3f35eb46b5ad13d4acdf15d41a97695a15256a96ace7ecd",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1526,7 +1528,8 @@
         "Desktop control console: one framed three-column layout with a full-height map, the running summary as a card over the map and the map note as a floating chip.",
         "Style the running-facts toggle row.",
         "Position the floating support button and move the map chip to the top-left corner.",
-        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs."
       ],
       "status": "active"
     },
@@ -2373,8 +2376,8 @@
     {
       "path": "apps/web/combined/status-notification.css",
       "origin": "authored",
-      "sha256": "cad5eda532fce85cfb2c64d25e94acb8c33bad8c99d39033c57911eb8eaf87ab",
-      "reason": "Position and size the shared top notification without replacing operational work areas. Stack toasts in one fixed container and style the action button and error tone.",
+      "sha256": "c232a74f29cb63b98b6b358a09b1072195e39b10590be4760ac0228726d3ad4e",
+      "reason": "Position and size the shared top notification without replacing operational work areas. Stack toasts in one fixed container and style the action button and error tone. Anchor the toast stack to the top right so it never covers the sub-tabs.",
       "status": "active"
     },
     {

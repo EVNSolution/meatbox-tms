@@ -203,3 +203,26 @@
 [data-page="orders"][data-subtab="zones"] .order-planning-layout { grid-template-columns: minmax(0, 1fr); }
 [data-page="orders"][data-subtab="zones"] .order-zone-body { max-height: none; }
 [data-page="orders"][data-subtab="list"] .order-source-list { margin-top: 0; }
+
+/* 배차 tab: date and dispatch stage share one slim strip; the map takes the rest of the viewport. */
+[data-page="orders"][data-subtab="plan"] #order-planning { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar { flex: 0 0 auto; margin: 0; padding: 4px 8px; gap: 4px 12px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar .date-summary-actions { min-height: 40px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar .button { min-height: 36px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar .date-step { width: 36px; min-width: 36px; height: 36px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-meta { margin-left: 0; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar .summary-counts > * { min-width: 56px; padding: 3px 10px; }
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar .summary-counts strong { font-size: 15px; }
+[data-page="orders"][data-subtab="plan"] [data-dispatch-workflow] { flex: 1 1 360px; min-width: 0; }
+[data-page="orders"][data-subtab="plan"] [data-dispatch-planning] { flex: 1 1 100%; min-width: 0; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow { margin: 0; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-toolbar { align-items: center; padding: 4px 10px; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-overview { display: flex; align-items: center; gap: 12px; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-phase { flex-direction: row; align-items: baseline; gap: 8px; }
+[data-page="orders"][data-subtab="plan"] [data-dispatch-summary] { display: none; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-actions { flex-direction: row; align-items: center; }
+[data-page="orders"][data-subtab="plan"] .dispatch-workflow-actions .button { min-height: 36px; }
+@media (min-width: 861px) {
+  [data-page="orders"][data-subtab="plan"] .order-map-canvas { min-height: clamp(480px, calc(100dvh - 232px), 900px); }
+  [data-page="orders"][data-subtab="plan"] .order-vehicle-list { max-height: clamp(280px, calc(100dvh - 330px), 800px); }
+}

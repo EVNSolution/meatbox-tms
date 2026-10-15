@@ -162,3 +162,11 @@
   [data-page="control"][data-subtab="stops"] .control-fleet,
   [data-page="control"][data-subtab="records"] .control-fleet { min-width: 0; }
 }
+
+/* 관제: the date bar is a single slim strip, like 배차. */
+[data-page="control"] .date-summary-toolbar { margin-bottom: 8px; padding: 4px 8px; gap: 4px 12px; }
+[data-page="control"] .date-summary-toolbar .date-summary-actions { min-height: 40px; }
+[data-page="control"] .date-summary-toolbar .button { min-height: 36px; }
+[data-page="control"] .date-summary-toolbar .date-step { width: 36px; min-width: 36px; height: 36px; }
+[data-page="control"] .date-summary-toolbar .summary-counts > * { min-width: 56px; padding: 3px 10px; }
+[data-page="control"] .date-summary-toolbar .summary-counts strong { font-size: 15px; }

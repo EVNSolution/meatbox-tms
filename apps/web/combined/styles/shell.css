@@ -154,7 +154,9 @@ ol {
   outline-offset: 4px;
 }
 
-.subtabs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.page-intro { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding-block: 10px; }
+.page-intro h1 { margin: 0; font-size: 22px; }
+.subtabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; }
 .subtabs[hidden] { display: none; }
 .subtabs a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 100px; color: var(--muted); font-size: 13px; font-weight: 600; text-decoration: none; }
 .subtabs a:hover { color: var(--text); background: var(--surface-hover); }
