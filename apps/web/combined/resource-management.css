@@ -58,3 +58,5 @@
 .resource-region-panel form > span { min-width: 28px; color: var(--muted); font-size: 11px; text-align: right; white-space: nowrap; }
 .resource-region-panel form .button { flex: 0 0 auto; min-height: var(--control-height); }
 .resource-region-list { max-height: 260px; overflow: auto; }
+.resource-region-list form { align-items: center; }
+.resource-region-list form > span { font-size: 12px; }

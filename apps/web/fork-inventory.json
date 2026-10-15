@@ -1092,13 +1092,14 @@
       "source": "apps/combined/resource-management.css",
       "sourceSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
       "target": "apps/web/combined/resource-management.css",
-      "targetSha256": "b36b582b1ffa324e6d32c8e8675af2d24364cee5b4a8e8436100c40692e63aac",
+      "targetSha256": "30c6a867e1161f63ea9fb2ce392d6ef5690bf4b27f50a00e50c98b15f8d50c49",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px",
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
         "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px.",
-        "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it."
+        "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it.",
+        "Center the vehicle count of each region code row against its input and button."
       ],
       "status": "active"
     },
