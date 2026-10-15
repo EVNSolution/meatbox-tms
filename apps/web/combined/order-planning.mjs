@@ -80,11 +80,9 @@ export function mountOrderPlanning({
     <aside class="panel order-vehicle-panel" aria-labelledby="order-vehicle-heading">
       <div class="order-vehicle-heading"><div><h2 id="order-vehicle-heading" data-order-group-heading>배차 차량</h2><p data-order-group-note>수신 순서</p></div></div>
       <div class="order-vehicle-list" data-order-vehicle aria-label="배차 차량 선택"></div>
-      <div class="order-dispatch-actions" data-order-dispatch-actions hidden><button type="button" class="button subtle" data-order-dispatch-pin disabled>핀배차</button><div class="order-multi-actions" data-order-multi-actions><button type="button" class="button subtle" data-order-multi-toggle aria-pressed="false" disabled>복수 선택</button><button type="button" class="button primary" data-order-multi-transfer disabled>선택 이관</button><button type="button" class="button subtle" data-order-multi-clear disabled>선택 해제</button></div><p class="order-multi-summary" data-order-multi-summary role="status"></p><p data-order-dispatch-context>차량 또는 지도 주문을 선택해 주세요.</p><p data-order-dispatch-result role="status" hidden></p></div>
-      <p class="order-region-note" data-order-region-note><strong>권역 기능 준비 중</strong> 실제 권역 데이터가 연결되면 경계와 권역 내 배송지 정보를 제공합니다.</p>
     </aside>
     <section class="panel order-map-panel" aria-labelledby="order-map-heading">
-      <div class="order-map-heading"><div><h2 id="order-map-heading">주문 배차 지도</h2><p data-order-map-description>전체 등록 주문과 선택 차량 배정</p></div><div class="order-map-controls"><fieldset class="order-map-mode" data-order-map-mode-control hidden><legend class="sr-only">지도 표시 단위</legend><label><input type="radio" name="order-map-mode" value="regions" data-order-map-mode checked><span>권역 단위</span></label><label><input type="radio" name="order-map-mode" value="orders" data-order-map-mode><span>주문 단위</span></label></fieldset></div></div>
+      <h2 id="order-map-heading" class="sr-only">주문 배차 지도</h2>
       <div class="order-map-canvas" data-order-map-canvas aria-label="주문 위치">
         <div class="order-map-layer" data-order-map-layer></div>
         <div class="order-select-box" data-order-select-box hidden></div>
@@ -93,10 +91,12 @@ export function mountOrderPlanning({
         <div class="order-map-status" data-order-map-status role="status"><span data-order-map-status-text>지도 준비 중</span><button type="button" class="button subtle" data-order-map-retry hidden>다시 시도</button></div>
         <section class="order-map-selection" data-order-selection aria-live="polite"><span>선택 주문</span><strong>지도에서 주문을 선택해 주세요.</strong></section>
         <p class="order-map-summary" data-order-map-summary>총 물량 확인 중</p>
+        <p class="order-map-count" data-order-map-count>위치 데이터 확인 중</p>
+        <div class="order-map-tools"><div class="order-dispatch-actions" data-order-dispatch-actions hidden><button type="button" class="button subtle" data-order-dispatch-pin disabled>핀배차</button><div class="order-multi-actions" data-order-multi-actions><button type="button" class="button subtle" data-order-multi-toggle aria-pressed="false" disabled>복수 선택</button><button type="button" class="button primary" data-order-multi-transfer disabled>선택 이관</button><button type="button" class="button subtle" data-order-multi-clear disabled>선택 해제</button></div><p class="order-multi-summary" data-order-multi-summary role="status"></p><p class="order-dispatch-context" data-order-dispatch-context></p><p data-order-dispatch-result role="status" hidden></p></div></div>
+        <div class="order-map-mode-wrap"><fieldset class="order-map-mode" data-order-map-mode-control hidden><legend class="sr-only">지도 표시 단위</legend><label><input type="radio" name="order-map-mode" value="regions" data-order-map-mode checked><span>권역 단위</span></label><label><input type="radio" name="order-map-mode" value="orders" data-order-map-mode><span>주문 단위</span></label></fieldset></div>
       </div>
-      <details class="order-location-info"><summary>주문 위치 정보</summary><p data-order-map-count>위치 데이터 확인 중</p></details>
       <details class="order-zone-volume" data-order-zone-panel open hidden><summary>권역별 물량 <span data-order-zone-total></span></summary>
-        <div class="order-zone-body"><p class="order-zone-note" data-order-zone-note></p>
+        <div class="order-zone-body">
         <div class="order-zone-table-wrap"><table class="order-zone-table"><thead><tr><th scope="col">권역</th><th scope="col">착지</th><th scope="col">박스</th><th scope="col">주문</th><th scope="col">중량</th><th scope="col">배송원</th></tr></thead><tbody data-order-zone-rows></tbody></table></div>
         <div class="order-list-pages"><button type="button" class="button subtle" data-order-zone-previous>이전</button><span data-order-zone-page></span><button type="button" class="button subtle" data-order-zone-next>다음</button></div></div>
       </details>
@@ -246,9 +246,6 @@ export function mountOrderPlanning({
     zonePage = paged.page;
     const volume = row => `${row.destinations.toLocaleString('ko-KR')}곳 / ${boxesText(row.boxes)} / 주문 ${row.orders.toLocaleString('ko-KR')}건 / 중량 ${weightText(row.weightKg)}`;
     setText('[data-order-zone-total]', totals ? `전체 ${volume(totals)}` : '');
-    setText('[data-order-zone-note]', rows.length
-      ? `주문이 있는 권역 ${rows.length.toLocaleString('ko-KR')}곳. 여러 권역에 걸친 주문은 권역마다 집계해 권역 합계가 전체보다 클 수 있습니다.${unlocated?.orders ? ` 권역을 알 수 없는 주문 ${unlocated.orders.toLocaleString('ko-KR')}건(${boxesText(unlocated.boxes)})은 표에 없습니다.` : ''}`
-      : '주문이 있는 권역이 없습니다.');
     const body = query('[data-order-zone-rows]');
     const driverNames = new Map(vehiclesFor(data).map(vehicle => [vehicle.id, vehicle.driver || vehicle.id]));
     const html = paged.items.map(row => `<tr><th scope="row"><button type="button" data-order-zone-id="${escapeHtml(row.zoneId)}" aria-pressed="${row.zoneId === selectedZoneId}">${escapeHtml(row.label)}</button></th><td>${row.destinations.toLocaleString('ko-KR')}곳</td><td>${boxesText(row.boxes)}</td><td>${row.orders.toLocaleString('ko-KR')}건</td><td>${weightText(row.weightKg)}</td><td class="order-zone-drivers" title="${escapeHtml(driverNamesText(zoneDriverMap.get(row.zoneId), id => driverNames.get(id) || id, Infinity))}">${escapeHtml(driverNamesText(zoneDriverMap.get(row.zoneId), id => driverNames.get(id) || id))}</td></tr>`).join('');
@@ -326,15 +323,8 @@ export function mountOrderPlanning({
     if (modeControl) modeControl.hidden = !isSource;
     setText('[data-order-group-heading]', isSource ? data?.dispatch?.phase === 'unplanned' ? '후보 배송원' : '차량별 배정' : '배차 차량');
     setText('[data-order-group-note]', isSource ? '주문 수신 순서' : '수신 순서');
-    setText('[data-order-map-description]', isSource
-      ? multiMode ? '복수 선택 중입니다. 핀을 클릭하거나 지도를 드래그해 배송지를 고릅니다.' : mapMode === 'regions' ? '권역에 마우스를 올리면 착지·박스가 보입니다. 권역을 누르거나 아래 표에서 고르면 경계와 배송지 핀이 함께 보입니다.' : '모든 주문 핀을 표시합니다.'
-      : '전체 등록 주문과 선택 차량 배정');
     const listPanel = query('[data-order-list-panel]');
     if (listPanel) listPanel.hidden = !isSource;
-    const regionNote = query('[data-order-region-note]');
-    if (regionNote) regionNote.innerHTML = isSource
-      ? '<strong>배송 권역</strong>제공된 권역 경계와 주문의 권역 소속으로 수량을 집계합니다.'
-      : '<strong>권역 기능 준비 중</strong> 실제 권역 데이터가 연결되면 경계와 권역 내 배송지 정보를 제공합니다.';
   }
   function syncSummary() {
     const source = deliveriesFor(data);
@@ -818,8 +808,6 @@ export function mountOrderPlanning({
       query('[data-order-dispatch-result]').hidden = true;
       query('[data-order-map-mode-control]').hidden = false;
       query('[data-order-map-mode-control]').querySelectorAll('input').forEach(input => { input.disabled = true; });
-      setText('[data-order-map-description]', '주문 위치와 배송 권역을 표시하는 영역입니다.');
-      query('[data-order-region-note]').innerHTML = `<strong>배송 권역</strong>${empty ? '미등록' : '미확인'}`;
       mapStatus.hidden = empty; mapRetry.hidden = true; mapStatusText.textContent = empty ? '' : message;
       count.textContent = empty ? '위치 미등록' : '위치 미확인';
       selection.hidden = true;

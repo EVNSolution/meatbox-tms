@@ -81,7 +81,6 @@ test('polling 갱신은 선택을 보존하고 계산은 선택한 배송원 ID�
   const commands = [];
   const workflow = mountDispatchWorkflow({ element, onCommand: (...args) => { commands.push(args); } });
   workflow.update(data());
-  assert.match(element.innerHTML, /서버 확정 후 배송 관제와 배차 기록에 반영됩니다/);
   assert.equal(nodes.summary.innerHTML, '<p class="dispatch-workflow-volume"><span>배차 대상</span><span>주문 10</span><span>배송지 9</span><span>20박스</span></p>');
   assert.match(nodes.candidates.innerHTML, /김기사/);
   assert.match(nodes.candidates.innerHTML, /data-dispatch-candidate="V1" checked disabled/);

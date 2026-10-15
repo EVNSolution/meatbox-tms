@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { runInNewContext } from 'node:vm';
 import { totalBoxes, orderMapModel, regionOrderCounts, mountOrderPlanning } from './order-planning.mjs';
 
 class FakeNode {
@@ -294,19 +293,10 @@ test('주문 시나리오 버튼과 비교 입력 없이 지도와 핀배차만 
 
 test('주문 화면은 운영 자료 좌표만 사용하고 데모 경로를 참조하지 않는다', () => {
   const source = readFileSync(new URL('./app.mjs', import.meta.url), 'utf8');
-  const body = source.match(/function syncDispatchContext\(\) \{[\s\S]*?\n\}\n\nfunction renderPage/)?.[0].replace(/\n\nfunction renderPage$/, '');
-  assert.ok(body);
   assert.doesNotMatch(source, /scenarioTools|demo-shell|deliveryLinks/);
-  assert.match(source, /function render\(\) \{\s*syncDispatchContext\(\);\s*renderPage\(\);/);
+  assert.match(source, /function render\(\) \{\s*renderPage\(\);/);
   assert.match(source, /if \(state\.page === 'orders'\) orderPlanning\.update\(state\.data, state\.selectedId, state\.dateContext\?\.date\);\s*if \(!state\.data\)/);
   assert.doesNotMatch(readFileSync(new URL('./order-planning.mjs', import.meta.url), 'utf8'), /\/scenario\/api/);
-  const nodes = { 'page-description': { textContent: '' } };
-  const state = { page: 'orders' };
-  const context = { state, orderPlanning: { usesSource: () => false }, byId: id => nodes[id] };
-  runInNewContext(body + '\nsyncDispatchContext();', context);
-  context.orderPlanning.usesSource = () => true;
-  runInNewContext('syncDispatchContext();', context);
-  assert.match(nodes['page-description'].textContent, /배차 계산/);
 });
 
 test('차량 목록 선택과 외부 주문 선택은 실제 총량이나 각 주문의 수량을 바꾸지 않는다', () => {
@@ -678,7 +668,6 @@ test('권역·주문 보기는 주문 원본과 카메라를 유지하며 날짜
   assert.equal(updates.at(-1).points, points);
   assert.equal(cameras.length, 0);
   assert.equal(nodes.selection.hidden, false);
-  assert.equal(nodes['map-description'].textContent, '모든 주문 핀을 표시합니다.');
   selectVehicle(nodes, 'G1');
   assert.equal(updates.at(-1).mode, 'orders');
   assert.equal(updates.at(-1).selectedGroupId, 'G1');
@@ -689,7 +678,6 @@ test('권역·주문 보기는 주문 원본과 카메라를 유지하며 날짜
   nodes['map-mode-control'].listeners.change({ target: { matches: () => true, value: 'regions' } });
   assert.equal(updates.at(-1).mode, 'regions');
   assert.equal(cameras.length, 0);
-  assert.match(nodes['map-description'].textContent, /마우스를 올리면/);
   assert.equal(nodes.selection.hidden, true);
   assert.deepEqual(input, before);
   planning.destroy();
@@ -753,7 +741,6 @@ test('복수 선택은 핀 클릭으로 배송지 묶음을 고르고 해제하�
   assert.equal(nodes['map-canvas'].dataset.multiSelect, 'true');
   assert.equal(log.dragPan.at(-1), 'disable');
   assert.equal(log.boxZoom.at(-1), 'disable');
-  assert.match(nodes['map-description'].textContent, /복수 선택 중/);
   assert.match(nodes['multi-summary'].textContent, /핀을 클릭하거나 지도를 드래그/);
 
   log.picks(['O1']);
@@ -976,7 +963,6 @@ test('권역별 물량 표는 착지·박스·주문을 권역마다 세고 중�
   planning.update(zonePlanningData(), null);
   assert.equal(nodes['zone-panel'].hidden, false);
   assert.equal(nodes['zone-total'].textContent, '전체 3곳 / 26박스 / 주문 4건 / 중량 미수신');
-  assert.match(nodes['zone-note'].textContent, /주문이 있는 권역 2곳.*권역 합계가 전체보다 클 수 있습니다/);
   const rows = nodes['zone-rows'].innerHTML.match(/<tr>.*?<\/tr>/g);
   assert.equal(rows.length, 2, '주문이 없는 권역은 표에 없다');
   assert.match(rows[0], /서울 첫 권역.*2곳.*21박스.*3건.*미수신/);

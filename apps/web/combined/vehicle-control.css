@@ -30,7 +30,8 @@
 .control-running-facts > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 8px; align-items: baseline; }
 .control-running-facts dt { color: var(--muted); }
 .control-running-facts dd { margin: 0; overflow-wrap: anywhere; }
-.control-map-panel { overflow: hidden; }
+.control-map-panel { position: relative; overflow: hidden; }
+.control-map-support { position: absolute; top: 12px; right: 12px; z-index: 3; box-shadow: 0 4px 16px #17203316; }
 .control-map-panel .panel-heading { flex-wrap: wrap; }
 .control-map-panel .button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: var(--control-height); padding-inline: 10px; white-space: nowrap; }
 .control-map-canvas { height: 400px; position: relative; }
@@ -130,7 +131,7 @@
   .control-map-workspace { position: relative; gap: 0; }
   .control-map-panel { flex: 1 1 auto; }
   .control-map-canvas { flex: 1 1 auto; height: auto; min-height: 240px; }
-  .control-map-note { position: absolute; top: 85px; left: 12px; z-index: 2; margin: 0; padding: 6px 10px; border-radius: 6px; background: #ffffffe6; box-shadow: 0 1px 3px #00000014; font-size: 11px; line-height: 1.4; }
+  .control-map-note { position: absolute; top: 12px; left: 12px; z-index: 2; margin: 0; padding: 6px 10px; border-radius: 6px; background: #ffffffe6; box-shadow: 0 1px 3px #00000014; font-size: 11px; line-height: 1.4; }
   .control-map-note:empty { display: none; }
   .control-current { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3; border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px #1b263314; }
   .control-current .panel-heading { padding: 8px 14px; min-height: 0; }

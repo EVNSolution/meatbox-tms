@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "fb640ecb0f67e652c38e3925d97a48654cf5ba7e9bb28abd83b3d55b1645f194",
+      "targetSha256": "a144f37a3f00fd1ae53a9fe8f0c779a64bfa9526876b1d7e4538e7222bd89577",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -37,7 +37,8 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Share the date navigation markup with dispatch management and step the control date through the registered date list.",
-        "Show connection, dispatch loading and control loading notices in a sticky top toast with reload/retry actions instead of in-flow panels."
+        "Show connection, dispatch loading and control loading notices in a sticky top toast with reload/retry actions instead of in-flow panels.",
+        "Drop the page description writer and the empty dispatch-context sync."
       ],
       "status": "active"
     },
@@ -583,11 +584,12 @@
       "source": "apps/combined/dispatch-workflow.css",
       "sourceSha256": "d3c042a43e3ae08a4eac46590b3bc9f662d90ba11a909fb5a4c4b5b99ea00a13",
       "target": "apps/web/combined/dispatch-workflow.css",
-      "targetSha256": "7bd6f3b15492e0b1c826bfd76a7748cea2d2cb7512e5ae75920908dbc92531c7",
+      "targetSha256": "2392e5f74388fa66c6bbef4229d81aee032014b29f4cbaf7da7ab7119451fd63",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
-        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens."
+        "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
+        "Drop the inner input focus ring so the search field shows one focus outline."
       ],
       "status": "active"
     },
@@ -595,13 +597,14 @@
       "source": "apps/combined/dispatch-workflow.mjs",
       "sourceSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59",
       "target": "apps/web/combined/dispatch-workflow.mjs",
-      "targetSha256": "6622fcc930ac47e6634ea86b78f9046ceea888c06f3e9150ad0bb08d153914c4",
+      "targetSha256": "82d089ba5f03d93c62569f29210f9a73a9db68265f51a0a46296fe718572624e",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
-        "Mark a synthetic plate as unverified in the candidate list"
+        "Mark a synthetic plate as unverified in the candidate list",
+        "Drop the server-confirmation hint under the dispatch actions."
       ],
       "status": "active"
     },
@@ -609,11 +612,12 @@
       "source": "apps/combined/dispatch-workflow.test.mjs",
       "sourceSha256": "1e721931eec18bce6266d669083e65ab096947ca61a4bf9c3637bf549156f0f2",
       "target": "apps/web/combined/dispatch-workflow.test.mjs",
-      "targetSha256": "308975d3c8fde9b9723baee28565de4eb306c98fd078da74b509f9de07bf783f",
+      "targetSha256": "6eae812e544ffede61eebd1991bf2036329a8d81962a005bef5f86104c612abf",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
-        "Keep the dispatch workspace visible without source data and default entry to dispatch management."
+        "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
+        "Drop the hint assertion."
       ],
       "status": "active"
     },
@@ -788,7 +792,7 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "4a2356ef64b7ec4927ba5f945f3f10ebdd5a85446edeaa09a184e38b1c6a594c",
+      "targetSha256": "0c69b12a1780fe9b2f2ff6dfc9341d69c4a0fe8d2c2df666bff8bcadaf6fc077",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -798,7 +802,8 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Load the driver messaging and printable pickup QR stylesheet inside the existing operational frontend.",
-        "Replace the in-flow connection panel and control notice with a fixed toast stack."
+        "Replace the in-flow connection panel and control notice with a fixed toast stack.",
+        "Drop the page description under the title."
       ],
       "status": "active"
     },
@@ -921,7 +926,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "6c1210ca60129e6d86bb7b228a8de02761b245dda0b6f6027dd9722ccece92de",
+      "targetSha256": "66fa9b08c5d2b726e7c05e72dbe8ef64b266068875d8ec3087ee39f956e1c743",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -933,7 +938,8 @@
         "Style the zone drivers column and the two popup buttons",
         "Remove dispatch date rules now owned by date-summary-toolbar.css and let the desktop planning layout fill the viewport with internal scrolling.",
         "Remove the in-flow dispatch message rules replaced by the toast.",
-        "Let the dispatch page flow again: viewport-proportional map and vehicle list heights, a scrolling zone table with a sticky header, no viewport-fill squeeze."
+        "Let the dispatch page flow again: viewport-proportional map and vehicle list heights, a scrolling zone table with a sticky header, no viewport-fill squeeze.",
+        "Style the floating map tools, mode switch and location chip; stack them on narrow screens."
       ],
       "status": "active"
     },
@@ -941,7 +947,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "6a0cf27cb3cf5bf008be9d77db4505ee7a19a0c3ca590f99c0934576d02ee3fc",
+      "targetSha256": "3f82974e435369d647400dbb97b34aabe604dc3c2d7045f4b4b318571074b54a",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -956,7 +962,8 @@
         "Add the zone volume table, zone selection with boundary and pins together and the delivery popup",
         "Stop stripping the generator's unverified disclosure from vehicle location text, drop raw coordinates for unverified vehicles, and mark synthetic plates as unverified",
         "Add the zone drivers column and the zone transfer dialog that hands a delivery bundle to a driver serving another zone, and mark the plate in the reassign preview",
-        "Show the hovered zone volume as a popover beside the cursor instead of overlapping map labels"
+        "Show the hovered zone volume as a popover beside the cursor instead of overlapping map labels",
+        "Remove map, region and vehicle explanations; move pin/multi-select actions, the map mode switch and the location count onto the map as floating tools."
       ],
       "status": "active"
     },
@@ -986,7 +993,7 @@
       "source": "apps/combined/order-planning.test.mjs",
       "sourceSha256": "5c4c37317c958b4e2da8651aaf2126c8fbd48421d1267b48964b54118ff8143b",
       "target": "apps/web/combined/order-planning.test.mjs",
-      "targetSha256": "fe4ed1890335bb32914d0b54cfe32c7d5203ce2b4eecb63657bc470ab00b6ba5",
+      "targetSha256": "da3a0e3281ade40248220381ef706ef89d50c13b0c0fc01c7cdcb2a0b8f31d32",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -995,7 +1002,8 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Cover multi-select, drag selection and bulk transfer",
         "Cover the zone volume table, zone selection and the delivery popup",
-        "Cover the zone drivers column and the zone transfer dialog"
+        "Cover the zone drivers column and the zone transfer dialog",
+        "Drop assertions on removed explanation copy and the retired app sync body."
       ],
       "status": "active"
     },
@@ -1060,11 +1068,12 @@
       "source": "apps/combined/resource-management.mjs",
       "sourceSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
       "target": "apps/web/combined/resource-management.mjs",
-      "targetSha256": "7dd5a631395fc96cc9ecacb02059f31953f3aaaeb3df0772b425bcf5d597a7cb",
+      "targetSha256": "9d54d0e8a3e6c0ea63f6f74ad9c82218313c83db8143e8e663a31c5499866e7b",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events.",
-        "Mark every listed plate as unverified and add a screen note until a real vehicle registry exists"
+        "Mark every listed plate as unverified and add a screen note until a real vehicle registry exists",
+        "Drop the unverified-plate explanation note."
       ],
       "status": "active"
     },
@@ -1312,14 +1321,15 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/shell.css",
-      "targetSha256": "9ada8475784e853a8030be59f1d247ca14f11422fd45e1bbf30db1c3c17d0015",
+      "targetSha256": "3545bc9fc2d0dc7fb75e289481405489298547be661616b101cf1e34201670ca",
       "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 57-344 into a dedicated stylesheet",
         "Apply the approved shared-theme alignment, responsive/control adjustments or removal of date/summary rules now owned by date-summary-toolbar.css; preserve surface layout and original fragment import order",
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
         "Align the brand with the portal header, center navigation labels, and fill the desktop viewport with the app shell so each work area scrolls on its own.",
-        "Drop the connection panel from the desktop app shell."
+        "Drop the connection panel from the desktop app shell.",
+        "Tighten the page intro now that it holds only the title."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1497,7 +1507,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "b046a6124fba66759caeeb7d31821a0a6eff5474d5e5c4d5f4d1c51b0022df86",
+      "targetSha256": "2afb58c1652dada7600acf064b73168bc0ba6ed52126293047547a653a1dcf65",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1507,7 +1517,8 @@
         "Fill the desktop viewport with the control layout so lists and the map scroll on their own.",
         "Bound the desktop control grid row so long vehicle and stop lists scroll inside their panels instead of growing the page.",
         "Desktop control console: one framed three-column layout with a full-height map, the running summary as a card over the map and the map note as a floating chip.",
-        "Style the running-facts toggle row."
+        "Style the running-facts toggle row.",
+        "Position the floating support button and move the map chip to the top-left corner."
       ],
       "status": "active"
     },
@@ -1515,7 +1526,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "74c19be8769ceb95f6c349c67fd2f877fb5eda5b72376fb2e1ebcb5f7e67867f",
+      "targetSha256": "289e394754679a02cdff348556038e59ca10cb1ca12574442271b3c9108b0738",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1525,7 +1536,8 @@
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Show the driver name first and mark the synthetic plate as unverified in the heading, list and detail title; use the driver name in the support table",
         "Mount pickup QR and driver messaging tools in the selected vehicle detail, update their dated context, and clear them with the existing control lifecycle.",
-        "Collapse the running facts behind a toggle that keeps its state across renders, and fit the map to the stops with padding for the floating cards on every resize or toggle."
+        "Collapse the running facts behind a toggle that keeps its state across renders, and fit the map to the stops with padding for the floating cards on every resize or toggle.",
+        "Remove list hints and the map heading; float the support-dispatch button over the map."
       ],
       "status": "active"
     },

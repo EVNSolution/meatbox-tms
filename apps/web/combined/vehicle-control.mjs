@@ -33,25 +33,24 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     <section class="panel control-fleet" aria-labelledby="control-fleet-heading">
       <div class="panel-heading"><h2 id="control-fleet-heading">차량별 남은 업무</h2><span data-control-count class="muted"></span></div>
       <div class="control-filters"><label class="field"><span>차량 검색</span><input type="search" data-control-search placeholder="차량번호 또는 배송원"></label><label class="field"><span>정렬</span><select data-control-sort><option value="received">주문 수신 순서<option value="stops">남은 배송지 많은 순<option value="boxes">남은 박스 많은 순<option value="duration">예상 소요 시간 긴 순</option></select></label></div>
-      <p class="control-unit-note">확정된 배차의 남은 업무입니다. 보류 배송지도 포함합니다.</p>
       <div class="control-vehicle-columns" aria-hidden="true"><span>차량 / 배송원</span><span>배송지</span><span>박스</span><span>소요</span></div>
       <div class="control-vehicle-list" data-control-vehicles tabindex="0" aria-label="차량별 잔여량 비교"></div>
     </section>
     <section class="control-map-workspace" aria-label="선택 차량 운행">
       <div class="panel control-current" data-control-summary aria-live="polite"></div>
-      <section class="panel control-map-panel" aria-labelledby="control-map-heading"><div class="panel-heading"><h2 id="control-map-heading">남은 배송지</h2><button type="button" class="button" data-control-support>${referenceIcon('support')}지원배차</button></div><div class="control-map-canvas" data-control-map></div><p class="control-map-note" data-control-map-note role="status"></p></section>
+      <section class="panel control-map-panel" aria-labelledby="control-map-heading"><h2 id="control-map-heading" class="sr-only">남은 배송지</h2><div class="control-map-canvas" data-control-map></div><button type="button" class="button control-map-support" data-control-support>${referenceIcon('support')}지원배차</button><p class="control-map-note" data-control-map-note role="status"></p></section>
     </section>
     <aside class="panel control-details" aria-label="선택 차량 상세">
       <div class="panel-heading"><h2 data-control-detail-title>차량 상세</h2></div>
       ${driverToolsMarkup()}
       <div class="detail-tabs control-tabs" role="tablist" aria-label="관제 관리"><button type="button" role="tab" id="tab-monitor" aria-selected="true" aria-controls="monitor-list-panel" data-control-tab="monitor">배송지 상세</button><button type="button" role="tab" id="tab-management" aria-selected="false" aria-controls="control-management-panel" tabindex="-1" data-control-tab="management">배송 관리</button></div>
-      <section id="monitor-list-panel" role="tabpanel" aria-labelledby="tab-monitor"><p class="control-unit-note">배송지를 펼쳐 배송 정보와 요청사항을 확인하세요.</p><div data-control-stops class="control-stop-list"></div></section>
+      <section id="monitor-list-panel" role="tabpanel" aria-labelledby="tab-monitor"><div data-control-stops class="control-stop-list"></div></section>
       <section id="control-management-panel" role="tabpanel" aria-labelledby="tab-management" hidden>
         <div data-control-records-view>
           <div class="control-management-target"><label class="field"><span>선택 배송지</span><select data-control-record-stop aria-label="관리할 배송지"></select></label><div class="control-management-actions"><button type="button" class="button" data-control-route>배송 순서 관리</button></div></div>
           <div class="control-record-filters" role="group" aria-label="기록 유형"><button type="button" data-control-record-filter="all" aria-pressed="true">전체</button><button type="button" data-control-record-filter="history" aria-pressed="false">처리 이력</button><button type="button" data-control-record-filter="notice" aria-pressed="false">고객 알림</button></div>
-          <p class="control-unit-note">수신된 최근 기록을 시간순으로 표시합니다.</p><ol class="control-record-list" data-control-records tabindex="0" aria-label="선택 배송지 이력과 알림"></ol>
-          <details class="control-common-events" data-control-common><summary>차량 공통 사건 이력</summary><p class="muted">대상 배송지가 지정되지 않은 최근 기록입니다.</p><ol class="control-fact-list" data-control-events></ol></details>
+          <ol class="control-record-list" data-control-records tabindex="0" aria-label="선택 배송지 이력과 알림"></ol>
+          <details class="control-common-events" data-control-common><summary>차량 공통 사건 이력</summary><ol class="control-fact-list" data-control-events></ol></details>
         </div>
         <div data-control-route-view hidden><div id="route-editor"></div></div>
       </section>

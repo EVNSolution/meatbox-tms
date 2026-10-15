@@ -14,9 +14,9 @@ import { dateNavActions, dateSummaryToolbar, mountDateSummaryToolbar } from './d
 import { mountStatusNotification } from '../src/shared/ui/status-notification.mjs';
 
 const pages = {
-  orders: { title: '배차 관리', description: '주문 확인, 배송원 선택과 배차 전송' },
-  deliveries: { title: '자원 관리', description: '차량별 지역 코드 관리' },
-  control: { title: '배송 관제', description: '차량별 남은 업무와 현재 운행, 배송지별 처리 이력' },
+  orders: { title: '배차 관리' },
+  deliveries: { title: '자원 관리' },
+  control: { title: '배송 관제' },
 };
 let pointerRouteTarget = null;
 let resourcesEmpty = false;
@@ -76,7 +76,7 @@ const orderPlanning = mountDatedDispatch({ element: byId('order-planning'), onSe
     const result = await operations.send('reassign', extra);
     if (!result) throw new Error('배정을 변경하지 못했습니다. 현재 주문 상태를 확인해 주세요.');
     return { ...result, shared: true };
-  }, onContextChange: () => { if (state.data) { renderSummary(); syncDispatchContext(); } renderStatusNotification(); },
+  }, onContextChange: () => { if (state.data) renderSummary(); renderStatusNotification(); },
   notify: notice => { state.dispatchNotice = notice.message ? notice : null; renderProgress(); } });
 mountResourceManagement({ element: byId('resource-management'), onEmptyChange: empty => { resourcesEmpty = empty; renderStatusNotification(); } });
 function selectDelivery(id) {
@@ -85,7 +85,6 @@ function selectDelivery(id) {
   if (selected) state.controlVehicleId = selected.vehicleId;
   render();
 }
-syncDispatchContext();
 const operations = connectOperations({
   onDateContext(context) {
     if ((state.dateContext && context.date !== state.dateContext.date) || context.empty || context.invalid) {
@@ -109,7 +108,6 @@ const operations = connectOperations({
     state.connectionMessage = message;
     state.errorNotice = '';
     byId('live-pages').hidden = false;
-    syncDispatchContext();
     render();
   },
   onError: message => {
@@ -122,7 +120,6 @@ function selectedDelivery() {
 }
 
 function render() {
-  syncDispatchContext();
   renderPage();
   renderControlDate();
   renderStatusNotification();
@@ -158,12 +155,6 @@ function render() {
     routeEditor.update({ ...state.data, deliveries: row?.deliveries || [], vehicle: row?.vehicle || { live: false }, customerStopId: row?.vehicle.live ? state.data.customerStopId : null }, selected?.id, state.connected && !state.data.dispatch?.readOnly);
     renderTabs();
   }
-  syncDispatchContext();
-}
-
-function syncDispatchContext() {
-  const ordersPage = state.page === 'orders';
-  if (ordersPage && orderPlanning.usesSource()) byId('page-description').textContent = '주문 확인 → 배송원 선택 → 배차 계산 → 전체 배차 전송';
 }
 
 function renderPage() {
@@ -177,7 +168,6 @@ function renderPage() {
   try {
     sessionStorage.setItem('meatbox.operator.page', state.page);
   } catch {}
-  byId('page-description').textContent = page.description;
 }
 
 function renderControlDate() {
