@@ -941,7 +941,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "cd550a8870ead822325f0c885900ceb5d9f2e035b6ff36049cd20ddd9e9181c2",
+      "targetSha256": "a136968d3d0d40e973cca81ea02b4eded076b6923724b2b07f0ee013d97ffd2f",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -963,7 +963,8 @@
         "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
         "Single-layer pill for the 권역/주문 단위 switch over the map.",
         "Dispatch tabs polish: aligned zone-table columns and card padding, order list without disclosure marker, outlined disabled primary action.",
-        "Zone volume list: fixed column widths, tabular numerals, 48px rows and row hover."
+        "Zone volume list: fixed column widths, tabular numerals, 48px rows and row hover.",
+        "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it."
       ],
       "status": "active"
     },
@@ -1081,12 +1082,13 @@
       "source": "apps/combined/resource-management.css",
       "sourceSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
       "target": "apps/web/combined/resource-management.css",
-      "targetSha256": "5025599799c426a79b39d51bb92fd8fc4b98feb5cc91d386947d4e94e4927c9d",
+      "targetSha256": "b36b582b1ffa324e6d32c8e8675af2d24364cee5b4a8e8436100c40692e63aac",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px",
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
-        "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px."
+        "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px.",
+        "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it."
       ],
       "status": "active"
     },

@@ -40,7 +40,9 @@
   .resource-table thead th:last-child, .resource-table tbody td:last-child { display: none; }
   .resource-table tbody tr, .resource-table tbody td, .resource-table tbody th { height: 44px; }
   .resource-table thead th, .resource-table tbody td, .resource-table tbody th { padding-inline: 6px; }
-  .resource-table select { height: 40px; padding-left: 4px; padding-right: 18px; background-position: right 4px center; }
+  .resource-table select { width: 100%; margin-left: 0; height: 40px; padding-left: 0; padding-right: 18px; background-position: right 4px center; }
+  .resource-table thead th { white-space: nowrap; }
+  .resource-table thead th:nth-child(3) { width: 64px; }
   .resource-actionbar { flex-wrap: wrap; }
   .resource-region-panel { right: auto; left: 0; }
 }

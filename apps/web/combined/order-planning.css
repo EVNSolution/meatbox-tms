@@ -271,3 +271,9 @@
 .order-zone-table tbody tr:hover > * { background: #f7f8fa; }
 .order-zone-table tbody tr > * { height: 48px; }
 .order-zone-table td.order-zone-drivers { overflow: hidden; text-overflow: ellipsis; }
+
+/* The date card may shrink and, when the strip wraps, takes the full row like the stage card. */
+[data-page="orders"][data-subtab="plan"] .date-summary-toolbar { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+@media (max-width: 1000px) {
+  [data-page="orders"][data-subtab="plan"] .date-summary-toolbar { flex: 1 1 100%; }
+}
