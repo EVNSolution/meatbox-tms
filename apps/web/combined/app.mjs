@@ -3,7 +3,7 @@ import { connectOperations } from './operations-client.mjs';
 import { mountDatedDispatch } from './dated-dispatch.mjs';
 import { mountRouteEditor } from './route-editor.mjs';
 import { referenceIcon } from './reference-icons.mjs';
-import { operatorRoute, controlDataPresentation, resolveDeliverySelection } from './operations-model.mjs';
+import { operatorRoute, routeHash, subtabs, controlDataPresentation, resolveDeliverySelection } from './operations-model.mjs';
 import { mountVehicleControl } from './vehicle-control.mjs';
 import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from './vehicle-operations-model.mjs';
 import { mountResourceManagement } from './resource-management.mjs';
@@ -165,6 +165,17 @@ function renderPage() {
     else link.removeAttribute('aria-current');
   });
   byId('page-heading').textContent = page.title;
+  const tabs = subtabs[state.page] || [];
+  const nav = byId('subtabs');
+  nav.hidden = !tabs.length;
+  const navKey = `${state.page}:${state.subtab}`;
+  if (nav.dataset.key !== navKey) {
+    nav.dataset.key = navKey;
+    nav.innerHTML = tabs.map(([id, label]) => `<a href="${routeHash(state.page, id)}"${id === state.subtab ? ' aria-current="page"' : ''}>${label}</a>`).join('');
+  }
+  const pageRoot = document.querySelector(`[data-page="${state.page}"]`);
+  if (pageRoot) pageRoot.dataset.subtab = state.subtab;
+  if (state.page === 'orders' && state.subtab === 'list') { const list = document.querySelector('.order-source-list'); if (list) list.open = true; }
   try {
     sessionStorage.setItem('meatbox.operator.page', state.page);
   } catch {}
@@ -242,6 +253,10 @@ function renderTabs() {
 
 }
 
+byId('subtabs').addEventListener('click', event => {
+  const link = event.target.closest('a');
+  if (link && event.detail > 0) pointerRouteTarget = new URL(link.href).hash;
+});
 byId('app-navigation').addEventListener('click', event => {
   const link = event.target.closest('[data-page-link]');
   if (link && event.detail > 0) {
@@ -272,15 +287,16 @@ document.querySelector('.skip-link').addEventListener('click', event => { event.
 normalizeRoute();
 
 function normalizeRoute() {
-  const hash = state.page === 'control' && state.controlTab === 'management' ? '#/control/manage' : `#/${state.page}`;
+  const hash = routeHash(state.page, state.subtab);
   if (location.hash !== hash) history.replaceState(null, '', hash);
 }
 
 function activateControlTab(tab) {
   state.controlTab = tab;
-  const hash = tab === 'management' ? '#/control/manage' : '#/control';
+  state.subtab = tab === 'management' ? 'records' : 'stops';
+  const hash = routeHash('control', state.subtab);
   if (location.hash !== hash) history.pushState(null, '', hash);
-  renderTabs();
+  render();
 }
 
 const controlTabs = [...document.querySelectorAll('[data-control-tab]')];

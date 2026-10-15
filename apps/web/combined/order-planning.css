@@ -190,3 +190,16 @@
   .order-zone-body { max-height: 440px; overflow: auto; }
   .order-zone-table thead th { position: sticky; top: 0; z-index: 1; background: #fff; }
 }
+
+/* Sub-tabs: one concern per tab, same DOM. */
+[data-page="orders"][data-subtab="zones"] [data-dispatch-workflow],
+[data-page="orders"][data-subtab="zones"] .order-vehicle-panel,
+[data-page="orders"][data-subtab="zones"] .order-map-panel > :not(.order-zone-volume),
+[data-page="orders"][data-subtab="zones"] .order-source-list,
+[data-page="orders"][data-subtab="list"] [data-dispatch-workflow],
+[data-page="orders"][data-subtab="list"] .order-planning-layout,
+[data-page="orders"][data-subtab="plan"] .order-zone-volume,
+[data-page="orders"][data-subtab="plan"] .order-source-list { display: none; }
+[data-page="orders"][data-subtab="zones"] .order-planning-layout { grid-template-columns: minmax(0, 1fr); }
+[data-page="orders"][data-subtab="zones"] .order-zone-body { max-height: none; }
+[data-page="orders"][data-subtab="list"] .order-source-list { margin-top: 0; }

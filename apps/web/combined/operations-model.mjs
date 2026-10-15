@@ -1,7 +1,20 @@
+export const subtabs = {
+  orders: [['plan', '배차'], ['zones', '권역 물량'], ['list', '주문 목록']],
+  control: [['map', '관제'], ['stops', '배송지'], ['records', '이력·알림']],
+};
+
 export function operatorRoute(hash = '') {
   const [path, section] = hash.replace(/^#\//, '').split('/');
   const page = ['orders', 'deliveries', 'control'].includes(path) ? path : path === 'manage' ? 'control' : 'orders';
-  return { page, controlTab: path === 'manage' || (page === 'control' && section === 'manage') ? 'management' : 'monitor' };
+  const manage = path === 'manage' || (page === 'control' && section === 'manage');
+  const known = (subtabs[page] || []).map(([id]) => id);
+  const subtab = manage ? 'records' : known.includes(section) ? section : known[0] || '';
+  return { page, subtab, controlTab: subtab === 'records' ? 'management' : 'monitor' };
+}
+
+export function routeHash(page, subtab) {
+  const first = (subtabs[page] || [])[0]?.[0];
+  return subtab && subtab !== first ? `#/${page}/${subtab}` : `#/${page}`;
 }
 
 export function controlDataPresentation(context, message = '배송 자료를 확인하고 있습니다.') {

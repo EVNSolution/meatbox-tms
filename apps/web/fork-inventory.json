@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "a144f37a3f00fd1ae53a9fe8f0c779a64bfa9526876b1d7e4538e7222bd89577",
+      "targetSha256": "04acf8da1d8de3047b5581ef8307cdfd2f12e5ee1eacfd4a8dc2d5881e37a935",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -38,7 +38,8 @@
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Share the date navigation markup with dispatch management and step the control date through the registered date list.",
         "Show connection, dispatch loading and control loading notices in a sticky top toast with reload/retry actions instead of in-flow panels.",
-        "Drop the page description writer and the empty dispatch-context sync."
+        "Drop the page description writer and the empty dispatch-context sync.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
       ],
       "status": "active"
     },
@@ -792,7 +793,7 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "0c69b12a1780fe9b2f2ff6dfc9341d69c4a0fe8d2c2df666bff8bcadaf6fc077",
+      "targetSha256": "801aa6609f404d5ec4b62966630e4b0a9a169b942895ccaa89148551abf04eed",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -803,7 +804,8 @@
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Load the driver messaging and printable pickup QR stylesheet inside the existing operational frontend.",
         "Replace the in-flow connection panel and control notice with a fixed toast stack.",
-        "Drop the page description under the title."
+        "Drop the page description under the title.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
       ],
       "status": "active"
     },
@@ -887,11 +889,12 @@
       "source": "apps/combined/operations-model.mjs",
       "sourceSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
       "target": "apps/web/combined/operations-model.mjs",
-      "targetSha256": "df6b1b5bc3a2e7a360816b32b1227c886075038fa0b3f3484fba1a714422aaad",
+      "targetSha256": "f35721685cdd85e723d64459292193c9cc082982a97b8487c17c0895bf42f45f",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Distinguish confirmed empty delivery dates from loading, failed reads and invalid dates without creating operational state."
+        "Distinguish confirmed empty delivery dates from loading, failed reads and invalid dates without creating operational state.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
       ],
       "status": "active"
     },
@@ -899,11 +902,12 @@
       "source": "apps/combined/operations-model.test.mjs",
       "sourceSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732",
       "target": "apps/web/combined/operations-model.test.mjs",
-      "targetSha256": "f7ea7489e8270a302cb15d0cd6f2a3c45c1fd85e933adb78ea76ffb5da878934",
+      "targetSha256": "904bfb44f71ba1a200e9c98061c931571bbc1dbf664dcbc80e11f6a3c954bfdb",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Verify control empty-date presentation does not turn loading, failures or invalid dates into confirmed absence."
+        "Verify control empty-date presentation does not turn loading, failures or invalid dates into confirmed absence.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
       ],
       "status": "active"
     },
@@ -926,7 +930,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "66fa9b08c5d2b726e7c05e72dbe8ef64b266068875d8ec3087ee39f956e1c743",
+      "targetSha256": "dee1efe71762694d2a216ad937196870b75f15e24fb59b48a3e02b03018b329f",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -939,7 +943,8 @@
         "Remove dispatch date rules now owned by date-summary-toolbar.css and let the desktop planning layout fill the viewport with internal scrolling.",
         "Remove the in-flow dispatch message rules replaced by the toast.",
         "Let the dispatch page flow again: viewport-proportional map and vehicle list heights, a scrolling zone table with a sticky header, no viewport-fill squeeze.",
-        "Style the floating map tools, mode switch and location chip; stack them on narrow screens."
+        "Style the floating map tools, mode switch and location chip; stack them on narrow screens.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
       ],
       "status": "active"
     },
@@ -947,7 +952,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "3f82974e435369d647400dbb97b34aabe604dc3c2d7045f4b4b318571074b54a",
+      "targetSha256": "8abf0afa1153afd5a2b4e58facc03a0ff25874f503901a7a2395a39dcf021eb4",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -963,7 +968,8 @@
         "Stop stripping the generator's unverified disclosure from vehicle location text, drop raw coordinates for unverified vehicles, and mark synthetic plates as unverified",
         "Add the zone drivers column and the zone transfer dialog that hands a delivery bundle to a driver serving another zone, and mark the plate in the reassign preview",
         "Show the hovered zone volume as a popover beside the cursor instead of overlapping map labels",
-        "Remove map, region and vehicle explanations; move pin/multi-select actions, the map mode switch and the location count onto the map as floating tools."
+        "Remove map, region and vehicle explanations; move pin/multi-select actions, the map mode switch and the location count onto the map as floating tools.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
       ],
       "status": "active"
     },
@@ -1321,7 +1327,7 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/shell.css",
-      "targetSha256": "3545bc9fc2d0dc7fb75e289481405489298547be661616b101cf1e34201670ca",
+      "targetSha256": "d314dbfa9ed0b4aee016b7bd361a4535c7e0e6250c16625ce8c7cd8f538b9aac",
       "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 57-344 into a dedicated stylesheet",
@@ -1329,7 +1335,8 @@
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
         "Align the brand with the portal header, center navigation labels, and fill the desktop viewport with the app shell so each work area scrolls on its own.",
         "Drop the connection panel from the desktop app shell.",
-        "Tighten the page intro now that it holds only the title."
+        "Tighten the page intro now that it holds only the title.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -1507,7 +1514,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "2afb58c1652dada7600acf064b73168bc0ba6ed52126293047547a653a1dcf65",
+      "targetSha256": "be3d8eeaeaab79b0990fcaf6f3e928b1ff327185d1880d34b8521239f083ab9a",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1518,7 +1525,8 @@
         "Bound the desktop control grid row so long vehicle and stop lists scroll inside their panels instead of growing the page.",
         "Desktop control console: one framed three-column layout with a full-height map, the running summary as a card over the map and the map note as a floating chip.",
         "Style the running-facts toggle row.",
-        "Position the floating support button and move the map chip to the top-left corner."
+        "Position the floating support button and move the map chip to the top-left corner.",
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
       ],
       "status": "active"
     },

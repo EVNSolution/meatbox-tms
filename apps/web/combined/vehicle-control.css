@@ -150,3 +150,15 @@
   #control-management-panel { flex: 1 1 auto; min-height: 0; overflow: auto; }
   #monitor-list-panel[hidden] { display: none; }
 }
+
+/* Sub-tabs: 관제 (map), 배송지 (stops), 이력·알림 (records) share one fleet list. */
+.control-tabs { display: none; }
+[data-page="control"][data-subtab="map"] .control-details,
+[data-page="control"][data-subtab="stops"] .control-map-workspace,
+[data-page="control"][data-subtab="records"] .control-map-workspace { display: none; }
+@media (min-width: 1271px) {
+  [data-page="control"] .vehicle-control-layout { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); }
+  [data-page="control"][data-subtab="map"] .control-fleet,
+  [data-page="control"][data-subtab="stops"] .control-fleet,
+  [data-page="control"][data-subtab="records"] .control-fleet { min-width: 0; }
+}

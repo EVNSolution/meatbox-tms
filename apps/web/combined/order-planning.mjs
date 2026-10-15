@@ -241,7 +241,7 @@ export function mountOrderPlanning({
       zoneHtml = '';
       return;
     }
-    const { rows, totals, unlocated } = zoneRows;
+    const { rows, totals } = zoneRows;
     const paged = paginate(rows, zonePage);
     zonePage = paged.page;
     const volume = row => `${row.destinations.toLocaleString('ko-KR')}곳 / ${boxesText(row.boxes)} / 주문 ${row.orders.toLocaleString('ko-KR')}건 / 중량 ${weightText(row.weightKg)}`;
