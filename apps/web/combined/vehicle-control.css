@@ -136,11 +136,14 @@
   .control-map-note { position: absolute; top: 12px; left: 12px; z-index: 2; margin: 0; padding: 6px 10px; border-radius: var(--radius); background: #ffffffe6; box-shadow: 0 1px 3px #00000014; font-size: 11px; line-height: 1.4; }
   .control-map-note:empty { display: none; }
   /* The running summary is docked above the map: one slim row, details below it. Nothing floats over the map card. */
-  .control-current { display: grid; grid-template-columns: minmax(180px, auto) minmax(0, 1fr); align-items: center; flex: none; border-bottom: 1px solid var(--border); }
+  /* Every column starts with a 64px row (63px + 1px divider) so the dividers line up across the frame. */
+  .vehicle-control-layout .panel-heading { min-height: 64px; box-sizing: border-box; }
+  .control-current { display: grid; grid-template-columns: minmax(180px, auto) minmax(0, 1fr); grid-template-rows: 63px auto; align-items: center; flex: none; border-bottom: 1px solid var(--border); }
   .control-current .panel-heading { grid-column: 1; border-bottom: 0; }
   .control-current .control-workload { grid-column: 2; border-bottom: 0; }
   .control-current .control-running-details { grid-column: 1 / -1; border-top: 1px solid var(--border); }
-  .control-current .panel-heading { padding: 8px 14px; min-height: 0; }
+  .control-current .panel-heading { padding: 0 16px; min-height: 0; height: 63px; }
+  .control-current .control-workload { padding: 0 16px; height: 63px; align-items: center; }
   .control-current .panel-heading div { display: flex; align-items: baseline; gap: 8px; }
   .control-current .panel-heading h2 { font-size: 14px; line-height: 20px; }
   .control-current .panel-heading p { margin: 0; }
