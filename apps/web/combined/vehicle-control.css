@@ -172,4 +172,4 @@
 [data-page="control"] .date-summary-toolbar .summary-counts strong { font-size: 15px; }
 
 /* Map explanations are hidden unless the map failed. */
-.control-map-note:not([data-error="true"]) { display: none; }
+.control-map-note:not([data-error="true"]):not([data-empty="true"]) { display: none; }

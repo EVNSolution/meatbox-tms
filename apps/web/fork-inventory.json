@@ -899,12 +899,13 @@
       "source": "apps/combined/operations-model.mjs",
       "sourceSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
       "target": "apps/web/combined/operations-model.mjs",
-      "targetSha256": "f35721685cdd85e723d64459292193c9cc082982a97b8487c17c0895bf42f45f",
+      "targetSha256": "76d5d1fe299bbfcb8d1fbb1c2fe5e64ad222a5aeada9a9c239831a3aa5b37cf7",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Distinguish confirmed empty delivery dates from loading, failed reads and invalid dates without creating operational state.",
-        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work."
       ],
       "status": "active"
     },
@@ -1533,7 +1534,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "98be08bd678c9744c275c6555fa331de275106071592557d9b66732f8a687536",
+      "targetSha256": "165b1b35b629c9206eb61d5a591eb79e8af2d00c3282897c52131403f667651e",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1549,7 +1550,8 @@
         "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
         "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
         "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
-        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker."
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work."
       ],
       "status": "active"
     },
@@ -1557,7 +1559,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "f1a79957eef02d05bef410a8a635a62418d6e3162dd17518f321289ec73f8cd5",
+      "targetSha256": "6d34fac1b8fa8648490fcf7a69ac2907672ce990da67696f3c07b7e016d0baf0",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1570,7 +1572,8 @@
         "Collapse the running facts behind a toggle that keeps its state across renders, and fit the map to the stops with padding for the floating cards on every resize or toggle.",
         "Remove list hints and the map heading; float the support-dispatch button over the map.",
         "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
-        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker."
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work."
       ],
       "status": "active"
     },
@@ -1578,13 +1581,14 @@
       "source": "apps/combined/vehicle-control.test.mjs",
       "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
       "target": "apps/web/combined/vehicle-control.test.mjs",
-      "targetSha256": "d1949b74b174308620adc7a0fa01d8fc84947c3e6e7e29e9ca4cdd3631891074",
+      "targetSha256": "cd6aff4cf07dca1423d9a687c25411d1db2becdd6096b29bd70e67c240c33fff",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Verify confirmed empty versus unknown control state, loaded-empty-loaded recovery and stale asynchronous map responses.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
-        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records."
+        "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work."
       ],
       "status": "active"
     },

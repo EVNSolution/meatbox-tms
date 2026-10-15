@@ -1,6 +1,6 @@
 export const subtabs = {
   orders: [['plan', '배차'], ['zones', '권역 물량'], ['list', '주문 목록']],
-  control: [['map', '관제'], ['stops', '배송지'], ['records', '이력·알림']],
+  control: [['map', '관제'], ['stops', '배송지'], ['records', '기록']],
 };
 
 export function operatorRoute(hash = '') {

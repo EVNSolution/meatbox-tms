@@ -97,7 +97,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   }
 
   function stopContents(stop) {
-    return `<div class="control-stop-body"><p class="muted">${esc(stop.address || '주소 미등록')}</p><dl class="control-stop-facts"><div><dt>배정 박스</dt><dd>${count(stop.boxes, '박스')}</dd></div><div><dt>도착 ETA</dt><dd>${esc(stop.preciseTimeText || stop.calculatedEta || '미확인')}</dd></div></dl><section class="control-request">${renderCustomerRequests(stop)}</section><section class="control-tip"><h4>배송원 팁</h4><p>${esc(stop.tip?.body || '등록된 배송팁이 없습니다.')}</p>${stop.tip ? `<small>${esc(stop.tip.author)}${stop.tip.updatedAt ? ` (${esc(stop.tip.updatedAt)})` : ''}</small>` : ''}</section><button type="button" class="button control-open-records" data-control-manage="${esc(stop.id)}">이력·알림 보기</button></div>`;
+    return `<div class="control-stop-body"><p class="muted">${esc(stop.address || '주소 미등록')}</p><dl class="control-stop-facts"><div><dt>배정 박스</dt><dd>${count(stop.boxes, '박스')}</dd></div><div><dt>도착 ETA</dt><dd>${esc(stop.preciseTimeText || stop.calculatedEta || '미확인')}</dd></div></dl><section class="control-request">${renderCustomerRequests(stop)}</section><section class="control-tip"><h4>배송원 팁</h4><p>${esc(stop.tip?.body || '등록된 배송팁이 없습니다.')}</p>${stop.tip ? `<small>${esc(stop.tip.author)}${stop.tip.updatedAt ? ` (${esc(stop.tip.updatedAt)})` : ''}</small>` : ''}</section><button type="button" class="button control-open-records" data-control-manage="${esc(stop.id)}">기록 보기</button></div>`;
   }
 
   function renderStops() {
@@ -173,7 +173,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       fitView();
     }
     markers.forEach(marker => marker.element.setAttribute('aria-pressed', String(marker.element.dataset.orderMarker === selectedId)));
-    { const note = find('[data-control-map-note]'); if (note.dataset) note.dataset.error = String(Boolean(mapError)); }
+    { const note = find('[data-control-map-note]'); if (note.dataset) { note.dataset.error = String(Boolean(mapError)); note.dataset.empty = 'false'; } }
     find('[data-control-map-note]').textContent = mapError || (activeRouteData
       ? `남은 배송지 ${model.mapped.length}곳 표시, 위치 미등록 ${model.unknownCount}곳. ${position ? source ? '차량 기준 위치 표시. 실시간 GPS 미수신.' : '차량은 시뮬레이션 위치입니다. 실제 GPS 미연결.' : '차량 현재 위치 미수신.'}`
       : '배송지 위치 데이터를 불러오고 있습니다. 미등록 건수는 수신 후 확인합니다.');
@@ -200,21 +200,32 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: mapPadding(), maxZoom: fitCoords.length === 1 ? 13 : 14, duration: 0 });
   }
 
+  function createMap() {
+    if (mapError || map) return;
+    try {
+      map = mapFactory(mapElement);
+      wheel = installModifierWheelZoom(map);
+      observer = new ResizeObserver(() => { map?.resize(); fitView(); });
+      observer.observe(mapElement);
+    } catch {
+      mapError = '지도를 불러오지 못했습니다. 새로고침해 주세요.';
+      find('[data-control-map-note]').textContent = mapError;
+      if (find('[data-control-map-note]').dataset) find('[data-control-map-note]').dataset.error = 'true';
+    }
+  }
+
+  // Without work the map still shows, empty, with the reason in a chip over it.
+  function resetMap() {
+    routeEpoch += 1;
+    markers.splice(0).forEach(marker => marker.remove());
+    signature = ''; fitCoords = [];
+    createMap();
+  }
+
   function ensureMap() {
     if (mapError) return;
-    if (!map) {
-      try {
-        map = mapFactory(mapElement);
-        wheel = installModifierWheelZoom(map);
-        observer = new ResizeObserver(() => { map?.resize(); fitView(); });
-        observer.observe(mapElement);
-      } catch {
-        mapError = '지도를 불러오지 못했습니다. 새로고침해 주세요.';
-        find('[data-control-map-note]').textContent = mapError;
-        if (find('[data-control-map-note]').dataset) find('[data-control-map-note]').dataset.error = 'true';
-        return;
-      }
-    }
+    createMap();
+    if (!map) return;
     map.resize();
     if (data?.sourceData) return;
     if (typeof loadRouteData !== 'function') {
@@ -264,7 +275,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     find('[data-control-sort]').value = 'received';
     if (support.open) support.close();
     showRecords();
-    removeMap();
+    resetMap();
     find('[data-control-count]').textContent = empty ? '0대' : '미확인';
     list.innerHTML = `<p class="control-unit-note">${empty ? '미배정' : '미확인'}</p>`;
     renderEmptySummary(empty, message);
@@ -276,8 +287,9 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     find('[data-support-data]').innerHTML = '';
     find('[data-control-common]').hidden = false;
     element.querySelectorAll('[data-control-record-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.controlRecordFilter === 'all')));
-    mapElement.innerHTML = empty ? '' : `<div class="control-map-empty" role="status">${esc(message)}</div>`;
-    find('[data-control-map-note]').textContent = empty ? '미배정' : message;
+    const note = find('[data-control-map-note]');
+    note.textContent = mapError || message;
+    if (note.dataset) note.dataset.empty = 'true';
     setControlsDisabled(true);
   }
 
