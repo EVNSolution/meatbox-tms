@@ -241,3 +241,11 @@
 [data-page="orders"][data-subtab="plan"] .order-planning-layout { align-items: stretch; }
 [data-page="orders"][data-subtab="plan"] .order-vehicle-panel { display: flex; flex-direction: column; }
 [data-page="orders"][data-subtab="plan"] .order-vehicle-list { flex: 1 1 auto; max-height: none; }
+
+/* Numbered pins (관제): the visit order sits in the pin head; the selected pin grows. */
+.order-map-marker-numbered { position: relative; isolation: isolate; font: 700 12px/1 var(--meatbox-font); color: #fff; }
+.order-map-marker-numbered::before { position: absolute; z-index: -1; left: 50%; bottom: 0; width: 31px; height: 40px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='52' viewBox='0 0 40 52' fill='none'%3E%3Cpath d='M20 49C20 49 5.5 32.5 5.5 19.5a14.5 14.5 0 0 1 29 0C34.5 32.5 20 49 20 49Z' fill='%23e60028' stroke='%23fff' stroke-width='2.5' stroke-linejoin='round'/%3E%3C/svg%3E"); background-position: center; background-size: contain; background-repeat: no-repeat; transform: translateX(-50%); }
+.order-map-marker-numbered { padding-bottom: 19px; align-items: flex-end; }
+.order-map-marker-numbered[data-selected-vehicle="true"]::after { display: none; }
+.order-map-marker-numbered[aria-pressed="true"] { z-index: 6; transform-origin: 50% 100%; }
+.order-map-marker-numbered[aria-pressed="true"]::before { width: 38px; height: 49px; filter: drop-shadow(0 0 0 #fff) drop-shadow(0 2px 3px #1b263340); }

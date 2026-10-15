@@ -141,9 +141,11 @@
       "source": "apps/combined/assets/maps/dsv-vehicle-marker.svg",
       "sourceSha256": "dac8f0b0bc172d8fecdfce13c306ea53ec9395655f2c84896b5b0a48bc3ea7ad",
       "target": "apps/web/public/combined/assets/maps/dsv-vehicle-marker.svg",
-      "targetSha256": "dac8f0b0bc172d8fecdfce13c306ea53ec9395655f2c84896b5b0a48bc3ea7ad",
+      "targetSha256": "34ea06e42dd0c9a226f402dbfcafc452e52eb251fc01309f5a753dcf9f6e7343",
       "reason": "Copy asset bytes and licenses into Vite public storage to retain the fixed /combined/assets URL, including runtime map/worker requests.",
-      "changes": [],
+      "changes": [
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker."
+      ],
       "status": "active"
     },
     {
@@ -938,7 +940,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "a97f745f582be39e295104e3a83a711cca1bf2dc507d39369856c6768679a62c",
+      "targetSha256": "14fb2599124bce5abdfa5882397628c8b63c1e919636a175380bb65a8fd4ebd6",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -956,7 +958,8 @@
         "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
         "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
         "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
-        "Restyle the destination pin as a Kakao-map style droplet in Meatbox red with a white inner dot and soft shadow."
+        "Restyle the destination pin as a Kakao-map style droplet in Meatbox red with a white inner dot and soft shadow.",
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker."
       ],
       "status": "active"
     },
@@ -1529,7 +1532,7 @@
       "source": "apps/combined/vehicle-control.css",
       "sourceSha256": "b89e63883406e906be4ea459dda9d5f724b6ca948318793c7f52a283f8accf7a",
       "target": "apps/web/combined/vehicle-control.css",
-      "targetSha256": "ad729090ebc082709c7c4682abffe99cd6610bd4e2b01be054da770fa022ffea",
+      "targetSha256": "98be08bd678c9744c275c6555fa331de275106071592557d9b66732f8a687536",
       "reason": "Preserve existing view behavior and dense/utility dimensions while aligning the listed font or ordinary control styles with the authored shared product theme.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1544,7 +1547,8 @@
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
         "Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
-        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps."
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker."
       ],
       "status": "active"
     },
@@ -1552,7 +1556,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "343cfe18bc33b643c617a06fb7f9cae4dcb8ece67de420398ec87c710bb86a54",
+      "targetSha256": "f1a79957eef02d05bef410a8a635a62418d6e3162dd17518f321289ec73f8cd5",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1564,7 +1568,8 @@
         "Mount pickup QR and driver messaging tools in the selected vehicle detail, update their dated context, and clear them with the existing control lifecycle.",
         "Collapse the running facts behind a toggle that keeps its state across renders, and fit the map to the stops with padding for the floating cards on every resize or toggle.",
         "Remove list hints and the map heading; float the support-dispatch button over the map.",
-        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps."
+        "Polish: equal-height strip cards and columns, small zone pins with a stronger selected-zone fill, no explanatory text on the maps.",
+        "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker."
       ],
       "status": "active"
     },

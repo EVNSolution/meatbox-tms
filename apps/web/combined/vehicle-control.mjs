@@ -151,7 +151,15 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     if (signature !== nextSignature) {
       signature = nextSignature;
       markers.splice(0).forEach(marker => marker.remove());
-      markers = model.mapped.map(item => markerFactory(map, item.delivery, item.coordinates));
+      markers = model.mapped.map(item => {
+        const marker = markerFactory(map, item.delivery, item.coordinates);
+        // The control map shows the visit order inside the pin; the shared pin builder stays untouched.
+        if (Number.isFinite(item.delivery.sequence) && marker.element?.classList) {
+          marker.element.classList.add('order-map-marker-numbered');
+          marker.element.textContent = String(item.delivery.sequence);
+        }
+        return marker;
+      });
       if (position) {
         const markerElement = document.createElement('div');
         markerElement.className = 'control-map-vehicle';
