@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 36,
+  "authoredFileCount": 37,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "c8b036d35bbfc91fdc1107fb5bb4290284ab1a9f5b0a6d1e233bf2282848fd0d",
+      "targetSha256": "529bbab206b7e28c21d1e0c66439217535a4a6ff94930bc2baba1d011778df71",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -40,7 +40,8 @@
         "Show connection, dispatch loading and control loading notices in a sticky top toast with reload/retry actions instead of in-flow panels.",
         "Drop the page description writer and the empty dispatch-context sync.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
-        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
+        "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only."
       ],
       "status": "active"
     },
@@ -944,7 +945,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "a136968d3d0d40e973cca81ea02b4eded076b6923724b2b07f0ee013d97ffd2f",
+      "targetSha256": "177e45ed585699ed733f0e18a9ec6cb10e04fa3de6e5bbc0c7d0f21211cf4dd0",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -967,7 +968,8 @@
         "Single-layer pill for the 권역/주문 단위 switch over the map.",
         "Dispatch tabs polish: aligned zone-table columns and card padding, order list without disclosure marker, outlined disabled primary action.",
         "Zone volume list: fixed column widths, tabular numerals, 48px rows and row hover.",
-        "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it."
+        "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it.",
+        "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only."
       ],
       "status": "active"
     },
@@ -1358,7 +1360,7 @@
       "source": "apps/combined/styles.css",
       "sourceSha256": "55e3397c12bd9142846385cbad8dfa270e72471157540bbf06875015e93386c3",
       "target": "apps/web/combined/styles/shell.css",
-      "targetSha256": "e0d8965901ff0f7ae260cc2bf230a50399aad553b2d8419968feaf24f8b8e224",
+      "targetSha256": "9ef4a9082991d3a663bf14e3a4f7d3f94131d9ac877db2239a933f72aaac0da6",
       "reason": "Derive the shell stylesheet from original lines 57-344; keep the initial extraction hash separate from the reviewed current target hash.",
       "changes": [
         "Extract original CSS lines 57-344 into a dedicated stylesheet",
@@ -1370,7 +1372,8 @@
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Slim the 배차 and 관제 date/stage strips, put the title and sub-tabs on one row, and move toasts to the top right so they never cover the sub-tabs.",
         "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px.",
-        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
+        "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only."
       ],
       "derivation": {
         "kind": "css-line-range",
@@ -2274,15 +2277,15 @@
     {
       "path": "apps/web/package-lock.json",
       "origin": "authored",
-      "sha256": "a23903a3ea2220e5bb41cc504ddd28919f41a6f5fb20d1f9465c6e9a32491bfb",
-      "reason": "Lock the independently owned frontend build and validation dependency tree for reproducible installation. Pin the qrcode 1.5.4 and @types/qrcode 1.5.6 dependency trees for local QR generation without a third-party data service.",
+      "sha256": "29bf3402ad63124145d4d595db797fb338bd59272bb771639c8dc993ce8f4b2a",
+      "reason": "Lock the independently owned frontend build and validation dependency tree for reproducible installation. Pin the qrcode 1.5.4 and @types/qrcode 1.5.6 dependency trees for local QR generation without a third-party data service. Add the lucide icon dependency for sidebar account icons.",
       "status": "active"
     },
     {
       "path": "apps/web/package.json",
       "origin": "authored",
-      "sha256": "fb904ea2ae7491f24a984a733bb1717e961d8000d02c7c9172a92b3eceb4adfe",
-      "reason": "Own one frontend package with pinned toolchain and explicit build, recursive regression and artifact verification commands. Pin qrcode 1.5.4 and @types/qrcode 1.5.6 for browser pickup QR generation.",
+      "sha256": "464f3bb728cadf91aab5edf49acb0189245d1e686a3d1be4fa6565e87a46ccee",
+      "reason": "Own one frontend package with pinned toolchain and explicit build, recursive regression and artifact verification commands. Pin qrcode 1.5.4 and @types/qrcode 1.5.6 for browser pickup QR generation. Add the lucide icon dependency for sidebar account icons.",
       "status": "active"
     },
     {
@@ -2463,6 +2466,13 @@
       "reason": "Verify individual-order QR payloads, print invalidation and late QR results, authenticated message contracts, read-only history, safe rendering, duplicate sends, and separate storage and push outcomes.",
       "status": "active",
       "sha256": "0670d26d9b972302e7000ca7f9f0517e34a26e11fa92c6f0de20930dc07a52e7"
+    },
+    {
+      "path": "apps/web/combined/account-icons.mjs",
+      "origin": "authored",
+      "sha256": "328c41762230d546b267e1596442f4ca3c55bf6198cdc77e4034a8b6b8d43ba4",
+      "reason": "Render the sidebar account icons (settings, account, logout) from the official Lucide icon data, tree-shaken to three icons.",
+      "status": "active"
     }
   ],
   "historicalTargetFileCount": 163,

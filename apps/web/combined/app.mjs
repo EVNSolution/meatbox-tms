@@ -3,6 +3,7 @@ import { connectOperations } from './operations-client.mjs';
 import { mountDatedDispatch } from './dated-dispatch.mjs';
 import { mountRouteEditor } from './route-editor.mjs';
 import { referenceIcon } from './reference-icons.mjs';
+import { accountIcon, logoutIcon, settingsIcon } from './account-icons.mjs';
 import { operatorRoute, routeHash, subtabs, controlDataPresentation, resolveDeliverySelection } from './operations-model.mjs';
 import { mountVehicleControl } from './vehicle-control.mjs';
 import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from './vehicle-operations-model.mjs';
@@ -32,14 +33,12 @@ const state = {
 const byId = id => document.getElementById(id);
 function mountOperationalShell() {
   document.body.dataset.viewer = 'operator';
-  byId('app-header').innerHTML = '<a class="brand" href="/combined/"><img src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a><div class="app-account"><span class="app-user" id="app-user" hidden></span><form class="app-logout" method="post" action="/logout"><button type="submit" class="button subtle">로그아웃</button></form></div>';
-  // The signed-in name is a convenience; the logout form works without it.
-  fetch('/api/session', { credentials: 'same-origin' }).then(response => response.ok ? response.json() : null).then(body => {
-    const user = body?.user;
-    const label = user?.displayName || user?.username || '';
-    if (label) { const node = byId('app-user'); node.textContent = label; node.hidden = false; }
-  }).catch(() => {});
-  byId('app-navigation').innerHTML = '<nav class="app-nav-links" aria-label="운영 업무"><a href="#/orders" data-page-link="orders">배차 관리</a><a href="#/control" data-page-link="control">배송 관제</a><a href="#/deliveries" data-page-link="deliveries">자원 관리</a></nav>';
+  byId('app-header').innerHTML = '<a class="brand" href="/combined/"><img src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a>';
+  byId('app-navigation').innerHTML = '<nav class="app-nav-links" aria-label="운영 업무"><a href="#/orders" data-page-link="orders">배차 관리</a><a href="#/control" data-page-link="control">배송 관제</a><a href="#/deliveries" data-page-link="deliveries">자원 관리</a><div class="app-nav-account" role="group" aria-label="계정">'
+    + `<button type="button" class="app-icon-button" aria-disabled="true" aria-label="설정" title="설정 (준비 중)">${settingsIcon}</button>`
+    + `<button type="button" class="app-icon-button" aria-disabled="true" aria-label="내 계정" title="내 계정 (준비 중)">${accountIcon}</button>`
+    + `<form class="app-logout" method="post" action="/logout"><button type="submit" class="app-icon-button" aria-label="로그아웃" title="로그아웃">${logoutIcon}</button></form>`
+    + '</div></nav>';
 }
 mountOperationalShell();
 const statusNotification = mountStatusNotification({ element: byId('status-notification') });

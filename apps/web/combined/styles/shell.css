@@ -129,12 +129,6 @@ ol {
 
 .brand img { display: block; width: 126px; height: 30px; }
 
-.app-account { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-.app-user { color: var(--muted); font-size: 13px; white-space: nowrap; }
-.app-user[hidden] { display: none; }
-.app-logout { margin: 0; }
-.app-logout .button { min-height: 36px; padding-inline: 12px; font-size: 13px; }
-
 .brand strong,
 .brand b,
 .brand span {
@@ -217,3 +211,13 @@ ol {
 
   .page-view { width: 100%; }
 }
+
+/* Account actions sit at the bottom of the sidebar: 설정, 내 계정, then 로그아웃 last. */
+.app-nav-account { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
+.app-logout { margin: 0; }
+.app-icon-button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius); color: var(--muted); background: transparent; cursor: pointer; }
+.app-icon-button:hover { color: var(--action); background: var(--surface-hover); }
+.app-icon-button[aria-disabled="true"] { cursor: default; opacity: .5; }
+.app-icon-button[aria-disabled="true"]:hover { color: var(--muted); background: transparent; }
+.app-icon-button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-icon { display: block; width: 22px; height: 22px; }
