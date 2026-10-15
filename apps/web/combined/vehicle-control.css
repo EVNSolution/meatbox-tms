@@ -125,6 +125,8 @@
   #vehicle-control { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
   .vehicle-control-layout { flex: 1 1 auto; grid-template-rows: minmax(0, 1fr); gap: 0; min-height: 520px; align-items: stretch; overflow: hidden; border: 1px solid var(--border); border-radius: var(--meatbox-radius-card); background: #fff; }
   .vehicle-control-layout > .panel { border: 0; border-radius: 0; box-shadow: none; }
+  .control-map-workspace > .panel { border: 0; border-radius: 0; box-shadow: none; }
+  .control-map-workspace > .control-current { border-bottom: 1px solid var(--border); }
   .control-fleet { border-right: 1px solid var(--border); }
   .control-details { border-left: 1px solid var(--border); }
   .control-fleet, .control-details, .control-map-workspace, .control-map-panel { display: flex; flex-direction: column; min-height: 0; }
