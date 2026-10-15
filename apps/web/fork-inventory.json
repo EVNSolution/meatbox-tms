@@ -1652,13 +1652,14 @@
       "source": "apps/portal/pages.js",
       "sourceSha256": "282476702f5db4d6e47ac87506176130b36a9538964caf49cb8175c931c0207a",
       "target": "apps/web/login/index.html",
-      "targetSha256": "7736911a4059f37bc8a9b42eb9ab41d9942465c79b010a132a479830d66bbec0",
+      "targetSha256": "6b05d307789c8f03be2b49dd6af94faf2653963ff88b5e6536aea09d51afd12b",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Materialize login markup and frontend-managed next, registered and authentication feedback",
         "Load the standalone portal authentication entry; keep authentication and session writes on the existing API",
         "Load the authored public theme stylesheet so product, guide and authentication share canonical font, colors and dimensions",
-        "Remove the redundant direct theme link; receive the shared public foundation through portal.css, matching native API authentication error pages"
+        "Remove the redundant direct theme link; receive the shared public foundation through portal.css, matching native API authentication error pages",
+        "Login page: drop the eyebrow and intro lines, add inert 아이디 찾기 / 비밀번호 찾기 links, a legal footer (개인정보 처리방침, 위치기반서비스 이용약관) and the 주식회사 이브이앤솔루션 copyright."
       ],
       "status": "active"
     },
@@ -1680,12 +1681,13 @@
       "source": "apps/portal/portal.css",
       "sourceSha256": "f60b1133cba63152770ed6a6df3db8dbc648beb6680bfb0609c4ca60be8ea01c",
       "target": "apps/web/public/portal.css",
-      "targetSha256": "3550ca7cf2bde1ea3b0d6f4ed6e19f49127858fdb02c21b9e25910707645c97b",
+      "targetSha256": "b1b6ab9226e472074cd8e77d21d705799eb080454fa84f9d58ff0cd7bd32b12a",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Remove unused landing/workspace styles and duplicate overrides; retain authentication layout and feedback using the shared theme tokens",
         "Import /theme.css from the public portal stylesheet so native API POST error HTML that links only portal.css retains the same authentication colors, font and dimensions",
-        "Use shared component appearance and consistent control, card, tab and dialog dimensions."
+        "Use shared component appearance and consistent control, card, tab and dialog dimensions.",
+        "Login page: drop the eyebrow and intro lines, add inert 아이디 찾기 / 비밀번호 찾기 links, a legal footer (개인정보 처리방침, 위치기반서비스 이용약관) and the 주식회사 이브이앤솔루션 copyright."
       ],
       "status": "active"
     },

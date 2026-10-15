@@ -14,9 +14,7 @@
     </header>
     <main id="main" class="auth-shell">
       <section class="auth-card">
-        <p class="eyebrow">MEATBOX TMS</p>
         <h1>로그인</h1>
-        <p class="intro">미트박스 TMS에 로그인해 주세요.</p>
         <p class="success" role="status" data-registered hidden>가입이 완료되었습니다. 새 계정으로 로그인해 주세요.</p>
         <p class="error" role="alert" data-auth-error hidden></p>
         <form method="post" action="/login" class="auth-form" data-validate data-auth-kind="login">
@@ -33,9 +31,13 @@
           </div>
           <button class="primary" type="submit">로그인</button>
         </form>
-        <p class="form-note">발급받은 계정으로 로그인해 주세요.</p>
+        <p class="auth-help"><span class="auth-link" aria-disabled="true" title="준비 중">아이디 찾기</span><span class="auth-link" aria-disabled="true" title="준비 중">비밀번호 찾기</span></p>
       </section>
     </main>
+    <footer class="site-footer">
+      <nav class="site-footer-links" aria-label="약관과 정책"><span class="auth-link" aria-disabled="true" title="문서 준비 중">개인정보 처리방침</span><span class="auth-link" aria-disabled="true" title="문서 준비 중">위치기반서비스 이용약관</span></nav>
+      <p class="site-footer-copy">Copyright © 2026 주식회사 이브이앤솔루션. All rights reserved.</p>
+    </footer>
     <script src="/portal-validation.js" defer></script>
     <script type="module" src="/portal-auth.js"></script>
   </body>
