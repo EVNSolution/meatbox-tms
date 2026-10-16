@@ -2,8 +2,10 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { Stop } from '../domain/dispatch';
+import { targetOf } from '../domain/navigation';
 import type { EtaLabel } from '../domain/routeView';
 import { Button, SequenceBadge, T } from './common';
+import { NavigationButton } from './NavigationButton';
 import { colors } from './theme';
 
 export function stopTone(stop: Stop): 'current' | 'pending' | 'done' {
@@ -27,6 +29,7 @@ export function StopDetails({
   info?: ReactNode;
 }) {
   const action = stop.status === 'current' ? 'complete' : null;
+  const navigable = stop.status === 'current' || stop.status === 'pending';
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
@@ -50,6 +53,7 @@ export function StopDetails({
           </View>
         ))}
       </View>
+      {navigable ? <NavigationButton target={targetOf(stop)} /> : null}
       {info}
       {action ? (
         <Button

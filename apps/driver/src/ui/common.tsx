@@ -27,6 +27,7 @@ type ButtonTone = 'primary' | 'action' | 'secondary' | 'danger';
 export function Button({
   label,
   onPress,
+  onLongPress,
   tone = 'primary',
   disabled = false,
   busy = false,
@@ -36,6 +37,7 @@ export function Button({
 }: {
   label: string;
   onPress(): void;
+  onLongPress?(): void;
   tone?: ButtonTone;
   disabled?: boolean;
   busy?: boolean;
@@ -51,6 +53,7 @@ export function Button({
       accessibilityRole="button"
       accessibilityState={{ disabled: inactive, busy }}
       disabled={inactive}
+      onLongPress={onLongPress}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,

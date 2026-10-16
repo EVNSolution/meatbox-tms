@@ -75,7 +75,8 @@
           "isAndroidForegroundServiceEnabled": true
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "./plugins/withNavigationQueries"
     ]
   }
 }

@@ -18,6 +18,18 @@ export async function saveVehicleChoice(date: string, vehicleId: string | null):
   else await AsyncStorage.setItem(VEHICLE_KEY, JSON.stringify({ date, vehicleId }));
 }
 
+const NAV_APP_KEY = 'meatbox.driver.nav-app';
+
+/** The navigation app the driver chose to use every time, or null. */
+export async function readNavApp(): Promise<string | null> {
+  return AsyncStorage.getItem(NAV_APP_KEY).catch(() => null);
+}
+
+export async function saveNavApp(app: string | null): Promise<void> {
+  if (app === null) await AsyncStorage.removeItem(NAV_APP_KEY);
+  else await AsyncStorage.setItem(NAV_APP_KEY, app);
+}
+
 // Pickup confirmation is local to this device. The server does not store it.
 function pickupKey(date: string, vehicleId: string): string {
   return `meatbox.driver.pickup.${date}.${vehicleId}`;
