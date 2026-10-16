@@ -74,6 +74,24 @@ class DriverActivityHttpTest {
     }
 
     @Test
+    fun `reads the route stop detail history and an event result`() {
+        assertThat(post("/events", DEPART).status).isEqualTo(202)
+        val route = get("/route?vehicleId=G1")
+        assertThat(route.status).isEqualTo(200)
+        assertThat(driverJson.readTree(route.contentAsString).path("phase").asString()).isEqualTo("delivering")
+        val stop = get("/stops/O3?vehicleId=G1")
+        val first = driverJson.readTree(stop.contentAsString).path("orders").first()
+        assertThat(first.path("orderId").asString()).isEqualTo("O3")
+        assertThat(get("/history?vehicleId=G1").contentAsString).contains("\"items\":[]")
+        assertThat(get("/events/e-go").status).isEqualTo(200)
+        assertProblem(get("/stops/O3?vehicleId=G2").contentAsString, 404, "STOP_NOT_FOUND")
+        assertProblem(get("/route?vehicleId=G9").contentAsString, 404, "DRIVER_VEHICLE_NOT_FOUND")
+        assertThat(get("/route").status).isEqualTo(400)
+        val anonymous = mvc.perform(MockMvcRequestBuilders.get("$PATH/history?vehicleId=G1")).andReturn().response
+        assertProblem(anonymous.contentAsString, 401, "LOGIN_REQUIRED")
+    }
+
+    @Test
     fun `accepts location batches up to 200 samples and 64 KiB`() {
         fun batch(count: Int) = """{"vehicleId":"G1","samples":[${(0 until count).joinToString(",") {
             """{"at":"2026-10-13T09:00:%02d+09:00","lat":37.5,"lng":127.0}""".format(it % 60)
@@ -129,6 +147,8 @@ class DriverActivityHttpTest {
         private const val PATH = "/api/dispatch-data/days/$DRIVER_DATE/driver"
         private val JPEG = DriverLocationPhotoTest.JPEG
         private val PNG = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0)
+        private const val DEPART = """{"eventId":"e-go","type":"departed","occurredAt":"2026-10-13T10:41:00+09:00",
+            "date":"$DRIVER_DATE","vehicleId":"G1","payload":{}}"""
         private const val EVENT = """{"eventId":"e-zone","type":"zone_entered","occurredAt":"2026-10-13T10:41:00+09:00",
             "date":"$DRIVER_DATE","vehicleId":"G1","payload":{"zoneId":"Z-07"}}"""
     }

@@ -118,6 +118,29 @@ class DriverController(
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(photo.contentType)).body(photo.bytes)
     }
 
+    @GetMapping("/route")
+    fun route(@PathVariable date: String, @RequestParam vehicleId: String, request: HttpServletRequest): ObjectNode {
+        limit(username(request), false)
+        return store.queries.route(date, checked(vehicleId, ID_LENGTH))
+    }
+
+    @GetMapping("/stops/{stopId}")
+    fun stop(
+        @PathVariable date: String,
+        @PathVariable stopId: String,
+        @RequestParam vehicleId: String,
+        request: HttpServletRequest,
+    ): ObjectNode {
+        limit(username(request), false)
+        return store.queries.stop(date, checked(vehicleId, ID_LENGTH), checked(stopId, ID_LENGTH))
+    }
+
+    @GetMapping("/history")
+    fun history(@PathVariable date: String, @RequestParam vehicleId: String, request: HttpServletRequest): ObjectNode {
+        limit(username(request), false)
+        return store.queries.history(date, checked(vehicleId, ID_LENGTH))
+    }
+
     @GetMapping("/events/{eventId}")
     fun eventResult(
         @PathVariable date: String,

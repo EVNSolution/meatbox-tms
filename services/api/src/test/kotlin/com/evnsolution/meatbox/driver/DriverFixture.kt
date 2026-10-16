@@ -69,7 +69,8 @@ internal fun routeFixture(directory: Path): RouteFixture {
         "sequence":$sequence,"coordinates":[127.0,37.5],"zoneIds":["Z1"]}"""
     Files.writeString(root.resolve("data/days/$DRIVER_DATE.json"), """
         {"schemaVersion":1,"date":"$DRIVER_DATE","summary":{"orders":4,"boxes":4},
-         "groups":[{"id":"G1","label":"합성 기사","regionNames":["합성 권역"]}],
+         "groups":[{"id":"G1","label":"합성 기사","regionNames":["합성 권역"]},
+                   {"id":"G2","label":"다른 기사","regionNames":["다른 권역"]}],
          "orders":[${order("O1", "가게A", 1)},${order("O2", "가게A", 2)},${order("O3", "가게B", 3)},${order("O4", "가게C", 4)}]}
     """.trimIndent())
     val fixture = RouteFixture.open(root, AtomicLong(Instant.parse("${DRIVER_DATE}T01:00:00Z").toEpochMilli()))

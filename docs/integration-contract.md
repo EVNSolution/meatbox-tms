@@ -39,6 +39,7 @@
 - `next.eta`는 ETA 산출 전까지 항상 `null`이다.
 - `stop_failed`의 `reasonCode`는 6개 코드 밖이면 `400 INVALID_REASON_CODE`다. 품목(`items`)은 검증하지 않고 기록만 한다.
 - `stopId`는 배송지 묶음의 첫 주문 ID다. 앱의 `S-104` 같은 값은 아직 없다.
+- `GET events/{eventId}`는 `200`으로 같은 본문을 돌려주고 `duplicate`가 `true`다. 없으면 `404 REQUEST_NOT_FOUND`다.
 - 이벤트 하나가 운행 명령 여러 개로 번역되어 날짜 `revision`이 여러 번 오를 수 있다. 응답의 `revision`은 노출하지 않는다.
 
 공통 봉투:
@@ -203,7 +204,7 @@
 
 ### 7.1 앱 → 우리 서버
 
-현행 경로: `/api/dispatch-data/days/{date}/driver/{events|locations|photos|photos/{photoId}}`가 구현됨. 나머지 조회 `GET` 4개는 미구현이다. 아래 표의 `/api/driver/...` 경로는 기사 계정 권한 단위에서 옮길 목표 경로다.
+구현됨(현행 경로): 아래 7개 끝점이 모두 `/api/dispatch-data/days/{date}/driver/{route|stops/{stopId}|history|events|events/{eventId}|photos|photos/{photoId}|locations}`에 있다. 표의 `/api/driver/...` 경로는 기사 계정 권한 단위에서 옮길 목표 경로다. 조회는 `vehicleId` 쿼리를 받고, `route`의 `eta`는 `null`이며, 배송지 상세의 출입정보는 아직 제한 없이 나간다.
 
 | 방법 | 경로 | 역할 | 본문·응답 |
 | --- | --- | --- | --- |

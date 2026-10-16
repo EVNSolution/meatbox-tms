@@ -37,6 +37,10 @@
 | `POST` | `/api/dispatch-data/days/{date}/commands` | 날짜별 배차·운행 명령 |
 | `GET` | `/api/dispatch-data/days/{date}/commands/{requestId}` | 저장된 명령 결과 조회 |
 | `POST` | `/api/dispatch-data/days/{date}/driver/events` | 기사 앱 이벤트 6종 수신 (Kotlin API 전용) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/events/{eventId}` | 이벤트 처리 결과 재확인 (Kotlin API 전용) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/route` | 차량의 배송지 순서·상태 (Kotlin API 전용) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/stops/{stopId}` | 배송지 상세 (Kotlin API 전용) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/history` | 당일 완료·미배송 이력 (Kotlin API 전용) |
 | `POST` | `/api/dispatch-data/days/{date}/driver/locations` | 기사 위치 배치 수신 (Kotlin API 전용) |
 | `POST` | `/api/dispatch-data/days/{date}/driver/photos` | 완료 사진 업로드 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/photos/{photoId}` | 올린 사진 다시 받기 (Kotlin API 전용) |
@@ -391,6 +395,46 @@
 - 저장 위치는 상태 디렉터리의 `photos/{date}/{photoId}.{jpg|png}`다. 날짜당 5000장까지다.
 - `GET`은 원본 바이트와 원본 `Content-Type`을 돌려준다. `photoId`가 UUID 형식이 아니면 파일 접근 전에 `400 INVALID_PHOTO_ID`다.
 - 사진은 올린 날짜 경로로만 받을 수 있다. 사진과 차량·기사의 소유 관계는 아직 검사하지 않는다.
+
+### 기사 앱 조회
+
+모두 `GET`이며 상태를 바꾸지 않는다. `vehicleId` 쿼리가 필요하다(`events/{eventId}`는 제외). 없으면 `400`, 없는 차량이면 `404 DRIVER_VEHICLE_NOT_FOUND`다.
+
+`GET .../driver/route?vehicleId=G1`
+
+```json
+{
+  "date": "2026-11-02", "vehicleId": "G1", "revision": 8, "phase": "delivering",
+  "stops": [{
+    "stopId": "O1", "sequence": 1, "orderIds": ["O1", "O2"], "name": "가게A", "address": "서울 …",
+    "boxes": 2, "status": "current", "eta": null
+  }],
+  "next": { "stopId": "O1", "eta": null }
+}
+```
+
+- `revision`은 날짜 상태의 `revision`이며 `route_reordered`의 `expectedRevision`으로 보낸다.
+- `phase`는 차량 phase(`idle`, `preparing`, `delivering`, `done`)다. `status`는 `pending`, `current`, `done`, `skipped`다.
+- `eta`는 ETA 산출 전까지 항상 `null`이다. `next`는 아직 끝나지 않은 첫 배송지이고 없으면 생략한다.
+
+`GET .../driver/stops/{stopId}?vehicleId=G1`
+
+- 위 요약 필드에 `assignmentUnitId`, `orders[]`, `previousPhoto`를 더한다. 같은 묶음의 아무 주문 ID로 조회해도 된다.
+- `orders[]`: `orderId`, `status`, `orderNumber`, `name`, `address`, `detailAddress`, `boxes`, `items`, `customerRequests`, `tip`, `transportConditions`, `access`. 원본에 없는 값은 `null`이다.
+- 출입정보(`access`)는 지금은 그대로 노출한다. 권한 단위에서 제한한다.
+- `previousPhoto`는 같은 `assignmentUnitId`로 가장 최근에 완료한 날의 첫 사진 `{ "photoId", "date", "completedAt" }`이고 없으면 `null`이다. 사진은 그 `date` 경로로 받는다. 최근 14일치 기사 상태 파일만 찾는다.
+- 그 차량의 배송지가 아니면 `404 STOP_NOT_FOUND`다.
+
+`GET .../driver/history?vehicleId=G1`
+
+- `items[]`는 완료(`done`)·미배송(`skipped`) 배송지를 `completedAt` 순으로 담는다. 항목은 위 요약 필드에 `result`(`completed`, `partially_completed`, `failed`)와 `completedAt`을 더한다.
+- `completedAt`은 운행 엔진이 기록한 시각이다. 앱 시계가 아니다.
+- 앱 이벤트로 처리한 배송지는 `reasonCode`, `note`, `photoIds`, `items`, `scannedCodes`도 담는다.
+
+`GET .../driver/events/{eventId}`
+
+- `POST events`가 돌려준 `202` 본문과 같은 본문을 `200`으로 돌려주며 `duplicate`는 항상 `true`다. 없거나 보존 한도로 제거됐으면 `404 REQUEST_NOT_FOUND`다. `eventId` 형식이 틀리면 `400 INVALID_INPUT`이다.
+- 날짜 명령의 `requestId`로 저장된 결과 중 이벤트가 아닌 것은 돌려주지 않는다.
 
 ### 기사 앱 끝점 오류
 

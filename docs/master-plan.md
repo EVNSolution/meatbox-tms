@@ -58,6 +58,7 @@
 | [x] 이벤트별 샘플 JSON | 초안 | 작업 식별자, 재시도 간격, RFC 9457 포함 |
 | [x] 서버→미트박스 송신 JSON 3종: 배송 상태(5), ETA(2), 온도(17) | 초안 | 주문 수신(5) 제안 본문과 GET/POST 끝점 요약 포함 |
 | [x] 앱 이벤트·위치·사진 수신 끝점 | 로컬 검증 | `DriverEventsTest`(이벤트 6종 정상 경로, 재전송 `duplicate`, 본문 불일치 409, `ROUTE_LOCKED`, 사진·사유 코드·date 거부, 재시작 뒤 조회), `DriverLocationPhotoTest`(120건 유지, `source: "driver"`, 사진 바이트·형식·`../`), `DriverActivityHttpTest`(202, 413·415 거부). 경로는 현행 `.../driver/*`이며 `/api/driver/*`는 권한 단위에서 옮긴다. 기사 계정 권한·ETA는 남음 |
+| [x] 기사 조회 GET 4개: 경로·배송지 상세·당일 이력·이벤트 결과 | 로컬 검증 | `DriverQueriesTest`(경로 순서·상태·`eta` null·revision, 배송지 상세와 직전 완료 사진, 다른 차량 배송지 404, 이력의 완료·미배송·사유), `DriverActivityHttpTest`(200·404·401), `test/api-connection/kotlin-state-owner.test.mjs`의 실제 JAR 시나리오(사진 업로드 → `stop_completed` → 재전송 `duplicate` → 재시작 뒤 `events/{eventId}` → `history`). ETA 산출·출입정보 권한 제한은 남음 |
 | [ ] 우리 쪽 모의 수신 엔드포인트 | 미착수 | 첫 송신 구현과 같은 작업 단위에서 만든다 |
 | [ ] 고객 실시간 조회 예시 화면 1장 | 미착수 | 미트박스 설득용. 그 이상 그리지 않음 |
 | [ ] 미트박스에 계약 초안 전달 | 미착수 | 확인 질문 6개는 계약 문서 6절 |

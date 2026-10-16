@@ -789,3 +789,75 @@ test('Kotlin rejects mismatched source dates before serving or saving dispatch s
     assert.equal(saved.revision, 1);
   });
 });
+
+test('Kotlin driver endpoints take a photo, translate an event once and list the history', { timeout: 90_000 }, async t => {
+  const fixture = await createFixture();
+  t.after(() => fixture.close());
+  const cookie = await login(fixture);
+  const days = `/api/dispatch-data/days/${fixture.today}`;
+  const driver = `${days}/driver`;
+  let state = (await requestJson(fixture, `${days}/state`, { cookie })).body;
+  for (const [type, extra] of [['calculate_dispatch', { vehicleIds: ['TRUCK-1'] }], ['publish_dispatch', null]]) {
+    const body = commandFor(state, type, extra ?? { draftVersion: state.dispatch.draftVersion });
+    const result = await requestJson(fixture, `${days}/commands`, { method: 'POST', cookie, body });
+    assert.equal(result.response.status, 200, JSON.stringify(result.body));
+    state = result.body.state;
+  }
+  const event = (eventId, type, payload) => ({
+    eventId, type, payload, occurredAt: '2026-11-02T10:41:00+09:00', date: fixture.today, vehicleId: 'TRUCK-1',
+  });
+  const problem = ({ response, body }, status, code) => {
+    assert.equal(response.status, status);
+    assert.match(response.headers.get('content-type'), /^application\/problem\+json/);
+    assert.equal(body.code, code);
+  };
+  const post = (pathname, body) => requestJson(fixture, `${driver}${pathname}`, { method: 'POST', cookie, body });
+
+  const departed = await post('/events', event('depart-1', 'departed', {}));
+  assert.equal(departed.response.status, 202, JSON.stringify(departed.body));
+  const route = (await requestJson(fixture, `${driver}/route?vehicleId=TRUCK-1`, { cookie })).body;
+  assert.equal(route.phase, 'delivering');
+  const first = route.stops[0];
+  assert.equal(first.status, 'current');
+
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6]);
+  const form = new FormData();
+  form.append('file', new Blob([jpeg], { type: 'image/jpeg' }), 'proof.jpg');
+  const upload = await fetch(`${fixture.origin}${driver}/photos`, {
+    method: 'POST', headers: { Cookie: cookie, Origin: fixture.publicOrigin }, body: form,
+  });
+  assert.equal(upload.status, 201);
+  const photo = await upload.json();
+  assert.equal(photo.bytes, jpeg.length);
+  const download = await fetch(`${fixture.origin}${driver}/photos/${photo.photoId}`, { headers: { Cookie: cookie } });
+  assert.equal(download.headers.get('content-type'), 'image/jpeg');
+  assert.deepEqual(Buffer.from(await download.arrayBuffer()), jpeg);
+
+  const completed = event('complete-1', 'stop_completed', { stopId: first.stopId, photoIds: [photo.photoId], note: '문 앞' });
+  const accepted = await post('/events', completed);
+  assert.equal(accepted.response.status, 202, JSON.stringify(accepted.body));
+  assert.equal(accepted.body.duplicate, false);
+  assert.equal(accepted.body.stop.status, 'done');
+  const revision = (await requestJson(fixture, `${days}/state`, { cookie })).body.revision;
+  const resent = await post('/events', completed);
+  assert.equal(resent.response.status, 202);
+  assert.deepEqual({ ...resent.body, duplicate: false }, accepted.body);
+  assert.equal(resent.body.duplicate, true);
+  assert.equal((await requestJson(fixture, `${days}/state`, { cookie })).body.revision, revision);
+
+  const changed = await post('/events', { ...completed, payload: { ...completed.payload, note: '다른 본문' } });
+  problem(changed, 409, 'REQUEST_ID_MISMATCH');
+  const missing = await post('/events', event('complete-2', 'stop_completed', { stopId: route.stops[1].stopId, photoIds: ['00000000-0000-4000-8000-000000000000'] }));
+  problem(missing, 400, 'PHOTO_NOT_FOUND');
+  await fixture.restart();
+  const looked = await requestJson(fixture, `${driver}/events/complete-1`, { cookie });
+  assert.equal(looked.response.status, 200);
+  assert.deepEqual(looked.body, resent.body);
+
+  const history = (await requestJson(fixture, `${driver}/history?vehicleId=TRUCK-1`, { cookie })).body;
+  assert.equal(history.items.length, 1);
+  assert.equal(history.items[0].stopId, first.stopId);
+  assert.equal(history.items[0].result, 'completed');
+  assert.deepEqual(history.items[0].photoIds, [photo.photoId]);
+  assert.equal(history.items[0].note, '문 앞');
+});

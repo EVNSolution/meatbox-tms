@@ -48,6 +48,9 @@ class DriverStore(
     /** Events, locations and photos that the driver app sends; they share this store's file, lock and checks. */
     val activity: DriverActivity = DriverActivity(this)
 
+    /** The driver app's reads: route, stop detail and the day's history. */
+    val queries: DriverQueries = DriverQueries(this)
+
     @Synchronized
     fun register(
         date: String, username: String, sessionDigest: String, vehicleId: String, token: String, deviceId: String,
