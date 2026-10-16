@@ -1,0 +1,17 @@
+/* Temperature on the control screen: vehicle rows, the summary badge, the map marker and the "온도 현황" dialog. */
+.control-vehicle-row .control-temp { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--text); font-variant-numeric: tabular-nums; }
+.control-vehicle-row .control-temp .badge { min-height: 20px; padding: 0 6px; font-size: 11px; }
+.control-current .panel-heading .badge + .badge { margin-left: 6px; }
+.control-map-vehicle[data-temperature="out"] { filter: drop-shadow(0 0 6px #c0143c); }
+.control-map-vehicle[data-temperature="stale"] { filter: drop-shadow(0 0 6px #b7791f); }
+.temperature-dialog { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 20px; border: 1px solid var(--border); border-radius: 12px; }
+.temperature-dialog .support-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.temperature-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.temperature-table th, .temperature-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+.temperature-table small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+.temperature-vehicle { padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 600; text-align: left; text-decoration: underline; cursor: pointer; }
+.temperature-error { margin: 12px 0; color: #9f1239; }
+@media (max-width: 740px) {
+  .temperature-dialog { padding: 14px; }
+  .temperature-table th, .temperature-table td { padding: 6px; }
+}

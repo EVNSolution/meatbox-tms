@@ -405,3 +405,44 @@ test('기록 필터와 순서 관리 화면 전환은 편집 영역을 재생성
   control.update({ ...next, connected: false }, 'V2', 'V2-S1');
   control.destroy();
 });
+
+const sensorState = (extra = {}) => ({ temperature: { celsius: -18.4, measuredAt: '2026-11-02T09:12:30+09:00', stale: false, outOfRange: false, ...extra } });
+
+test('관제 차량 행·운행 요약·지도 마커가 서버가 준 온도와 상태를 문구로 보여 준다', () => {
+  const { element, node } = fixture();
+  const control = mountVehicleControl({ element, onSelectVehicle() {}, onSelectDelivery() {}, mapFactory });
+  const hot = { ...vehicle, location: { coordinates: [127, 37.5], label: '서울 예시 위치', source: 'demo' } };
+  const cold = { id: 'V3', plate: '예시 차량 003', driver: '예시 배송원 003', live: false };
+  const quiet = { id: 'V4', plate: '예시 차량 004', driver: '예시 배송원 004', live: false };
+  const stops = [...deliveries, { id: 'V3-S1', vehicleId: 'V3', name: '배송지 4', boxes: 1, status: 'pending' }, { id: 'V4-S1', vehicleId: 'V4', name: '배송지 5', boxes: 1, status: 'pending' }];
+  const withTemperature = {
+    fleetVehicles: [hot, cold, quiet], fleetDeliveries: stops, events: [],
+    vehicleStates: { V2: sensorState({ celsius: -12, outOfRange: true }), V3: sensorState(), V4: {} },
+  };
+  control.update(withTemperature, 'V2', 'V2-S1');
+  const list = node('[data-control-vehicles]').innerHTML;
+  assert.match(list, /<span class="badge red">범위 밖<\/span> -12\.0°C/);
+  assert.match(list, /<span class="badge green">정상<\/span> -18\.4°C/);
+  assert.equal([...list.matchAll(/control-temp/g)].length, 2, '값을 보내지 않은 차량 행에는 온도 줄이 없다');
+  assert.match(node('[data-control-summary]').innerHTML, /data-temp-kind="out">온도 -12\.0°C 범위 밖<\/span>/);
+
+  node('[data-control-sort]').listeners.change({ target: { value: 'temperature' } });
+  const sorted = node('[data-control-vehicles]').innerHTML;
+  assert.ok(sorted.indexOf('V2') < sorted.indexOf('V3') && sorted.indexOf('V3') < sorted.indexOf('V4'), '범위 밖, 정상, 정보 없음 순');
+
+  control.update({ ...withTemperature, vehicleStates: { V2: sensorState({ stale: true }) } }, 'V2', 'V2-S1');
+  assert.match(node('[data-control-summary]').innerHTML, /온도 -18\.4°C 미수신, 마지막 수신 09:12/);
+  control.update({ ...withTemperature, vehicleStates: {} }, 'V2', 'V2-S1');
+  assert.doesNotMatch(node('[data-control-summary]').innerHTML, /온도 /);
+  control.destroy();
+});
+
+test('온도 현황 버튼은 자료가 없으면 꺼지고 차량이 있으면 켜진다', () => {
+  const { element, node } = fixture();
+  const control = mountVehicleControl({ element, onSelectVehicle() {}, onSelectDelivery() {}, mapFactory });
+  control.update(null);
+  assert.equal(node('[data-control-temperature]').disabled, true);
+  control.update(data, 'V2', 'V2-S1');
+  assert.equal(node('[data-control-temperature]').disabled, false);
+  control.destroy();
+});

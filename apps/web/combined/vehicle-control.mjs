@@ -6,6 +6,9 @@ import { installModifierWheelZoom } from './map-wheel-zoom.mjs';
 import { locationLabel, plateLabel } from './vehicle-identity.mjs';
 import { vehicleOperations, sortVehicleOperations, resolveDefaultControlVehicle, resolveControlDelivery, vehicleEvents, deliveryRecords, controlPosition } from './vehicle-operations-model.mjs';
 import { driverToolsMarkup, mountDriverTools } from './driver-tools.ts';
+import { createTemperatureClient } from './temperature-client.ts';
+import { readTemperature, sortByTemperature, stateOf, temperatureView } from './temperature-model.ts';
+import { mountTemperatureOverview, temperatureOverviewMarkup } from './temperature-overview.ts';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const count = (value, unit = '') => value === null || value === undefined ? '미확인' : `${value.toLocaleString('ko-KR')}${unit}`;
@@ -26,20 +29,24 @@ const actualSpeedText = row => row.actualSpeed
 
 const factRows = facts => facts.length ? facts.map(fact => `<li><time>${esc(fact.time || '-')}</time><span>${esc(fact.message)}</span></li>`).join('') : '<li class="muted">미등록</li>';
 
+// The temperature the day state carries for one vehicle (today only), as a view; none when the vehicle sent nothing.
+const temperatureOf = (data, vehicleId) => temperatureView(readTemperature(stateOf(data?.vehicleStates, vehicleId)));
+const temperatureLine = view => view.kind === 'none' ? '' : `<small class="control-temp" data-temp-kind="${view.kind}"><span class="badge ${view.tone}">${esc(view.label)}</span> ${esc(view.valueText)}</small>`;
+
 export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery, onOpenManagement, onOpenRoute = () => {},
   mapFactory = createOrderMap, markerFactory = createOrderMarker,
-  loadRouteData = null,
+  loadRouteData = null, temperatureClient = createTemperatureClient(),
 }) {
   element.innerHTML = `<div class="vehicle-control-layout">
     <section class="panel control-fleet" aria-labelledby="control-fleet-heading">
       <div class="panel-heading"><h2 id="control-fleet-heading">차량별 남은 업무</h2><span data-control-count class="muted"></span></div>
-      <div class="control-filters"><label class="field"><span>차량 검색</span><input type="search" data-control-search placeholder="차량번호 또는 배송원"></label><label class="field"><span>정렬</span><select data-control-sort><option value="received">주문 수신 순서<option value="stops">남은 배송지 많은 순<option value="boxes">남은 박스 많은 순<option value="duration">예상 소요 시간 긴 순</option></select></label></div>
+      <div class="control-filters"><label class="field"><span>차량 검색</span><input type="search" data-control-search placeholder="차량번호 또는 배송원"></label><label class="field"><span>정렬</span><select data-control-sort><option value="received">주문 수신 순서<option value="stops">남은 배송지 많은 순<option value="boxes">남은 박스 많은 순<option value="duration">예상 소요 시간 긴 순<option value="temperature">온도 이상 우선</select></label></div>
       <div class="control-vehicle-columns" aria-hidden="true"><span>차량 / 배송원</span><span>배송지</span><span>박스</span><span>소요</span></div>
       <div class="control-vehicle-list" data-control-vehicles tabindex="0" aria-label="차량별 잔여량 비교"></div>
     </section>
     <section class="control-map-workspace" aria-label="선택 차량 운행">
       <div class="panel control-current" data-control-summary aria-live="polite"></div>
-      <section class="panel control-map-panel" aria-labelledby="control-map-heading"><h2 id="control-map-heading" class="sr-only">남은 배송지</h2><div class="control-map-canvas" data-control-map></div><div class="control-map-tools"><button type="button" class="button" data-control-fit>${fitIcon}전체 보기</button><button type="button" class="button" data-control-support>${referenceIcon('support')}지원배차</button></div><p class="control-map-note" data-control-map-note role="status"></p></section>
+      <section class="panel control-map-panel" aria-labelledby="control-map-heading"><h2 id="control-map-heading" class="sr-only">남은 배송지</h2><div class="control-map-canvas" data-control-map></div><div class="control-map-tools"><button type="button" class="button" data-control-fit>${fitIcon}전체 보기</button><button type="button" class="button" data-control-temperature>온도 현황</button><button type="button" class="button" data-control-support>${referenceIcon('support')}지원배차</button></div><p class="control-map-note" data-control-map-note role="status"></p></section>
     </section>
     <aside class="panel control-details" aria-label="선택 차량 상세">
       <div class="panel-heading"><h2 data-control-detail-title>차량 상세</h2></div>
@@ -57,7 +64,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       </section>
     </aside>
   </div>
-  <dialog class="support-dispatch-dialog" data-support-dialog aria-labelledby="support-title"><div class="support-heading"><h2 id="support-title">지원배차</h2><button type="button" class="button icon-button" data-support-close aria-label="지원배차 닫기">${referenceIcon('close')}</button></div><p>예상 완료시간과 실제 완수 속도를 바탕으로 지원할 차량을 판단합니다.</p><p class="support-waiting">실제 위치가 연결되지 않아 주변 차량을 확인할 수 없습니다. 안정 레벨의 상, 중, 하 기준과 호출, 수락, 재배정 연결을 기다리고 있습니다.</p><div class="support-data" data-support-data></div><div class="support-actions"><button type="button" class="button" disabled>호출 대기</button><button type="button" class="button primary" disabled>지원 지시 대기</button></div></dialog>`;
+  <dialog class="support-dispatch-dialog" data-support-dialog aria-labelledby="support-title"><div class="support-heading"><h2 id="support-title">지원배차</h2><button type="button" class="button icon-button" data-support-close aria-label="지원배차 닫기">${referenceIcon('close')}</button></div><p>예상 완료시간과 실제 완수 속도를 바탕으로 지원할 차량을 판단합니다.</p><p class="support-waiting">실제 위치가 연결되지 않아 주변 차량을 확인할 수 없습니다. 안정 레벨의 상, 중, 하 기준과 호출, 수락, 재배정 연결을 기다리고 있습니다.</p><div class="support-data" data-support-data></div><div class="support-actions"><button type="button" class="button" disabled>호출 대기</button><button type="button" class="button primary" disabled>지원 지시 대기</button></div></dialog>${temperatureOverviewMarkup()}`;
   const find = selector => element.querySelector(selector);
   let data = null, rows = [], row = null, selectedId = null, sort = 'received', search = '';
   let previousVehicleId = null, previousSelectedId = null, recordFilter = 'all';
@@ -69,6 +76,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   const support = find('[data-support-dialog]');
   const recordList = find('[data-control-records]');
   const driverTools = mountDriverTools({ element });
+  const temperatureOverview = mountTemperatureOverview({ element, client: temperatureClient, onSelectVehicle: id => onSelectVehicle(id) });
 
   function replacePreservingFocus(target, markup, selector) {
     if (target.innerHTML === markup) return;
@@ -80,14 +88,21 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   }
 
   function renderVehicles() {
-    const visible = sortVehicleOperations(rows, sort).filter(item => `${item.vehicle.id} ${item.vehicle.plate} ${item.vehicle.driver}`.toLocaleLowerCase('ko-KR').includes(search));
+    const sorted = sort === 'temperature' ? sortByTemperature(rows, data?.vehicleStates) : sortVehicleOperations(rows, sort);
+    const visible = sorted.filter(item => `${item.vehicle.id} ${item.vehicle.plate} ${item.vehicle.driver}`.toLocaleLowerCase('ko-KR').includes(search));
     find('[data-control-count]').textContent = `${visible.length}대`;
-    replacePreservingFocus(list, visible.map(item => `<button type="button" class="control-vehicle-row" data-control-vehicle="${esc(item.vehicle.id)}" aria-pressed="${item.vehicle.id === row?.vehicle.id}"><span><strong>${esc(item.vehicle.driver || '배송원 미등록')}</strong><small>${esc(plateLabel(item.vehicle))}</small></span><span aria-label="남은 배송지">${count(item.remainingStops)}</span><span aria-label="남은 박스">${count(item.remainingBoxes)}</span><span class="muted" aria-label="${esc(`예상 소요 시간 ${remainingText(item)}`)}">${esc(remainingText(item))}</span></button>`).join('') || '<p class="control-unit-note">검색 결과 없음</p>', '[data-control-vehicle]');
+    replacePreservingFocus(list, visible.map(item => `<button type="button" class="control-vehicle-row" data-control-vehicle="${esc(item.vehicle.id)}" aria-pressed="${item.vehicle.id === row?.vehicle.id}"><span><strong>${esc(item.vehicle.driver || '배송원 미등록')}</strong><small>${esc(plateLabel(item.vehicle))}</small>${temperatureLine(temperatureOf(data, item.vehicle.id))}</span><span aria-label="남은 배송지">${count(item.remainingStops)}</span><span aria-label="남은 박스">${count(item.remainingBoxes)}</span><span class="muted" aria-label="${esc(`예상 소요 시간 ${remainingText(item)}`)}">${esc(remainingText(item))}</span></button>`).join('') || '<p class="control-unit-note">검색 결과 없음</p>', '[data-control-vehicle]');
+  }
+
+  // The vehicle's temperature beside its badge; nothing when it sent none, so the heading keeps its shape.
+  function temperatureBadge(item) {
+    const view = temperatureOf(data, item.vehicle.id);
+    return view.kind === 'none' ? '' : `<span class="badge ${view.tone}" data-temp-kind="${view.kind}">온도 ${esc(view.text)}</span>`;
   }
 
   function renderSummary() {
     const source = Boolean(data?.sourceData);
-    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.driver || '배송원 미등록')}</h2><p>${esc(plateLabel(row.vehicle))}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span></div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><details class="control-running-details"${factsOpen ? ' open' : ''}><summary>운행 상세<span>${esc(row.current?.name ? `현재 ${row.current.name}, ETA ${row.current.preciseTimeText || row.current.calculatedEta || '미확인'}` : '현재 배송지 없음')}</span>${referenceIcon('next')}</summary><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동과 하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}</details>` : '<p class="control-unit-note">미배정</p>';
+    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.driver || '배송원 미등록')}</h2><p>${esc(plateLabel(row.vehicle))}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span>${temperatureBadge(row)}</div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><details class="control-running-details"${factsOpen ? ' open' : ''}><summary>운행 상세<span>${esc(row.current?.name ? `현재 ${row.current.name}, ETA ${row.current.preciseTimeText || row.current.calculatedEta || '미확인'}` : '현재 배송지 없음')}</span>${referenceIcon('next')}</summary><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동과 하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}</details>` : '<p class="control-unit-note">미배정</p>';
     find('[data-control-detail-title]').textContent = row ? `${row.vehicle.driver || row.vehicle.id} 상세` : '차량 상세';
   }
 
@@ -148,7 +163,8 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     // controlPosition() keeps vehicle-operations-model.mjs's own historical, byte-pinned label text
     // (see test/web-fork-legacy); only its 'demo' branch needs the unverified disclosure the marker shows.
     const position = rawPosition?.source === 'demo' ? { ...rawPosition, label: locationLabel(row.vehicle) } : rawPosition;
-    const nextSignature = JSON.stringify([row?.vehicle.id, model.mapped.map(item => [item.delivery.id, item.delivery.name, item.delivery.boxes, item.coordinates]), position]);
+    const heat = row ? temperatureOf(data, row.vehicle.id) : null;
+    const nextSignature = JSON.stringify([row?.vehicle.id, model.mapped.map(item => [item.delivery.id, item.delivery.name, item.delivery.boxes, item.coordinates]), position, heat?.text]);
     if (signature !== nextSignature) {
       signature = nextSignature;
       markers.splice(0).forEach(marker => marker.remove());
@@ -165,8 +181,10 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
         const markerElement = document.createElement('div');
         markerElement.className = 'control-map-vehicle';
         markerElement.setAttribute('role', 'img');
-        markerElement.setAttribute('aria-label', position.label);
-        markerElement.title = position.label;
+        const label = heat && heat.kind !== 'none' ? `${position.label}, 온도 ${heat.text}` : position.label;
+        markerElement.setAttribute('aria-label', label);
+        markerElement.title = label;
+        if (heat && heat.kind !== 'none') markerElement.dataset.temperature = heat.kind;
         const vehicleMarker = new maplibregl.Marker({ element: markerElement }).setLngLat(position.coordinates).addTo(map);
         markers.push({ element: markerElement, remove: () => vehicleMarker.remove() });
       }
@@ -264,6 +282,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     find('[data-control-search]').disabled = disabled;
     find('[data-control-sort]').disabled = disabled;
     find('[data-control-support]').disabled = disabled || !row;
+    temperatureOverview.setEnabled(!disabled);
     find('[data-control-record-stop]').disabled = disabled || !row;
     find('[data-control-route]').disabled = disabled || !row?.deliveries.length;
     element.querySelectorAll('[data-control-record-filter]').forEach(button => { button.disabled = disabled; });
@@ -352,6 +371,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       const preferredDeliveryId = deliveryId ?? data?.sourceData?.defaultStopId;
       row = resolveDefaultControlVehicle(data, rows, vehicleId, preferredDeliveryId); selectedId = preferredDeliveryId;
       driverTools.update(data, row);
+      temperatureOverview.update(rows.map(item => item.vehicle));
       if (!map) mapElement.innerHTML = '';
       setControlsDisabled(false);
       if (previousVehicleId !== row?.vehicle.id) { opened = new Set(); recordFilter = 'all'; showRecords(); }
@@ -363,6 +383,6 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       if (support.open) renderSupport();
       return row;
     },
-    destroy() { destroyed = true; driverTools.destroy(); if (support.open) support.close(); removeMap(); },
+    destroy() { destroyed = true; driverTools.destroy(); temperatureOverview.destroy(); if (support.open) support.close(); removeMap(); },
   };
 }

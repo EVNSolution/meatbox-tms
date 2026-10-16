@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 37,
+  "authoredFileCount": 44,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -807,7 +807,7 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "801aa6609f404d5ec4b62966630e4b0a9a169b942895ccaa89148551abf04eed",
+      "targetSha256": "b7b7d89493d77a3dd587ecc959e625b43569191f70c642a98e7ab2cd0e0008d4",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -819,7 +819,8 @@
         "Load the driver messaging and printable pickup QR stylesheet inside the existing operational frontend.",
         "Replace the in-flow connection panel and control notice with a fixed toast stack.",
         "Drop the page description under the title.",
-        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Load the temperature stylesheet for the control screen."
       ],
       "status": "active"
     },
@@ -1587,7 +1588,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "929df0c016ab0e176b4b6ca2dede82293ef81375fdeff7008c288d0f6fa5e1b5",
+      "targetSha256": "9b84beffeac61fa022f9df8c7b18f81e07c0bcebe8d3b2e7c9a8b9aa1fd0453e",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1603,7 +1604,8 @@
         "Numbered visit-order pins for the control map, a growing selected pin and a navy circular vehicle marker.",
         "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
-        "Add a Zoom to fit button that also frames the vehicle; the default view frames the stops only."
+        "Add a Zoom to fit button that also frames the vehicle; the default view frames the stops only.",
+        "Show each vehicle's temperature state (range-out, silent, normal) in the fleet row, the running summary and the vehicle marker, sort by it, and open the all-vehicle temperature dialog."
       ],
       "status": "active"
     },
@@ -1611,14 +1613,15 @@
       "source": "apps/combined/vehicle-control.test.mjs",
       "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
       "target": "apps/web/combined/vehicle-control.test.mjs",
-      "targetSha256": "cd6aff4cf07dca1423d9a687c25411d1db2becdd6096b29bd70e67c240c33fff",
+      "targetSha256": "745b2ee2f02689a246b8e5c61b6d8a8d6b377a19ef9b7ab700eb1219c5b21aa8",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Verify confirmed empty versus unknown control state, loaded-empty-loaded recovery and stale asynchronous map responses.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
-        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work."
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
+        "Verify the temperature state in the fleet rows, summary badge and sorting, and the temperature dialog button's enabled state."
       ],
       "status": "active"
     },
@@ -2399,8 +2402,8 @@
     {
       "path": "apps/web/tsconfig.json",
       "origin": "authored",
-      "sha256": "3f39f5f44c1ae76125cefba1aa63b613baebf25706eb75d6e3a3f238a7bfcdcc",
-      "reason": "Apply strict checking to new TypeScript and keep forked legacy JavaScript outside an unsupported whole-codebase typecheck claim. Include the new operational driver-tools TypeScript module in strict frontend checking.",
+      "sha256": "c6ed84dc04c2a9785e47779ef88acb6f222943acce7bc0e1db94da1af9ac83ea",
+      "reason": "Apply strict checking to new TypeScript and keep forked legacy JavaScript outside an unsupported whole-codebase typecheck claim. Include the new operational driver-tools TypeScript module in strict frontend checking. Allow explicit .ts import extensions so strict TypeScript modules import each other the way the Node test runner resolves them.",
       "status": "active"
     },
     {
@@ -2413,8 +2416,8 @@
     {
       "path": "apps/web/public/components.css",
       "origin": "authored",
-      "sha256": "a3b3187c0b97aed12a7d9fb3cc800c9e07cefc51e142ef828c7de7b37688deab",
-      "reason": "Own shared buttons, fields, cards, tabs, focus and dialog appearance across product, guide and authentication pages. Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
+      "sha256": "35539ce0405b8789d92428ac8aa54b272fb9152d4cfa80564dc404569bdf8ec1",
+      "reason": "Own shared buttons, fields, cards, tabs, focus and dialog appearance across product, guide and authentication pages. Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps. Add a red badge variant for range-out and failure states that are always written in words.",
       "status": "active"
     },
     {
@@ -2479,6 +2482,55 @@
       "sha256": "a8face3495fac88a7e17b48c451d35ca3199cbe2106c1a41a63389b87e86dab7",
       "reason": "Render the sidebar account icons (settings, account, logout) from the official Lucide icon data, tree-shaken to three icons.",
       "status": "active"
+    },
+    {
+      "path": "apps/web/combined/temperature-model.ts",
+      "origin": "authored",
+      "reason": "Classify the temperature the server reports per vehicle (range-out, silent, normal, none), order vehicles by it and validate the latest-value answer without inventing values.",
+      "status": "active",
+      "sha256": "4cb520bdf33ec39bf0fec0b1e7410e42c15f750132023cfba32098764a266111"
+    },
+    {
+      "path": "apps/web/combined/temperature-model.test.mjs",
+      "origin": "authored",
+      "reason": "Verify temperature classification and precedence, formatting, ordering, answer validation and the per-vehicle overview rows.",
+      "status": "active",
+      "sha256": "2ec340b78bf90464505b754143d551937ad0530e974b0a7d7396c295eb82c2b4"
+    },
+    {
+      "path": "apps/web/combined/temperature-client.ts",
+      "origin": "authored",
+      "reason": "Read the latest and per-day temperature routes with the session, a Seoul 24-hour window and explicit unavailable-versus-no-data failures.",
+      "status": "active",
+      "sha256": "7e195891423f7a536719f4aeeca5afac6639f4dcb7954554d98511a516ecb47a"
+    },
+    {
+      "path": "apps/web/combined/temperature-client.test.mjs",
+      "origin": "authored",
+      "reason": "Verify the Seoul day window, request shape, unavailable and failure classification and answer validation of the temperature client.",
+      "status": "active",
+      "sha256": "7a48d1866fcc9c6ccf3cc1c07c8ea94fbb0977f1f46ed5f08e82661f68391922"
+    },
+    {
+      "path": "apps/web/combined/temperature-overview.ts",
+      "origin": "authored",
+      "reason": "Show every vehicle's latest temperature in a dialog that opens the ones needing attention first and never shows an older list after a failure.",
+      "status": "active",
+      "sha256": "877e44ecfa5b816312181dc7bed025a52da0de3aa22890b1b41e0afde1c5131c"
+    },
+    {
+      "path": "apps/web/combined/temperature-overview.test.mjs",
+      "origin": "authored",
+      "reason": "Verify the temperature dialog table, load and retry, polling stop on an unavailable module, closing and vehicle selection.",
+      "status": "active",
+      "sha256": "a8ee86ad35e7adf3477a109b57232c4561cd3af69f90377750b36c96f7bafe52"
+    },
+    {
+      "path": "apps/web/combined/temperature.css",
+      "origin": "authored",
+      "reason": "Style temperature rows, summary badge, vehicle marker state and the temperature dialog with the shared operational tokens.",
+      "status": "active",
+      "sha256": "9d5b87fd309aaa01a7eee1ea9a3d5e93e831d0a6f89707ef09fb6d8106a1a04d"
     }
   ],
   "historicalTargetFileCount": 163,

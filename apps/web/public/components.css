@@ -44,6 +44,7 @@ a[aria-disabled="true"] { cursor: not-allowed; }
 .badge.green { color: #0e662f; background: #edf8f0; border-color: #99d2aa; }
 .badge.amber { color: #704000; background: #fff6df; border-color: #e7bf70; }
 .badge.neutral { color: #515760; background: #f2f3f5; border-color: #c9ced5; }
+.badge.red { color: #9f1239; background: #fff1f2; border-color: #f1a5b3; }
 
 .field { min-width: 0; display: grid; gap: 5px; font-size: 12px; color: var(--muted); }
 :is(input:not([type="checkbox"], [type="radio"], [type="hidden"]), select, textarea) {
