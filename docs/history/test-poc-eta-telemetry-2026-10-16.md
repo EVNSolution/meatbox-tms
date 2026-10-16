@@ -30,7 +30,7 @@
 | 3 | `departed`(`stopOrder`, `location`) 10-25 | 202 | `next.eta` 17:42 |
 | 4 | `GET .../driver/route` | 200 | `phase delivering`, ETA A 17:42 < B 17:52 < C 17:57 단조 증가, A·B `estimated:true`, 좌표 없는 C `estimated:false` |
 | 5 | `/mock/meatbox/received?kind=eta` | 200 | 약 5초 내 1건, `reason departed`, `messageId`=`2026-10-25-3-eta-api-g01`=`Idempotency-Key`, stops 3건 |
-| 6 | `stop_completed` A (ETA보다 3분 이름) | 202 | `stop.status done`, 모의 수신기에 `reason delayed` 1건(id `-r1`, B·C만, B 17:43·C 17:48) |
+| 6 | `stop_completed` A (ETA보다 3분 이르게 닫음) | 202 | `stop.status done`, 모의 수신기에 `reason delayed` 1건(id `-r1`, B·C만, B 17:43·C 17:48) |
 | 7 | `route_reordered` B↔C (B가 현재 배송지) | 409 | `ROUTE_LOCKED`. 상태 불변. 문서대로의 거절이다 |
 | 8 | `zone_entered`(location, zoneId `ZZ-NONE`) | 202 | `reason zone_entered` 1건(id `-r2`, B 17:41·C 17:46). 위치 없이 보내면 400 `LOCATION_REQUIRED` |
 | 9 | 10-25 `ops/outbox` | 200 | pending 0, failed 0, sent 10 |
