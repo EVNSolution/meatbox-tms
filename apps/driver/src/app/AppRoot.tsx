@@ -6,10 +6,15 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchDayState, fetchMessages, getSession, logout, sendCommand, sendMessage, type DriverCommand } from '../api/client';
+import { newEventStamp, sendDeparted, sendRouteReordered, suggestRoute } from '../api/driverApi';
+import type { DriverRoute } from '../api/driverContracts';
 import { ApiError, type DriverMessage, type SessionUser } from '../api/types';
 import { useDriverRoute } from './useDriverRoute';
 import { POLL_INTERVAL_MS } from '../config';
-import { buildRouteOrderCommand, groupStops, isDispatchOperable, seoulToday, stopProgress, vehicleDeliveries, vehiclePhase, type DayState, type Stop } from '../domain/dispatch';
+import { groupStops, isDispatchOperable, seoulToday, stopProgress, vehicleDeliveries, vehiclePhase, type DayState, type Stop } from '../domain/dispatch';
+import { serverStopOrder, suggestedKeys, suggestionSummary } from '../domain/routeDraft';
+import { RetryAttempt } from '../domain/retryAttempt';
+import { departureLocation } from '../platform/location';
 import { registerPush, revokePush, subscribePush, subscribePushToken, type PushStatus } from '../platform/pushNotifications';
 import { dimmedStopKeys, etaLabel, serverStop } from '../domain/routeView';
 import { RequestGate } from '../platform/requestQueue';
@@ -28,6 +33,8 @@ import { colors, fontFamily, radius, TOUCH_MIN } from '../ui/theme';
 
 function errorText(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === 'REVISION_CONFLICT') return '다른 곳에서 배송 순서가 바뀌어 최신 순서를 다시 불러왔습니다. 다시 편집해 주세요.';
+    if (error.code === 'ROUTE_LOCKED') return '이미 시작했거나 끝난 배송지의 순서는 바꿀 수 없습니다.';
     if (error.status === 401) return '로그인이 만료되었습니다. 다시 로그인해 주세요.';
     if (error.status === 409) return '배송 상태가 바뀌었습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요.';
     if (error.status === 404) return '오늘 배차 정보를 찾을 수 없습니다.';
@@ -96,6 +103,8 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   const active = useRef(true);
   const seenMessages = useRef(new Set<string>());
   const pushWork = useRef<Promise<unknown>>(Promise.resolve());
+  const attempts = useRef(new RetryAttempt<ReturnType<typeof newEventStamp> & { problem: 'denied' | 'unavailable' | null }>());
+  const editBasis = useRef<DriverRoute | null>(null);
 
   useEffect(() => { active.current = true; return () => { active.current = false; generation.current += 1; messageGeneration.current += 1; }; }, []);
   useEffect(() => {
@@ -131,7 +140,7 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
     return () => { clearInterval(timer); subscription.remove(); };
   }, [refresh]);
 
-  const { route } = useDriverRoute(date, vehicleId, state, onSignedOut);
+  const { route, reload: reloadRoute } = useDriverRoute(date, vehicleId, state, onSignedOut);
 
   const loadMessages = useCallback(async (force = false) => {
     if (!vehicleId || vehicleId !== selectedVehicle.current) return;
@@ -217,10 +226,80 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   function act(action: 'arrive' | 'complete', stop: Stop) {
     if (vehicleId) void command({ type: action === 'arrive' ? 'arrive_stop' : 'complete_stop', vehicleId, orderId: stop.orders[0].id });
   }
-  function reorder(keys: string[]) {
-    if (!editing || !vehicleId) return;
-    try { void command(buildRouteOrderCommand({ vehicleId, deliveries: vehicleDeliveries(editing, vehicleId), pendingStopKeys: keys, phase: vehiclePhase(editing, vehicleId) }), editing); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : '배송 순서를 확인해 주세요.'); }
+  // Order edits and the departure are driver events; the other stop commands stay on `commands` until the
+  // completion events replace them.
+  async function openEditor() {
+    if (!state || !vehicleId || mutating.current) return;
+    setError(null);
+    const fresh = await reloadRoute();
+    if (!fresh || fresh.revision !== stateRef.current?.revision) {
+      void refresh(true);
+      setError('최신 상태를 불러오는 중입니다. 잠시 후 다시 눌러 주세요.');
+      return;
+    }
+    editBasis.current = fresh;
+    setEditing(stateRef.current);
+  }
+  async function suggestOrder(): Promise<{ keys: string[]; summary: string }> {
+    const basis = editBasis.current;
+    if (!vehicleId || !basis || !editing) throw new Error('순서 편집을 다시 열어 주세요.');
+    const suggestion = await suggestRoute(date, vehicleId).catch((cause: unknown) => {
+      if (cause instanceof ApiError && cause.status === 401) fail(cause);
+      throw new Error(errorText(cause));
+    });
+    if (suggestion.revision !== basis.revision) {
+      void refresh(true);
+      throw new Error(errorText(new ApiError(409, 'REVISION_CONFLICT')));
+    }
+    const editable = groupStops(vehicleDeliveries(editing, vehicleId)).filter((stop) => stop.status === 'pending');
+    const keys = suggestedKeys(editable, suggestion, basis);
+    if (!keys) throw new Error('서버가 제안한 순서를 이 화면과 맞출 수 없습니다. 새로고침해 주세요.');
+    return { keys, summary: suggestionSummary(suggestion) };
+  }
+  async function saveOrder(keys: string[]) {
+    const basis = editBasis.current;
+    if (!editing || !vehicleId || !basis || mutating.current) return;
+    mutating.current = true; generation.current += 1; setBusy(true); setError(null);
+    try {
+      const order = serverStopOrder(keys, groupStops(vehicleDeliveries(editing, vehicleId)), basis);
+      const stamp = await attempts.current.get(
+        `reorder:${basis.revision}:${order.join(',')}`,
+        () => ({ ...newEventStamp(), problem: null }),
+      );
+      await sendRouteReordered({ ...stamp, date, vehicleId }, order, basis.revision);
+      attempts.current.settle();
+      if (active.current) setEditing(null);
+    } catch (cause) {
+      // A network failure keeps the ID for a resend; any answer from the server settles it.
+      if (cause instanceof ApiError) { attempts.current.settle(); setEditing(null); }
+      fail(cause);
+    } finally {
+      mutating.current = false; etag.current = null;
+      if (active.current) { setBusy(false); void refresh(true); }
+    }
+  }
+  async function depart() {
+    if (!vehicleId || mutating.current) return;
+    mutating.current = true; generation.current += 1; setBusy(true); setError(null);
+    try {
+      // A resend after a lost response must be the same request, so the stamp keeps its time and location.
+      const stamp = await attempts.current.get('departed', async () => {
+        const { location, problem: reason } = await departureLocation();
+        return { ...newEventStamp(location), problem: reason };
+      });
+      await sendDeparted({ ...stamp, date, vehicleId });
+      attempts.current.settle();
+      const problem = stamp.problem;
+      if (problem && active.current) {
+        setBanner({ title: '출발 위치 없음', body: problem === 'denied' ? '위치 권한이 없어 출발 위치를 보내지 않았습니다.' : '현재 위치를 읽지 못해 출발 위치를 보내지 않았습니다.' });
+      }
+    } catch (cause) {
+      if (cause instanceof ApiError) attempts.current.settle();
+      fail(cause);
+    } finally {
+      mutating.current = false; etag.current = null;
+      if (active.current) { setBusy(false); void refresh(true); }
+    }
   }
 
   const chosenVehicle = state?.fleetVehicles.find((vehicle) => vehicle.id === vehicleId);
@@ -251,9 +330,9 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
     {banner ? <Pressable accessibilityRole="button" onPress={() => { setMessagesOpen(true); setBanner(null); }} style={styles.banner}><T style={styles.bannerTitle}>{banner.title}</T><T numberOfLines={2} style={styles.bannerBody}>{banner.body}</T></Pressable> : null}
     {!state ? <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>
       : !operable ? <View style={styles.center}><T>오늘 배차가 확정되면 배송을 시작할 수 있습니다.</T><Button label="새로고침" onPress={() => void refresh(true)} /></View>
-      : editing ? <RouteOrderEditor isSaving={busy} onCancel={() => setEditing(null)} onSave={reorder} stops={groupStops(vehicleDeliveries(editing, vehicleId)).filter((stop) => stop.status === 'pending')} />
-      : tab === 'delivery' && pickup ? <PickupScreen allOrderIds={new Set(state.fleetDeliveries.map((order) => order.id))} date={date} deliveries={deliveries} key={`${date}:${vehicleId}`} onEditOrder={() => setEditing(state)} onStart={() => void command({ type: 'start_route', vehicleId })} starting={busy || !!error} vehicleId={vehicleId} />
-      : tab === 'delivery' ? <DeliveryScreen busy={busy || !!error} canEditOrder={false} etaFor={etaFor} infoFor={infoFor} onAction={act} onEditOrder={() => setEditing(state)} onRefresh={() => { setRefreshing(true); void refresh(true); }} refreshing={refreshing} stops={stops} />
+      : editing ? <RouteOrderEditor isSaving={busy} onCancel={() => setEditing(null)} onSave={(keys) => void saveOrder(keys)} onSuggest={suggestOrder} stops={groupStops(vehicleDeliveries(editing, vehicleId)).filter((stop) => stop.status === 'pending')} />
+      : tab === 'delivery' && pickup ? <PickupScreen allOrderIds={new Set(state.fleetDeliveries.map((order) => order.id))} date={date} deliveries={deliveries} key={`${date}:${vehicleId}`} onEditOrder={() => void openEditor()} onStart={() => void depart()} starting={busy || !!error} vehicleId={vehicleId} />
+      : tab === 'delivery' ? <DeliveryScreen busy={busy || !!error} canEditOrder={false} etaFor={etaFor} infoFor={infoFor} onAction={act} onEditOrder={() => void openEditor()} onRefresh={() => { setRefreshing(true); void refresh(true); }} refreshing={refreshing} stops={stops} />
       : <View style={styles.fill}><DeliveryRouteMap dimmedKeys={dimmedStopKeys(stops, route)} onMapPress={() => setSelectedKey(null)} onSelect={setSelectedKey} selectedKey={selectedKey} stops={stops} />
         <BottomSheet onDismiss={() => setSelectedKey(null)} open={!!selectedStop}>{selectedStop ? <ScrollView style={styles.stopSheet}><StopDetails busy={busy || !!error} eta={etaFor(selectedStop)} info={infoFor(selectedStop)} onAction={act} stop={selectedStop} /><Button label="닫기" onPress={() => setSelectedKey(null)} tone="secondary" /></ScrollView> : null}</BottomSheet>
       </View>}

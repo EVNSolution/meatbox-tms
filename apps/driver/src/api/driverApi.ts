@@ -32,13 +32,25 @@ export async function suggestRoute(date: string, vehicleId: string, lockFirst?: 
 
 export type AppLocation = { lat: number; lng: number; accuracyM?: number };
 
-type EventInput = { eventId: string; date: string; vehicleId: string; location?: AppLocation | null };
+/** Everything that identifies one event. A resend must carry the same values, or the server answers 409. */
+export type EventInput = {
+  eventId: string;
+  occurredAt: string;
+  date: string;
+  vehicleId: string;
+  location?: AppLocation | null;
+};
+
+/** The ID and time of a new event. Keep it for a resend. */
+export function newEventStamp(location: AppLocation | null = null): { eventId: string; occurredAt: string; location: AppLocation | null } {
+  return { eventId: newEventId(), occurredAt: new Date().toISOString(), location };
+}
 
 async function sendEvent(type: string, input: EventInput, payload: object): Promise<EventReply> {
   const body = {
     eventId: input.eventId,
     type,
-    occurredAt: new Date().toISOString(),
+    occurredAt: input.occurredAt,
     date: input.date,
     vehicleId: input.vehicleId,
     payload,
@@ -47,7 +59,7 @@ async function sendEvent(type: string, input: EventInput, payload: object): Prom
   return readEventReply(await requestJson(`${base(input.date)}/events`, jsonInit('POST', body)));
 }
 
-/** Departure. The same `eventId` can be sent again after a lost response; the reply then has `duplicate: true`. */
+/** Departure. The same input can be sent again after a lost response; the reply then has `duplicate: true`. */
 export function sendDeparted(input: EventInput): Promise<EventReply> {
   return sendEvent('departed', input, {});
 }

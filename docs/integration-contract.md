@@ -254,6 +254,8 @@
 
 ### 7.1 앱 → 우리 서버
 
+**앱 사용 중:** 배송원 앱(`apps/driver`)은 `GET route`, `GET stops/{stopId}`, `GET photos/{photoId}`(직전 완료 사진), `POST route/suggest`, `POST events`의 `departed`·`route_reordered`를 쓴다. `stop_*`·`zone_entered`·`locations`·`photos` 업로드·`history`는 아직 쓰지 않는다. 지도 핀 좌표는 `GET route`에 없어 날짜 상태에서 읽는다.
+
 구현됨(현행 경로): 아래 7개 끝점이 모두 `/api/dispatch-data/days/{date}/driver/{route|stops/{stopId}|history|events|events/{eventId}|photos|photos/{photoId}|locations}`에 있다. 표의 `/api/driver/...` 경로는 기사 계정 권한 단위에서 옮길 목표 경로다. 조회는 `vehicleId` 쿼리를 받고, `route`의 `eta`는 출발 전 `null`이고 출발 뒤 값이 채워지며, 배송지 상세의 출입정보는 아직 제한 없이 나간다.
 
 | 방법 | 경로 | 역할 | 본문·응답 |

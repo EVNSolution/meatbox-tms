@@ -1,0 +1,15 @@
+# 배송원 앱 API 코드 라이브 점검 (에뮬레이터·실기기 아님)
+# 서버: node scripts/web-fork-fixture.mjs --native (합성 데이터, 로컬 JAR, git 90453b0 기준 작업 트리)
+# 명령: EXPO_PUBLIC_MEATBOX_API_BASE_URL=http://127.0.0.1:4173 LIVE_CHECK_USERNAME=<fixture 계정> LIVE_CHECK_PASSWORD=<fixture 암호> npx tsx scripts/live-check.mts
+# 실행 시각: 2026-10-16T18:21:30+0900
+login: {"username":"fork-reviewer"}
+route: {"revision":2,"phase":"idle","stops":["BUNDLE-1","NEXT-1"]}
+suggest: {"lockFirst":"NEXT-1","stopOrder":["NEXT-1","BUNDLE-1"],"changed":true,"summary":"예상 28분 · 9.7km"}
+route_reordered: {"duplicate":false}
+route after reorder: {"revision":3,"stops":["NEXT-1","BUNDLE-1"]}
+stale revision: "REVISION_CONFLICT"
+stop detail: {"sections":[],"previousPhoto":null}
+departed: {"duplicate":false,"next":{"stopId":"NEXT-1","eta":"2026-10-16T18:33:00+09:00"}}
+eta labels: [{"name":"합성 식당 B","eta":{"text":"도착 18:33","dimmed":false}},{"name":"합성 정육점 A","eta":{"text":"도착 19:01","dimmed":false}}]
+reorder after departure: "refused 409"
+LIVE CHECK OK

@@ -1,9 +1,10 @@
 import { ApiError } from './types';
 
 // Shapes of the driver endpoints in docs/api-reference.md. Anything else is rejected, never guessed.
+// `sequence` is the position in the route; a single stop's detail does not carry it.
 export type RouteStopSummary = {
   stopId: string;
-  sequence: number;
+  sequence: number | null;
   orderIds: string[];
   name: string;
   address: string;
@@ -78,7 +79,7 @@ function readSummary(value: unknown): RouteStopSummary {
   if (!record(value) || !STATUSES.includes(String(value.status))) return fail();
   return {
     stopId: text(value.stopId),
-    sequence: count(value.sequence),
+    sequence: value.sequence == null ? null : count(value.sequence),
     orderIds: strings(value.orderIds),
     name: text(value.name),
     address: text(value.address),

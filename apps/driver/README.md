@@ -53,11 +53,33 @@ CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--max-old-space-size=2048 CMAKE_BUILD_PARA
 - TMS 계정 로그인. 시작 시 `/api/session`으로 세션을 확인합니다. 비밀번호를 저장하지 않습니다.
 - 서울 기준 당일 차량을 선택합니다. 선택은 날짜별로 복원합니다. TEST 데모는 기존 TMS 계정의 수동 차량 선택 범위입니다.
 - 차량의 모든 주문을 `meatbox:YYYY-MM-DD:<orderId>` QR로 확인해야 배송 시작 버튼이 활성화됩니다. 다른 날짜·다른 차량·중복·미등록 QR을 구분합니다. 수령 확인은 이 기기에 저장되며 서버의 수령 증빙 기능은 아닙니다.
-- 배송·지도 두 탭. 배송 시작 전과 이후에 대기 배송지를 묶음 단위로 편집합니다. 현재·완료·보류 주문의 위치는 유지합니다.
+- 배송·지도 두 탭. 배송 시작 전에만 대기 배송지를 묶음 단위로 편집합니다("자동 생성" 제안 포함). 배송 시작 뒤 편집은 다음 단위에서 엽니다.
 - 현재 배송지의 도착 처리 후 완료·다음 처리가 가능합니다. 서버 응답을 반영하고 상태 충돌 시 최신 상태를 불러옵니다.
-- 지도는 실제 주문 좌표만 표시합니다. 좌표가 없는 배송지는 안내문으로 표시합니다. 마커를 누르면 상세 sheet가 열립니다. 내 위치는 지도에서만 사용하고 서버에 전송하지 않습니다.
+- 지도는 실제 주문 좌표만 표시합니다. 좌표가 없는 배송지는 안내문으로 표시합니다. 마커를 누르면 상세 sheet가 열립니다. 내 위치는 지도 표시와 출발 이벤트의 위치 1회에만 사용합니다. 주기적 전송은 아직 없습니다.
 - 메시지 버튼에서 운영팀 내역을 확인하고 메시지를 보냅니다. FCM은 `meatbox-driver` 채널을 사용합니다. 현재 날짜·차량에 맞는 푸시만 처리합니다.
 - 실행 중 토큰이 바뀌면 새 토큰을 서버에 직접 등록합니다. 토큰 이벤트 안에서 토큰 조회를 다시 호출하지 않습니다. 앱이 foreground로 돌아오면 권한과 토큰을 재확인하되 권한 팝업을 반복해서 열지 않습니다.
+
+## 서버 기사 끝점 연결 (경로·상세·순서·출발)
+
+`src/api/driverApi.ts`가 `docs/api-reference.md`의 기사 끝점을 한 곳에서 부릅니다. 응답이 계약과 다르면 `INVALID_RESPONSE`로 거부합니다. 오류는 `ApiError.code`(problem+json의 `code`)로 분기하고 401은 로그인 화면입니다.
+
+- `GET .../driver/route`: 배송지별 ETA(`estimated:false`는 흐리게 표시), 서버 `stopId`, 순서 변경이 기대하는 `revision`. 날짜 상태가 바뀔 때마다 다시 읽습니다.
+- `GET .../driver/stops/{id}`: 고객 요청, 배송팁, 출입 정보, 운송 조건, 품목, 직전 완료 사진(`GET photos/{id}`)을 "상세 보기"에서 읽습니다.
+- `POST .../driver/route/suggest`: 순서 편집기의 "자동 생성". 제안만 받고 서버 상태는 안 바뀝니다. 목록에 반영한 뒤 "완료"를 눌러야 `route_reordered`(`expectedRevision`)로 적용됩니다. `409 REVISION_CONFLICT`면 최신 상태를 다시 읽습니다.
+- `POST .../driver/events`: `departed`(전경 위치 1회 포함)와 `route_reordered`. 같은 요청을 다시 보낼 때는 `eventId`뿐 아니라 시각·위치까지 같은 본문이어야 서버가 `duplicate`로 답합니다(`domain/retryAttempt.ts`). 출발 뒤에는 순서 편집 버튼을 숨깁니다.
+- 위치는 출발 때만 읽습니다(`expo-location`, 전경 권한만). 권한이 없거나 읽지 못해도 출발은 막지 않습니다. 백그라운드 수집은 다음 단위입니다.
+- 도착·완료는 아직 `POST /commands`(`arrive_stop`, `complete_stop`)이고 지도 핀 좌표는 `GET /state`입니다. 완료 이벤트로 바꿀 때 정리합니다.
+
+## API 코드 라이브 점검
+
+앱 화면이 아니라 앱의 API·도메인 코드를 실제 서버에 붙여 보는 스크립트입니다. 합성 데이터 서버를 띄운 뒤 실행합니다.
+
+```sh
+make run-native-fixture   # 다른 터미널, 합성 데이터 (계정은 scripts/web-fork-fixture.mjs의 fixture 값)
+EXPO_PUBLIC_MEATBOX_API_BASE_URL=http://127.0.0.1:4173 LIVE_CHECK_USERNAME=... LIVE_CHECK_PASSWORD=... npx tsx scripts/live-check.mts
+```
+
+로그인 → 경로 → 제안 → 순서 변경 → 오래된 revision 거부 → 출발 → ETA 라벨을 확인합니다. 출력 예는 `docs/evidence/driver-app-live-check-2026-10-16.txt`입니다. **Android 에뮬레이터·실기기에서 화면을 확인한 기록은 아직 없습니다.** 화면 렌더 테스트 도구(jest 등)도 없어서 화면은 뷰모델 테스트까지만 검사합니다.
 
 ## API 계약
 

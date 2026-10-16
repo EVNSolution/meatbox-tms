@@ -19,7 +19,7 @@ import {
   resolveDeliveryOrderDragTarget,
   type DeliveryOrderPositions,
 } from '../domain/delivery/sortableOrder';
-import { SequenceBadge, T } from './common';
+import { Button, SequenceBadge, T } from './common';
 import { colors, radius, TOUCH_MIN } from './theme';
 
 const ROW_BASE_HEIGHT = 84;
@@ -36,14 +36,18 @@ export function RouteOrderEditor({
   isSaving,
   onCancel,
   onSave,
+  onSuggest,
 }: {
   stops: Stop[];
   isSaving: boolean;
   onCancel(): void;
   onSave(stopKeys: string[]): void;
+  onSuggest(): Promise<{ keys: string[]; summary: string }>;
 }) {
   const { fontScale } = useWindowDimensions();
   const [ordered, setOrdered] = useState(stops);
+  const [suggesting, setSuggesting] = useState(false);
+  const [note, setNote] = useState<{ text: string; error: boolean } | null>(null);
   const rowHeight = Math.round(ROW_BASE_HEIGHT * Math.max(1, fontScale));
   const rowStep = rowHeight + ROW_GAP;
   const positions = useSharedValue(createDeliveryOrderPositions(stops.map((stop) => stop.key)));
@@ -63,6 +67,21 @@ export function RouteOrderEditor({
       next.splice(targetIndex, 0, moved);
       return next;
     });
+  }
+
+  async function suggest() {
+    setSuggesting(true);
+    setNote(null);
+    try {
+      const { keys, summary } = await onSuggest();
+      const byKey = new Map(stops.map((stop) => [stop.key, stop]));
+      setOrdered(keys.map((key) => byKey.get(key)).filter((stop): stop is Stop => !!stop));
+      setNote({ text: `${summary}. 확인하고 완료를 누르면 적용됩니다.`, error: false });
+    } catch (cause) {
+      setNote({ text: cause instanceof Error ? cause.message : '자동 순서를 만들지 못했습니다.', error: true });
+    } finally {
+      setSuggesting(false);
+    }
   }
 
   const changed = ordered.some((stop, index) => stop.key !== stops[index]?.key);
@@ -87,6 +106,10 @@ export function RouteOrderEditor({
             {isSaving ? '저장 중…' : '완료'}
           </T>
         </Pressable>
+      </View>
+      <View style={styles.suggest}>
+        <Button busy={suggesting} disabled={isSaving} label="자동 생성" onPress={() => void suggest()} tone="secondary" />
+        {note ? <T accessibilityRole={note.error ? 'alert' : undefined} style={note.error ? styles.noteError : styles.note}>{note.text}</T> : null}
       </View>
       <ScrollView pointerEvents={isSaving ? 'none' : 'auto'} removeClippedSubviews={false} style={styles.scroll}>
         <View style={[styles.list, { height: listHeight }]}>
@@ -233,6 +256,9 @@ function DraggableStopRow({
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: colors.background, flex: 1 },
+  suggest: { gap: 6, paddingHorizontal: 12, paddingTop: 8 },
+  note: { color: colors.muted, fontSize: 13 },
+  noteError: { color: colors.error, fontSize: 13 },
   header: {
     alignItems: 'center',
     backgroundColor: colors.surface,

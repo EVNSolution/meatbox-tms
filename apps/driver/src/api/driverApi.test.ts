@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { test, type TestContext } from 'node:test';
 
-import { fetchRoute, fetchStop, newEventId, photoUrl, sendDeparted, sendRouteReordered, suggestRoute } from './driverApi';
+import { fetchRoute, fetchStop, newEventId, newEventStamp, photoUrl, sendDeparted, sendRouteReordered, suggestRoute } from './driverApi';
 import { ApiError } from './types';
 
 const DATE = '2026-11-02';
+const NOW = '2026-11-02T00:30:00.000Z';
 const route = {
   date: DATE, vehicleId: 'G1', revision: 8, phase: 'idle',
   stops: [
@@ -13,8 +14,9 @@ const route = {
   ],
   next: { stopId: 'O1', eta: null },
 };
+const { sequence: _position, ...stopSummary } = route.stops[0];
 const detail = {
-  ...route.stops[0], assignmentUnitId: 'U1',
+  ...stopSummary, assignmentUnitId: 'U1',
   orders: [{ orderId: 'O1', status: 'pending', orderNumber: 'N1', name: '가게A', address: '서울', detailAddress: null, boxes: 2, items: [], customerRequests: ['문 앞'], tip: null, transportConditions: null, access: null }],
   previousPhoto: { photoId: 'p1', date: '2026-11-01', completedAt: '2026-11-01T10:00:00+09:00' },
 };
@@ -43,7 +45,9 @@ test('reads route, stop detail and a suggestion from the driver endpoints with c
     path.includes('/route/suggest') ? suggestion : path.includes('/stops/') ? detail : route,
   ));
   assert.equal((await fetchRoute(DATE, 'G 1')).stops[1].estimated, false);
-  assert.equal((await fetchStop(DATE, 'G1', 'O1')).previousPhoto?.photoId, 'p1');
+  const stop = await fetchStop(DATE, 'G1', 'O1');
+  assert.equal(stop.previousPhoto?.photoId, 'p1');
+  assert.equal(stop.sequence, null);
   const proposed = await suggestRoute(DATE, 'G1');
   assert.deepEqual(proposed.stopOrder, ['O3', 'O1']);
   await suggestRoute(DATE, 'G1', 'O1');
@@ -61,15 +65,14 @@ test('reads route, stop detail and a suggestion from the driver endpoints with c
 
 test('sends departed and route_reordered events with the eventId, location and expected revision', async (t) => {
   const calls = mockFetch(t, () => json({ accepted: true, duplicate: false, receivedAt: 'now', next: { stopId: 'O3', eta: '2026-11-02T09:40:00+09:00' } }));
-  const input = { eventId: 'e-1', date: DATE, vehicleId: 'G1', location: { lat: 37.5, lng: 127, accuracyM: 8 } };
+  const input = { eventId: 'e-1', occurredAt: '2026-11-02T00:30:00.000Z', date: DATE, vehicleId: 'G1', location: { lat: 37.5, lng: 127, accuracyM: 8 } };
   const departed = await sendDeparted(input);
   assert.equal(departed.next?.stopId, 'O3');
-  await sendRouteReordered({ eventId: 'e-2', date: DATE, vehicleId: 'G1' }, ['O3', 'O1'], 8);
+  await sendRouteReordered({ eventId: 'e-2', occurredAt: NOW, date: DATE, vehicleId: 'G1' }, ['O3', 'O1'], 8);
   const [first, second] = calls.map((call) => JSON.parse(String(call.init.body)));
-  assert.deepEqual({ ...first, occurredAt: typeof first.occurredAt }, {
-    eventId: 'e-1', type: 'departed', occurredAt: 'string', date: DATE, vehicleId: 'G1', payload: {}, location: input.location,
+  assert.deepEqual(first, {
+    eventId: 'e-1', type: 'departed', occurredAt: input.occurredAt, date: DATE, vehicleId: 'G1', payload: {}, location: input.location,
   });
-  assert.equal(Number.isFinite(Date.parse(first.occurredAt)), true);
   assert.deepEqual(second.payload, { stopOrder: ['O3', 'O1'], expectedRevision: 8 });
   assert.equal('location' in second, false);
   assert.equal(calls[0].path, `/api/dispatch-data/days/${DATE}/driver/events`);
@@ -77,7 +80,7 @@ test('sends departed and route_reordered events with the eventId, location and e
 
 test('a resent event reports duplicate and a problem+json code reaches the caller', async (t) => {
   mockFetch(t, () => json({ accepted: true, duplicate: true, receivedAt: 'now' }, 202));
-  const again = await sendDeparted({ eventId: 'e-1', date: DATE, vehicleId: 'G1' });
+  const again = await sendDeparted({ eventId: 'e-1', occurredAt: NOW, date: DATE, vehicleId: 'G1' });
   assert.equal(again.duplicate, true);
   assert.equal(again.next, null);
 
@@ -85,10 +88,23 @@ test('a resent event reports duplicate and a problem+json code reaches the calle
     t.mock.restoreAll();
     mockFetch(t, () => problem(status, code));
     await assert.rejects(
-      sendRouteReordered({ eventId: 'e-3', date: DATE, vehicleId: 'G1' }, ['O1'], 1),
+      sendRouteReordered({ eventId: 'e-3', occurredAt: NOW, date: DATE, vehicleId: 'G1' }, ['O1'], 1),
       (error: unknown) => error instanceof ApiError && error.status === status && error.code === code,
     );
   }
+});
+
+test('a resend carries the same body byte for byte, and a new stamp has its own ID and time', async (t) => {
+  const calls = mockFetch(t, () => json({ accepted: true, duplicate: false, receivedAt: 'now' }, 202));
+  const stamp = newEventStamp({ lat: 37.5, lng: 127 });
+  const input = { ...stamp, date: DATE, vehicleId: 'G1' };
+  await sendDeparted(input);
+  await sendDeparted(input);
+  assert.equal(calls[0].init.body, calls[1].init.body);
+  const other = newEventStamp();
+  assert.notEqual(other.eventId, stamp.eventId);
+  assert.equal(Number.isFinite(Date.parse(other.occurredAt)), true);
+  assert.equal(other.location, null);
 });
 
 test('malformed driver responses are rejected instead of shown', async (t) => {
@@ -96,7 +112,7 @@ test('malformed driver responses are rejected instead of shown', async (t) => {
   await assert.rejects(fetchRoute(DATE, 'G1'), (error: unknown) => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
   t.mock.restoreAll();
   mockFetch(t, () => json({ accepted: false }));
-  await assert.rejects(sendDeparted({ eventId: 'e', date: DATE, vehicleId: 'G1' }), (error: unknown) => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
+  await assert.rejects(sendDeparted({ eventId: 'e', occurredAt: NOW, date: DATE, vehicleId: 'G1' }), (error: unknown) => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
   t.mock.restoreAll();
   mockFetch(t, () => json({ ...suggestion, stopOrder: [1] }));
   await assert.rejects(suggestRoute(DATE, 'G1'), (error: unknown) => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
