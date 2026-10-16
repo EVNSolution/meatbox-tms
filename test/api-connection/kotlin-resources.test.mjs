@@ -4,6 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import test from 'node:test';
+import { assertProblem } from './problem.mjs';
 import { startForkFixture } from '../../scripts/web-fork-fixture.mjs';
 
 const require = createRequire(import.meta.url);
@@ -94,7 +95,7 @@ test('built Kotlin API exclusively owns the resource registry while Node keeps a
       ]) {
         const response = await requestRaw(origin, route, options);
         assert.equal(response.status, 401);
-        assert.deepEqual(parsed(response), { error: 'LOGIN_REQUIRED' });
+        assertProblem(response, parsed(response), 401, 'LOGIN_REQUIRED');
         assertKotlinOwner(response);
       }
     }

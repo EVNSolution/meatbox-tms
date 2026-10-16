@@ -33,6 +33,8 @@
 | `npm run check:capacity` | `node scripts/capacity-check.mjs` | 합성 대용량 상태의 직렬화·복원·모델 변환 확인 |
 | `npm run check:capacity:stream` | `node scripts/capacity-stream-check.mjs` | 합성 WebSocket 동시 연결과 변경 프레임 확인 |
 
+`make check-api-contracts`의 계약 테스트는 오류 본문을 `test/api-connection/problem.mjs`의 `assertProblem`으로 검사한다(`application/problem+json`, `code`=`error`, `status`=HTTP 상태).
+
 lint, typecheck, build, 브라우저 E2E, 배포 스모크용 npm 스크립트는 없다. [`vehicle-operations-browser-check.mjs`](../scripts/vehicle-operations-browser-check.mjs)와 Python 준비 스크립트용 테스트 파일은 존재하지만 `package.json`의 공식 명령에 연결되어 있지 않다. 필요한 도구·fixture·실행 계약을 별도로 확정하기 전에는 표준 릴리스 명령으로 간주하지 않는다.
 
 ## 기능별 소스와 회귀

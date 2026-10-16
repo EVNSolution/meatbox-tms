@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import test from 'node:test';
+import { assertProblem } from './problem.mjs';
 import { WebSocket } from 'ws';
 import { startForkFixture } from '../../scripts/web-fork-fixture.mjs';
 
@@ -104,7 +105,7 @@ test('built Kotlin reader connects to the fork while Node remains the only write
       for (const route of reads) {
         const response = await requestRaw(origin, route);
         assert.equal(response.status, 401);
-        assert.deepEqual(parsed(response), { error: 'LOGIN_REQUIRED' });
+        assertProblem(response, parsed(response), 401, 'LOGIN_REQUIRED');
         assert.equal(response.headers['x-meatbox-source-reader'], 'kotlin');
       }
     }
@@ -153,7 +154,7 @@ test('built Kotlin reader connects to the fork while Node remains the only write
     for (const date of ['2026-02-30', '1900-01-01', '2026-99-99', `${fixture.today}.json`]) {
       const response = await get(`/api/dispatch-data/days/${date}`);
       assert.equal(response.status, 404);
-      assert.deepEqual(parsed(response), { error: 'DISPATCH_DATA_NOT_FOUND' });
+      assertProblem(response, parsed(response), 404, 'DISPATCH_DATA_NOT_FOUND');
       assert.equal(response.headers['x-meatbox-source-reader'], 'kotlin');
     }
   });
@@ -165,12 +166,12 @@ test('built Kotlin reader connects to the fork while Node remains the only write
       await fs.writeFile(filename, '{broken');
       const corrupt = await get(reads[0]);
       assert.equal(corrupt.status, 500);
-      assert.deepEqual(parsed(corrupt), { error: 'DISPATCH_DATA_INVALID' });
+      assertProblem(corrupt, parsed(corrupt), 500, 'DISPATCH_DATA_INVALID');
       assert.equal(corrupt.headers['x-meatbox-source-reader'], 'kotlin');
       await fs.unlink(filename);
       const absent = await get(reads[0]);
       assert.equal(absent.status, 404);
-      assert.deepEqual(parsed(absent), { error: 'DISPATCH_DATA_UNAVAILABLE' });
+      assertProblem(absent, parsed(absent), 404, 'DISPATCH_DATA_UNAVAILABLE');
       assert.equal(absent.headers['x-meatbox-source-reader'], 'kotlin');
       assert.ok(!absent.body.includes(Buffer.from(fixture.dataDirectory)));
     } finally { await fs.writeFile(filename, bytes); }

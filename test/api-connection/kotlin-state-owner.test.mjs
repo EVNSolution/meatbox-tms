@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import test from 'node:test';
+import { assertProblem } from './problem.mjs';
 
 import { createDispatchOperations } from '../../lib/dispatch-operations.mjs';
 import calculatorModule from '../../lib/dispatch-calculator.js';
@@ -709,7 +710,7 @@ test('Kotlin rejects mismatched source dates before serving or saving dispatch s
           for (const encoding of ['identity', 'gzip']) {
             const response = await rawRead(route(date), encoding);
             assert.equal(response.status, 500);
-            assert.deepEqual(JSON.parse(response.bytes), { error: 'DISPATCH_DATA_INVALID' });
+            assertProblem(response, JSON.parse(response.bytes), 500, 'DISPATCH_DATA_INVALID');
           }
           const state = await requestJson(fixture, `${route(date)}/state`, { cookie });
           assert.equal(state.response.status, 500);
@@ -737,7 +738,7 @@ test('Kotlin rejects mismatched source dates before serving or saving dispatch s
         assert.equal((await rawRead(route(fixture.today), 'identity')).status, 200);
         const response = await rawRead(route(fixture.today), 'gzip');
         assert.equal(response.status, 500);
-        assert.deepEqual(JSON.parse(response.bytes), { error: 'DISPATCH_DATA_INVALID' });
+        assertProblem(response, JSON.parse(response.bytes), 500, 'DISPATCH_DATA_INVALID');
         assert.deepEqual(await fs.readdir(fixture.stateDirectory), []);
       } finally { await fs.writeFile(`${sourcePath(fixture.today)}.gz`, compressed); }
     }
@@ -750,7 +751,7 @@ test('Kotlin rejects mismatched source dates before serving or saving dispatch s
       await fs.writeFile(`${sourcePath(fixture.today)}.gz`, gzipSync(excessive));
       const response = await rawRead(route(fixture.today), 'gzip');
       assert.equal(response.status, 500);
-      assert.deepEqual(JSON.parse(response.bytes), { error: 'DISPATCH_DATA_INVALID' });
+      assertProblem(response, JSON.parse(response.bytes), 500, 'DISPATCH_DATA_INVALID');
       assert.deepEqual((await rawRead(route(fixture.today), 'identity')).bytes, plain);
       assert.deepEqual(await fs.readdir(fixture.stateDirectory), []);
     } finally { await fs.writeFile(`${sourcePath(fixture.today)}.gz`, compressed); }
@@ -764,7 +765,7 @@ test('Kotlin rejects mismatched source dates before serving or saving dispatch s
       for (const encoding of ['identity', 'gzip']) {
         const response = await rawRead(route(fixture.today), encoding);
         assert.equal(response.status, 500);
-        assert.deepEqual(JSON.parse(response.bytes), { error: 'DISPATCH_DATA_INVALID' });
+        assertProblem(response, JSON.parse(response.bytes), 500, 'DISPATCH_DATA_INVALID');
       }
       const state = await requestJson(fixture, `${route(fixture.today)}/state`, { cookie });
       assert.equal(state.response.status, 500);
