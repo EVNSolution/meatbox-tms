@@ -26,6 +26,9 @@ class FcmSender(
 ) {
     @Volatile private var cached: AccessToken? = null
 
+    /** Whether an account and project are set; without them every push is "unconfigured". */
+    val configured: Boolean get() = accountFile.isNotBlank() && projectId.isNotBlank()
+
     /** The operator's message arrived; the app then reads the messages. */
     fun send(tokens: List<String>, date: String, vehicleId: String, messageId: String): PushSummary =
         send(tokens, date, vehicleId, PushContent("ops_message", "미트박스 배송", "운영팀의 새 메시지가 있습니다.", messageId))

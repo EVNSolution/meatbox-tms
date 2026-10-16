@@ -103,6 +103,10 @@ class DispatchStore(
         val drafts = if (published) dispatched(current.plan, candidate) else emptyList()
         val listener = routeChanges?.takeIf { type in ROUTE_CHANGING_COMMANDS }
         val changes = listener?.let { routeChanges(current.plan.snapshot(), candidate.snapshot()) }.orEmpty()
+        // Beside `result` and `state`, only when a vehicle's route changed, so every other answer keeps its bytes.
+        if (listener != null && changes.isNotEmpty()) {
+            output.set("driverNotice", driverNotice(changes, listener.pushConfigured))
+        }
         commit(date, current, candidate, requestId, hash, output, drafts)
         if (changes.isNotEmpty()) {
             // A failing notification must never undo or fail the operator's command.

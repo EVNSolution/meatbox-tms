@@ -19,7 +19,10 @@ class RouteChangeNotifier(
     private val executor: Executor = Executor { task ->
         Thread(task, "route-change-push").apply { isDaemon = true }.start()
     },
+    private val configured: () -> Boolean = { true },
 ) : RouteChangeListener {
+    override val pushConfigured: Boolean get() = configured()
+
     override fun changed(date: String, revision: Long, changes: List<RouteChange>) {
         changes.forEach { change -> executor.execute { notify(date, revision, change) } }
     }

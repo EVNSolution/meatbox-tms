@@ -21,7 +21,22 @@ data class RouteChange(val vehicleId: String, val added: Int, val removed: Int, 
  */
 fun interface RouteChangeListener {
     fun changed(date: String, revision: Long, changes: List<RouteChange>)
+
+    /** False when pushes cannot be sent at all (no FCM account), so that the operator is told at once. */
+    val pushConfigured: Boolean get() = true
 }
+
+/**
+ * What the operator's command told the drivers, for the answer to the command: the vehicles whose route changed, the
+ * line each one gets, and whether a push was queued. The push itself is asynchronous and its outcome is only logged.
+ */
+internal fun driverNotice(changes: List<RouteChange>, pushConfigured: Boolean): ObjectNode =
+    dispatchMapper.createObjectNode().apply {
+        put("vehicles", changes.size)
+        put("push", if (pushConfigured) "queued" else "unconfigured")
+        val rows = putArray("changes")
+        changes.forEach { rows.addObject().put("vehicleId", it.vehicleId).put("text", it.describe()) }
+    }
 
 /** The commands that can move orders between vehicles or reorder them. Driver events are not among them. */
 internal val ROUTE_CHANGING_COMMANDS = setOf("publish_dispatch", "reassign", "set_route_order")

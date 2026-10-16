@@ -243,3 +243,15 @@ test('명령 응답이 멈추면 재전송하지 않고 최신 상태로 처리 
   assert.deepEqual(await client.send('complete_stop'), { accepted: true });
   assert.equal(posts[1].expectedRevision, 2);
 });
+
+test('경로를 바꾼 명령의 응답에 있던 기사 알림 정보를 결과와 함께 돌려주고 없으면 결과를 그대로 둔다', async t => {
+  const notice = { vehicles: 1, push: 'unconfigured', changes: [{ vehicleId: 'G1', text: '배차가 변경되었습니다. 순서 변경' }] };
+  let withNotice = true;
+  globals(t, async url => (url.endsWith('/state') ? response(state('2025-09-12')) : response({ state: state('2025-09-12', 2), result: { changedCount: 1 }, ...(withNotice ? { driverNotice: notice } : {}) }, 200, '"v2"')));
+  const client = connectSourceOperations({ manifest, onState() {}, onStatus() {}, onError() {}, login() {} });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(await client.send('reassign', { orderIds: ['O-2025-09-12'], targetVehicleId: 'G2' }), { changedCount: 1, driverNotice: notice });
+  withNotice = false;
+  assert.deepEqual(await client.send('reassign', { orderIds: ['O-2025-09-12'], targetVehicleId: 'G2' }), { changedCount: 1 });
+  client.close();
+});

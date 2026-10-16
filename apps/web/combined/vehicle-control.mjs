@@ -12,6 +12,7 @@ import { mountTemperatureOverview, temperatureOverviewMarkup } from './temperatu
 import { mountTemperaturePanel, temperaturePanelMarkup } from './temperature-panel.ts';
 import { seoulToday } from './operating-date.mjs';
 import { etaFor, etaNote, etaText, readEta } from './server-eta.ts';
+import { fleetCounts, fleetPositions, positionOf, positionText } from './fleet-map.ts';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const count = (value, unit = '') => value === null || value === undefined ? '미확인' : `${value.toLocaleString('ko-KR')}${unit}`;
@@ -57,7 +58,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     </section>
     <section class="control-map-workspace" aria-label="선택 차량 운행">
       <div class="panel control-current" data-control-summary aria-live="polite"></div>
-      <section class="panel control-map-panel" aria-labelledby="control-map-heading"><h2 id="control-map-heading" class="sr-only">남은 배송지</h2><div class="control-map-canvas" data-control-map></div><div class="control-map-tools"><button type="button" class="button" data-control-fit>${fitIcon}전체 보기</button><button type="button" class="button" data-control-temperature>온도 현황</button><button type="button" class="button" data-control-support>${referenceIcon('support')}지원배차</button></div><p class="control-map-note" data-control-map-note role="status"></p></section>
+      <section class="panel control-map-panel" aria-labelledby="control-map-heading"><h2 id="control-map-heading" class="sr-only">남은 배송지</h2><div class="control-map-canvas" data-control-map></div><div class="control-map-tools"><button type="button" class="button" data-control-fit>${fitIcon}전체 보기</button><button type="button" class="button" data-control-fleet aria-pressed="false">전체 차량</button><button type="button" class="button" data-control-temperature>온도 현황</button><button type="button" class="button" data-control-support>${referenceIcon('support')}지원배차</button></div><p class="control-map-note" data-control-map-note role="status"></p><div class="control-fleet-card" data-control-fleet-card hidden></div></section>
     </section>
     <aside class="panel control-details" aria-label="선택 차량 상세">
       <div class="panel-heading"><h2 data-control-detail-title>차량 상세</h2></div>
@@ -81,6 +82,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   let data = null, rows = [], row = null, selectedId = null, sort = 'received', search = '';
   let previousVehicleId = null, previousSelectedId = null, recordFilter = 'all';
   let opened = new Set(), routeData = null, routePromise = null, map = null, markers = [], signature = '';
+  let fleetMode = false;
   let mapError = '', wheel, observer, destroyed = false, routeEpoch = 0, factsOpen = false, fitCoords = [], fitAllCoords = [];
   const mapElement = find('[data-control-map]');
   const list = find('[data-control-vehicles]');
@@ -173,8 +175,72 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     find('[data-support-data]').innerHTML = `<h3>차량 운영 현황</h3><p class="muted">${source ? '승인 운영 계획과 수신된 실제 완료 기록을 표시합니다. GPS 기반 주변 차량 비교는 산정 대기 중입니다.' : '완수 속도는 실제 완료 사건의 시간 구간이 필요합니다. 현재 시뮬레이션 기록으로 실제 작업 속도를 산출하지 않습니다.'}</p><div class="support-table-scroll"><table><thead><tr><th>배송원</th><th>완료 / 배정</th><th>계획 출발</th><th>마지막 도착 ETA</th><th>완료 예상</th><th>실제 완수 속도</th><th>안정 레벨</th></tr></thead><tbody>${rows.map(item => `<tr><th>${esc(item.vehicle.driver || item.vehicle.id)}</th><td>${item.completed.length} / ${item.deliveries.length}곳</td><td>${esc(item.fixedDepartureText || '미확인')}</td><td>${esc(item.lastArrivalEta || '미확인')}</td><td>${esc(completionText(item))}${item.timing ? `<small>${source ? '승인 운영계획' : '시뮬레이션 계산값'}</small>` : ''}</td><td>${source ? esc(actualSpeedText(item)) : '실데이터 대기'}</td><td>기준 미정</td></tr>`).join('')}</tbody></table></div>`;
   }
 
+  // One map of every vehicle that has a place: where it is, how old that is, and what its temperature says.
+  function renderFleetMap() {
+    const vehicles = rows.map(item => item.vehicle);
+    const { positions, missing } = fleetPositions(vehicles, Date.now());
+    const kinds = new Map(positions.map(item => [item.vehicleId, temperatureOf(data, item.vehicleId)]));
+    const nextSignature = JSON.stringify(['fleet', positions.map(item => [item.vehicleId, item.coordinates, positionText(item), kinds.get(item.vehicleId).text])]);
+    if (signature !== nextSignature) {
+      signature = nextSignature;
+      markers.splice(0).forEach(marker => marker.remove());
+      markers = positions.map(position => {
+        const vehicle = vehicles.find(item => item.id === position.vehicleId);
+        const heat = kinds.get(position.vehicleId);
+        const markerElement = document.createElement('div');
+        markerElement.className = 'control-map-vehicle control-fleet-marker';
+        markerElement.dataset.fleetVehicle = position.vehicleId;
+        markerElement.dataset.positionSource = position.old ? 'old' : position.source;
+        if (heat.kind !== 'none') markerElement.dataset.temperature = heat.kind;
+        const name = vehicle?.driver || vehicle?.plate || position.vehicleId;
+        const label = `${name}, ${positionText(position)}${heat.kind !== 'none' ? `, 온도 ${heat.text}` : ''}`;
+        markerElement.setAttribute('role', 'button');
+        markerElement.setAttribute('tabindex', '0');
+        markerElement.setAttribute('aria-label', label);
+        markerElement.title = label;
+        // The marker names the driver without the leading region code; the full name stays in the title.
+        markerElement.innerHTML = `<span class="control-fleet-name">${esc((String(name).replace(/^\([^)]*\)\s*/, '') || String(name)).slice(0, 10))}</span>`;
+        const choose = () => onSelectVehicle(position.vehicleId);
+        markerElement.addEventListener('click', choose);
+        markerElement.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(); } });
+        const vehicleMarker = new maplibregl.Marker({ element: markerElement }).setLngLat(position.coordinates).addTo(map);
+        return { element: markerElement, remove: () => vehicleMarker.remove() };
+      });
+      fitCoords = positions.map(item => item.coordinates);
+      fitAllCoords = fitCoords;
+      fitView();
+    }
+    markers.forEach(marker => marker.element.setAttribute('aria-pressed', String(marker.element.dataset?.fleetVehicle === row?.vehicle.id)));
+    const note = find('[data-control-map-note]');
+    if (note.dataset) { note.dataset.error = String(Boolean(mapError)); note.dataset.empty = 'false'; }
+    note.textContent = mapError || (positions.length ? fleetCounts(positions, missing) : '위치를 받은 차량이 없습니다. 기사 앱 위치나 기준 위치가 없는 차량은 지도에 나오지 않습니다.');
+    renderFleetCard(positions);
+  }
+
+  function renderFleetCard(positions) {
+    const card = find('[data-control-fleet-card]');
+    const position = positions.find(item => item.vehicleId === row?.vehicle.id);
+    if (!fleetMode || !row) { card.hidden = true; return; }
+    const heat = temperatureOf(data, row.vehicle.id);
+    card.hidden = false;
+    card.innerHTML = `<strong>${esc(row.vehicle.driver || '배송원 미등록')}</strong> <span class="muted">${esc(plateLabel(row.vehicle))}</span>`
+      + `<p>${esc(position ? positionText(position) : '위치 없음')}</p>`
+      + `<p>온도 ${esc(heat.kind === 'none' ? '정보 없음' : heat.text)}</p>`
+      + `<p>${esc(row.current?.name ? `현재 ${row.current.name}` : row.remaining.length ? '출발 전 또는 상태 확인' : '모든 배송 완료')} · 남은 ${count(row.remainingStops, '곳')} ${count(row.remainingBoxes, '박스')}</p>`
+      + '<div class="control-fleet-actions"><button type="button" class="button" data-fleet-detail>배송 정보 보기</button><button type="button" class="button" data-fleet-temperature>온도 이력</button></div>';
+  }
+
+  function setFleetMode(next) {
+    fleetMode = next;
+    signature = '';
+    find('[data-control-fleet]').setAttribute('aria-pressed', String(next));
+    renderMap();
+    if (!next) find('[data-control-fleet-card]').hidden = true;
+  }
+
   function renderMap() {
     if (!map) return;
+    if (fleetMode) { renderFleetMap(); return; }
     const source = Boolean(data?.sourceData);
     const activeRouteData = source ? { points: (row?.remaining || []).flatMap(delivery =>
       Array.isArray(delivery.coordinates) && delivery.coordinates.length === 2 && delivery.coordinates.every(Number.isFinite)
@@ -183,7 +249,11 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     const rawPosition = controlPosition(data, row);
     // controlPosition() keeps vehicle-operations-model.mjs's own historical, byte-pinned label text
     // (see test/web-fork-legacy); only its 'demo' branch needs the unverified disclosure the marker shows.
-    const position = rawPosition?.source === 'demo' ? { ...rawPosition, label: locationLabel(row.vehicle) } : rawPosition;
+    const placed = row ? positionOf(row.vehicle, Date.now()) : null;
+    const reported = placed?.source === 'driver' ? placed : null;
+    // A driver-app position is named as such and dated; only a reference place keeps the "unverified" wording.
+    const position = reported ? { coordinates: reported.coordinates, source: 'driver', label: `차량 ${positionText(reported)}` }
+      : rawPosition?.source === 'demo' ? { ...rawPosition, label: locationLabel(row.vehicle) } : rawPosition;
     const heat = row ? temperatureOf(data, row.vehicle.id) : null;
     const nextSignature = JSON.stringify([row?.vehicle.id, model.mapped.map(item => [item.delivery.id, item.delivery.name, item.delivery.boxes, item.coordinates]), position, heat?.text]);
     if (signature !== nextSignature) {
@@ -217,7 +287,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     markers.forEach(marker => marker.element.setAttribute('aria-pressed', String(marker.element.dataset.orderMarker === selectedId)));
     { const note = find('[data-control-map-note]'); if (note.dataset) { note.dataset.error = String(Boolean(mapError)); note.dataset.empty = 'false'; } }
     find('[data-control-map-note]').textContent = mapError || (activeRouteData
-      ? `남은 배송지 ${model.mapped.length}곳 표시, 위치 미등록 ${model.unknownCount}곳. ${position ? source ? '차량 기준 위치 표시. 실시간 GPS 미수신.' : '차량은 시뮬레이션 위치입니다. 실제 GPS 미연결.' : '차량 현재 위치 미수신.'}`
+      ? `남은 배송지 ${model.mapped.length}곳 표시, 위치 미등록 ${model.unknownCount}곳. ${position ? reported ? `차량은 ${positionText(reported)}입니다.` : source ? '차량 기준 위치 표시. 실시간 GPS 미수신.' : '차량은 시뮬레이션 위치입니다. 실제 GPS 미연결.' : '차량 현재 위치 미수신.'}`
       : '배송지 위치 데이터를 불러오고 있습니다. 미등록 건수는 수신 후 확인합니다.');
   }
 
@@ -240,7 +310,9 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   function fitView(coords = fitCoords) {
     if (!map || !coords.length) return;
     const lngs = coords.map(c => c[0]), lats = coords.map(c => c[1]);
-    map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: mapPadding(), maxZoom: coords.length === 1 ? 13 : 14, duration: 0 });
+    // A vehicle icon is 48px with its name below it: keep it clear of the map edge.
+    const padding = fleetMode ? Object.fromEntries(Object.entries(mapPadding()).map(([side, value]) => [side, Math.max(value, 80)])) : mapPadding();
+    map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding, maxZoom: coords.length === 1 ? 13 : 14, duration: 0 });
   }
 
   function createMap() {
@@ -304,6 +376,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     find('[data-control-sort]').disabled = disabled;
     find('[data-control-support]').disabled = disabled || !row;
     temperatureOverview.setEnabled(!disabled);
+    find('[data-control-fleet]').disabled = disabled || !row;
     find('[data-control-record-stop]').disabled = disabled || !row;
     find('[data-control-route]').disabled = disabled || !row?.deliveries.length;
     element.querySelectorAll('[data-control-record-filter]').forEach(button => { button.disabled = disabled; });
@@ -313,6 +386,9 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     driverTools.update(null, null);
     temperaturePanel.clear();
     data = null; rows = []; row = null; selectedId = null;
+    fleetMode = false;
+    find('[data-control-fleet]').setAttribute('aria-pressed', 'false');
+    find('[data-control-fleet-card]').hidden = true;
     previousVehicleId = null; previousSelectedId = null;
     search = ''; sort = 'received'; opened = new Set(); recordFilter = 'all';
     routeData = null; routePromise = null; mapError = '';
@@ -379,6 +455,12 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     if (marker) onSelectDelivery(marker.dataset.orderMarker);
   });
   find('[data-control-fit]').addEventListener('click', () => fitView(fitAllCoords));
+  find('[data-control-fleet]').addEventListener('click', () => { if (data && row) setFleetMode(!fleetMode); });
+  find('[data-control-fleet-card]').addEventListener('click', event => {
+    if (!data || !row) return;
+    if (event.target.closest('[data-fleet-detail]')) setFleetMode(false);
+    else if (event.target.closest('[data-fleet-temperature]')) onOpenTemperature(row.vehicle.id);
+  });
   find('[data-control-support]').addEventListener('click', () => { if (!data || !row) return; renderSupport(); support.showModal(); });
   find('[data-support-close]').addEventListener('click', () => support.close());
   support.addEventListener('close', () => find('[data-control-support]').focus());

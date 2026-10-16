@@ -92,6 +92,10 @@ if (route.phase !== 'delivering' && route.operable) {
     location: { lat: 37.5, lng: 126.8 },
   } });
 }
+// Where the vehicles are: TRUCK-1 reports from the driver app just now, TRUCK-2 was last heard of twenty minutes ago.
+const sample = (minutesAgo, lat, lng) => ({ at: new Date(Date.now() - minutesAgo * 60_000).toISOString(), lat, lng, accuracyM: 10 });
+await call(driverCookie, `${day}/driver/locations`, { method: 'POST', body: { vehicleId: 'TRUCK-1', samples: [sample(0.3, 37.5665, 126.978)] } });
+await call(ops, `${day}/driver/locations`, { method: 'POST', body: { vehicleId: 'TRUCK-2', samples: [sample(20, 37.5172, 127.0473)] } });
 console.log(JSON.stringify({ status: 'seeded', today, driver: driver.username, minutes }));
 
 if (args['keep-alive']) {

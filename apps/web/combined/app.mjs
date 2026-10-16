@@ -14,6 +14,7 @@ import { mountDatePicker } from './date-picker.mjs';
 import { seoulToday, validOperatingDate } from './operating-date.mjs';
 import { dateNavActions, dateSummaryToolbar, mountDateSummaryToolbar } from './date-summary-toolbar.mjs';
 import { mountStatusNotification } from '../src/shared/ui/status-notification.mjs';
+import { driverNoticeText, readDriverNotice } from './driver-notice.ts';
 
 const pages = {
   orders: { title: '배차 관리' },
@@ -74,23 +75,36 @@ const vehicleControl = mountVehicleControl({ element: byId('vehicle-control'),
     activateControlTab('temperature');
   },
 });
-const routeEditor = mountRouteEditor({ element: byId('route-editor'), onSend: (type, extra) => operations.send(type, extra), onSelect: selectDelivery,
+const routeEditor = mountRouteEditor({ element: byId('route-editor'), onSend: (type, extra) => sendCommand(type, extra), onSelect: selectDelivery,
   onCancel: () => { vehicleControl.showRecords(); document.querySelector('[data-control-route]').focus(); },
 });
 const orderPlanning = mountDatedDispatch({ element: byId('order-planning'), onSelect: selectDelivery,
   onDateChange: date => operations.selectDate(date),
   onCommand: async (type, extra) => {
-    const result = await operations.send(type, extra);
+    const result = await sendCommand(type, extra);
     if (!result) throw new Error('배차 요청을 처리하지 못했습니다. 최신 상태를 확인해 주세요.');
     return result;
   },
   onAssign: async extra => {
-    const result = await operations.send('reassign', extra);
+    const result = await sendCommand('reassign', extra);
     if (!result) throw new Error('배정을 변경하지 못했습니다. 현재 주문 상태를 확인해 주세요.');
     return { ...result, shared: true };
   }, onContextChange: () => { if (state.data) renderSummary(); renderStatusNotification(); },
   notify: notice => { state.dispatchNotice = notice.message ? notice : null; renderProgress(); } });
 mountResourceManagement({ element: byId('resource-management'), assignmentClient: createDriverAssignmentClient(), onEmptyChange: empty => { resourcesEmpty = empty; renderStatusNotification(); } });
+// A command that moved a route answers with what the server told the drivers; show it for a moment on every screen.
+let noticeSeq = 0;
+async function sendCommand(type, extra) {
+  const result = await operations.send(type, extra);
+  const message = driverNoticeText(readDriverNotice(result?.driverNotice));
+  if (message) {
+    const id = ++noticeSeq;
+    state.driverNotice = { id, message };
+    renderStatusNotification();
+    setTimeout(() => { if (state.driverNotice?.id === id) { state.driverNotice = null; renderStatusNotification(); } }, 5500);
+  }
+  return result;
+}
 function selectDelivery(id) {
   state.selectedId = id;
   const selected = (state.data?.fleetDeliveries || state.data?.deliveries || []).find(item => item.id === id);
@@ -219,6 +233,10 @@ function renderProgress() {
 }
 
 function renderStatusNotification() {
+  if (state.driverNotice) {
+    statusNotification.update({ context: `driver:${state.driverNotice.id}`, key: `driver:${state.driverNotice.id}`, message: state.driverNotice.message });
+    return;
+  }
   const date = state.dateContext?.date;
   const context = `${state.page}:${state.page === 'deliveries' ? '' : date || ''}`;
   let message = '';

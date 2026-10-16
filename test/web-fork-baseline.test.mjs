@@ -54,7 +54,9 @@ const authoredPaths = [
   'apps/web/combined/temperature-panel.ts', 'apps/web/combined/temperature-panel.test.mjs',
   'apps/web/combined/driver-assignment-client.ts',
   'apps/web/combined/driver-assignment-client.test.mjs', 'apps/web/combined/server-eta.ts',
-  'apps/web/combined/server-eta.test.mjs',
+  'apps/web/combined/server-eta.test.mjs', 'apps/web/combined/fleet-map.ts',
+  'apps/web/combined/fleet-map.test.mjs', 'apps/web/combined/fleet-map.css',
+  'apps/web/combined/driver-notice.ts', 'apps/web/combined/driver-notice.test.mjs',
 ].sort();
 const inventory = JSON.parse(readFileSync(path.join(root, 'apps/web/fork-inventory.json'), 'utf8'));
 const git = args => execFileSync('git', args, { cwd: root, maxBuffer: 16 * 1024 * 1024 });

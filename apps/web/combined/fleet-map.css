@@ -1,0 +1,15 @@
+/* The all-vehicle map of the control screen: one marker per vehicle with a place, and the card of the selected one. */
+.control-fleet-marker { position: relative; cursor: pointer; }
+.control-fleet-marker[aria-pressed="true"] { z-index: 2; filter: drop-shadow(0 0 5px var(--brand)); }
+.control-fleet-marker[data-position-source="reference"] { opacity: 0.55; }
+.control-fleet-marker[data-position-source="old"] { opacity: 0.7; filter: grayscale(0.8); }
+.control-fleet-marker[data-temperature="out"] { filter: drop-shadow(0 0 6px #c0143c); }
+.control-fleet-name { position: absolute; top: 13px; left: 46px; max-width: 96px; padding: 1px 6px; overflow: hidden; border: 1px solid var(--border); border-radius: 4px; background: #fff; color: var(--text); font-size: 11px; font-weight: 600; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; box-shadow: 0 1px 3px #00000022; }
+.control-fleet-card { position: absolute; left: 12px; bottom: 12px; z-index: 3; width: min(320px, calc(100% - 24px)); padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; box-shadow: 0 4px 16px #17203322; font-size: 12px; line-height: 1.5; }
+.control-fleet-card[hidden] { display: none; }
+.control-fleet-card p { margin: 4px 0 0; }
+.control-fleet-actions { display: flex; gap: 8px; margin-top: 10px; }
+.control-fleet-actions .button { flex: 1; min-height: 36px; padding-inline: 8px; font-size: 12px; }
+@media (max-width: 740px) {
+  .control-fleet-card { position: static; width: auto; margin: 8px; box-shadow: none; }
+}

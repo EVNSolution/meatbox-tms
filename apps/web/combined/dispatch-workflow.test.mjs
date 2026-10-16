@@ -277,3 +277,16 @@ test('발표 명단은 기존 계산·확정 후보와 불완전한 후보 자�
   assert.deepEqual(presentationCandidateIds({ ...base, candidateIds: [presentationFleet.vehicleIds[0]] }), []);
   assert.deepEqual(presentationCandidateIds({ ...base, candidates: base.candidates.slice(1) }), []);
 });
+
+test('전송 결과의 기사 알림 정보를 배너에 덧붙이고, 푸시 설정이 없으면 보내지 않았다고 말한다', async () => {
+  for (const [push, expected] of [['queued', /기사 알림 발송 2대\. 푸시를 요청했고 기기 수신은 확인되지 않습니다/], ['unconfigured', /기사 알림 발송 0대\. 푸시 설정이 없어 보내지 않았습니다/]]) {
+    const { element, nodes } = fixture();
+    const workflow = mountDispatchWorkflow({ element, onCommand: async () => ({ driverNotice: { vehicles: 2, push, changes: [] } }) });
+    workflow.update(data({ dispatch: { ...data().dispatch, phase: 'draft', candidateIds: ['V1'], draftVersion: 4, canPublish: true, hasChanges: true } }));
+    nodes.publish.listeners.click();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.match(nodes.notice.textContent, /전체 배차를 전송했습니다/);
+    assert.match(nodes.notice.textContent, expected);
+    workflow.destroy();
+  }
+});

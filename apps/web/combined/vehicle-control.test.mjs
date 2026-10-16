@@ -477,3 +477,54 @@ test('기사가 출발하면 서버가 계산한 ETA를 배송지와 운행 상�
   assert.doesNotMatch(node('[data-control-summary]').innerHTML, /기사 앱에서 출발하면/);
   control.destroy();
 });
+
+test('전체 차량 지도는 위치를 받은 차량을 한 지도에 보이고 출처와 오래된 정도를 문구로 말한다', () => {
+  const { element, node } = fixture();
+  const created = [];
+  const original = globalThis.document.createElement;
+  globalThis.document.createElement = () => { const item = new FakeNode(); created.push(item); return item; };
+  const control = mountVehicleControl({ element, onSelectVehicle() {}, onSelectDelivery() {}, mapFactory });
+  const fresh = { ...vehicle, location: { coordinates: [127, 37.5], source: 'driver', at: new Date(Date.now() - 120_000).toISOString() } };
+  const reference = { id: 'V3', plate: '예시 차량 003', driver: '예시 배송원 003', live: false, location: { coordinates: [127.1, 37.4], source: 'demo', label: '서울 예시 위치' } };
+  const nowhere = { id: 'V4', plate: '예시 차량 004', driver: '예시 배송원 004', live: false };
+  const stops = [...deliveries, { id: 'V3-S1', vehicleId: 'V3', name: '배송지 4', boxes: 1, status: 'pending' }, { id: 'V4-S1', vehicleId: 'V4', name: '배송지 5', boxes: 1, status: 'pending' }];
+  const withPlaces = { fleetVehicles: [fresh, reference, nowhere], fleetDeliveries: stops, events: [], sourceData: { date: '2026-11-02' } };
+  control.update(withPlaces, 'V2', 'V2-S1');
+  assert.match(node('[data-control-map-note]').textContent, /차량은 기사 앱 위치 · 2분 전입니다\./, '한 대 보기에서도 기사 앱 위치로 이름 붙인다');
+  assert.doesNotMatch(node('[data-control-map-note]').textContent, /GPS 미수신/);
+
+  node('[data-control-fleet]').listeners.click();
+  assert.equal(node('[data-control-fleet]')['aria-pressed'], 'true');
+  assert.equal(node('[data-control-map-note]').textContent, '기사 앱 위치 1대, 오래된 위치 0대, 기준 위치 1대, 위치 없음 1대.');
+  const card = node('[data-control-fleet-card]');
+  assert.equal(card.hidden, false);
+  assert.match(card.innerHTML, /기사 앱 위치 · 2분 전/);
+  assert.match(card.innerHTML, /data-fleet-detail/);
+  assert.match(card.innerHTML, /data-fleet-temperature/);
+  const markers = created.filter(item => item.dataset.fleetVehicle);
+  assert.deepEqual(markers.map(item => [item.dataset.fleetVehicle, item.dataset.positionSource]), [['V2', 'driver'], ['V3', 'reference']]);
+  assert.match(markers[1].title, /기준 위치 \(기사 앱 위치 미수신\)/);
+
+  node('[data-control-fleet-card]').listeners.click({ target: { closest: selector => selector === '[data-fleet-detail]' ? {} : null } });
+  assert.equal(node('[data-control-fleet-card]').hidden, true);
+  assert.equal(node('[data-control-fleet]')['aria-pressed'], 'false');
+  globalThis.document.createElement = original;
+  control.destroy();
+});
+
+test('전체 차량 지도의 아이콘을 누르면 그 차량이 선택되고 카드의 온도 이력은 온도 탭을 연다', () => {
+  const { element, node } = fixture();
+  const created = [];
+  const original = globalThis.document.createElement;
+  globalThis.document.createElement = () => { const item = new FakeNode(); created.push(item); return item; };
+  const selected = [], opened = [];
+  const control = mountVehicleControl({ element, onSelectVehicle: id => selected.push(id), onOpenTemperature: id => opened.push(id), onSelectDelivery() {}, mapFactory });
+  control.update({ fleetVehicles: [{ ...vehicle, location: { coordinates: [127, 37.5], source: 'driver', at: new Date().toISOString() } }], fleetDeliveries: deliveries, events: [] }, 'V2', 'V2-S1');
+  node('[data-control-fleet]').listeners.click();
+  created.find(item => item.dataset.fleetVehicle).listeners.click();
+  assert.deepEqual(selected, ['V2']);
+  node('[data-control-fleet-card]').listeners.click({ target: { closest: selector => selector === '[data-fleet-temperature]' ? {} : null } });
+  assert.deepEqual(opened, ['V2']);
+  globalThis.document.createElement = original;
+  control.destroy();
+});

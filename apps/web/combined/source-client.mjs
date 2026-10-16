@@ -95,7 +95,9 @@ export function connectSourceOperations({ manifest, onState, onStatus, onError, 
         if (stopped || ticket !== epoch) return null;
         if (response.status === 401) { close(); login(); return null; }
         if (!response.ok) throw new Error(payload.message || payload.error || '요청을 처리하지 못했습니다.');
-        receive(payload.state); etag = null; return stopped ? null : payload.result ?? {};
+        receive(payload.state); etag = null;
+        // The server answers a route-changing command with what it told the drivers, beside `result` and `state`.
+        return stopped ? null : payload.driverNotice ? { ...payload.result, driverNotice: payload.driverNotice } : payload.result ?? {};
       } catch (error) {
         if (!stopped && ticket === epoch) {
           await refresh();

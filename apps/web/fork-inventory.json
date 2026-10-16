@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 52,
+  "authoredFileCount": 57,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "379cf58d651d1d79b56635708f6fc552a53424925995c621a7165ae1d5878092",
+      "targetSha256": "f53137bc049a1690abfcc8e0b98884bf7aaa1338d08097b711e7e66e78790f7d",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -43,7 +43,8 @@
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
         "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only.",
         "Route the temperature tab of the control screen and open it for the vehicle chosen in the temperature dialog.",
-        "Give the resource screen the driver assignment client."
+        "Give the resource screen the driver assignment client.",
+        "Show what the server told the drivers after a route-changing command."
       ],
       "status": "active"
     },
@@ -613,7 +614,7 @@
       "source": "apps/combined/dispatch-workflow.mjs",
       "sourceSha256": "e56fbcc4a0f2e12571515085e36377fbbe6baeaf3e55eeb45f0c6333c5812f59",
       "target": "apps/web/combined/dispatch-workflow.mjs",
-      "targetSha256": "db7961a5d8eb80c995f40ae9d3bee994900ac759402ac4da0881ffcd7e133e76",
+      "targetSha256": "ad40cb37ec963f8eaff65cad84f2dca9fe8674bb29651fce8c0dcc95a612b4ba",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -621,7 +622,8 @@
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Mark a synthetic plate as unverified in the candidate list",
         "Drop the server-confirmation hint under the dispatch actions.",
-        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
+        "Append the driver notice to the publish banner."
       ],
       "status": "active"
     },
@@ -629,12 +631,13 @@
       "source": "apps/combined/dispatch-workflow.test.mjs",
       "sourceSha256": "1e721931eec18bce6266d669083e65ab096947ca61a4bf9c3637bf549156f0f2",
       "target": "apps/web/combined/dispatch-workflow.test.mjs",
-      "targetSha256": "6eae812e544ffede61eebd1991bf2036329a8d81962a005bef5f86104c612abf",
+      "targetSha256": "84d4309afc726f9675ed602f60bbfa45f32d9ba443c412f9fd22b4bd27e26eea",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
-        "Drop the hint assertion."
+        "Drop the hint assertion.",
+        "Verify the driver notice in the publish banner for queued and unconfigured pushes."
       ],
       "status": "active"
     },
@@ -809,7 +812,7 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "b7b7d89493d77a3dd587ecc959e625b43569191f70c642a98e7ab2cd0e0008d4",
+      "targetSha256": "f5879693b1bea27a62f069d7272d712fde782e52f43c666991d63d43549a248a",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -822,7 +825,8 @@
         "Replace the in-flow connection panel and control notice with a fixed toast stack.",
         "Drop the page description under the title.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
-        "Load the temperature stylesheet for the control screen."
+        "Load the temperature stylesheet for the control screen.",
+        "Load the all-vehicle map stylesheet."
       ],
       "status": "active"
     },
@@ -1273,18 +1277,22 @@
       "source": "apps/combined/source-client.mjs",
       "sourceSha256": "00c7cfb02120fc13b6ca0d43f1e54a5c93c6af59401bad0785b0bd69edd8c8c9",
       "target": "apps/web/combined/source-client.mjs",
-      "targetSha256": "00c7cfb02120fc13b6ca0d43f1e54a5c93c6af59401bad0785b0bd69edd8c8c9",
+      "targetSha256": "134049a00bef5fb02447c8c06f8f2164732fee21682d41ae6d0fc3f11f7287d6",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
-      "changes": [],
+      "changes": [
+        "Return the server's driver notice beside the command result."
+      ],
       "status": "active"
     },
     {
       "source": "apps/combined/source-client.test.mjs",
       "sourceSha256": "916b9829e26c5dceb234b08bb6a3f1b2c9f00b092abbc21a88a61d1f0ec7ab21",
       "target": "apps/web/combined/source-client.test.mjs",
-      "targetSha256": "916b9829e26c5dceb234b08bb6a3f1b2c9f00b092abbc21a88a61d1f0ec7ab21",
+      "targetSha256": "fa98c3e2e0459dbe8bb9a63af3645ed7f7a131e1cec1f8d4ee9a2b4ebb3d5cc3",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
-      "changes": [],
+      "changes": [
+        "Verify the driver notice is returned with the result and absent otherwise."
+      ],
       "status": "active"
     },
     {
@@ -1595,7 +1603,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "c586332f7f6b5d2bfe87820e9a550bbae835b30c392949302ab3cf147e2edc1a",
+      "targetSha256": "adb8a43ed6e4e401b231c34135f64213b979842030922f45b22242f1a37b7d0b",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1614,7 +1622,8 @@
         "Add a Zoom to fit button that also frames the vehicle; the default view frames the stops only.",
         "Show each vehicle's temperature state (range-out, silent, normal) in the fleet row, the running summary and the vehicle marker, sort by it, and open the all-vehicle temperature dialog.",
         "Add the vehicle temperature tab (current value and day graph) to the selected vehicle details and open it from the temperature dialog.",
-        "Show the server-computed ETA of a departed vehicle beside the plan estimate in the stop details and running details, with its departure source, recomputation count and reason."
+        "Show the server-computed ETA of a departed vehicle beside the plan estimate in the stop details and running details, with its departure source, recomputation count and reason.",
+        "Add the all-vehicle map with the selected vehicle's card, name driver-app positions with their age and reference places without GPS wording."
       ],
       "status": "active"
     },
@@ -1622,7 +1631,7 @@
       "source": "apps/combined/vehicle-control.test.mjs",
       "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
       "target": "apps/web/combined/vehicle-control.test.mjs",
-      "targetSha256": "e9a89b935e840ab3e1c1f74ac1803c29f5dafc53ee4ae8e852aeb6aaf70d12f3",
+      "targetSha256": "59f794dc98983e70e3c1a0b76123d58bb6f52d971e961502c03fc3bacedb825d",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -1632,7 +1641,8 @@
         "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
         "Verify the temperature state in the fleet rows, summary badge and sorting, and the temperature dialog button's enabled state.",
         "Verify the temperature tab, the temperature dialog selection route and the dated vehicle details wiring.",
-        "Verify the server ETA beside the plan estimate before and after the driver departs."
+        "Verify the server ETA beside the plan estimate before and after the driver departs.",
+        "Verify the all-vehicle map, position wording and card actions."
       ],
       "status": "active"
     },
@@ -2598,6 +2608,41 @@
       "reason": "Verify server ETA reading, bundle matching by order, Seoul clock text, unknown position and actual arrival wording.",
       "status": "active",
       "sha256": "1d6b2a006767b4a86e761dd8f7bda95399e1c82bca6e6d375e876064495b5f5f"
+    },
+    {
+      "path": "apps/web/combined/fleet-map.ts",
+      "origin": "authored",
+      "reason": "Classify each vehicle's place as a driver-app position with its age or a reference place, and count the fleet in words.",
+      "status": "active",
+      "sha256": "64b54fe19fb098decff5c15578ab5005fd272932f5ff765a35a34a9f2566a595"
+    },
+    {
+      "path": "apps/web/combined/fleet-map.test.mjs",
+      "origin": "authored",
+      "reason": "Verify position source, age, old threshold, bad places and fleet counts.",
+      "status": "active",
+      "sha256": "7f7f61ea78fe098bb0e3f05142a9436cfa0d793590afc267fcfcee023f0650c0"
+    },
+    {
+      "path": "apps/web/combined/fleet-map.css",
+      "origin": "authored",
+      "reason": "Style the all-vehicle map icons, names and the selected vehicle's card with distinctions that do not rely on color.",
+      "status": "active",
+      "sha256": "7a61296f3759a0293d1bc803d724d4c886e9d35fd0f6fd7cc631514e8f98e6f3"
+    },
+    {
+      "path": "apps/web/combined/driver-notice.ts",
+      "origin": "authored",
+      "reason": "Read and word the driver notice of a command without claiming that a phone received a push.",
+      "status": "active",
+      "sha256": "73c8148ca6e594b15467aea61b73d26ed15364fbc3b9d8d5ad8fff359cfcfcd2"
+    },
+    {
+      "path": "apps/web/combined/driver-notice.test.mjs",
+      "origin": "authored",
+      "reason": "Verify queued, unconfigured, unknown and malformed driver notices.",
+      "status": "active",
+      "sha256": "49bc8dd5a88f13774cdb99ef580b2c724d7fdfd021fd34f0d7dc50a8779fb2b9"
     }
   ],
   "historicalTargetFileCount": 163,

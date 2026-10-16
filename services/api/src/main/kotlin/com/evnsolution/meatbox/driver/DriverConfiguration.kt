@@ -47,7 +47,7 @@ class DriverConfiguration {
     fun routeChangeNotifier(dispatch: DispatchStore, store: DriverStore, sender: FcmSender): RouteChangeNotifier =
         RouteChangeNotifier(store, send = { tokens, date, vehicleId, content ->
             sender.send(tokens, date, vehicleId, content)
-        })
+        }, configured = { sender.configured })
             .also { dispatch.routeChanges = it }
 
     @Bean

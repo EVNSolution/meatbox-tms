@@ -322,6 +322,17 @@
 | `begin_dispatch_revision` | 없음 | 확정본에서 수정안을 연다 |
 | `discard_dispatch_revision` | 없음 | 수정안을 버리고 확정본을 유지한다 |
 
+**기사 알림 결과 `driverNotice`.** `publish_dispatch`·`reassign`·`set_route_order`가 어느 차량의 주문 목록이나 순서를 바꾸면 응답에 `result`·`state` 옆에 `driverNotice`가 붙는다. 바뀐 차량이 없으면 이 필드가 없고 다른 응답의 바이트는 그대로다. 명령 결과로 저장되므로 같은 `requestId` 재전송도 같은 값을 돌려준다.
+
+```json
+{ "driverNotice": { "vehicles": 2, "push": "queued",
+  "changes": [{ "vehicleId": "G1", "text": "배차가 변경되었습니다. 주문 추가 4건" }] } }
+```
+
+- `vehicles`: 경로가 바뀐 차량 수. `changes[].text`는 그 차량의 기사 앱 알림 문구다.
+- `push`: `queued`면 FCM 요청을 큐에 넣었다는 뜻이다. 발송은 비동기이고 결과는 서버 로그에만 남으며 기기 수신은 확인하지 않는다. `unconfigured`면 FCM 서비스 계정·프로젝트가 설정되지 않아 보내지 않았다. 어느 쪽이든 기사 앱은 전경으로 돌아올 때 최신 경로를 읽는다.
+- 웹은 이를 "기사 알림 발송 N대"(또는 "0대, 푸시 설정이 없어 보내지 않았습니다")로 보인다.
+
 최초 계산 요청 예:
 
 ```json

@@ -1,4 +1,5 @@
 import { referenceIcon } from './reference-icons.mjs';
+import { driverNoticeText, readDriverNotice } from './driver-notice.ts';
 import { presentationCandidateIds } from './dispatch-presentation.mjs';
 import { plateLabel } from './vehicle-identity.mjs';
 
@@ -248,7 +249,8 @@ export function mountDispatchWorkflow({ element, onCommand = () => {} } = {}) {
           calculationReady = false;
           notice.hidden = false;
           notice.className = 'dispatch-workflow-notice';
-          notice.textContent = requestPhase === 'amending' ? '변경 배차를 다시 전송했습니다. 배송 관제에서 반영 상태를 확인해 주세요.' : '전체 배차를 전송했습니다. 배송 관제에서 반영 상태를 확인해 주세요.';
+          const told = driverNoticeText(readDriverNotice(result?.driverNotice));
+          notice.textContent = `${requestPhase === 'amending' ? '변경 배차를 다시 전송했습니다. 배송 관제에서 반영 상태를 확인해 주세요.' : '전체 배차를 전송했습니다. 배송 관제에서 반영 상태를 확인해 주세요.'}${told ? ` ${told}` : ''}`;
           noticeError = false;
         }
       }
