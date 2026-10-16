@@ -47,6 +47,8 @@ class DriverStore(
     internal val directory: Path,
     internal val clock: () -> Instant = Instant::now,
     private val isSessionActive: (String, String) -> Boolean,
+    /** Whether the account may drive the vehicle now. Asked at every push, so a taken-away vehicle stops. */
+    private val mayDrive: (String, String) -> Boolean = { _, _ -> true },
     internal val publicOrigin: String = "",
     etaConfig: EtaConfig = EtaConfig(),
     /** Where routes start before departure (`meatbox.route.depot-lat/lng`), or null when the installation sets none. */
@@ -129,8 +131,9 @@ class DriverStore(
             messages.add(message)
             save(date, state)
             val tokens = if (from == "ops") {
-                state.path("devices").filter { it.path("vehicleId").asString() == vehicleId }
-                    .map { it.path("token").asString() }
+                state.path("devices").filter {
+                    it.path("vehicleId").asString() == vehicleId && mayDrive(it.path("username").asString(), vehicleId)
+                }.map { it.path("token").asString() }
             } else emptyList()
             PendingMessage(publicMessage(message), tokens)
         }
@@ -140,7 +143,7 @@ class DriverStore(
     @Synchronized
     fun tokens(date: String, vehicleId: String): List<String> = runCatching {
         load(date).path("devices").filter {
-            it.path("vehicleId").asString() == vehicleId &&
+            it.path("vehicleId").asString() == vehicleId && mayDrive(it.path("username").asString(), vehicleId) &&
                 isSessionActive(it.path("sessionDigest").asString(), it.path("username").asString())
         }.map { it.path("token").asString() }
     }.getOrDefault(emptyList())

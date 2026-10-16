@@ -2,6 +2,7 @@ package com.evnsolution.meatbox.driver
 
 import com.evnsolution.meatbox.dispatch.DispatchStore
 import com.evnsolution.meatbox.auth.AuthService
+import com.evnsolution.meatbox.auth.Role
 import com.evnsolution.meatbox.eta.EtaConfig
 import com.evnsolution.meatbox.eta.EtaPoint
 import com.evnsolution.meatbox.integrations.fcm.FcmSender
@@ -19,6 +20,7 @@ class DriverConfiguration {
     fun driverStore(
         dispatch: DispatchStore,
         auth: ObjectProvider<AuthService>,
+        assignments: DriverAssignments,
         @Value("\${meatbox.dispatch.state-dir:}") directory: String,
         @Value("\${meatbox.dispatch.public-origin:}") origin: String,
         @Value("\${meatbox.eta.detour-factor:1.4}") detourFactor: Double,
@@ -29,8 +31,16 @@ class DriverConfiguration {
         @Value("\${meatbox.route.depot-lng:}") depotLng: String,
     ): DriverStore = DriverStore(dispatch, Path.of(directory), isSessionActive = { digest, username ->
         auth.ifAvailable?.isSessionActive(digest, username) == true
+    }, mayDrive = { username, vehicleId ->
+        // Operators run every vehicle. A driver only the ones that are assigned to them.
+        val service = auth.ifAvailable
+        service == null || service.roleOf(username) == Role.OPS || assignments.driverOf(vehicleId) == username
     }, publicOrigin = origin, etaConfig = EtaConfig(detourFactor, speedKmh, serviceMinutes, delayThresholdMinutes),
         depot = depot(depotLat, depotLng))
+
+    @Bean
+    fun driverAssignments(@Value("\${meatbox.dispatch.state-dir:}") directory: String): DriverAssignments =
+        DriverAssignments(Path.of(directory).resolve("driver-assignments.json"))
 
     /** Wires operator route changes to the drivers' phones. */
     @Bean

@@ -27,7 +27,8 @@ class DriverHttpTest {
             if (cookie != "meatbox_session=fixture") throw LoginRequiredException()
             "demo"
         })
-        mvc = MockMvcBuilders.standaloneSetup(DriverController(store, FcmSender("", ""), ORIGIN))
+        val assignments = DriverAssignments(directory.resolve("assign.json"))
+        mvc = MockMvcBuilders.standaloneSetup(DriverController(store, FcmSender("", ""), assignments, ORIGIN))
             .setControllerAdvice(ProblemExceptionHandler(quietAlerts()))
             .addFilters<org.springframework.test.web.servlet.setup.StandaloneMockMvcBuilder>(filter).build()
     }

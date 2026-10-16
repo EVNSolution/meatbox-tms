@@ -29,7 +29,10 @@ class DriverActivityHttpTest {
             if (cookie != "meatbox_session=fixture") throw LoginRequiredException()
             "demo"
         })
-        val controller = DriverController(routeFixture(directory).driver, FcmSender("", ""), ORIGIN)
+        val controller = DriverController(
+            routeFixture(directory).driver, FcmSender("", ""),
+            DriverAssignments(directory.resolve("assign.json")), ORIGIN,
+        )
         mvc = MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(ProblemExceptionHandler(quietAlerts()))
             .addFilters<StandaloneMockMvcBuilder>(filter).build()

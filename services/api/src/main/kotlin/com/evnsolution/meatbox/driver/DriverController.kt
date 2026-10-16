@@ -6,6 +6,8 @@ import org.springframework.http.HttpStatus
 
 import com.evnsolution.meatbox.legacy.DispatchDataException
 import com.evnsolution.meatbox.auth.AuthService
+import com.evnsolution.meatbox.auth.Role
+import com.evnsolution.meatbox.auth.RoleFilter
 import com.evnsolution.meatbox.dispatch.DispatchException
 import jakarta.servlet.http.HttpServletRequest
 import java.security.MessageDigest
@@ -33,6 +35,7 @@ import tools.jackson.databind.node.ObjectNode
 class DriverController(
     private val store: DriverStore,
     private val sender: FcmSender,
+    private val assignments: DriverAssignments,
     @param:Value("\${meatbox.dispatch.public-origin:}") private val origin: String,
 ) {
     private val limits = mutableMapOf<String, Window>()
@@ -45,7 +48,8 @@ class DriverController(
         }
         val session = AuthService.tokenFrom(request.getHeader("Cookie"))
             ?: driverFail(HttpStatus.UNAUTHORIZED.value(), "LOGIN_REQUIRED")
-        store.register(date, username(request), AuthService.digest(session), string(body, "vehicleId", ID_LENGTH),
+        val vehicleId = own(request, string(body, "vehicleId", ID_LENGTH))
+        store.register(date, username(request), AuthService.digest(session), vehicleId,
             string(body, "token", TOKEN_LENGTH, false), string(body, "deviceId", ID_LENGTH, false))
         return mapOf("registered" to true)
     }
@@ -60,7 +64,7 @@ class DriverController(
     @GetMapping("/messages")
     fun messages(@PathVariable date: String, @RequestParam vehicleId: String, request: HttpServletRequest): ObjectNode {
         limit(username(request), false)
-        return store.messages(date, checked(vehicleId, ID_LENGTH))
+        return store.messages(date, own(request, checked(vehicleId, ID_LENGTH)))
     }
 
     @PostMapping("/messages")
@@ -68,7 +72,9 @@ class DriverController(
         val body = mutation(request, setOf("vehicleId", "from", "body"))
         val from = string(body, "from", PLATFORM_LENGTH)
         if (from !in setOf("ops", "driver")) driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_MESSAGE_FROM")
-        val vehicleId = string(body, "vehicleId", ID_LENGTH)
+        // A driver writes as a driver, and only for a vehicle of theirs.
+        if (isDriver(request) && from != "driver") driverFail(HttpStatus.FORBIDDEN.value(), "ROLE_FORBIDDEN")
+        val vehicleId = own(request, string(body, "vehicleId", ID_LENGTH))
         val pending = store.append(date, vehicleId, from, string(body, "body", MESSAGE_LENGTH))
         // Persist first. Push acceptance does not mean that the device displayed the notification.
         val delivery = if (from == "driver") PushSummary("not-requested") else
@@ -82,6 +88,7 @@ class DriverController(
     @PostMapping("/events")
     fun event(@PathVariable date: String, request: HttpServletRequest): ResponseEntity<ObjectNode> {
         val body = mutation(request, EVENT_FIELDS, setOf("location"), EVENT_BODY)
+        own(request, string(body, "vehicleId", ID_LENGTH))
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(store.activity.acceptEvent(date, body).body)
     }
 
@@ -92,7 +99,7 @@ class DriverController(
         if (samples.isEmpty || samples.size() > MAX_SAMPLES_PER_BATCH) invalidInput()
         samples.forEach { checkLocation(it, sample = true) }
         return ResponseEntity.status(HttpStatus.ACCEPTED)
-            .body(store.activity.acceptLocations(date, string(body, "vehicleId", ID_LENGTH), samples))
+            .body(store.activity.acceptLocations(date, own(request, string(body, "vehicleId", ID_LENGTH)), samples))
     }
 
     @PostMapping("/photos", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
@@ -132,7 +139,7 @@ class DriverController(
         request: HttpServletRequest,
     ): ResponseEntity<ObjectNode> {
         limit(username(request), false)
-        val route = store.queries.route(date, checked(vehicleId, ID_LENGTH))
+        val route = store.queries.route(date, own(request, checked(vehicleId, ID_LENGTH)))
         val etag = "W/\"route-" + MessageDigest.getInstance("SHA-256").digest(driverJson.writeValueAsBytes(route))
             .take(ETAG_BYTES).joinToString("") { "%02x".format(it) } + "\""
         if (request.getHeader("If-None-Match") == etag) {
@@ -144,7 +151,12 @@ class DriverController(
     @GetMapping("/vehicles")
     fun vehicles(@PathVariable date: String, request: HttpServletRequest): ObjectNode {
         limit(username(request), false)
-        return store.queries.vehicles(date)
+        val day = store.queries.vehicles(date)
+        if (!isDriver(request)) return day
+        // A driver chooses among their own vehicles only.
+        val mine = assignments.view().assignments
+        val own = day.path("vehicles").filter { mine[it.path("vehicleId").asString()] == username(request) }
+        return day.apply { set("vehicles", driverJson.createArrayNode().apply { own.forEach(::add) }) }
     }
 
     /** A proposal only: it changes nothing, so it takes the read limit but, being a POST, still needs the Origin. */
@@ -152,7 +164,7 @@ class DriverController(
     fun suggest(@PathVariable date: String, @RequestParam vehicleId: String, request: HttpServletRequest): ObjectNode {
         val body = mutation(request, emptySet(), setOf("lockFirst"), write = false, allowEmpty = true)
         val lockFirst = if (body.has("lockFirst")) string(body, "lockFirst", ID_LENGTH, false) else null
-        return store.queries.suggest(date, checked(vehicleId, ID_LENGTH), lockFirst)
+        return store.queries.suggest(date, own(request, checked(vehicleId, ID_LENGTH)), lockFirst)
     }
 
     /** The driver's note on a stop, told to the next driver and the operator. Idempotent under `requestId`. */
@@ -161,7 +173,7 @@ class DriverController(
         val body = mutation(request, setOf("vehicleId", "requestId", "body"))
         if (!body.path("body").isString) driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_INPUT")
         return store.activity.setTip(
-            date, string(body, "vehicleId", ID_LENGTH), checked(stopId, ID_LENGTH),
+            date, own(request, string(body, "vehicleId", ID_LENGTH)), checked(stopId, ID_LENGTH),
             string(body, "requestId", REQUEST_ID_LENGTH, false), body.path("body").asString(),
         ).body
     }
@@ -174,13 +186,13 @@ class DriverController(
         request: HttpServletRequest,
     ): ObjectNode {
         limit(username(request), false)
-        return store.queries.stop(date, checked(vehicleId, ID_LENGTH), checked(stopId, ID_LENGTH))
+        return store.queries.stop(date, own(request, checked(vehicleId, ID_LENGTH)), checked(stopId, ID_LENGTH))
     }
 
     @GetMapping("/history")
     fun history(@PathVariable date: String, @RequestParam vehicleId: String, request: HttpServletRequest): ObjectNode {
         limit(username(request), false)
-        return store.queries.history(date, checked(vehicleId, ID_LENGTH))
+        return store.queries.history(date, own(request, checked(vehicleId, ID_LENGTH)))
     }
 
     @GetMapping("/events/{eventId}")
@@ -216,6 +228,21 @@ class DriverController(
             driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_INPUT")
         }
         return body
+    }
+
+    /**
+     * `RoleFilter` sets the role of every signed-in request. Without it the verifier knows no roles (the Node session
+     * of the compatibility mode), where every account is an operator.
+     */
+    private fun isDriver(request: HttpServletRequest): Boolean =
+        request.getAttribute(RoleFilter.ROLE_ATTRIBUTE) == Role.DRIVER.wire
+
+    /** [vehicleId] when this caller may act for it: operators for any, a driver for the vehicles assigned to them. */
+    private fun own(request: HttpServletRequest, vehicleId: String): String {
+        if (isDriver(request) && assignments.driverOf(vehicleId) != username(request)) {
+            driverFail(HttpStatus.FORBIDDEN.value(), "VEHICLE_NOT_ASSIGNED")
+        }
+        return vehicleId
     }
 
     private fun username(request: HttpServletRequest): String =
