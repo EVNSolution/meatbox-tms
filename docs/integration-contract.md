@@ -120,6 +120,17 @@
 
 사진 URL은 서명된 링크이며 유효기간이 있다. 미트박스가 장기 보관하려면 수신 즉시 복사한다.
 
+**구현됨(배송 상태만).** 기사 앱 이벤트·배차 확정이 상태를 바꾸면 같은 체크포인트 쓰기로 송신함(`outbox`)에 메시지를 남기고, 발송기가 `POST {MEATBOX_API_BASE_URL}/tms/delivery-status`로 보낸다([운영](operations.md#미트박스-송신-kotlin-api)). 계약과 다른 점:
+
+- `arriving`은 보내지 않는다. 다음 배송지가 되는 시점을 이번에 정하지 않았다.
+- `photos`는 `{PUBLIC_ORIGIN}/api/dispatch-data/days/{date}/driver/photos/{photoId}`다. **서명 토큰이 없고 우리 세션이 필요하다.** 미트박스가 그대로는 받을 수 없다. 서명 URL은 후속이다.
+- `messageId`는 `{date}-{revision}-{orderId}`(주문 ID의 `A-Za-z0-9._-` 밖 문자는 `_`)이고 `Idempotency-Key`와 같다. 본문의 `items`는 부분 완료만, `failure`는 미배송만 채우고 나머지는 `null`이다.
+- `dispatched`는 배차 확정 명령(`publish_dispatch`) 성공 때 보낸다. 수정안을 확정하면 차량이 바뀐 주문만 다시 보낸다.
+- 한 주문의 메시지는 순서대로 나간다. 앞 메시지가 재시도 중이면 뒤 메시지는 기다린다.
+- `429`는 `5xx`처럼 재시도하고, 그 밖의 `4xx`·`3xx`는 재시도 없이 `failedAt`을 남기고 알림(`meatbox-outbound`/`DELIVERY_STATUS_REJECTED`)을 보낸다. 한 메시지가 11번 실패하면 `DELIVERY_STATUS_UNREACHABLE` 알림을 보낸다.
+- 인증은 `MEATBOX_API_TOKEN`이 있을 때만 `Authorization: Bearer`를 붙인다. 고정 IP 허용은 배포 쪽 과제다.
+- ETA(3.2)·온도(3.3)는 보내지 않는다. 송신함의 `kind`로 나중에 얹는다.
+
 ### 3.2 ETA
 
 차량 단위, 출발 시와 재산출 때마다 전체를 다시 보낸다. 부분 갱신은 없다.
@@ -186,7 +197,9 @@
 
 ## 5. 모의 수신기
 
-미트박스 명세 전까지 PoC는 우리 서버의 `/mock/meatbox/*`가 3장의 본문을 받아 `202`를 돌려주는 것으로 통과시킨다. 첫 송신 구현과 같은 작업 단위에서 만든다. 아직 없다.
+미트박스 명세 전까지 PoC는 우리 서버의 `/mock/meatbox/*`가 3장의 본문을 받아 `202`를 돌려주는 것으로 통과시킨다. 첫 송신 구현과 같은 작업 단위에서 만들었다.
+
+**구현됨.** `meatbox.mock-receiver.enabled=true`일 때만 뜨는 테스트 전용 수신기다. 필수 키·`Idempotency-Key`를 검사하고 최근 200건을 `GET /mock/meatbox/received`로 보여 준다. 세션이 없으므로 운영에 켜지 않는다. 경로와 오류는 [API 참조](api-reference.md#모의-수신기-mockmeatbox-테스트-전용)에 있다. 송신기가 `{base}/tms/<종류>`로 보내므로 수신기는 `/mock/meatbox/tms/<종류>`도 받는다(기본 주소 `.../mock/meatbox`). 3.2·3.3 본문은 검사만 하고, 송신기는 아직 보내지 않는다.
 
 ## 6. 미트박스에 확인할 것
 

@@ -50,3 +50,13 @@ meatbox:
     # Empty webhook URL keeps the default WARN-log channel.
     alert-webhook-url: ${MEATBOX_ALERT_WEBHOOK_URL:}
     server-name: ${MEATBOX_ALERT_SERVER_NAME:}
+
+  outbound:
+    # Empty base URL keeps messages in the outbox without sending. The token is sent as a Bearer header when set.
+    base-url: ${MEATBOX_API_BASE_URL:}
+    token: ${MEATBOX_API_TOKEN:}
+    interval-seconds: ${MEATBOX_OUTBOX_INTERVAL_SECONDS:5}
+
+  # TEST ONLY: stands in for Meatbox's API with no session check. Never enable in production.
+  mock-receiver:
+    enabled: ${MEATBOX_MOCK_RECEIVER_ENABLED:false}

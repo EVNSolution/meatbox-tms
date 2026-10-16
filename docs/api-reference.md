@@ -45,6 +45,8 @@
 | `POST` | `/api/dispatch-data/days/{date}/driver/photos` | 완료 사진 업로드 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/photos/{photoId}` | 올린 사진 다시 받기 (Kotlin API 전용) |
 | `GET` | `/api/ops/alerts` | 최근 서버 오류 알림 50건과 채널 종류 (Kotlin API 전용) |
+| `GET` | `/api/ops/outbox?date=` | 미트박스 송신 대기·거절·완료 건수와 최근 20건 (Kotlin API 전용) |
+| `POST` `GET` | `/mock/meatbox/*` | 미트박스 모의 수신기. **테스트 전용**, 기본 꺼짐 (Kotlin API 전용) |
 | `GET` | `/api/resources` | 차량·지역 코드 등록부 |
 | `POST` | `/api/resources/region-codes` | 지역 코드 생성 |
 | `PATCH` | `/api/resources/region-codes/{code}` | 지역 코드 이름 변경 |
@@ -458,6 +460,42 @@
 | `413` | `DRIVER_BODY_TOO_LARGE`, `PHOTO_TOO_LARGE` | 본문 또는 사진이 한도를 넘음 |
 | `415` | `UNSUPPORTED_PHOTO_TYPE` | jpeg·png가 아님 |
 | `503` | `DRIVER_STATE_WRITE_FAILED`, `DRIVER_PHOTO_WRITE_FAILED` | 저장 실패. 같은 요청을 다시 보낸다 |
+
+## 미트박스 송신 현황과 모의 수신기 (Kotlin API 전용)
+
+### `GET /api/ops/outbox?date=YYYY-MM-DD`
+
+세션이 필요하다(`/api/ops/*` 공통). 날짜 체크포인트의 송신함(`outbox`)을 요약한다. 없는 날짜는 `404 DISPATCH_DATA_NOT_FOUND`, 날짜 형식 오류는 `400 INVALID_DATE`, 날짜 상태 모듈이 꺼져 있으면 `503 OUTBOX_UNAVAILABLE`이다.
+
+```json
+{
+  "date": "2026-11-02", "pending": 1, "failed": 0, "sent": 8,
+  "recent": [{
+    "messageId": "2026-11-02-6-MB-1", "kind": "delivery-status", "orderId": "MB-1", "attempts": 2,
+    "lastStatus": "503", "nextAttemptAt": "2026-11-02T10:41:20+09:00", "sentAt": null, "failedAt": null
+  }]
+}
+```
+
+- `pending`은 미전송(재시도 대기 포함), `failed`는 `4xx` 거절로 멈춘 건, `sent`는 전송 완료 건이다. 완료·거절 건은 24시간, 최대 1000건까지 남는다. 미전송 건은 지우지 않는다.
+- `recent`는 가장 늦게 쌓인 순 20건이다. `lastStatus`는 HTTP 상태 코드 또는 `timeout`·`connect-failed`다.
+- 주문 본문·사진 URL·토큰은 넣지 않는다.
+
+### 모의 수신기 `/mock/meatbox/*` (테스트 전용)
+
+미트박스 명세가 오기 전 PoC용 수신기다([연동 계약](integration-contract.md) 5·7.4절). `meatbox.mock-receiver.enabled=true`(`MEATBOX_MOCK_RECEIVER_ENABLED`)일 때만 뜨고, 꺼져 있으면 모든 경로가 `404`다. **세션도 인증도 없다.** 운영 설정에 켜지 않는다.
+
+| 방법 | 경로 | 동작 |
+|---|---|---|
+| `POST` | `/mock/meatbox/delivery-status` 또는 `/mock/meatbox/tms/delivery-status` | 계약 3.1 본문 검사 후 `202 {"accepted":true}` |
+| `POST` | `/mock/meatbox/eta` (`.../tms/eta`) | 계약 3.2 본문 검사 후 `202` |
+| `POST` | `/mock/meatbox/temperature` (`.../tms/temperature`) | 계약 3.3 본문 검사 후 `202` |
+| `GET` | `/mock/meatbox/received?kind=` | 받은 메시지(시간순, 최근 200건). `kind`는 `delivery-status`·`eta`·`temperature`. 항목은 `kind`, `idempotencyKey`, `receivedAt`, `body` |
+
+- 송신기는 `{MEATBOX_API_BASE_URL}/tms/<종류>`로 보내므로, 모의 수신기를 쓸 때 기본 주소는 `http://127.0.0.1:<포트>/mock/meatbox`다.
+- 필수 키: 배송 상태 `messageId`·`orderId`·`status`·`occurredAt`·`vehicleId`(`status`는 계약 6종 중 하나), ETA `messageId`·`vehicleId`·`computedAt`·`reason`·`stops`(배열), 온도 `messageId`·`vehicleId`·`sensorId`·`measurements`(배열).
+- 오류는 `400` problem+json이다. `IDEMPOTENCY_KEY_REQUIRED`(헤더 없음), `IDEMPOTENCY_KEY_MISMATCH`(헤더 ≠ 본문 `messageId`), `INVALID_BODY`(필수 키·값 오류), `INVALID_KIND`(`received`의 `kind`).
+- 같은 `Idempotency-Key`를 다시 받으면 `202`로 답하되 목록에는 한 번만 남는다. 목록은 프로세스 메모리에만 있다.
 
 ## 자원 등록부
 

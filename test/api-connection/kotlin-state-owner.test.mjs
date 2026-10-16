@@ -120,6 +120,10 @@ async function startKotlin(settings) {
     `--meatbox.auth.public-origin=${settings.publicOrigin}`,
     '--meatbox.dispatch.enabled=true', `--meatbox.dispatch.state-dir=${settings.stateDirectory}`,
     `--meatbox.dispatch.public-origin=${settings.publicOrigin}`,
+    ...(settings.outbound ? [
+      '--meatbox.mock-receiver.enabled=true', '--meatbox.outbound.interval-seconds=1',
+      `--meatbox.outbound.base-url=http://${host}:${settings.port}/mock/meatbox`,
+    ] : []),
   ], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
   let logs = '';
   let startupError;
@@ -155,7 +159,7 @@ async function startKotlin(settings) {
   }
 }
 
-async function createFixture() {
+async function createFixture({ outbound = false } = {}) {
   const temporary = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'meatbox-kotlin-state-owner-')));
   await fs.chmod(temporary, 0o700);
   const dataDirectory = path.join(temporary, 'dispatch-data');
@@ -175,7 +179,7 @@ async function createFixture() {
   const [port, legacyPort, publicPort] = await Promise.all([freePort(), freePort(), freePort()]);
   const settings = {
     jar: await bootJarPath(), port, legacyPort, publicOrigin: `http://${host}:${publicPort}`,
-    dataDirectory, stateDirectory, accessFile, resourceDatabase,
+    dataDirectory, stateDirectory, accessFile, resourceDatabase, outbound,
   };
   let kotlin = await startKotlin(settings);
   let closed = false;
@@ -466,6 +470,9 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     actualState = (await requestJson(fixture, `/api/dispatch-data/days/${fixture.today}/state`, { cookie })).body;
     assert.deepEqual(normalized(actualState), expected);
     const checkpoint = JSON.parse(await fs.readFile(path.join(fixture.stateDirectory, `${fixture.today}.json`), 'utf8'));
+    // `outbox` holds the Meatbox messages that publishing owes. Node has no outbound sender, so the golden has none.
+    assert.equal(checkpoint.outbox.length, 4);
+    delete checkpoint.outbox;
     assert.deepEqual(normalized(checkpoint), normalized(demoFreeGolden(golden)));
   });
 
@@ -860,4 +867,67 @@ test('Kotlin driver endpoints take a photo, translate an event once and list the
   assert.equal(history.items[0].result, 'completed');
   assert.deepEqual(history.items[0].photoIds, [photo.photoId]);
   assert.equal(history.items[0].note, '문 앞');
+});
+
+// PoC pass criterion before Meatbox publishes its API: a driver event reaches the contract-3.1 receiver
+// (our mock, contract 5) through the outbox, with the key, the status mapping and the photo URL.
+test('Kotlin sends delivery-status messages to the mock Meatbox receiver after driver events', { timeout: 90_000 }, async t => {
+  const fixture = await createFixture({ outbound: true });
+  t.after(() => fixture.close());
+  const cookie = await login(fixture);
+  const days = `/api/dispatch-data/days/${fixture.today}`;
+  const driver = `${days}/driver`;
+  let state = (await requestJson(fixture, `${days}/state`, { cookie })).body;
+  for (const [type, extra] of [['calculate_dispatch', { vehicleIds: ['TRUCK-1'] }], ['publish_dispatch', null]]) {
+    const body = commandFor(state, type, extra ?? { draftVersion: state.dispatch.draftVersion });
+    const result = await requestJson(fixture, `${days}/commands`, { method: 'POST', cookie, body });
+    assert.equal(result.response.status, 200, JSON.stringify(result.body));
+    state = result.body.state;
+  }
+  const event = (eventId, type, payload) => ({
+    eventId, type, payload, occurredAt: '2026-11-02T10:41:00+09:00', date: fixture.today, vehicleId: 'TRUCK-1',
+  });
+  const post = (pathname, body) => requestJson(fixture, `${driver}${pathname}`, { method: 'POST', cookie, body });
+  assert.equal((await post('/events', event('depart-1', 'departed', {}))).response.status, 202);
+  const route = (await requestJson(fixture, `${driver}/route?vehicleId=TRUCK-1`, { cookie })).body;
+  const first = route.stops[0];
+
+  const form = new FormData();
+  form.append('file', new Blob([Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6])], { type: 'image/jpeg' }), 'proof.jpg');
+  const upload = await fetch(`${fixture.origin}${driver}/photos`, {
+    method: 'POST', headers: { Cookie: cookie, Origin: fixture.publicOrigin }, body: form,
+  });
+  const photo = await upload.json();
+  const completed = await post('/events', event('complete-1', 'stop_completed', { stopId: first.stopId, photoIds: [photo.photoId], note: '문 앞' }));
+  assert.equal(completed.response.status, 202, JSON.stringify(completed.body));
+
+  // The receiver needs no session; poll up to 15 s for the sender's 1 s timer.
+  const deadline = Date.now() + 15_000;
+  let messages = [];
+  while (Date.now() < deadline) {
+    messages = (await (await fetch(`${fixture.origin}/mock/meatbox/received?kind=delivery-status`)).json()).messages;
+    if (messages.some(item => item.body.status === 'delivered')) break;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  const delivered = messages.filter(item => item.body.status === 'delivered');
+  assert.equal(delivered.length, first.orderIds.length, JSON.stringify(messages));
+  for (const item of delivered) {
+    assert.equal(item.idempotencyKey, item.body.messageId);
+    assert.equal(item.body.vehicleId, 'TRUCK-1');
+    assert.equal(item.body.note, '문 앞');
+    assert.deepEqual(item.body.photos, [`${fixture.publicOrigin}${driver}/photos/${photo.photoId}`]);
+  }
+  assert.ok(messages.some(item => item.body.status === 'dispatched'));
+  assert.ok(messages.some(item => item.body.status === 'departed'));
+
+  let outbox;
+  do {
+    outbox = await requestJson(fixture, `/api/ops/outbox?date=${fixture.today}`, { cookie });
+    assert.equal(outbox.response.status, 200);
+    if (outbox.body.pending > 0) await new Promise(resolve => setTimeout(resolve, 250));
+  } while (outbox.body.pending > 0 && Date.now() < deadline);
+  messages = (await (await fetch(`${fixture.origin}/mock/meatbox/received`)).json()).messages;
+  assert.equal(outbox.body.pending, 0);
+  assert.equal(outbox.body.failed, 0);
+  assert.equal(outbox.body.sent, messages.length);
 });

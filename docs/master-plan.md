@@ -41,7 +41,7 @@
 | 항목 | 상태 | 근거·메모 |
 | --- | --- | --- |
 | [x] RFC 9457 공통 오류 응답 (19) | 로컬 검증 | `ProblemResponseTest`(DispatchException·429·500·404·405), `ApiPathGuardHttpTest`(필터 401·400, 실서버 404), `DriverHttpTest`(429 Retry-After), 계약 테스트 58건 통과. `error`·`message` 호환 필드는 프런트가 `code`로 옮긴 뒤 제거 |
-| [x] 오류 자동 감지·담당자 알림 (19) | 로컬 검증 | `ops/ErrorAlertsTest`(500·저장 실패 감지, 10분 창 억제·요약 99건, 다른 code 별도, 채널 예외 시 500 유지, 큐 상한), `ops/WebhookAlertChannelTest`(로컬 HTTP 수신), `ops/OpsAlertsHttpTest`(`GET /api/ops/alerts` 401·목록). 채널은 로그 기본·웹훅 선택. 메일·미트박스 송신 실패 연결·운영 시간 외 대응 기준은 남음 |
+| [x] 오류 자동 감지·담당자 알림 (19) | 로컬 검증 | `ops/ErrorAlertsTest`(500·저장 실패 감지, 10분 창 억제·요약 99건, 다른 code 별도, 채널 예외 시 500 유지, 큐 상한), `ops/WebhookAlertChannelTest`(로컬 HTTP 수신), `ops/OpsAlertsHttpTest`(`GET /api/ops/alerts` 401·목록). 채널은 로그 기본·웹훅 선택. 미트박스 송신 실패는 `meatbox-outbound` 알림으로 연결됨(아래 트랙 B). 메일·운영 시간 외 대응 기준은 남음 |
 | [x] 명령 결과를 요청 ID로 영속 조회, 응답 유실 후 중복 적용 방지 | 로컬 검증 | `DispatchStoreTest`(재전송·본문 불일치·재시작·저장 실패·보존 한도), `test/api-connection/kotlin-state-owner.test.mjs`(HTTP 재전송·GET·재시작). 날짜당 500건·24시간·8MiB. [다음 기능 계획](next-feature-delivery-plan.md) F04 |
 | [ ] 테넌트·소속·역할 권한 (3) | 미착수 | F05·F06 |
 | [ ] 원본 변경 시 기존 배차 재사용 차단 | 미착수 | F02 |
@@ -59,7 +59,8 @@
 | [x] 서버→미트박스 송신 JSON 3종: 배송 상태(5), ETA(2), 온도(17) | 초안 | 주문 수신(5) 제안 본문과 GET/POST 끝점 요약 포함 |
 | [x] 앱 이벤트·위치·사진 수신 끝점 | 로컬 검증 | `DriverEventsTest`(이벤트 6종 정상 경로, 재전송 `duplicate`, 본문 불일치 409, `ROUTE_LOCKED`, 사진·사유 코드·date 거부, 재시작 뒤 조회), `DriverLocationPhotoTest`(120건 유지, `source: "driver"`, 사진 바이트·형식·`../`), `DriverActivityHttpTest`(202, 413·415 거부). 경로는 현행 `.../driver/*`이며 `/api/driver/*`는 권한 단위에서 옮긴다. 기사 계정 권한·ETA는 남음 |
 | [x] 기사 조회 GET 4개: 경로·배송지 상세·당일 이력·이벤트 결과 | 로컬 검증 | `DriverQueriesTest`(경로 순서·상태·`eta` null·revision, 배송지 상세와 직전 완료 사진, 다른 차량 배송지 404, 이력의 완료·미배송·사유), `DriverActivityHttpTest`(200·404·401), `test/api-connection/kotlin-state-owner.test.mjs`의 실제 JAR 시나리오(사진 업로드 → `stop_completed` → 재전송 `duplicate` → 재시작 뒤 `events/{eventId}` → `history`). ETA 산출·출입정보 권한 제한은 남음 |
-| [ ] 우리 쪽 모의 수신 엔드포인트 | 미착수 | 첫 송신 구현과 같은 작업 단위에서 만든다 |
+| [x] 우리 쪽 모의 수신 엔드포인트 | 로컬 검증 | `outbound/MockMeatboxReceiverTest`(3종 202, 필수 키·`Idempotency-Key` 누락 400, 중복 키 1건, 200건 상한, 송신기→수신기 실제 HTTP, 꺼짐이면 404). `meatbox.mock-receiver.enabled`가 켜질 때만 뜨는 테스트 전용 |
+| [x] 배송 상태 송신 어댑터(outbox) | 로컬 검증 | `driver/OutboxMessagesTest`(이벤트별 상태 매핑, 재전송 시 항목 1건, 저장 실패 시 상태·항목 없음), `outbound/OutboxDispatcherTest`(202 `sentAt`, 503 두 번 뒤 202·5초→15초, 400 재시도 없음·알림 1회, 연결 거부 11회 알림 1회, 재시작 뒤 이어 보내기), `outbound/OpsOutboxTest`(`GET /api/ops/outbox` 401·정상), `test/api-connection/kotlin-state-owner.test.mjs`의 실제 JAR PoC 시나리오. `arriving`·ETA·온도 송신·사진 서명 URL은 남음. 미트박스 실 송수신은 `업무 확인` 전 |
 | [ ] 고객 실시간 조회 예시 화면 1장 | 미착수 | 미트박스 설득용. 그 이상 그리지 않음 |
 | [ ] 미트박스에 계약 초안 전달 | 미착수 | 확인 질문 6개는 계약 문서 6절 |
 | [ ] 미트박스 명세·인증·테스트 환경 수령 | 미착수 | 외부 의존 |

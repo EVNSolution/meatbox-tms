@@ -252,7 +252,29 @@ Kotlin API는 5xx를 내면 담당자 알림을 한 번 보낸다. 채널 설정
 
 확인 경로: 세션이 있는 상태로 `GET /api/ops/alerts`를 호출한다. 최근 알림 50건(`subject`, `at`, `suppressedCount`), 채널 종류, 버린 건수를 돌려준다. 세션이 없으면 `401 LOGIN_REQUIRED`다. 로그 채널일 때는 `journalctl -u meatbox-api@<slot>`에서 `ALERT`로 찾는다.
 
-알림을 받으면 위 장애 분류 표의 코드 행으로 이어간다. 메일 채널과 미트박스 송신 실패 연결은 아직 없다. 운영 시간 외 대응 기준은 정하지 않았다.
+알림을 받으면 위 장애 분류 표의 코드 행으로 이어간다. 메일 채널은 아직 없다. 운영 시간 외 대응 기준은 정하지 않았다. 미트박스 송신 실패는 아래 절의 알림으로 같은 채널에 연결된다.
+
+### 미트박스 송신 (Kotlin API)
+
+기사 앱 이벤트나 배차 확정이 주문 상태를 바꾸면 서버가 미트박스에 배송 상태 메시지([연동 계약](integration-contract.md) 3.1)를 보낸다. 메시지는 상태 변경과 같은 체크포인트 쓰기로 날짜 상태의 송신함에 쌓이고, 단일 스레드 발송기가 주기적으로 집어 보낸다.
+
+| 변수 | 필수 여부 | 기본값 | 의미 |
+| --- | --- | --- | --- |
+| `MEATBOX_API_BASE_URL` | 송신 시 필수 | 없음 | 미트박스 기본 주소(http·https). 비우면 발송기가 돌지 않고 송신함에만 쌓인다(시작 로그 1줄). 메시지는 `POST {주소}/tms/delivery-status`로 간다. |
+| `MEATBOX_API_TOKEN` | 선택 | 없음 | 있으면 `Authorization: Bearer`로 보낸다. 비우면 헤더를 생략한다. 비밀값이므로 `api.env`(0600)에만 둔다. 로그·알림·`/api/ops/outbox`에 넣지 않는다. |
+| `MEATBOX_OUTBOX_INTERVAL_SECONDS` | 선택 | `5` | 발송기 주기. 1 미만은 1로 본다. |
+| `MEATBOX_MOCK_RECEIVER_ENABLED` | 선택 | `false` | **테스트 전용.** 켜면 `/mock/meatbox/*` 모의 수신기가 뜬다. 아래 참고. |
+
+- 전송: `Content-Type: application/json`, `Idempotency-Key: <messageId>`, 시간 초과 10초, 리다이렉트 없음. 2xx면 `sentAt`을 기록한다.
+- 재시도: `5xx`·`429`·시간 초과·연결 실패는 5초 → 15초 → 45초 → 2분 → 5분(상한) 간격으로 무기한 반복한다. 같은 `messageId`로 다시 보내므로 미트박스가 키로 중복을 막아야 한다. 응답을 받기 전에 프로세스가 죽거나 `sentAt` 저장이 실패하면 같은 메시지가 한 번 더 간다.
+- 거절: 그 밖의 `4xx`·`3xx`는 재시도 없이 `failedAt`과 상태 코드를 남기고 알림 `meatbox-outbound` / `DELIVERY_STATUS_REJECTED`를 보낸다. 본문을 고치지 않고 다시 보내지 않는다.
+- 불통: 한 메시지가 11번 실패하면 알림 `meatbox-outbound` / `DELIVERY_STATUS_UNREACHABLE`을 보낸다. 이후에도 재시도는 계속한다. 알림 억제는 위 규칙(10분 창)을 따른다.
+- 순서: 한 주문의 메시지는 앞 메시지가 끝나야 나간다(`4xx` 거절은 끝난 것으로 본다).
+- 확인: 세션이 있는 상태로 `GET /api/ops/outbox?date=YYYY-MM-DD`. `pending`(미전송), `failed`(거절), `sent`와 최근 20건(`attempts`, `nextAttemptAt`, `lastStatus`)을 돌려준다. `pending`이 줄지 않으면 `lastStatus`가 `timeout`·`connect-failed`·`5xx`인지, `MEATBOX_API_BASE_URL`이 비었는지 본다.
+- 복구: 미전송 건은 재시작해도 체크포인트에 남아 이어서 나간다. 거절(`failed`) 건은 자동으로 다시 보내지 않는다. 미트박스가 본문 문제를 고친 뒤 다시 보내는 도구는 아직 없다. 체크포인트를 손으로 고치지 않는다.
+- 슬롯 전환: 새 슬롯이 쓰기 주체가 된 뒤 이전 슬롯의 발송기가 오래된 캐시로 체크포인트를 덮어쓰지 않도록, 쓰기 전에 파일의 `revision`을 대조한다. 전환 중 같은 메시지가 두 슬롯에서 한 번씩 갈 수 있으므로 미트박스의 `Idempotency-Key` 처리가 전제다.
+
+모의 수신기(테스트 전용): 운영 JAR에 같은 코드가 들어 있고 `MEATBOX_MOCK_RECEIVER_ENABLED`가 `true`일 때만 켜진다. 기본값은 `false`이며 `deploy/new-stack/api.env.example`에도 켜는 줄이 없다. **TEST 서버의 `api.env`에만** `MEATBOX_MOCK_RECEIVER_ENABLED=true`와 `MEATBOX_API_BASE_URL=http://127.0.0.1:<API 포트>/mock/meatbox`를 넣고 슬롯을 다시 시작한다. 세션이 없는 경로이므로 게이트웨이(Caddy)에서 `/mock/*`를 외부로 열지 않는다(API는 `127.0.0.1`만 수신한다). 받은 목록은 `curl http://127.0.0.1:<포트>/mock/meatbox/received?kind=delivery-status`로 본다. 운영·QA에는 켜지 않는다. 실제 미트박스 주소를 받으면 두 변수를 바꾸고 모의 수신기를 끈다.
 
 최근 로그는 요청 본문을 출력하지 않는 범위로 제한한다. 현재 Node 오류 처리는 오류 이름만 출력하지만 프록시·플랫폼 로그 정책은 별도 확인이 필요하다.
 
