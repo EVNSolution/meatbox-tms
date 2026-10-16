@@ -34,11 +34,25 @@ Firebase Android 앱의 `google-services.json`을 `.private/google-services.json
 
 전용 키 APK는 debug 서명 APK와 서명이 달라 그 위에 업데이트로 설치되지 않습니다. 기존 debug APK를 지운 뒤 설치합니다.
 
+### 수동 실행 절차
+
+이 workflow는 push·PR·스케줄로 시작하지 않습니다. 코드가 `main`에 들어간 뒤 사람이 한 번 실행합니다(서명 키와 Firebase 설정을 쓰고 Actions 사용량 15~20분이 듭니다).
+
+```sh
+gh workflow run driver-apk.yml --ref main
+gh run list --workflow driver-apk.yml --limit 1      # 실행 ID 확인
+gh run watch <실행 ID>                                 # 끝날 때까지 지켜봄
+gh run download <실행 ID> --dir tmp/driver-apk         # artifact(APK, SHA256SUMS, metadata.json)
+```
+
+성공하면 `metadata.json`의 `package`, `versionCode`, `abis`, `signingCertificateSha256`이 workflow의 기대값과 일치한다는 뜻입니다. 앱에 네이티브 모듈이나 권한을 더한 변경은 병합 뒤 이 workflow를 한 번 돌려 서명과 Firebase 단계까지 확인합니다(일반 `CI`는 타입·테스트·lint만 돌립니다).
+
 ## 로컬 TEST APK 빌드 (비상용)
 
 Android SDK와 JDK 21을 준비한 뒤 앱 디렉터리에서 실행합니다. SDK 56 템플릿을 고정하며 네이티브 생성물은 Git에 넣지 않습니다.
 
 ```sh
+export ANDROID_HOME="$HOME/Library/Android/sdk"   # 없으면 'SDK location not found'로 실패합니다
 CI=1 EXPO_NO_TELEMETRY=1 npm run prebuild:android
 cd android
 CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--max-old-space-size=2048 CMAKE_BUILD_PARALLEL_LEVEL=2 ./gradlew --no-daemon --max-workers=2 --no-parallel -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=512m" -Pkotlin.compiler.execution.strategy=in-process -PreactNativeArchitectures=arm64-v8a --init-script ../scripts/android-build-limits.gradle :app:assembleRelease
@@ -46,7 +60,29 @@ CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--max-old-space-size=2048 CMAKE_BUILD_PARA
 
 출력은 `android/app/build/outputs/apk/release/app-release.apk`입니다. 이 명령은 기기에 설치하지 않습니다. ARM64 기기용이며 네이티브 컴파일과 링크 작업 수도 제한합니다. Metro worker는 2개입니다. 이 제한은 전체 프로세스 메모리의 합산 상한이 아닙니다.
 
-기본 Expo debug keystore로 서명하는 TEST 데모입니다. 스토어 배포용 서명이 아닙니다. Firebase 파일을 제공하기 전에 만든 APK는 푸시 설정이 없습니다. 파일 제공 후 다시 prebuild와 APK 빌드를 실행해야 합니다.
+필요한 SDK 구성 요소는 React Native 0.85 기준 `platforms;android-36`, `build-tools;36.0.0`, `ndk;27.1.12297006`, `cmake;3.22.1`이고 JDK는 21입니다. 2026-10-16 이 Mac(8GB, 8코어)에서 위 명령이 성공했습니다: prebuild 3.6초, `assembleRelease` 약 4~5분, APK 약 58 MiB(arm64-v8a). 기록은 `docs/evidence/driver-apk-local-build-2026-10-16.txt`입니다. 기기에서 실행해 본 기록은 아직 없습니다.
+
+기본 Expo debug keystore로 서명하는 TEST 데모입니다. 스토어 배포용 서명이 아닙니다. 이 서명은 Actions의 전용 키 서명과 달라 두 APK는 서로 덮어 설치되지 않습니다. Firebase 파일을 제공하기 전에 만든 APK는 푸시 설정이 없습니다. 파일 제공 후 다시 prebuild와 APK 빌드를 실행해야 합니다.
+
+## 배포, OS 호환, 업데이트 (요구서 36·37·38)
+
+서명 키를 어디에 보관하는지는 이 문서에 적지 않습니다.
+
+**배포 (36).** TEST는 위 Actions workflow가 만든 서명 APK를 직접 설치합니다. Google Play는 새 앱에 AAB(`:app:bundleRelease`)와 Play App Signing이 필요합니다. 아래는 코드가 아니라 사람이 하는 일이며 아직 하지 않았습니다.
+- 개발자 계정, 스토어 항목(설명·스크린샷), 개인정보처리방침 URL, 데이터 보안 양식.
+- **권한 선언**: 백그라운드 위치(`ACCESS_BACKGROUND_LOCATION`)와 포그라운드 서비스 위치(`FOREGROUND_SERVICE_LOCATION`) 사용 이유와 화면 설명. 앱은 운행 중 위치를 운영팀에 전송하는 기능에만 씁니다.
+- 내부 테스트 트랙에서 시작합니다.
+
+**빌드된 APK의 권한 (2026-10-16 확인, 바꾸지 않음).** 앱 기능에 쓰는 것: 위치 3개(`ACCESS_FINE/COARSE/BACKGROUND_LOCATION`), `FOREGROUND_SERVICE`·`FOREGROUND_SERVICE_LOCATION`, `CAMERA`, `INTERNET`, `POST_NOTIFICATIONS`, `VIBRATE`, `WAKE_LOCK`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, FCM 수신(`com.google.android.c2dm.permission.RECEIVE`). 라이브러리가 더하고 앱 기능에서는 쓰지 않는 것: `USE_BIOMETRIC`, `USE_FINGERPRINT`, `RECEIVE_BOOT_COMPLETED`, 제조사 런처 배지 권한 약 15개(`com.sec.android.provider.badge...` 등), `BIND_GET_INSTALL_REFERRER_SERVICE`. 스토어 심사에서 질문이 오면 `app.json`의 `android.blockedPermissions`로 뺄 수 있으나 기기 검증 없이 바꾸지 않았습니다. 이미 막아 둔 것: `READ/WRITE_EXTERNAL_STORAGE`, `RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`. 위치 포그라운드 서비스(`LocationTaskService`)는 `foregroundServiceType=location`으로 선언돼 있습니다.
+
+**OS 호환 (37).** `minSdk` 24(Android 7.0), `targetSdk`·`compileSdk` 36. 기기에서 확인할 목록은 다음과 같습니다. 아직 기기 매트릭스는 돌리지 않았습니다.
+- Android 13+ 알림 권한 요청(`POST_NOTIFICATIONS`), 푸시 채널 `meatbox-driver`.
+- Android 10+ 백그라운드 위치 권한 흐름("항상 허용"은 권장일 뿐 필수가 아님), 11+ 패키지 가시성(`queries`).
+- Android 14+ 포그라운드 서비스 유형·권한(위 선언).
+- 사진: 시스템 카메라와 사진 선택기(저장소 권한 없음).
+- 제조사 절전(삼성·샤오미 등)에서 위치 수집 30초 간격 유지: 실기기 PoC 필요.
+
+**업데이트 방식 (38).** `app.json`의 `android.versionCode`를 배포마다 올립니다(같거나 낮으면 설치되지 않음). 같은 서명 키로 만든 APK는 기존 앱 위에 덮어 설치됩니다(키가 다르면 지우고 설치). Play 배포 뒤에는 Play가 업데이트를 배포합니다. 인앱 강제 업데이트와 서버의 최소 앱 버전 검사는 아직 없습니다. 서버 API는 필드를 더하는 방식(앱은 모르는 필드를 무시, 모르는 응답 모양은 거부)으로 바꾸므로 오래된 앱이 새 서버에서 어디까지 동작하는지는 배포 전에 따로 확인합니다.
 
 ## 동작
 
@@ -78,6 +114,15 @@ CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--max-old-space-size=2048 CMAKE_BUILD_PARA
 - **오늘 이력**: 상단 "오늘 이력"이 `GET history`를 최신순으로 보여 줍니다.
 - **운영팀 전화**: 빌드 때 `EXPO_PUBLIC_MEATBOX_OPS_PHONE`을 넣으면 "운영팀 전화" 버튼이 `tel:`로 전화 앱을 엽니다. 비어 있으면 버튼이 없습니다. 교체 방법은 [운영 절차](../../docs/operations.md#배송원-앱-빌드-설정)입니다.
 - **배송팁·고객 요청**: 상세 보기에 `customerRequests`와 `tip`이 보이고, 닫히지 않은 배송지는 "배송팁 쓰기/수정"으로 `POST stops/{stopId}/tip`(`requestId` 멱등, 500자)을 호출합니다. 온라인에서만 저장합니다.
+
+## 길안내 (내비게이션 앱 연결, 요구서 63의 1차)
+
+배송 카드와 지도 시트의 "길안내" 버튼이 진행 중 배송지(없으면 첫 대기 배송지)를 설치된 내비게이션 앱에 넘깁니다(`src/domain/navigation.ts`).
+- 앱 4종: 티맵, 카카오맵, 네이버지도, 구글맵. 카카오내비는 URL 스킴이 없어(카카오모빌리티 답변) 제외했고 SDK 연동은 앱 키가 생긴 뒤 후속입니다.
+- 설치된 앱이 하나면 바로 열고, 여럿이면 한 번 고르며 "다음부터 이 앱으로 바로 열기"를 켜면 기억합니다(길게 누르면 다시 고름). 설치된 앱이 없으면 구글맵 웹 길찾기를 엽니다.
+- **목적지는 배송지 좌표 그대로입니다.** 입구·도로 정보로 정차 위치를 고르는 기능과 외부 경로 API 연동은 구현하지 않았습니다(도로 데이터·API 키 없음). 좌표가 없는 배송지는 주소 검색으로 열려 길안내를 앱에서 직접 시작해야 합니다.
+- 스킴 근거: 구글맵은 공식 문서, 네이버지도는 문서(`appname` 필수)에서 일부만 확인, 카카오맵(`kakaomap://route?ep=위도,경도&by=CAR`)은 카카오 담당자의 데브톡 답변, 티맵(`tmap://route?goalx=경도&goaly=위도&goalname=`)은 블로그 기준입니다. **기기에서 열어 본 기록은 없습니다.** 앱 업데이트로 스킴이 바뀌면 깨질 수 있습니다.
+- Android 11+에서 `Linking.canOpenURL`이 앱을 보려면 manifest `queries`가 필요해서 로컬 설정 플러그인 `plugins/withNavigationQueries.js`가 네 스킴을 선언합니다. 빌드한 APK의 `queries`에서 확인했습니다.
 
 ## 서버 기사 끝점 연결 (경로·상세·순서·출발)
 
