@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import type { VehicleList } from '../api/driverContracts';
-import { vehicleChoices } from './vehiclesView';
+import { onlyVehicle, vehicleChoices } from './vehiclesView';
 
 const list = (vehicles: VehicleList['vehicles']): VehicleList => ({ date: '2026-11-02', dispatchPhase: 'published', operable: true, vehicles });
 const row = (vehicleId: string, extra: Partial<VehicleList['vehicles'][number]> = {}): VehicleList['vehicles'][number] => ({
@@ -22,4 +22,10 @@ test('a vehicle without label, plate or region falls back to its ID and has no s
 test('vehicles with stops come first and keep the server order among themselves', () => {
   const ids = vehicleChoices(list([row('A'), row('B', { stops: 1 }), row('C'), row('D', { stops: 2 })])).map((choice) => choice.vehicleId);
   assert.deepEqual(ids, ['B', 'D', 'A', 'C']);
+});
+
+test('a single assigned vehicle opens by itself and several or none are chosen by hand', () => {
+  assert.equal(onlyVehicle(vehicleChoices(list([row('G1')]))), 'G1');
+  assert.equal(onlyVehicle(vehicleChoices(list([row('G1'), row('G2')]))), null);
+  assert.equal(onlyVehicle(vehicleChoices(list([]))), null);
 });

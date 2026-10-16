@@ -1,6 +1,6 @@
 # HTTP API 참조
 
-서버가 제공하는 HTTP 경로와 요청·응답 계약을 정리한다. `/api/meatbox/*`(미트박스 주문 수신)와 `POST /api/telemetry/temperature`(온도 단말 수신)를 뺀 모든 `/api/*` 경로는 `meatbox_session` 쿠키가 필요하다. 현재 인증은 세션 존재만 확인하며 역할·테넌트·기사·고객별 자원 권한은 검사하지 않는다.
+서버가 제공하는 HTTP 경로와 요청·응답 계약을 정리한다. `/api/meatbox/*`(미트박스 주문 수신)와 `POST /api/telemetry/temperature`(온도 단말 수신)를 뺀 모든 `/api/*` 경로는 `meatbox_session` 쿠키가 필요하다. 세션의 계정은 역할(`ops`·`driver`)을 가지며 서버가 경로군별로 허용 역할을 판정한다([역할과 권한](#역할과-권한)). 테넌트·고객별 권한은 없다(단일 테넌트).
 
 ## 공통 규칙
 
@@ -26,43 +26,87 @@
 
 ## 경로 요약
 
-| 방법 | 경로 | 역할 |
+| 방법 | 경로 | 설명 | 허용 역할 |
+|---|---|---|---|
+| `GET` | `/api/session` | 현재 세션 사용자 | ops, driver |
+| `GET` | `/api/dispatch-data/manifest` | 준비된 날짜와 원본 메타데이터 | ops |
+| `GET` | `/api/dispatch-data/days/{date}` | 날짜별 원본 주문·후보 그룹 | ops |
+| `GET` | `/api/dispatch-data/regions` | 공통 권역 GeoJSON | ops |
+| `GET` | `/api/dispatch-data/destinations` | 선택일까지의 누적 배송지 검색 | ops |
+| `GET` | `/api/dispatch-data/days/{date}/state` | 날짜별 배차·운행 snapshot | ops |
+| `POST` | `/api/dispatch-data/days/{date}/commands` | 날짜별 배차·운행 명령 | ops |
+| `GET` | `/api/dispatch-data/days/{date}/commands/{requestId}` | 저장된 명령 결과 조회 | ops |
+| `POST` | `/api/dispatch-data/days/{date}/driver/events` | 기사 앱 이벤트 6종 수신 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/events/{eventId}` | 이벤트 처리 결과 재확인 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/route` | 차량의 배송지 순서·상태·주문·좌표·ETA. 기사 앱이 읽는 하루 전체 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/vehicles` | 그날의 차량 목록과 phase·배송지·주문 수, 차량 선택용 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `POST` | `/api/dispatch-data/days/{date}/driver/stops/{stopId}/tip` | 배송팁 등록, `requestId` 멱등 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `POST` | `/api/dispatch-data/days/{date}/driver/route/suggest` | 자동 배송 순서 제안, 상태 불변 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/stops/{stopId}` | 배송지 상세 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/history` | 당일 완료·미배송 이력 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `POST` | `/api/dispatch-data/days/{date}/driver/locations` | 기사 위치 배치 수신 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `POST` | `/api/dispatch-data/days/{date}/driver/photos` | 완료 사진 업로드 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/photos/{photoId}` | 올린 사진 다시 받기 (Kotlin API 전용) | ops(모든 차량), driver(배정 차량) |
+| `POST` | `/api/meatbox/orders` | 미트박스가 밀어 넣는 주문 등록·변경·취소. 세션이 아니라 Bearer 토큰, 토큰 미설정이면 경로 없음 (Kotlin API 전용) | Bearer 토큰(세션 아님) |
+| `POST` | `/api/telemetry/temperature` | 온도 단말(또는 게이트웨이)이 밀어 넣는 측정값. 세션이 아니라 Bearer 토큰, 토큰 미설정이면 경로 없음 (Kotlin API 전용) | Bearer 토큰(세션 아님) |
+| `GET` | `/api/telemetry/temperature/latest` | 차량·센서별 최신 온도와 마지막 수신 경과 (Kotlin API 전용) | ops |
+| `GET` | `/api/telemetry/temperature/{vehicleId}?from=&to=&resolution=` | 한 차량의 온도 이력, 최대 24시간 (Kotlin API 전용) | ops |
+| `GET` | `/api/ops/alerts` | 최근 서버 오류 알림 50건과 채널 종류 (Kotlin API 전용) | ops |
+| `GET` | `/api/ops/telemetry` | 온도 메시지 송신 대기·거절·완료 건수, 차량별 (Kotlin API 전용) | ops |
+| `GET` | `/api/ops/outbox?date=` | 미트박스 송신 대기·거절·완료 건수와 최근 20건 (Kotlin API 전용) | ops |
+| `POST` | `/api/ops/days/{date}/source-conflict/resolve` | 원본이 바뀐 날짜의 체크포인트를 유지·보관 (Kotlin API 전용) | ops |
+| `GET` | `/api/ops/driver-assignments` | 기사 계정-차량 배정과 기사 계정 목록 (Kotlin API 전용) | ops |
+| `PUT` | `/api/ops/driver-assignments/{vehicleId}` | 차량에 기사 계정을 배정하거나 해제 (Kotlin API 전용) | ops |
+| `POST` | `/api/ops/export` | 운영 데이터 내보내기 작업 시작 (Kotlin API 전용) | ops |
+| `GET` | `/api/ops/export`, `/api/ops/export/{jobId}`, `/api/ops/export/{jobId}/download` | 작업 목록·상태, 아카이브 받기 (Kotlin API 전용) | ops |
+| `POST` `GET` | `/mock/meatbox/*` | 미트박스 모의 수신기. **테스트 전용**, 기본 꺼짐 (Kotlin API 전용) | (테스트 전용, 세션 없음) |
+| `GET` | `/api/resources` | 차량·지역 코드 등록부 | ops |
+| `POST` | `/api/resources/region-codes` | 지역 코드 생성 | ops |
+| `PATCH` | `/api/resources/region-codes/{code}` | 지역 코드 이름 변경 | ops |
+| `PATCH` | `/api/resources/vehicles` | 차량 지역 코드 일괄 변경 | ops |
+| `PATCH` | `/api/resources/vehicles/{id}` | 차량 한 대의 지역 코드 변경 | ops |
+
+## 역할과 권한
+
+계정의 `role`은 `ops`(운영자) 또는 `driver`(기사)다. 서버는 `RoleFilter` 하나로 모든 `/api/*`의 허용 역할을 판정한다. 세션이 없으면 판정하지 않고 각 모듈이 `401`을 낸다. 위 표에 없는 `/api/*` 경로는 `ops`만 허용하므로 새 경로는 닫힌 채 시작한다.
+
+| 경로군 | ops | driver |
 |---|---|---|
-| `GET` | `/api/session` | 현재 세션 사용자 |
-| `GET` | `/api/dispatch-data/manifest` | 준비된 날짜와 원본 메타데이터 |
-| `GET` | `/api/dispatch-data/days/{date}` | 날짜별 원본 주문·후보 그룹 |
-| `GET` | `/api/dispatch-data/regions` | 공통 권역 GeoJSON |
-| `GET` | `/api/dispatch-data/destinations` | 선택일까지의 누적 배송지 검색 |
-| `GET` | `/api/dispatch-data/days/{date}/state` | 날짜별 배차·운행 snapshot |
-| `POST` | `/api/dispatch-data/days/{date}/commands` | 날짜별 배차·운행 명령 |
-| `GET` | `/api/dispatch-data/days/{date}/commands/{requestId}` | 저장된 명령 결과 조회 |
-| `POST` | `/api/dispatch-data/days/{date}/driver/events` | 기사 앱 이벤트 6종 수신 (Kotlin API 전용) |
-| `GET` | `/api/dispatch-data/days/{date}/driver/events/{eventId}` | 이벤트 처리 결과 재확인 (Kotlin API 전용) |
-| `GET` | `/api/dispatch-data/days/{date}/driver/route` | 차량의 배송지 순서·상태·주문·좌표·ETA. 기사 앱이 읽는 하루 전체 (Kotlin API 전용) |
-| `GET` | `/api/dispatch-data/days/{date}/driver/vehicles` | 그날의 차량 목록과 phase·배송지·주문 수, 차량 선택용 (Kotlin API 전용) |
-| `POST` | `/api/dispatch-data/days/{date}/driver/stops/{stopId}/tip` | 배송팁 등록, `requestId` 멱등 (Kotlin API 전용) |
-| `POST` | `/api/dispatch-data/days/{date}/driver/route/suggest` | 자동 배송 순서 제안, 상태 불변 (Kotlin API 전용) |
-| `GET` | `/api/dispatch-data/days/{date}/driver/stops/{stopId}` | 배송지 상세 (Kotlin API 전용) |
-| `GET` | `/api/dispatch-data/days/{date}/driver/history` | 당일 완료·미배송 이력 (Kotlin API 전용) |
-| `POST` | `/api/dispatch-data/days/{date}/driver/locations` | 기사 위치 배치 수신 (Kotlin API 전용) |
-| `POST` | `/api/dispatch-data/days/{date}/driver/photos` | 완료 사진 업로드 (Kotlin API 전용) |
-| `GET` | `/api/dispatch-data/days/{date}/driver/photos/{photoId}` | 올린 사진 다시 받기 (Kotlin API 전용) |
-| `POST` | `/api/meatbox/orders` | 미트박스가 밀어 넣는 주문 등록·변경·취소. 세션이 아니라 Bearer 토큰, 토큰 미설정이면 경로 없음 (Kotlin API 전용) |
-| `POST` | `/api/telemetry/temperature` | 온도 단말(또는 게이트웨이)이 밀어 넣는 측정값. 세션이 아니라 Bearer 토큰, 토큰 미설정이면 경로 없음 (Kotlin API 전용) |
-| `GET` | `/api/telemetry/temperature/latest` | 차량·센서별 최신 온도와 마지막 수신 경과 (Kotlin API 전용) |
-| `GET` | `/api/telemetry/temperature/{vehicleId}?from=&to=&resolution=` | 한 차량의 온도 이력, 최대 24시간 (Kotlin API 전용) |
-| `GET` | `/api/ops/alerts` | 최근 서버 오류 알림 50건과 채널 종류 (Kotlin API 전용) |
-| `GET` | `/api/ops/telemetry` | 온도 메시지 송신 대기·거절·완료 건수, 차량별 (Kotlin API 전용) |
-| `GET` | `/api/ops/outbox?date=` | 미트박스 송신 대기·거절·완료 건수와 최근 20건 (Kotlin API 전용) |
-| `POST` | `/api/ops/days/{date}/source-conflict/resolve` | 원본이 바뀐 날짜의 체크포인트를 유지·보관 (Kotlin API 전용) |
-| `POST` | `/api/ops/export` | 운영 데이터 내보내기 작업 시작 (Kotlin API 전용) |
-| `GET` | `/api/ops/export`, `/api/ops/export/{jobId}`, `/api/ops/export/{jobId}/download` | 작업 목록·상태, 아카이브 받기 (Kotlin API 전용) |
-| `POST` `GET` | `/mock/meatbox/*` | 미트박스 모의 수신기. **테스트 전용**, 기본 꺼짐 (Kotlin API 전용) |
-| `GET` | `/api/resources` | 차량·지역 코드 등록부 |
-| `POST` | `/api/resources/region-codes` | 지역 코드 생성 |
-| `PATCH` | `/api/resources/region-codes/{code}` | 지역 코드 이름 변경 |
-| `PATCH` | `/api/resources/vehicles` | 차량 지역 코드 일괄 변경 |
-| `PATCH` | `/api/resources/vehicles/{id}` | 차량 한 대의 지역 코드 변경 |
+| `/api/session` | ✓ | ✓ |
+| `/api/dispatch-data/days/{date}/driver/**` | ✓ 모든 차량 | ✓ 배정된 차량만 |
+| `/api/dispatch-data/**` 그 밖(manifest·regions·destinations·원본·state·commands) | ✓ | `403 ROLE_FORBIDDEN` |
+| `/api/resources/**`, `/api/ops/**`, `/api/telemetry/**` 조회 | ✓ | `403 ROLE_FORBIDDEN` |
+| `/api/meatbox/**`, `POST /api/telemetry/temperature` | Bearer 토큰 | Bearer 토큰 |
+
+- 기사 앱 끝점에서 `driver`는 `vehicleId`(쿼리·본문·이벤트 봉투)가 자기에게 배정된 차량이어야 한다. 아니면 `403 VEHICLE_NOT_ASSIGNED`다. `GET driver/vehicles`는 자기 차량만 돌려준다(배정이 없으면 빈 목록). `POST driver/messages`는 `from: "driver"`만 쓸 수 있다(`ops`는 `403 ROLE_FORBIDDEN`).
+- 배정은 `{state-dir}/driver-assignments.json`이 소유한다. 상시 배정이고 날짜별 예외는 없다. 차량 하나에 기사 한 명, 기사 한 명에 여러 차량이 가능하다. 변경은 즉시 적용된다. 푸시 토큰도 보내는 순간 배정을 다시 확인한다.
+- 사진 `GET driver/photos/{photoId}`와 `GET driver/events/{eventId}`는 차량에 묶이지 않는다. 식별자를 모르면 읽을 수 없다는 점에 기댄다.
+- 알 수 없는 `role` 값의 계정은 `/api/session`만 쓸 수 있다.
+- Node가 인증을 소유하는 호환 모드(`legacy-api-origin`)는 역할을 모르므로 모든 계정이 `ops`다.
+
+### `GET /api/ops/driver-assignments`
+
+```json
+{
+  "revision": 3,
+  "assignments": [{ "vehicleId": "G1", "driver": "kim", "known": true }],
+  "drivers": [{ "username": "kim", "displayName": "김기사", "disabled": false }]
+}
+```
+
+`known`은 그 계정이 지금 활성 `driver` 계정이라는 뜻이다. `drivers`는 `driver` 역할 계정만 담는다.
+
+### `PUT /api/ops/driver-assignments/{vehicleId}`
+
+`Origin`이 공개 origin과 같아야 한다. 본문은 `{"revision": 3, "driver": "kim"}`이고 `driver`가 `null`이면 배정을 해제한다. `revision`은 마지막으로 읽은 값이어야 한다. 성공하면 `200 {"revision", "vehicleId", "driver"}`다. 변경은 서버 로그(INFO)에 남는다. 차량 ID는 날짜의 주문 그룹 ID다. 자원 등록부는 기준일 하루의 ID만 갖고 있어 등록부로 검증하지 않는다.
+
+| 상태 | 코드 | 의미 |
+|---|---|---|
+| `400` | `DRIVER_NOT_FOUND` | 없거나 비활성이거나 `driver` 역할이 아닌 계정 |
+| `400` | `INVALID_INPUT`, `TOO_MANY_ASSIGNMENTS` | 본문 형식 오류, 5000대 초과 |
+| `403` | `ORIGIN_REQUIRED`, `ROLE_FORBIDDEN` | |
+| `409` | `ASSIGNMENT_REVISION_CONFLICT` | 최신 목록을 다시 읽는다 |
+| `500` | `DRIVER_ASSIGNMENTS_INVALID` | 배정 파일이 깨졌다. 기사 요청은 닫히고 운영자 경로는 영향이 없다. 파일을 복구한다 |
 
 구현 조립은 [`server.js`](../server.js), 날짜 조회는 [`dispatch-data.js`](../lib/dispatch-data.js), 날짜 상태·명령은 [`source-operations-router.js`](../lib/source-operations-router.js), 자원 API는 [`resource-router.js`](../lib/resource-router.js)를 따른다.
 
@@ -77,12 +121,13 @@
   "user": {
     "username": "reviewer",
     "displayName": "검토자",
-    "createdAt": 1780000000000
+    "createdAt": 1780000000000,
+    "role": "ops"
   }
 }
 ```
 
-비밀번호 해시, 세션 토큰과 초대 코드는 반환하지 않는다. 사용자 객체에는 역할이나 접근 범위가 없다. 실제 공개 필드는 [`publicUser`](../lib/access.js)에서 확인한다.
+`user.role`은 `ops`, `driver` 또는 알 수 없는 저장값이면 `null`이다(Node 호환 모드는 필드가 없다). 비밀번호 해시, 세션 토큰과 초대 코드는 반환하지 않는다. 접근 범위(차량 배정)는 이 응답에 없고 기사 앱의 `driver/vehicles`가 알려 준다.
 
 ## 날짜 원본 조회
 
@@ -604,6 +649,8 @@
 | `400` | `INVALID_PHOTO_ID` | `photoId`가 UUID 형식이 아님 |
 | `404` | `PHOTO_NOT_FOUND` | `GET`으로 없는 사진을 요청함 |
 | `422` | `ZONE_MISMATCH` | `zone_entered`의 위치가 그 `zoneId` 폴리곤 밖. 저장하지 않으며 같은 `eventId`로 다시 보내도 같다 |
+| `403` | `VEHICLE_NOT_ASSIGNED` | `driver` 계정에 배정되지 않은 차량. 배정은 운영자가 한다 |
+| `403` | `ROLE_FORBIDDEN` | `driver`가 `from: "ops"` 메시지를 보냄 |
 | `404` | `STOP_NOT_FOUND` | 이 차량의 배송지가 아님 |
 | `404` | `DRIVER_VEHICLE_NOT_FOUND` | 없는 차량 |
 | `409` | `ROUTE_LOCKED` | 경로가 끝났거나, 출발한 차량의 현재·완료·보류 배송지를 옮기는 순서 변경 |

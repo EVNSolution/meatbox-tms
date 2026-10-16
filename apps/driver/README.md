@@ -86,8 +86,8 @@ CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--max-old-space-size=2048 CMAKE_BUILD_PARA
 
 ## 동작
 
-- TMS 계정 로그인. 시작 시 `/api/session`으로 세션을 확인합니다. 비밀번호를 저장하지 않습니다.
-- 서울 기준 당일 차량을 선택합니다. 선택은 날짜별로 복원합니다. TEST 데모는 기존 TMS 계정의 수동 차량 선택 범위입니다.
+- TMS 계정 로그인. 시작 시 `/api/session`으로 세션을 확인합니다. 비밀번호를 저장하지 않습니다. 응답의 `user.role`이 `driver`가 아니면 "기사 계정이 아닙니다"를 보이고 로그아웃만 할 수 있습니다(운영자 계정으로는 앱을 쓰지 않습니다. 시험에도 기사 계정이 필요합니다).
+- 서울 기준 당일 차량은 서버가 계정에 배정된 차량만 돌려줍니다. 1대면 자동으로 열고, 여러 대면 고릅니다. 배정이 없으면 "배정된 차량이 없습니다"를 보입니다. 배정은 운영자가 합니다([운영](../../docs/operations.md#기사-계정-만들기와-차량-배정)). 선택은 날짜별로 복원합니다.
 - 차량의 모든 주문을 `meatbox:YYYY-MM-DD:<orderId>` QR로 확인해야 배송 시작 버튼이 활성화됩니다. 다른 날짜·다른 차량·중복·미등록 QR을 구분합니다. 수령 확인은 이 기기에 저장되며 서버의 수령 증빙 기능은 아닙니다.
 - 배송·지도 두 탭. 배송 시작 전에만 대기 배송지를 묶음 단위로 편집합니다("자동 생성" 제안 포함). 배송 시작 뒤 편집은 다음 단위에서 엽니다.
 - 현재 배송지에서 "완료 · 미배송 처리"를 열어 완료 / 미배송(사유 6종) / 부분 완료(주문 1건 배송지만, 품목별 수량)를 사진 최대 3장(완료는 1장 이상 필수)과 특이사항(500자)과 함께 보냅니다. 보고는 단말 큐에 저장되고 화면에는 바로 닫힌 배송지로 보입니다. 전송 대기 건수는 상단 배지로, 멈춘 건은 빨간 배지와 목록 시트(다시 시도·삭제)로 확인합니다.
@@ -149,7 +149,7 @@ EXPO_PUBLIC_MEATBOX_API_BASE_URL=http://127.0.0.1:4173 LIVE_CHECK_USERNAME=... L
 
 ## API 계약
 
-공통: native cookie, `Origin` 헤더, `credentials: include`. 로그인은 form `POST /login` 후 `GET /api/session` 확인입니다. 서버는 `{user:{username,displayName}}`을 반환합니다.
+공통: native cookie, `Origin` 헤더, `credentials: include`. 로그인은 form `POST /login` 후 `GET /api/session` 확인입니다. 서버는 `{user:{username,displayName,createdAt,role}}`을 반환합니다. 배정되지 않은 차량의 요청은 `403 VEHICLE_NOT_ASSIGNED`입니다. 단말 큐의 보고는 403이면 `rejected`로 멈추고 지워지지 않습니다(배정을 되돌린 뒤 다시 보낼 수 있습니다).
 
 날짜별 기본 경로: `/api/dispatch-data/days/{date}`.
 

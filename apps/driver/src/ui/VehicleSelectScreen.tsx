@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchVehicles } from '../api/driverApi';
 import type { VehicleList } from '../api/driverContracts';
 import { ApiError } from '../api/types';
-import { vehicleChoices } from '../domain/vehiclesView';
+import { onlyVehicle, vehicleChoices } from '../domain/vehiclesView';
 import { Button, Logo, T } from './common';
 import { colors, radius, TOUCH_MIN } from './theme';
 
@@ -37,6 +37,13 @@ export function VehicleSelectScreen({
   }, [attempt, date, onSessionLost]);
   const retry = () => { setLoaded({ status: 'loading' }); setAttempt((value) => value + 1); };
   const choices = useMemo(() => (loaded.status === 'ready' ? vehicleChoices(loaded.list) : []), [loaded]);
+  const only = onlyVehicle(choices);
+  const opened = useRef<string | null>(null);
+  useEffect(() => {
+    if (!only || opened.current === only) return;
+    opened.current = only;
+    onSelect(only);
+  }, [only, onSelect]);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -46,8 +53,8 @@ export function VehicleSelectScreen({
       </View>
       <ScrollView contentContainerStyle={styles.body}>
         <T style={styles.title}>차량 선택</T>
-        <T style={styles.caption}>데모용 배송원 선택 · {date}</T>
-        <T style={styles.caption}>실제 운영에서는 계정에 배정된 차량이 자동으로 정해집니다.</T>
+        <T style={styles.caption}>{date}</T>
+        <T style={styles.caption}>계정에 배정된 차량만 표시됩니다.</T>
         {loaded.status === 'error' ? (
           <View style={styles.notice}>
             <T style={styles.error}>{loaded.text}</T>
@@ -58,7 +65,7 @@ export function VehicleSelectScreen({
         {loaded.status === 'ready' && !loaded.list.operable ? (
           <T style={styles.caption}>오늘 배차가 확정되면 배송을 시작할 수 있습니다.</T>
         ) : null}
-        {loaded.status === 'ready' && choices.length === 0 ? <T style={styles.caption}>오늘 배차된 차량이 없습니다.</T> : null}
+        {loaded.status === 'ready' && choices.length === 0 ? <T style={styles.caption}>배정된 차량이 없습니다. 관제에 배정을 요청해 주세요.</T> : null}
         {choices.map((choice) => (
           <Pressable
             accessibilityRole="button"

@@ -43,10 +43,16 @@
 | [x] RFC 9457 공통 오류 응답 (19) | 로컬 검증 | `ProblemResponseTest`(DispatchException·429·500·404·405), `ApiPathGuardHttpTest`(필터 401·400, 실서버 404), `DriverHttpTest`(429 Retry-After), 계약 테스트 58건 통과. `error`·`message` 호환 필드는 프런트가 `code`로 옮긴 뒤 제거 |
 | [x] 오류 자동 감지·담당자 알림 (19) | 로컬 검증 | `ops/ErrorAlertsTest`(500·저장 실패 감지, 10분 창 억제·요약 99건, 다른 code 별도, 채널 예외 시 500 유지, 큐 상한), `ops/WebhookAlertChannelTest`(로컬 HTTP 수신), `ops/OpsAlertsHttpTest`(`GET /api/ops/alerts` 401·목록). 채널은 로그 기본·웹훅 선택. 미트박스 송신 실패는 `meatbox-outbound` 알림으로 연결됨(아래 트랙 B). 메일·운영 시간 외 대응 기준은 남음 |
 | [x] 명령 결과를 요청 ID로 영속 조회, 응답 유실 후 중복 적용 방지 | 로컬 검증 | `DispatchStoreTest`(재전송·본문 불일치·재시작·저장 실패·보존 한도), `test/api-connection/kotlin-state-owner.test.mjs`(HTTP 재전송·GET·재시작). 날짜당 500건·24시간·8MiB. [다음 기능 계획](next-feature-delivery-plan.md) F04 |
-| [ ] 테넌트·소속·역할 권한 (3) | 미착수 | F05·F06 |
+| [x] 테넌트·소속·역할 권한 (3) | 로컬 검증 | **단일 테넌트(미트박스) 가정, 테넌트 분리는 하지 않음.** 역할 `ops`·`driver` 둘만. 계정 `role`(선택 필드, 계정 파일 version 1 유지, 없으면 ops), 초대가 역할을 정함(관리 명령 `admin-role` 필수, `set-role`), `RoleFilter` 하나가 경로군별 판정(목록에 없는 `/api/*`는 ops 전용, 기사는 `/driver/*`만), 기사 끝점은 배정된 차량만(`driver-assignments.json`, `PUT /api/ops/driver-assignments/{vehicleId}`, 그 밖은 `403 VEHICLE_NOT_ASSIGNED`), 차량 목록 필터, 푸시 발송 때 배정 재확인. 서버 `RoleAccessTest`·`ApiPathGuardHttpTest`(등록된 모든 `/api` 경로 × 역할)·`DriverRoleTest`·`DriverAssignmentsTest`, `test/api-connection/kotlin-roles.test.mjs`(실제 JAR: 기사 초대 발급→가입→배정→기사 로그인→차량 1대→다른 차량 403→업무 경로 403→배정 회수→`set-role`), 앱 `domain/account.test.ts`·`vehiclesView.test.ts`. [다음 기능 계획](next-feature-delivery-plan.md) F05·F06, [보안과 접근](security-and-access.md). **서버 미반영, 실기기 미확인.** 남음: 아래 후속 |
 | [x] 원본 변경 시 기존 배차 재사용 차단 | 로컬 검증 | `dispatch/DispatchSourceChangeTest` 10건(번들 교체 warm/cold, 같은 번들 해시에서 날짜 내용 변경, 되돌리면 해소, 구버전 체크포인트 승격·충돌, keep/discard·거부, 알림 1회), `test/api-connection/kotlin-state-owner.test.mjs`(충돌 상태 200·409·`resolve`). 체크포인트에 `contentHash`(schema 2 유지), 충돌 중 `GET state`는 `sourceConflict`, 명령·기사 읽기는 `409 SOURCE_CHANGED`(내보내기는 막지 않음), 해소는 운영자 끝점. 구버전 v2는 같은 `sourceId`면 제자리 승격. [다음 기능 계획](next-feature-delivery-plan.md) F02. **서버 미반영**: TEST의 v2 체크포인트 승격은 배포 뒤 로그로 확인한다. 웹 화면의 충돌 표시는 `apps/web` 변경 금지로 안 했다 |
 | [x] 계약 종료 시 운영 데이터 일괄 내보내기 (20) | 로컬 검증 | `export/ExportWriterTest`(manifest 크기·SHA-256 대조, 내보낸 체크포인트로 새 state-dir의 `DispatchStore`가 같은 snapshot 복원, 사진 색인=`stop_completed`의 `photoIds`, 온도 줄 수, 자원 JSON 왕복, 토큰·세션 제외, 빈 범위, 쓰는 중인 줄 처리), `ExportJobsTest`(동시 실행 409, 디스크 507, 없는 jobId 404, 재시작 뒤 조회, 7일 삭제, CLI), `ExportHttpTest`(세션 없음 401, 202→done→다운로드 SHA-256, 400). 실제 JAR 시나리오: 주문 3건 수신→배차 확정→출발·사진·완료→온도 수신→`POST /api/ops/export`→내려받아 manifest 8파일 전부 일치, CLI(`--meatbox.export.out`)도 같은 형식. [형식 명세](data-export-format.md)·[런북](operations.md). 서버 반영·실제 규모(사진 수 GB) 시험은 안 했다. 역할 권한은 없고 세션 + 감사 로그만이다(권한 단위에서 제한) |
 | [ ] 미디어 6개월 Standard 후 장기 보관 이전 (26) | 미착수 | |
+
+후속 (트랙 A, 역할):
+
+- **role 없는 계정의 기본값(ops)을 거부로 바꾼다.** 기존 계정을 위한 임시 fail-open이다. 이행 완료 후 `role` 없는 계정이 0건임을 확인하고 바꾼다. 확인 절차는 [운영](operations.md#기사-계정-만들기와-차량-배정)이다.
+- Node CLI(`scripts/manage-access.js`)가 발급한 초대는 `role`이 없어 ops가 된다. 기사 초대는 Kotlin 관리 명령으로만 발급한다. 필요하면 Node CLI에도 역할을 넣거나 기사 초대 경로에서 뺀다.
+- 사진·이벤트 결과 조회를 차량에 묶는다. 불변 감사 로그. 운영자 안의 권한 세분화.
 
 ## 트랙 B. 앱↔서버 이벤트와 미트박스 송신 계약
 
@@ -73,6 +79,8 @@
 
 1차 종료다. 아래는 요구서 대비 부족 기능 메모이며 착수 여부는 결정 기록에 따른다.
 `코드 없음`은 2026-10-16 키워드 검색 결과이고 실제 화면 확인은 아니다.
+
+후속: 웹에 **차량 기사 배정 UI**와 역할 표시를 만든다(지금은 `/api/ops/driver-assignments` API와 관리 명령으로만 가능하고, 기사 계정이 웹을 열면 API가 거절돼 오류만 보인다).
 
 후속: 웹이 날짜 명령에 `requestId`를 보내고 응답 유실 시 같은 요청을 재전송하도록 한다. 서버는 이미 받는다([API 참조](api-reference.md)).
 
@@ -113,7 +121,7 @@
 | [x] 미배송 사유·사진 (60) | 로컬 검증 | 미배송 갈래가 사유 6종(필수)·메모·사진(선택)을 `stop_failed`로 보낸다. `domain/stopEvents.test.ts`(사유 필수, 코드 6종 서버와 일치), 라이브 점검(`ABSENT`·사진이 이력에 `failed`로 돌아옴). **에뮬레이터·실기기 미확인** |
 | [x] 부분 완료 (61) | 로컬 검증 | 부분 완료 갈래가 주문 품목별 배송 수량(0~주문 수량, 하나 이상 줄어야 함)을 `stop_partially_completed`로 보낸다. **주문이 1건인 배송지에서만** 연다: 서버가 `orderId`를 지정한 부분 완료만 그 주문 하나의 상태를 미트박스에 알려서 다중 주문 묶음은 나머지 주문의 상태를 못 보낸다(계약 6절 질문). `domain/stopEvents.test.ts`(단일 주문만, 수량 범위·모두 같으면 거절), 라이브 점검(`partially_completed`가 이력에 돌아옴). **에뮬레이터·실기기 미확인**. 기본 제공 확정 |
 | [x] 배차 변경 알림 수신 (31) | 로컬 검증 | 서버: 운영 날짜 명령(`publish_dispatch`·`reassign`·`set_route_order`)이 성공하면 명령 전후의 차량별 주문 순서를 비교해 바뀐 차량의 기기에 `route_changed` FCM data 메시지를 보낸다(디스패치 락 밖 스레드, 기사 본인 이벤트 제외, 실패는 로그만). `driver/RouteChangeNotifierTest`·`dispatch/RouteChangesTest`·`FcmSenderTest`. 앱: 받으면 날짜 상태와 경로를 다시 읽고 서버 문장을 배너로 보여 준다(`domain/pushEffect.test.ts`). **FCM 실발송과 기기 수신 미확인**: 서비스 계정·`google-services.json`이 없는 환경이라 가짜 전송기까지만 확인했다. 앱이 꺼져 있으면 전경 복귀 때 새로고침이 최신 경로를 가져온다 |
-| [ ] 스토어 배포·OS 호환 (36·37·38) | 구현 | **로컬 빌드 검증까지만 했다(스토어·기기·업데이트 검증은 아님).** 이 Mac에서 `prebuild` 3.6초, `assembleRelease`(arm64-v8a) 성공: 1차 4분 36초, 클린 prebuild 뒤 2차 2분 45초, APK 57.96 MiB, 패키지·versionCode 2·targetSdk 36·`arm64-v8a`·위치 권한·`LocationTaskService`의 `foregroundServiceType=location`을 `aapt2`로 확인(`docs/evidence/driver-apk-local-build-2026-10-16.txt`). D-1~D-4에서 더한 네이티브 모듈(`expo-location`·`expo-task-manager`·`expo-image-picker`·`expo-image-manipulator`·`expo-file-system`)이 컴파일·링크되는 것은 이때 처음 확인했다. 서명은 Expo debug 키라 TEST 서명 APK와 다르다. `Driver APK` Actions workflow는 수동 전용이고 마지막 성공(10-14)이 D-1 이전이라 **병합 뒤 한 번 수동 실행해 서명·Firebase 단계를 확인해야 한다**(절차는 앱 README). 배포·OS 호환·업데이트 절차와 권한 목록은 앱 README에 썼다. **남은 일(사람 몫 포함)**: Google Play 등록(개발자 계정·스토어 항목·개인정보처리방침·데이터 보안 양식·백그라운드 위치/포그라운드 서비스 권한 선언·AAB·Play App Signing), 실기기 OS 매트릭스(Android 7~16, 제조사 절전), 인앱 업데이트·최소 앱 버전 검사(미구현) |
+| [ ] 스토어 배포·OS 호환 (36·37·38) | 구현 | **로컬 빌드 검증까지만 했다(스토어·기기·업데이트 검증은 아님).** 이 Mac에서 `prebuild` 3.6초, `assembleRelease`(arm64-v8a) 성공: 1차 4분 36초, 클린 prebuild 뒤 2차 2분 45초, APK 57.96 MiB, 패키지·versionCode 2·targetSdk 36·`arm64-v8a`·위치 권한·`LocationTaskService`의 `foregroundServiceType=location`을 `aapt2`로 확인(`docs/evidence/driver-apk-local-build-2026-10-16.txt`). D-1~D-4에서 더한 네이티브 모듈(`expo-location`·`expo-task-manager`·`expo-image-picker`·`expo-image-manipulator`·`expo-file-system`)이 컴파일·링크되는 것은 이때 처음 확인했다. 서명은 Expo debug 키라 TEST 서명 APK와 다르다. `Driver APK` Actions workflow는 수동 전용이고 마지막 성공(10-14)이 D-1 이전이라 병합 뒤 한 번 수동 실행해 서명·Firebase 단계를 확인해야 했다. **Driver APK CI run 38901058849 성공(9분 20초)**(절차는 앱 README). 배포·OS 호환·업데이트 절차와 권한 목록은 앱 README에 썼다. **남은 일(사람 몫 포함)**: Google Play 등록(개발자 계정·스토어 항목·개인정보처리방침·데이터 보안 양식·백그라운드 위치/포그라운드 서비스 권한 선언·AAB·Play App Signing), 실기기 OS 매트릭스(Android 7~16, 제조사 절전), 인앱 업데이트·최소 앱 버전 검사(미구현) |
 
 후속 후보 (트랙 D):
 - 서버는 **현재(`current`) 배송지만** 도착·완료로 받는다. 앱은 `stop_*` 이벤트만 보내므로 현장에서 순서를 건너뛰어 다른 배송지를 먼저 완료하려면 먼저 순서를 바꿔야 한다(건너뛰기 요구가 오면 서버 상태 기계 변경이 필요하다). 오프라인에서 연달아 완료한 건은 큐 순서대로 처리되어 문제가 없다.

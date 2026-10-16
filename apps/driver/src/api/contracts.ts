@@ -7,7 +7,11 @@ function fail(): never { throw new ApiError(502, 'INVALID_RESPONSE'); }
 
 export function readSession(value: unknown): SessionUser {
   if (!record(value) || !record(value.user) || typeof value.user.username !== 'string') return fail();
-  return { username: value.user.username, displayName: typeof value.user.displayName === 'string' ? value.user.displayName : null };
+  return {
+    username: value.user.username,
+    displayName: typeof value.user.displayName === 'string' ? value.user.displayName : null,
+    role: typeof value.user.role === 'string' ? value.user.role : null,
+  };
 }
 
 export function readMessages(value: unknown): DriverMessage[] {

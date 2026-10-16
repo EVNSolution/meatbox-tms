@@ -7,7 +7,7 @@ export class ApiError extends Error {
   }
 }
 
-export type SessionUser = { username: string; displayName?: string | null };
+export type SessionUser = { username: string; displayName?: string | null; role: string | null };
 
 export type DriverMessage = {
   id: string;

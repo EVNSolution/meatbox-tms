@@ -15,6 +15,11 @@ const PHASE: Record<VehicleRow['phase'], string> = {
   done: '운행 종료',
 };
 
+/** A driver with exactly one assigned vehicle has nothing to choose: that vehicle opens by itself. */
+export function onlyVehicle(choices: VehicleChoice[]): string | null {
+  return choices.length === 1 ? choices[0].vehicleId : null;
+}
+
 /** The rows of the vehicle choice. Vehicles with stops come first so the driver finds a loaded one at the top. */
 export function vehicleChoices(list: VehicleList): VehicleChoice[] {
   const rows = list.vehicles.map((vehicle, index) => ({

@@ -39,11 +39,13 @@ import { StopDetails } from '../ui/StopDetails';
 import { HistoryScreen } from '../ui/HistoryScreen';
 import { StopInfo } from '../ui/StopInfo';
 import { VehicleSelectScreen } from '../ui/VehicleSelectScreen';
+import { isDriverAccount, NOT_DRIVER_MESSAGE } from '../domain/account';
 import { colors, fontFamily, radius, TOUCH_MIN } from '../ui/theme';
 
 function errorText(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === 'REVISION_CONFLICT') return '다른 곳에서 배송 순서가 바뀌어 최신 순서를 다시 불러왔습니다. 다시 편집해 주세요.';
+    if (error.code === 'VEHICLE_NOT_ASSIGNED') return '이 차량은 내 계정에 배정되지 않았습니다.';
     if (error.code === 'ROUTE_LOCKED') return '이미 시작했거나 끝난 배송지의 순서는 바꿀 수 없습니다.';
     if (error.code === 'SOURCE_CHANGED') return '배차 원본이 바뀌어 확인 중입니다. 관제에서 확인한 뒤 다시 불러와 주세요.';
     if (error.status === 401) return '로그인이 만료되었습니다. 다시 로그인해 주세요.';
@@ -86,6 +88,12 @@ function SessionRoot() {
     {error ? <Button label="다시 연결" onPress={() => { setRestoring(true); setError(null); void restore(); }} /> : <ActivityIndicator color={colors.brand} />}
   </SafeAreaView>;
   if (!user) return <LoginScreen onLogin={setUser} />;
+  if (!isDriverAccount(user)) {
+    return <SafeAreaView style={styles.center}>
+      <Logo /><T style={styles.notice}>{NOT_DRIVER_MESSAGE}</T>
+      <Button label="로그아웃" onPress={() => { void logout().finally(signedOut); }} />
+    </SafeAreaView>;
+  }
   return <DriverWorkspace date={date} key={`${user.username}:${date}`} onSignedOut={signedOut} />;
 }
 

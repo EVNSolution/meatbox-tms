@@ -34,7 +34,8 @@
 | 자산 | 코드상 동작 | 운영 한계 |
 | --- | --- | --- |
 | 애플리케이션 릴리스 | 읽기 전용 코드와 정적 자산 | 실행 SHA를 애플리케이션이 자동 노출하지 않는다. 배포 절차가 별도 `REVISION` 등 변경 불가능한 표식을 남겨야 한다. |
-| 계정 파일 | JSON, 파일 잠금, 동기화 후 원자적 rename, 0600 | 비밀번호 해시와 초대 해시를 포함한다. 세션은 파일에 없고 프로세스 메모리에만 있다. 재시작은 모든 세션을 만료시킨다. |
+| 계정 파일 | JSON, 파일 잠금, 동기화 후 원자적 rename, 0600 | 비밀번호 해시, 초대 해시와 계정·초대의 `role`을 포함한다. 세션은 파일에 없고 프로세스 메모리에만 있다. 재시작은 모든 세션을 만료시킨다. |
+| 기사 배정 | `{state-dir}/driver-assignments.json`, 원자적 rename, 0600, 단일 writer | 차량 ID → 기사 계정. 체크포인트와 같이 백업·복원한다. 없으면 배정이 없는 것이다 |
 | 날짜별 데이터셋 | 애플리케이션은 읽기만 수행 | 체크포인트의 `sourceId`는 manifest의 `source.csvSha256`과 일치해야 한다. 다른 데이터셋과 체크포인트를 섞으면 복원이 거부된다. |
 | 배차 체크포인트 | 날짜별 JSON, 파일 동기화 후 원자적 rename | 정상 재시작 복원용이다. 디렉터리를 `fsync`하지 않아 전원 손실 시 최신 rename 보존을 보장하지 않는다. 날짜별 직렬화는 한 프로세스 안에서만 적용된다. |
 | 자원 등록부 | 기존 SQLite 파일을 지연 연결하고 트랜잭션·revision으로 변경 | `user_version=1` 파일은 최초 DB 연결 때 v2로 자동 이행한다. 자원 조회 요청도 연결을 열기 때문에 쓰기를 유발할 수 있다. 다중 서비스 쓰기는 검증된 계약이 아니다. |
@@ -422,11 +423,45 @@ java -jar meatbox-api.jar --spring.main.web-application-type=none \
 
 `scripts/manage-access.js`는 서버 파일을 변경하는 관리 도구다. 공개 관리자 API는 없다.
 
-- `issue-invite`는 계정 파일에 초대 해시를 추가하고 새 0600 파일에 평문 초대 코드를 쓴다.
+- **초대는 Kotlin 관리 명령으로 발급한다.** `--meatbox.auth.admin-role=ops|driver`는 필수이고 생략하면 실패한다(생략만으로 운영자가 만들어지지 않게 한다). `scripts/manage-access.js`(Node)가 발급한 초대는 `role`이 없어 가입하면 ops 계정이 되므로 기사 초대에 쓰지 않는다.
+- `issue-invite`는 계정 파일에 초대 해시를 추가하고 새 0600 파일에 평문 초대 코드를 쓴다. 초대의 역할이 가입한 계정의 역할이 되고 가입자는 고를 수 없다.
 - `disable-user` CLI는 계정 파일의 비활성 상태를 저장한다. 별도 CLI가 실행 중 서버 메모리를 직접 지우지는 않는다. 서버는 다음 HTTP 세션 확인, WebSocket 메시지 처리 또는 주기적 세션 점검(30초)에서 거절하므로 적용 결과를 확인한다.
 - 초대 코드는 한 번만 사용하고 만료 시간을 제한한다. 평문 초대 파일은 전달과 수령 확인 후 승인된 보존 정책에 따라 정리한다.
 - CLI를 서비스 사용자와 다른 사용자로 실행하면 소유권이 바뀔 수 있다. 대상·출력·실행 사용자를 변경 기록에서 확인한다.
-- 계정 종류별 권한은 아직 없다. 계정 발급 자체가 전체 인증 영역 접근 권한 부여다. [보안과 접근](security-and-access.md)을 따른다.
+- 계정에는 역할이 있다. `ops`는 모든 화면·API, `driver`는 기사 앱의 자기 차량만 쓴다. 경로별 허용은 [API 참조](api-reference.md#역할과-권한), 판단 기준은 [보안과 접근](security-and-access.md)을 따른다.
+
+### 기사 계정 만들기와 차량 배정
+
+서비스와 같은 사용자로 실행한다. 서버를 멈출 필요는 없다(계정 파일 잠금을 쓴다).
+
+```bash
+set -a; . /etc/meatbox/api.env; set +a
+# 1. 기사 초대 발급. 평문 초대 코드는 0600 파일에 쓰이고 화면에는 경로만 나온다.
+java -jar meatbox-api.jar --spring.main.web-application-type=none \
+  --meatbox.auth.admin-command=issue-invite --meatbox.auth.admin-role=driver \
+  --meatbox.auth.admin-output=/var/tmp/driver-invite.txt
+```
+
+2. 초대 코드를 기사에게 별도 채널로 전달한다. 기사는 `/dev/register`에서 가입한다(사용자 이름·비밀번호는 기사가 정한다).
+3. 운영자가 배정한다. 세션 쿠키와 `Origin`이 필요하다.
+   - `GET /api/ops/driver-assignments`로 `revision`과 기사 계정 목록을 읽는다.
+   - `PUT /api/ops/driver-assignments/{vehicleId}` 본문 `{"revision": N, "driver": "kim"}`. 해제는 `"driver": null`.
+   - 차량 ID는 그날 기사 앱 차량 선택에 나오는 `vehicleId`(주문 그룹 ID)다. 날짜가 바뀌어도 배정은 유지된다.
+4. 기사 앱으로 로그인해 차량이 1대만 보이고 자동으로 열리는지 확인한다. 다른 차량의 `route`는 `403 VEHICLE_NOT_ASSIGNED`다.
+5. 배정을 바꾸면 기사의 다음 요청부터 적용된다. 푸시도 보내는 순간 다시 확인한다.
+
+기사에게 새 차량을 주면서 이전 차량을 비우려면 이전 차량도 `null`로 해제한다. 해제하지 않으면 두 대가 모두 보인다.
+
+역할 변경(예: 운영자 계정을 기사로, 퇴사 처리 전 임시 회수):
+
+```bash
+java -jar meatbox-api.jar --spring.main.web-application-type=none \
+  --meatbox.auth.admin-command=set-role --meatbox.auth.admin-username=kim --meatbox.auth.admin-role=driver
+```
+
+세션을 지우지 않아도 다음 요청부터 적용된다. 계정 비활성화(`disable-user`)는 기존과 같다. 배정 파일이 깨지면(`500 DRIVER_ASSIGNMENTS_INVALID`) 기사 요청만 닫힌다. 파일을 백업에서 복구하거나 지우고 다시 배정한다. 파일은 `DISPATCH_STATE_DIR`의 일부라 체크포인트와 같이 백업한다.
+
+**이행 메모**: `role` 필드가 없는 기존 계정은 ops다. 역할이 생기기 전 계정을 그대로 쓰기 위한 임시 기본값이다. 이행이 끝나면 `role` 없는 계정이 0건인지 확인하고 기본값을 거부로 바꾼다([마스터 계획서](master-plan.md) 트랙 A 후속). 확인은 계정 파일을 출력하지 않고 `grep -c '"passwordHash"'`와 `grep -c '"role"'`의 차이로 한다.
 
 ## 운영 인수인계 기록
 
