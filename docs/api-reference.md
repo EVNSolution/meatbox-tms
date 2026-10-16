@@ -39,6 +39,7 @@
 | `POST` | `/api/dispatch-data/days/{date}/driver/events` | 기사 앱 이벤트 6종 수신 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/events/{eventId}` | 이벤트 처리 결과 재확인 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/route` | 차량의 배송지 순서·상태 (Kotlin API 전용) |
+| `POST` | `/api/dispatch-data/days/{date}/driver/route/suggest` | 자동 배송 순서 제안, 상태 불변 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/stops/{stopId}` | 배송지 상세 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/history` | 당일 완료·미배송 이력 (Kotlin API 전용) |
 | `POST` | `/api/dispatch-data/days/{date}/driver/locations` | 기사 위치 배치 수신 (Kotlin API 전용) |
@@ -456,6 +457,27 @@
 
 - `POST events`가 돌려준 `202` 본문과 같은 본문을 `200`으로 돌려주며 `duplicate`는 항상 `true`다. 없거나 보존 한도로 제거됐으면 `404 REQUEST_NOT_FOUND`다. `eventId` 형식이 틀리면 `400 INVALID_INPUT`이다.
 - 날짜 명령의 `requestId`로 저장된 결과 중 이벤트가 아닌 것은 돌려주지 않는다.
+
+### 자동 배송 순서 제안
+
+`POST .../driver/route/suggest?vehicleId=G1`. 본문은 없거나 `{ "lockFirst": "O3" }`다. Origin 헤더와 세션이 필요하고, 읽기 한도(분당 120)를 쓴다. **제안만 한다.** 날짜 상태·이벤트 기록·송신함·ETA·`revision`을 바꾸지 않으며, 같은 상태에서 같은 요청은 같은 응답이다. 앱이 받아 `route_reordered`로 적용하고, 운영이 같은 순서를 `set_route_order`로 확정할 수 있다. 날짜 명령(`commands`)에는 두지 않았다. 운영도 이 끝점을 세션으로 쓴다.
+
+```json
+{
+  "date": "2026-11-02", "vehicleId": "G1", "revision": 8,
+  "stopOrder": ["O3", "O4", "O1"], "changed": true, "totalMinutes": 70, "totalKm": 24.8,
+  "placed": [{ "stopId": "O4", "placed": "no-coordinates", "afterStopId": "O1" }]
+}
+```
+
+- `stopOrder`는 전체 배송지 ID다. `revision`은 `GET route`와 같은 값이라 `route_reordered`의 `expectedRevision`으로 그대로 보낸다. `changed`는 지금 순서와 다른지다.
+- `totalMinutes`는 열린 배송지 사이 이동 시간과 배송지당 작업 시간(`MEATBOX_ETA_SERVICE_MINUTES`)의 합이다. `totalKm`은 이동 시간을 평균 속도(`MEATBOX_ETA_SPEED_KMH`)로 환산한 도로 추정 거리다. 둘 다 직선거리 × 우회계수 모델의 값이라 실측이 아니다.
+- 출발 전에는 모든 배송지를, 출발 뒤에는 `pending` 배송지만 옮긴다. 현재·완료·보류 배송지는 제 자리에 있다(`route_reordered`의 규칙과 같다). 종료된 경로는 `409 ROUTE_LOCKED`다.
+- 시작점은 출발 전에 창고 좌표(`MEATBOX_ROUTE_DEPOT_LAT/LNG`), 없으면 기사 앱의 최신 위치다. 출발 뒤에는 최신 위치, 없으면 직전 닫힌 배송지, 없으면 창고다. 시작점이 없으면 첫 열린 배송지가 그대로 첫 자리에 남는다.
+- 알고리즘은 시작점에서의 최근접 이웃 뒤 2-opt(최대 100회 반복, 배송지 200개 상한)다. 지금 순서보다 긴 순서는 제안하지 않는다(`lockFirst`가 있으면 제외).
+- 좌표가 없는 배송지는 주소 앞 3어절이 같은 배송지 바로 뒤에, 없으면 열린 배송지의 맨 끝에 놓고 `placed`에 `no-coordinates`로 알린다. 배송지는 이미 `assignmentUnitId` 묶음이라 "같은 묶음 뒤"는 따로 없다.
+- `lockFirst`는 열린 배송지 중 좌표가 있는 배송지(묶음의 아무 주문 ID)이고 열린 배송지의 첫 자리가 된다. 아니면 `400 INVALID_INPUT`, 이 차량의 배송지가 아니면 `404 STOP_NOT_FOUND`다.
+- **한계.** 도로 데이터가 없어 좌회전 제한·간선도로 위주(요구서 62번의 휴리스틱)는 계산하지 않는다. 거리는 `TravelTimeEstimator` 한 곳에서만 나오므로 경로 API 구현체로 바꾸면 이 제안과 ETA가 같이 바뀐다. 2-opt는 구간을 뒤집으므로 오가는 시간이 다른 추정기라면 계산부를 다시 본다. 자동 주행 경로(63)는 범위 밖이다.
 
 ### 도착 예정 시각 (ETA)
 

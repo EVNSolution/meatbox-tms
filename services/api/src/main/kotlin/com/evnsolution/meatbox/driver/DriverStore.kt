@@ -7,6 +7,8 @@ import com.evnsolution.meatbox.legacy.DispatchDataException
 import com.evnsolution.meatbox.dispatch.DispatchStore
 import com.evnsolution.meatbox.eta.EtaConfig
 import com.evnsolution.meatbox.eta.EtaModel
+import com.evnsolution.meatbox.eta.EtaPoint
+import com.evnsolution.meatbox.eta.RoutePlanner
 import tools.jackson.core.StreamReadFeature
 import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.JsonNode
@@ -46,8 +48,11 @@ class DriverStore(
     private val isSessionActive: (String, String) -> Boolean,
     internal val publicOrigin: String = "",
     etaConfig: EtaConfig = EtaConfig(),
+    /** Where routes start before departure (`meatbox.route.depot-lat/lng`), or null when the installation sets none. */
+    internal val depot: EtaPoint? = null,
 ) {
     internal val eta = EtaModel(etaConfig)
+    internal val planner = RoutePlanner(eta.estimator)
 
     private val fileLock = DriverFileLock(directory.resolve(".driver-state.lock"))
 

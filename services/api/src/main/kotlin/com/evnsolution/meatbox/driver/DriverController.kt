@@ -126,6 +126,14 @@ class DriverController(
         return store.queries.route(date, checked(vehicleId, ID_LENGTH))
     }
 
+    /** A proposal only: it changes nothing, so it takes the read limit but, being a POST, still needs the Origin. */
+    @PostMapping("/route/suggest")
+    fun suggest(@PathVariable date: String, @RequestParam vehicleId: String, request: HttpServletRequest): ObjectNode {
+        val body = mutation(request, emptySet(), setOf("lockFirst"), write = false, allowEmpty = true)
+        val lockFirst = if (body.has("lockFirst")) string(body, "lockFirst", ID_LENGTH, false) else null
+        return store.queries.suggest(date, checked(vehicleId, ID_LENGTH), lockFirst)
+    }
+
     @GetMapping("/stops/{stopId}")
     fun stop(
         @PathVariable date: String,
@@ -158,13 +166,16 @@ class DriverController(
         fields: Set<String>,
         optional: Set<String> = emptySet(),
         maxBody: Int = MAX_BODY,
+        write: Boolean = true,
+        allowEmpty: Boolean = false,
     ): ObjectNode {
         if (request.getHeader("Origin") != origin) driverFail(HttpStatus.FORBIDDEN.value(), "ORIGIN_REQUIRED")
-        limit(username(request), true)
+        limit(username(request), write)
+        val bytes = request.inputStream.readNBytes(maxBody + 1)
+        if (allowEmpty && bytes.isEmpty()) return driverJson.createObjectNode()
         if (request.contentType?.substringBefore(';')?.trim()?.lowercase() != "application/json") {
             driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_JSON")
         }
-        val bytes = request.inputStream.readNBytes(maxBody + 1)
         if (bytes.size > maxBody) driverFail(HttpStatus.PAYLOAD_TOO_LARGE.value(), "DRIVER_BODY_TOO_LARGE")
         val body = runCatching { driverJson.readTree(bytes) as? ObjectNode }.getOrNull()
             ?: driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_JSON")

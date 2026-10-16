@@ -39,6 +39,17 @@ class DriverQueries internal constructor(private val store: DriverStore) {
         }
     }
 
+    /** The automatic order proposal ([suggestRoute]); reads only, so it never changes the date. */
+    fun suggest(date: String, vehicleId: String, lockFirst: String?): ObjectNode = synchronized(store) {
+        store.validate(date, vehicleId)
+        val route = Route(store.dispatch.snapshot(date), vehicleId)
+        val sampled = sampledPoint(store.activity.latestLocations(date), vehicleId)
+        suggestRoute(
+            route, store.planner, SuggestOrigin(store.depot, sampled), lockFirst,
+            store.eta.config.serviceMinutes, store.eta.config.speedKmh,
+        ).apply { put("date", date) }
+    }
+
     /** One stop's orders, customer, address, items, access, tip and requests, and the last completion photo there. */
     fun stop(date: String, vehicleId: String, stopId: String): ObjectNode = synchronized(store) {
         store.validate(date, vehicleId)

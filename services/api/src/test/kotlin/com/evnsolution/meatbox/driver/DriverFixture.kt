@@ -3,6 +3,7 @@ package com.evnsolution.meatbox.driver
 import com.evnsolution.meatbox.legacy.LegacySettings
 import com.evnsolution.meatbox.legacy.DispatchDataReader
 import com.evnsolution.meatbox.dispatch.DispatchStore
+import com.evnsolution.meatbox.eta.EtaPoint
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -47,33 +48,45 @@ internal class RouteFixture(
     fun restarted(): RouteFixture = RouteFixture.open(state.parent, now)
 
     companion object {
-        fun open(root: Path, now: AtomicLong): RouteFixture {
+        fun open(root: Path, now: AtomicLong, depot: EtaPoint? = null): RouteFixture {
             val reader = DispatchDataReader(LegacySettings(URI("http://127.0.0.1:1"), root.resolve("data")))
             val dispatch = DispatchStore(reader, root.resolve("state"), now::get)
             val clock = { Instant.ofEpochMilli(now.get()) }
-            val driver = DriverStore(dispatch, root.resolve("state"), clock, { _, _ -> true })
+            val driver = DriverStore(dispatch, root.resolve("state"), clock, { _, _ -> true }, depot = depot)
             return RouteFixture(driver, dispatch, root.resolve("state"), now)
         }
     }
 }
 
-internal fun routeFixture(directory: Path): RouteFixture {
+/**
+ * [coordinates] and [addresses] override an order's `[lng,lat]` (`"null"`: none) and address by order ID; the default
+ * is the same point for every order.
+ */
+internal fun routeFixture(
+    directory: Path,
+    coordinates: Map<String, String> = emptyMap(),
+    addresses: Map<String, String> = emptyMap(),
+    depot: EtaPoint? = null,
+): RouteFixture {
     val root = directory.toRealPath()
     Files.createDirectories(root.resolve("data/days"))
     Files.createDirectories(root.resolve("state"))
     Files.writeString(root.resolve("data/manifest.json"), """
         {"schemaVersion":1,"defaultDate":"$DRIVER_DATE","dates":[{"date":"$DRIVER_DATE"}],"source":{"csvSha256":"fixture"}}
     """.trimIndent())
-    fun order(id: String, name: String, sequence: Int) =
-        """{"id":"$id","groupId":"G1","name":"$name","address":"$name 주소","boxes":1,"sourceRows":1,
-        "sequence":$sequence,"coordinates":[127.0,37.5],"zoneIds":["Z1"]}"""
+    fun order(id: String, name: String, sequence: Int): String {
+        val point = coordinates[id] ?: "[127.0,37.5]"
+        val where = if (point == "null") "" else """"coordinates":$point,"""
+        return """{"id":"$id","groupId":"G1","name":"$name","address":"${addresses[id] ?: "$name 주소"}","boxes":1,
+        "sourceRows":1,"sequence":$sequence,$where"zoneIds":["Z1"]}"""
+    }
     Files.writeString(root.resolve("data/days/$DRIVER_DATE.json"), """
         {"schemaVersion":1,"date":"$DRIVER_DATE","summary":{"orders":4,"boxes":4},
          "groups":[{"id":"G1","label":"합성 기사","regionNames":["합성 권역"]},
                    {"id":"G2","label":"다른 기사","regionNames":["다른 권역"]}],
          "orders":[${order("O1", "가게A", 1)},${order("O2", "가게A", 2)},${order("O3", "가게B", 3)},${order("O4", "가게C", 4)}]}
     """.trimIndent())
-    val fixture = RouteFixture.open(root, AtomicLong(Instant.parse("${DRIVER_DATE}T01:00:00Z").toEpochMilli()))
+    val fixture = RouteFixture.open(root, AtomicLong(Instant.parse("${DRIVER_DATE}T01:00:00Z").toEpochMilli()), depot)
     fun run(command: ObjectNode) =
         fixture.dispatch.command(DRIVER_DATE, command.put("expectedBoot", fixture.dispatch.boot))
     run(driverJson.createObjectNode().put("type", "calculate_dispatch").put("expectedRevision", 0)

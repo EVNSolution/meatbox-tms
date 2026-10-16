@@ -93,6 +93,32 @@ class DriverActivityHttpTest {
     }
 
     @Test
+    fun `suggests a route order with or without a body and changes nothing`() {
+        val before = get("/route?vehicleId=G1").contentAsString
+        val bare = suggest("G1", null)
+        assertThat(bare.status).isEqualTo(200)
+        val json = driverJson.readTree(bare.contentAsString)
+        assertThat(json.path("stopOrder").toList().map { it.asString() }).containsExactlyInAnyOrder("O1", "O3", "O4")
+        assertThat(driverJson.readTree(before).path("revision").asLong()).isEqualTo(json.path("revision").asLong())
+        assertThat(suggest("G1", "{}").status).isEqualTo(200)
+        val locked = suggest("G1", """{"lockFirst":"O4"}""")
+        assertThat(driverJson.readTree(locked.contentAsString).path("stopOrder").first().asString()).isEqualTo("O4")
+        assertThat(get("/route?vehicleId=G1").contentAsString).isEqualTo(before)
+        assertProblem(suggest("G1", """{"other":1}""").contentAsString, 400, "INVALID_INPUT")
+        assertProblem(suggest("G1", """{"lockFirst":""}""").contentAsString, 400, "INVALID_INPUT")
+        assertProblem(suggest("G1", "{").contentAsString, 400, "INVALID_JSON")
+        assertProblem(suggest("G9", null).contentAsString, 404, "DRIVER_VEHICLE_NOT_FOUND")
+        assertProblem(suggest("G1", """{"lockFirst":"nope"}""").contentAsString, 404, "STOP_NOT_FOUND")
+        val suggestPath = "$PATH/route/suggest?vehicleId=G1"
+        val noOrigin = mvc.perform(MockMvcRequestBuilders.post(suggestPath).header("Cookie", COOKIE))
+            .andReturn().response
+        assertProblem(noOrigin.contentAsString, 403, "ORIGIN_REQUIRED")
+        val anonymous = mvc.perform(MockMvcRequestBuilders.post(suggestPath).header("Origin", ORIGIN))
+            .andReturn().response
+        assertProblem(anonymous.contentAsString, 401, "LOGIN_REQUIRED")
+    }
+
+    @Test
     fun `accepts location batches up to 200 samples and 64 KiB`() {
         fun batch(count: Int) = """{"vehicleId":"G1","samples":[${(0 until count).joinToString(",") {
             """{"at":"2026-10-13T09:00:%02d+09:00","lat":37.5,"lng":127.0}""".format(it % 60)
@@ -138,6 +164,13 @@ class DriverActivityHttpTest {
         MockMvcRequestBuilders.post(PATH + path).header("Cookie", COOKIE).header("Origin", ORIGIN)
             .contentType("application/json").content(body),
     ).andReturn().response
+
+    private fun suggest(vehicleId: String, body: String?): MockHttpServletResponse {
+        val request = MockMvcRequestBuilders.post("$PATH/route/suggest?vehicleId=$vehicleId")
+            .header("Cookie", COOKIE).header("Origin", ORIGIN)
+        return mvc.perform(if (body == null) request else request.contentType("application/json").content(body))
+            .andReturn().response
+    }
 
     private fun get(path: String): MockHttpServletResponse =
         mvc.perform(MockMvcRequestBuilders.get(PATH + path).header("Cookie", COOKIE)).andReturn().response

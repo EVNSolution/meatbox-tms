@@ -107,6 +107,7 @@ published ── begin_dispatch_revision ──► amending
 - `skipped`만 남은 차량 경로는 `current`·`pending`이 없으면 phase가 `done`이 된다. 완료 판정이 `done`만 세던 것을 같이 고쳤다.
 - 저장된 결과는 이벤트 응답(`accepted`, `receivedAt`, `stop`, `next`)이며 날짜 체크포인트의 `commandResults`에 같은 쓰기로 들어간다. 날짜 상태 전체가 아니다.
 - ETA: 위 번역의 `departed`가 성공하면 같은 쓰기로 차량 ETA가 저장된다. 그 뒤 `stop_*`·`zone_entered`·출발 후 `route_reordered`가 성공하면 남은 배송지 ETA를 같은 쓰기로 다시 계산해 덮어쓴다(규칙과 임계는 [API 참조](api-reference.md#도착-예정-시각-eta)). 출발 시각은 `occurredAt`(수신 시각과 5분 넘게 다르면 수신 시각), 출발 위치는 이벤트 `location`이나 최근 위치 샘플이다. 계산 모델은 [API 참조](api-reference.md#도착-예정-시각-eta)에 있다.
+- 자동 배송 순서: `POST .../driver/route/suggest`는 snapshot을 읽기만 한다. 체크포인트·기사 상태 파일·송신함을 쓰지 않고 `revision`도 올리지 않는다. 제안한 순서는 앱이 `route_reordered`(또는 운영이 `set_route_order`)로 적용해야 상태가 바뀌고, 그때 위 번역과 `ROUTE_LOCKED` 규칙을 그대로 받는다. 규칙은 [API 참조](api-reference.md#자동-배송-순서-제안)에 있다.
 - 이벤트가 주문 상태를 바꾸면 미트박스로 보낼 배송 상태 메시지가 같은 쓰기로 체크포인트 `outbox`에 들어간다(아래). `stop_completed`→`delivered`, `stop_partially_completed`→`partially_delivered`, `stop_failed`→`failed`, `departed`→`departed`. `zone_entered`·`route_reordered`는 배송 상태를 보내지 않는다. `departed`는 차량 ETA 메시지(`kind: "eta"`) 1건도 더 남기고, 재산출은 새 ETA가 마지막으로 보낸 ETA와 임계 이상 벌어질 때만(`route_reordered`는 항상) 남긴다. 미전송 ETA 메시지는 새 메시지로 교체된다(아래 ETA).
 
 ### 기사 상태 파일의 소유

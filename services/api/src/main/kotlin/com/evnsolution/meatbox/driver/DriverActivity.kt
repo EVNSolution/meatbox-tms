@@ -105,7 +105,7 @@ class DriverActivity internal constructor(private val store: DriverStore) {
         }
     }
 
-    private fun latestLocations(date: String): DriverLocations = reported[date]
+    internal fun latestLocations(date: String): DriverLocations = reported[date]
         ?: runCatching { latest(store.load(date)) }.getOrElse { DriverLocations(0, emptyMap()) }
             .also { reported[date] = it }
 
