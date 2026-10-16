@@ -8,6 +8,7 @@ import com.evnsolution.meatbox.legacy.DispatchDataException
 import com.evnsolution.meatbox.auth.AuthService
 import com.evnsolution.meatbox.dispatch.DispatchException
 import jakarta.servlet.http.HttpServletRequest
+import java.security.MessageDigest
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.MediaType
@@ -120,10 +121,30 @@ class DriverController(
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(photo.contentType)).body(photo.bytes)
     }
 
+    /**
+     * The route with an ETag of its content, so a poll that finds nothing new is answered with `304`. The tag is weak
+     * (`W/`) on purpose: Tomcat does not compress a response that has a strong ETag.
+     */
     @GetMapping("/route")
-    fun route(@PathVariable date: String, @RequestParam vehicleId: String, request: HttpServletRequest): ObjectNode {
+    fun route(
+        @PathVariable date: String,
+        @RequestParam vehicleId: String,
+        request: HttpServletRequest,
+    ): ResponseEntity<ObjectNode> {
         limit(username(request), false)
-        return store.queries.route(date, checked(vehicleId, ID_LENGTH))
+        val route = store.queries.route(date, checked(vehicleId, ID_LENGTH))
+        val etag = "W/\"route-" + MessageDigest.getInstance("SHA-256").digest(driverJson.writeValueAsBytes(route))
+            .take(ETAG_BYTES).joinToString("") { "%02x".format(it) } + "\""
+        if (request.getHeader("If-None-Match") == etag) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED).eTag(etag).build()
+        }
+        return ResponseEntity.ok().eTag(etag).body(route)
+    }
+
+    @GetMapping("/vehicles")
+    fun vehicles(@PathVariable date: String, request: HttpServletRequest): ObjectNode {
+        limit(username(request), false)
+        return store.queries.vehicles(date)
     }
 
     /** A proposal only: it changes nothing, so it takes the read limit but, being a POST, still needs the Origin. */
@@ -234,6 +255,7 @@ class DriverController(
         private val EVENT_FIELDS = setOf("eventId", "type", "occurredAt", "date", "vehicleId", "payload")
         private const val ID_LENGTH = 128
         private const val REQUEST_ID_LENGTH = 64
+        private const val ETAG_BYTES = 12
         private const val TOKEN_LENGTH = 4096
         private const val MESSAGE_LENGTH = 1000
         private const val PLATFORM_LENGTH = 16

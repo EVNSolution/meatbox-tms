@@ -20,24 +20,71 @@ private val STOP_RESULTS = mapOf(
 )
 private val ORDER_FIELDS = listOf(
     "orderNumber", "name", "address", "detailAddress", "boxes", "items",
-    "customerRequests", "tip", "transportConditions", "access",
+    "customerRequests", "tip", "transportConditions", "access", "deliveryType", "csNote",
 )
+private val SELECTABLE_PHASES = setOf("published", "amending")
 
 /** The driver app's reads. Everything is derived from the date snapshot plus the records the app itself sent. */
+@Suppress("TooManyFunctions")
 class DriverQueries internal constructor(private val store: DriverStore) {
-    /** Stops in order with status, ETA (null before departure) and the `revision` that `route_reordered` expects. */
+    /**
+     * Stops in order with status, ETA (null before departure), position and orders, the vehicle and whether the day is
+     * confirmed, and the `revision` that `route_reordered` expects. This is all the app reads of the day.
+     */
     fun route(date: String, vehicleId: String): ObjectNode = synchronized(store) {
         store.validate(date, vehicleId)
-        val route = Route(store.dispatch.snapshot(date), vehicleId)
+        val snapshot = store.dispatch.snapshot(date)
+        val route = Route(snapshot, vehicleId)
+        val dispatchPhase = snapshot.path("dispatch").path("phase").asString("unplanned")
         driverJson.createObjectNode().apply {
             put("date", date).put("vehicleId", vehicleId).put("revision", route.revision).put("phase", route.phase)
+            put("dispatchPhase", dispatchPhase).put("operable", dispatchPhase in SELECTABLE_PHASES)
+            set("vehicle", vehicleInfo(snapshot, vehicleId))
             set("stops", array(route.stops.mapIndexed { index, stop ->
-                summary(stop, index + 1).also { putEta(it, route, stop) }
+                summary(stop, index + 1).also {
+                    putEta(it, route, stop)
+                    it.set("coordinates", coordinatesOf(stop))
+                    it.set("orders", array(stop.deliveries.map(::order)))
+                }
             }))
             route.next(null)?.let { set("next", nextStop(it.stopId, route)) }
             if (route.temperature.isObject) set("temperature", route.temperature.deepCopy())
         }
     }
+
+    /** Every vehicle of the day with its phase and how many stops and orders it carries: the vehicle choice. */
+    fun vehicles(date: String): ObjectNode = synchronized(store) {
+        store.validate(date)
+        val snapshot = store.dispatch.snapshot(date)
+        val dispatchPhase = snapshot.path("dispatch").path("phase").asString("unplanned")
+        driverJson.createObjectNode().apply {
+            put("date", date).put("dispatchPhase", dispatchPhase).put("operable", dispatchPhase in SELECTABLE_PHASES)
+            set("vehicles", array(snapshot.path("fleetVehicles").toList().map { vehicle ->
+                val id = vehicle.path("id").asString()
+                val route = Route(snapshot, id)
+                vehicleInfo(snapshot, id).apply {
+                    put("phase", route.phase)
+                    put("stops", route.stops.size)
+                    put("orders", route.stops.sumOf { it.deliveries.size })
+                }
+            }))
+        }
+    }
+
+    /** `{vehicleId, label, plate, region}` of one vehicle of the day. */
+    private fun vehicleInfo(snapshot: ObjectNode, vehicleId: String): ObjectNode {
+        val vehicle = snapshot.path("fleetVehicles").firstOrNull { it.path("id").asString() == vehicleId }
+        fun text(key: String) = vehicle?.path(key)?.takeIf { it.isString }?.let { driverJson.stringNode(it.asString()) }
+            ?: driverJson.nullNode()
+        return driverJson.createObjectNode().put("vehicleId", vehicleId).apply {
+            set("label", text("driver")); set("plate", text("plate")); set("region", text("region"))
+        }
+    }
+
+    /** `[lng, lat]` of the stop's first order that has usable coordinates, or null. */
+    private fun coordinatesOf(stop: RouteStop): JsonNode = stopPoint(stop)?.let {
+        driverJson.createArrayNode().add(it.lng).add(it.lat)
+    } ?: driverJson.nullNode()
 
     /** The automatic order proposal ([suggestRoute]); reads only, so it never changes the date. */
     fun suggest(date: String, vehicleId: String, lockFirst: String?): ObjectNode = synchronized(store) {

@@ -7,7 +7,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { gzipSync } from 'node:zlib';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import test from 'node:test';
 import { assertProblem } from './problem.mjs';
 
@@ -1097,4 +1097,60 @@ test('Kotlin proposes a stop order from the depot and the route follows it once 
   const again = await requestJson(fixture, `${driver}/route/suggest?vehicleId=TRUCK-1`, { method: 'POST', cookie });
   assert.equal(again.body.changed, false);
   assert.equal(again.body.revision, after.revision);
+});
+
+// The driver reads are compressed by the server and answer 304 for an unchanged poll; the dispatch state, which
+// compresses itself, is not compressed twice.
+test('Kotlin compresses driver reads once, keeps the state endpoint single-encoded and answers 304 for a repeat poll', { timeout: 90_000 }, async t => {
+  const fixture = await createFixture();
+  t.after(() => fixture.close());
+  const cookie = await login(fixture);
+  const days = `/api/dispatch-data/days/${fixture.today}`;
+  let state = (await requestJson(fixture, `${days}/state`, { cookie })).body;
+  for (const [type, extra] of [['calculate_dispatch', { vehicleIds: ['TRUCK-1'] }], ['publish_dispatch', null]]) {
+    const body = commandFor(state, type, extra ?? { draftVersion: state.dispatch.draftVersion });
+    const result = await requestJson(fixture, `${days}/commands`, { method: 'POST', cookie, body });
+    assert.equal(result.response.status, 200, JSON.stringify(result.body));
+    state = result.body.state;
+  }
+  const raw = (pathname, headers) => new Promise((resolve, reject) => {
+    const request = http.request(`${fixture.origin}${pathname}`, { headers: { Cookie: cookie, ...headers } }, response => {
+      const chunks = [];
+      response.on('data', chunk => chunks.push(chunk));
+      response.on('end', () => resolve({ status: response.statusCode, headers: response.headers, body: Buffer.concat(chunks) }));
+    });
+    request.on('error', reject);
+    request.end();
+  });
+  const decodedOnce = reply => JSON.parse(gunzipSync(reply.body).toString('utf8'));
+
+  const stateReply = await raw(`${days}/state`, { 'Accept-Encoding': 'gzip' });
+  assert.equal(stateReply.status, 200);
+  assert.equal(stateReply.headers['content-encoding'], 'gzip');
+  assert.equal(decodedOnce(stateReply).revision, state.revision, 'one gunzip must give the JSON, not a second gzip');
+
+  const route = `${days}/driver/route?vehicleId=TRUCK-1`;
+  const gzipped = await raw(route, { 'Accept-Encoding': 'gzip' });
+  assert.equal(gzipped.status, 200);
+  assert.equal(gzipped.headers['content-encoding'], 'gzip');
+  const body = decodedOnce(gzipped);
+  assert.deepEqual(body.stops.map(stop => stop.stopId), ['BUNDLE-1', 'NEXT-1', 'NEXT-2']);
+  assert.equal(body.operable, true);
+  assert.deepEqual(body.stops[0].coordinates, [126.81, 37.56]);
+  assert.deepEqual(body.stops[0].orders.map(order => order.orderId), ['BUNDLE-1', 'BUNDLE-2']);
+  assert.equal(body.vehicle.vehicleId, 'TRUCK-1');
+
+  const plain = await raw(route, { 'Accept-Encoding': 'identity' });
+  assert.equal(plain.headers['content-encoding'], undefined);
+  assert.deepEqual(JSON.parse(plain.body.toString('utf8')), body);
+
+  const etag = gzipped.headers.etag;
+  assert.match(etag, /^W\/"route-[0-9a-f]+"$/);
+  const repeat = await raw(route, { 'Accept-Encoding': 'gzip', 'If-None-Match': etag });
+  assert.equal(repeat.status, 304);
+  assert.equal(repeat.body.length, 0);
+
+  const vehicles = await raw(`${days}/driver/vehicles`, { 'Accept-Encoding': 'identity' });
+  assert.equal(vehicles.status, 200);
+  assert.deepEqual(JSON.parse(vehicles.body.toString('utf8')).vehicles.map(vehicle => [vehicle.vehicleId, vehicle.stops, vehicle.orders]), [['TRUCK-1', 3, 4], ['TRUCK-2', 0, 0]]);
 });

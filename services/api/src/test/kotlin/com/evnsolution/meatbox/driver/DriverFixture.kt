@@ -67,6 +67,10 @@ internal fun routeFixture(
     coordinates: Map<String, String> = emptyMap(),
     addresses: Map<String, String> = emptyMap(),
     depot: EtaPoint? = null,
+    /** Raw JSON members added to an order by ID, such as `"items":[...],"csNote":"..."`. */
+    extras: Map<String, String> = emptyMap(),
+    /** More orders for G1, each `(id, destination name)`, to size-test a big day. */
+    bulk: List<Pair<String, String>> = emptyList(),
     /** Runs after the stores exist and before the day is calculated and published, to hook listeners. */
     beforePublish: (RouteFixture) -> Unit = {},
 ): RouteFixture {
@@ -79,14 +83,17 @@ internal fun routeFixture(
     fun order(id: String, name: String, sequence: Int): String {
         val point = coordinates[id] ?: "[127.0,37.5]"
         val where = if (point == "null") "" else """"coordinates":$point,"""
+        val more = extras[id]?.let { ",$it" }.orEmpty()
         return """{"id":"$id","groupId":"G1","name":"$name","address":"${addresses[id] ?: "$name 주소"}","boxes":1,
-        "sourceRows":1,"sequence":$sequence,$where"zoneIds":["Z1"]}"""
+        "sourceRows":1,"sequence":$sequence,$where"zoneIds":["Z1"]$more}"""
     }
     Files.writeString(root.resolve("data/days/$DRIVER_DATE.json"), """
         {"schemaVersion":1,"date":"$DRIVER_DATE","summary":{"orders":4,"boxes":4},
          "groups":[{"id":"G1","label":"합성 기사","regionNames":["합성 권역"]},
                    {"id":"G2","label":"다른 기사","regionNames":["다른 권역"]}],
-         "orders":[${order("O1", "가게A", 1)},${order("O2", "가게A", 2)},${order("O3", "가게B", 3)},${order("O4", "가게C", 4)}]}
+         "orders":[${order("O1", "가게A", 1)},${order("O2", "가게A", 2)},${order("O3", "가게B", 3)},${order("O4", "가게C", 4)}${
+        bulk.mapIndexed { index, (id, name) -> "," + order(id, name, 5 + index) }.joinToString("")
+    }]}
     """.trimIndent())
     val fixture = RouteFixture.open(root, AtomicLong(Instant.parse("${DRIVER_DATE}T01:00:00Z").toEpochMilli()), depot)
     beforePublish(fixture)

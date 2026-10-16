@@ -149,6 +149,34 @@ class DriverActivityHttpTest {
     }
 
     @Test
+    fun `the route answers 304 for an unchanged poll and the vehicles list needs a session`() {
+        val first = get("/route?vehicleId=G1")
+        val etag = first.getHeader("ETag").orEmpty()
+        assertThat(first.status).isEqualTo(200)
+        assertThat(etag).startsWith("W/\"route-")
+        fun conditional(tag: String) = mvc.perform(
+            MockMvcRequestBuilders.get("$PATH/route?vehicleId=G1").header("Cookie", COOKIE)
+                .header("If-None-Match", tag),
+        ).andReturn().response
+        val same = conditional(etag)
+        assertThat(same.status).isEqualTo(304)
+        assertThat(same.contentAsString).isEmpty()
+        assertThat(conditional("W/\"route-other\"").status).isEqualTo(200)
+        assertThat(post("/events", DEPART).status).isEqualTo(202)
+        assertThat(conditional(etag).status).isEqualTo(200)
+        assertThat(get("/route?vehicleId=G1").getHeader("ETag")).isNotEqualTo(etag)
+
+        val vehicles = get("/vehicles")
+        assertThat(vehicles.status).isEqualTo(200)
+        val json = driverJson.readTree(vehicles.contentAsString)
+        assertThat(json.path("vehicles").size()).isEqualTo(2)
+        assertThat(json.path("operable").asBoolean()).isTrue()
+        val anonymous = mvc.perform(MockMvcRequestBuilders.get("$PATH/vehicles")).andReturn().response
+        assertProblem(anonymous.contentAsString, 401, "LOGIN_REQUIRED")
+        assertProblem(get("/route?vehicleId=G9").contentAsString, 404, "DRIVER_VEHICLE_NOT_FOUND")
+    }
+
+    @Test
     fun `accepts location batches up to 200 samples and 64 KiB`() {
         fun batch(count: Int) = """{"vehicleId":"G1","samples":[${(0 until count).joinToString(",") {
             """{"at":"2026-10-13T09:00:%02d+09:00","lat":37.5,"lng":127.0}""".format(it % 60)

@@ -1,6 +1,13 @@
 server:
   address: 127.0.0.1
   port: ${SERVER_PORT:8081}
+  # Responses of 1 KiB and more are gzip-compressed when the client asks. The dispatch state endpoint compresses
+  # itself; Tomcat skips a response that already has a Content-Encoding.
+  compression:
+    enabled: true
+    # Error bodies (application/problem+json) stay uncompressed so they are readable without a decoder.
+    mime-types: application/json
+    min-response-size: 1KB
   # Finish in-flight requests on SIGTERM, so a blue/green switch never cuts a checkpoint save.
   shutdown: graceful
 

@@ -38,7 +38,8 @@
 | `GET` | `/api/dispatch-data/days/{date}/commands/{requestId}` | 저장된 명령 결과 조회 |
 | `POST` | `/api/dispatch-data/days/{date}/driver/events` | 기사 앱 이벤트 6종 수신 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/events/{eventId}` | 이벤트 처리 결과 재확인 (Kotlin API 전용) |
-| `GET` | `/api/dispatch-data/days/{date}/driver/route` | 차량의 배송지 순서·상태 (Kotlin API 전용) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/route` | 차량의 배송지 순서·상태·주문·좌표·ETA. 기사 앱이 읽는 하루 전체 (Kotlin API 전용) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/vehicles` | 그날의 차량 목록과 phase·배송지·주문 수, 차량 선택용 (Kotlin API 전용) |
 | `POST` | `/api/dispatch-data/days/{date}/driver/stops/{stopId}/tip` | 배송팁 등록, `requestId` 멱등 (Kotlin API 전용) |
 | `POST` | `/api/dispatch-data/days/{date}/driver/route/suggest` | 자동 배송 순서 제안, 상태 불변 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/stops/{stopId}` | 배송지 상세 (Kotlin API 전용) |
@@ -427,13 +428,41 @@
 ```json
 {
   "date": "2026-11-02", "vehicleId": "G1", "revision": 8, "phase": "delivering",
+  "dispatchPhase": "published", "operable": true,
+  "vehicle": { "vehicleId": "G1", "label": "(Z001) 기사", "plate": "12가 3456", "region": "서울 강서" },
   "stops": [{
     "stopId": "O1", "sequence": 1, "orderIds": ["O1", "O2"], "name": "가게A", "address": "서울 …",
-    "boxes": 2, "status": "current", "eta": "2026-11-02T09:40:00+09:00", "estimated": true
+    "boxes": 2, "status": "current", "eta": "2026-11-02T09:40:00+09:00", "estimated": true,
+    "coordinates": [126.81, 37.56],
+    "orders": [{
+      "orderId": "O1", "status": "current", "orderNumber": "MB-1", "name": "가게A", "address": "서울 …",
+      "detailAddress": "1층", "boxes": 1, "deliveryType": "fresh", "csNote": "오전 배송",
+      "items": [{ "sku": "PK-001", "name": "삼겹살 1kg", "qty": 3, "boxes": 1, "barcode": "8801234567890" }],
+      "customerRequests": null, "tip": null, "transportConditions": null, "access": { "entranceCode": "1234*" }
+    }]
   }],
   "next": { "stopId": "O1", "eta": "2026-11-02T09:40:00+09:00" }
 }
 ```
+
+- `vehicle`은 이 차량의 표시 정보다. `dispatchPhase`는 날짜의 배차 단계이고 `operable`은 확정(`published`)이거나 수정 중(`amending`)이어서 운행할 수 있다는 뜻이다. 확정 전에는 `stops`가 비고 `operable: false`다.
+- `stops[].coordinates`는 `[경도, 위도]`이고 묶음에서 좌표가 있는 첫 주문의 것이다. 없으면 `null`이다.
+- `stops[].orders[]`는 그 배송지 묶음의 주문 전부다. 항목은 `GET stops/{stopId}`의 `orders[]`와 같다(같은 함수가 만든다). 값이 없는 필드는 `null`이다. 품목의 `barcode`는 미트박스가 주문에 실어 보낸 값이고 없으면 키가 없다.
+- 서버는 `Accept-Encoding: gzip`을 보낸 요청의 `application/json` 응답을 1 KiB 이상일 때 압축한다(`server.compression`). 오류 본문(`application/problem+json`)과 스스로 압축하는 날짜 상태·원본 끝점은 한 번만 인코딩된다. `ETag`는 본문 해시의 약한 태그(`W/"route-…"`)이고 `If-None-Match`가 같으면 `304`다. 약한 태그인 이유는 Tomcat이 강한 ETag가 붙은 응답을 압축하지 않기 때문이다. 200개 배송지·600개 주문 규모에서 압축 전 1 MiB 미만이다.
+
+`GET .../driver/vehicles`
+
+```json
+{
+  "date": "2026-11-02", "dispatchPhase": "published", "operable": true,
+  "vehicles": [
+    { "vehicleId": "G1", "label": "(Z001) 기사", "plate": "12가 3456", "region": "서울 강서", "phase": "idle", "stops": 12, "orders": 31 }
+  ]
+}
+```
+
+- 세션만 필요하다. 그날의 모든 차량이고 `stops`는 배송지 묶음 수, `orders`는 주문 수다. 기사 앱의 차량 선택이 쓰며 다른 차량의 주문 내용은 담지 않는다.
+- 날짜 형식이 틀리면 `400 INVALID_DATE`다.
 
 - `revision`은 날짜 상태의 `revision`이며 `route_reordered`의 `expectedRevision`으로 보낸다.
 - `temperature`는 오늘 날짜에 그 차량의 온도 값이 있을 때만 나온다: `{celsius, measuredAt, stale, outOfRange}`(날짜 상태의 같은 필드). 없으면 키가 없다.
