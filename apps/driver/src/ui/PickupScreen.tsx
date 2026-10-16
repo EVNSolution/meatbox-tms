@@ -18,7 +18,6 @@ export function PickupScreen({
   date,
   vehicleId,
   deliveries,
-  allOrderIds,
   starting,
   onStart,
   onEditOrder,
@@ -26,7 +25,6 @@ export function PickupScreen({
   date: string;
   vehicleId: string;
   deliveries: FleetDelivery[];
-  allOrderIds: ReadonlySet<string>;
   starting: boolean;
   onStart(): void;
   onEditOrder(): void;
@@ -58,7 +56,7 @@ export function PickupScreen({
   }
 
   function handleScan(raw: string): PickupScanResult {
-    const result = matchPickupQr({ raw, date, vehicleOrderIds, allOrderIds, scanned: scanRef.current });
+    const result = matchPickupQr({ raw, date, vehicleOrderIds, scanned: scanRef.current });
     const delivery = 'orderId' in result ? deliveries.find((d) => d.id === result.orderId) : undefined;
     const label = delivery ? `${delivery.name} ${delivery.orderNumber ?? ''}`.trim() : undefined;
     if (result.kind === 'ok') {

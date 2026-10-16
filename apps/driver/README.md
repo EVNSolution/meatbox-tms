@@ -88,7 +88,8 @@ CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--max-old-space-size=2048 CMAKE_BUILD_PARA
 - `POST .../driver/route/suggest`: 순서 편집기의 "자동 생성". 제안만 받고 서버 상태는 안 바뀝니다. 목록에 반영한 뒤 "완료"를 눌러야 `route_reordered`(`expectedRevision`)로 적용됩니다. `409 REVISION_CONFLICT`면 최신 상태를 다시 읽습니다.
 - `POST .../driver/events`: `departed`(전경 위치 1회 포함)와 `route_reordered`. 같은 요청을 다시 보낼 때는 `eventId`뿐 아니라 시각·위치까지 같은 본문이어야 서버가 `duplicate`로 답합니다(`domain/retryAttempt.ts`). 출발 뒤에는 순서 편집 버튼을 숨깁니다.
 - 위치는 출발 때만 읽습니다(`expo-location`, 전경 권한만). 권한이 없거나 읽지 못해도 출발은 막지 않습니다. 백그라운드 수집은 다음 단위입니다.
-- 쓰기는 모두 이벤트입니다. `POST /commands`와 `boot`·`expectedRevision`은 앱에서 쓰지 않습니다. `GET /state`는 읽기 전용으로 남아 차량 선택, QR 수령 확인, 지도 핀 좌표, 품목·오프라인 표시에 씁니다(서버 끝점 정리 단위 후).
+- 앱은 날짜 상태(`GET /state`)·`boot`·`POST /commands`를 쓰지 않습니다. 쓰기는 모두 이벤트이고, 하루 전체는 `GET driver/route` 한 곳(차량 정보, 확정 여부, 배송지 좌표, 주문·품목·바코드, ETA, `revision`)에서 10초마다 읽습니다. 마지막 `ETag`를 보내 바뀐 게 없으면 304입니다. 차량 선택은 `GET driver/vehicles`입니다. QR 상차 스캔은 이 차량 주문만 알아서 다른 차량 주문과 모르는 주문을 구분하지 않습니다.
+- **출발 후 순서 편집**: 진행·완료·미배송 배송지는 "고정"으로 위쪽에 읽기 전용으로 보이고 대기 배송지만 드래그합니다. "자동 생성"도 쓸 수 있습니다. 전송 대기 중인 기록이 있으면 편집을 막습니다.
 
 ## API 코드 라이브 점검
 
@@ -107,13 +108,13 @@ EXPO_PUBLIC_MEATBOX_API_BASE_URL=http://127.0.0.1:4173 LIVE_CHECK_USERNAME=... L
 
 날짜별 기본 경로: `/api/dispatch-data/days/{date}`.
 
-- `GET /state`: ETag 지원. `boot`, `revision`, `fleetVehicles`, `fleetDeliveries`, `vehicleStates`, `dispatch.phase` 사용.
+- `GET /driver/route?vehicleId=...`, `GET /driver/vehicles`: 위 "서버 기사 끝점 연결"과 [API 참조](../../docs/api-reference.md)를 따릅니다.
 - `PUT /driver/push-token`: `{vehicleId,token,deviceId,platform:'android'}`.
 - `DELETE /driver/push-token`: `{token}`. 저장된 등록 날짜로 해제합니다.
 - `GET /driver/messages?vehicleId=...`: `{messages:[{id,from,body,createdAt}]}`.
 - `POST /driver/messages`: `{vehicleId,body,from:'driver'}`.
 
-Kotlin 배송 도착/완료 값은 `HH:mm` 문자열 또는 null입니다. 상태는 `pending/current/done/skipped`, 차량 단계는 `idle/preparing/delivering/done`입니다. 배송지 묶음은 Kotlin과 같은 NFC 정규화·trim한 이름+주소를 사용합니다. 좌표는 `[longitude, latitude]`입니다.
+배송지 상태는 `pending/current/done/skipped`, 차량 단계는 `idle/preparing/delivering/done`입니다. 배송지 묶음(`stopId`)은 서버가 정합니다. 좌표는 `[longitude, latitude]`입니다.
 
 ## 검증 경계
 

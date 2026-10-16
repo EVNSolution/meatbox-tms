@@ -1,0 +1,104 @@
+# 배송원 앱 API·큐·위치·팁·스캔 코드 라이브 점검 — 날짜 상태(GET state) 읽기 제거 전후 비교 (에뮬레이터·실기기 아님)
+# 서버: node scripts/web-fork-fixture.mjs --native (합성 데이터, 로컬 JAR). 명령: LIVE_CHECK_PLAN=<정차 결과> EXPO_PUBLIC_MEATBOX_API_BASE_URL=http://127.0.0.1:4173 LIVE_CHECK_USERNAME=<fixture 계정> LIVE_CHECK_PASSWORD=<fixture 암호> npx tsx scripts/live-check.mts
+# 전: 커밋 203fede(앱이 GET state로 배송지를 만들던 코드). 후: 이 단위의 route 모델 코드. 두 실행 모두 같은 계획 2개(completed,failed / partial,completed)를 새 서버에서 돌렸다.
+# 비교: 시각과 도착 시각(HH:mm)을 가린 뒤 전의 42줄과 후의 같은 라벨 42줄이 한 줄도 다르지 않음. 후에만 있는 라벨: vehicles, route orders, route poll, scanned codes in history.
+
+################ 전 (state 읽기 사용) ################
+## PLAN completed,failed
+login: {"username":"fork-reviewer"}
+route: {"revision":2,"phase":"idle","stops":["BUNDLE-1","NEXT-1"]}
+suggest: {"lockFirst":"NEXT-1","stopOrder":["NEXT-1","BUNDLE-1"],"changed":true,"summary":"예상 28분 · 9.7km"}
+route_reordered: {"duplicate":false}
+route after reorder: {"revision":3,"stops":["NEXT-1","BUNDLE-1"]}
+stale revision: "REVISION_CONFLICT"
+stop detail: {"sections":[],"previousPhoto":null}
+departed: {"duplicate":false,"next":{"stopId":"NEXT-1","eta":"2026-10-16T21:13:00+09:00"}}
+eta labels: [{"name":"합성 식당 B","eta":{"text":"도착 21:13","dimmed":false}},{"name":"합성 정육점 A","eta":{"text":"도착 21:41","dimmed":false}}]
+reorder after departure: "refused 409"
+locations: {"result":"sent","batches":[2]}
+truck after locations: {"lat":37.5605,"lng":126.9705,"source":"driver"}
+201 samples: "refused 400"
+tip in stop detail: {"tip":"뒷문 이용, 벨 없음","sections":["배송팁"]}
+queue after first drain: {"result":"waiting","states":["pending","pending"],"log":["upload","send stop_completed"]}
+queue after the retry: {"log":["lookup","upload","send stop_failed"]}
+history: [{"stopId":"NEXT-1","result":"completed","reasonCode":null,"note":"문 앞 보관","photos":1},{"stopId":"BUNDLE-1","result":"failed","reasonCode":"ABSENT","note":"부재","photos":1}]
+photo download: {"bytes":13,"same":true}
+resend of a sent event: {"duplicate":true}
+tip on a closed stop: "refused 409; the earlier request still answers duplicate"
+LIVE CHECK OK
+## PLAN partial,completed
+login: {"username":"fork-reviewer"}
+route: {"revision":2,"phase":"idle","stops":["BUNDLE-1","NEXT-1"]}
+suggest: {"lockFirst":"NEXT-1","stopOrder":["NEXT-1","BUNDLE-1"],"changed":true,"summary":"예상 28분 · 9.7km"}
+route_reordered: {"duplicate":false}
+route after reorder: {"revision":3,"stops":["NEXT-1","BUNDLE-1"]}
+stale revision: "REVISION_CONFLICT"
+stop detail: {"sections":[],"previousPhoto":null}
+departed: {"duplicate":false,"next":{"stopId":"NEXT-1","eta":"2026-10-16T21:14:00+09:00"}}
+eta labels: [{"name":"합성 식당 B","eta":{"text":"도착 21:14","dimmed":false}},{"name":"합성 정육점 A","eta":{"text":"도착 21:42","dimmed":false}}]
+reorder after departure: "refused 409"
+locations: {"result":"sent","batches":[2]}
+truck after locations: {"lat":37.5605,"lng":126.9705,"source":"driver"}
+201 samples: "refused 400"
+tip in stop detail: {"tip":"뒷문 이용, 벨 없음","sections":["배송팁"]}
+queue after first drain: {"result":"waiting","states":["sent","pending"],"log":["send stop_partially_completed","upload","send stop_completed"]}
+queue after the retry: {"log":["lookup"]}
+history: [{"stopId":"NEXT-1","result":"partially_completed","reasonCode":null,"note":"일부 품절","photos":0},{"stopId":"BUNDLE-1","result":"completed","reasonCode":null,"note":"문 앞 보관","photos":1}]
+photo download: {"bytes":13,"same":true}
+resend of a sent event: {"duplicate":true}
+tip on a closed stop: "refused 409; the earlier request still answers duplicate"
+LIVE CHECK OK
+
+################ 후 (route 모델, state·boot 읽기 0건) ################
+## PLAN completed,failed
+login: {"username":"fork-reviewer"}
+route: {"revision":2,"phase":"idle","stops":["BUNDLE-1","NEXT-1"]}
+vehicles: {"operable":true,"rows":[["TRUCK-1",2,3,"idle"],["TRUCK-2",0,0,"idle"]]}
+route orders: [{"stopId":"BUNDLE-1","orders":["BUNDLE-1","BUNDLE-2"],"coordinates":[126.81,37.56]},{"stopId":"NEXT-1","orders":["NEXT-1"],"coordinates":[126.87,37.52]}]
+route poll: "unchanged day answers 304"
+suggest: {"lockFirst":"NEXT-1","stopOrder":["NEXT-1","BUNDLE-1"],"changed":true,"summary":"예상 28분 · 9.7km"}
+route_reordered: {"duplicate":false}
+route after reorder: {"revision":3,"stops":["NEXT-1","BUNDLE-1"]}
+stale revision: "REVISION_CONFLICT"
+stop detail: {"sections":[],"previousPhoto":null}
+departed: {"duplicate":false,"next":{"stopId":"NEXT-1","eta":"2026-10-16T21:20:00+09:00"}}
+eta labels: [{"name":"합성 식당 B","eta":{"text":"도착 21:20","dimmed":false}},{"name":"합성 정육점 A","eta":{"text":"도착 21:48","dimmed":false}}]
+reorder after departure: "refused 409"
+locations: {"result":"sent","batches":[2]}
+truck after locations: {"lat":37.5605,"lng":126.9705,"source":"driver"}
+201 samples: "refused 400"
+tip in stop detail: {"tip":"뒷문 이용, 벨 없음","sections":["배송팁"]}
+queue after first drain: {"result":"waiting","states":["pending","pending"],"log":["upload","send stop_completed"]}
+queue after the retry: {"log":["lookup","upload","send stop_failed"]}
+history: [{"stopId":"NEXT-1","result":"completed","reasonCode":null,"note":"문 앞 보관","photos":1},{"stopId":"BUNDLE-1","result":"failed","reasonCode":"ABSENT","note":"부재","photos":1}]
+scanned codes in history: [["NEXT-1",["LIVE-CODE-1","LIVE-CODE-2"]]]
+photo download: {"bytes":13,"same":true}
+resend of a sent event: {"duplicate":true}
+tip on a closed stop: "refused 409; the earlier request still answers duplicate"
+LIVE CHECK OK
+## PLAN partial,completed
+login: {"username":"fork-reviewer"}
+route: {"revision":2,"phase":"idle","stops":["BUNDLE-1","NEXT-1"]}
+vehicles: {"operable":true,"rows":[["TRUCK-1",2,3,"idle"],["TRUCK-2",0,0,"idle"]]}
+route orders: [{"stopId":"BUNDLE-1","orders":["BUNDLE-1","BUNDLE-2"],"coordinates":[126.81,37.56]},{"stopId":"NEXT-1","orders":["NEXT-1"],"coordinates":[126.87,37.52]}]
+route poll: "unchanged day answers 304"
+suggest: {"lockFirst":"NEXT-1","stopOrder":["NEXT-1","BUNDLE-1"],"changed":true,"summary":"예상 28분 · 9.7km"}
+route_reordered: {"duplicate":false}
+route after reorder: {"revision":3,"stops":["NEXT-1","BUNDLE-1"]}
+stale revision: "REVISION_CONFLICT"
+stop detail: {"sections":[],"previousPhoto":null}
+departed: {"duplicate":false,"next":{"stopId":"NEXT-1","eta":"2026-10-16T21:20:00+09:00"}}
+eta labels: [{"name":"합성 식당 B","eta":{"text":"도착 21:20","dimmed":false}},{"name":"합성 정육점 A","eta":{"text":"도착 21:48","dimmed":false}}]
+reorder after departure: "refused 409"
+locations: {"result":"sent","batches":[2]}
+truck after locations: {"lat":37.5605,"lng":126.9705,"source":"driver"}
+201 samples: "refused 400"
+tip in stop detail: {"tip":"뒷문 이용, 벨 없음","sections":["배송팁"]}
+queue after first drain: {"result":"waiting","states":["sent","pending"],"log":["send stop_partially_completed","upload","send stop_completed"]}
+queue after the retry: {"log":["lookup"]}
+history: [{"stopId":"NEXT-1","result":"partially_completed","reasonCode":null,"note":"일부 품절","photos":0},{"stopId":"BUNDLE-1","result":"completed","reasonCode":null,"note":"문 앞 보관","photos":1}]
+scanned codes in history: [["BUNDLE-1",["LIVE-CODE-1","LIVE-CODE-2"]]]
+photo download: {"bytes":13,"same":true}
+resend of a sent event: {"duplicate":true}
+tip on a closed stop: "refused 409; the earlier request still answers duplicate"
+LIVE CHECK OK

@@ -3,7 +3,6 @@ export type PickupScanResult =
   | { kind: 'already'; orderId: string }
   | { kind: 'invalid' }
   | { kind: 'wrong_date'; date: string }
-  | { kind: 'other_vehicle'; orderId: string }
   | { kind: 'unknown'; orderId: string };
 
 const QR_PATTERN = /^meatbox:(\d{4}-\d{2}-\d{2}):(.+)$/u;
@@ -18,18 +17,14 @@ export function matchPickupQr(input: {
   raw: string;
   date: string;
   vehicleOrderIds: ReadonlySet<string>;
-  allOrderIds: ReadonlySet<string>;
   scanned: ReadonlySet<string>;
 }): PickupScanResult {
   const parsed = parsePickupQr(input.raw);
   if (!parsed) return { kind: 'invalid' };
   if (parsed.date !== input.date) return { kind: 'wrong_date', date: parsed.date };
   const { orderId } = parsed;
-  if (!input.vehicleOrderIds.has(orderId)) {
-    return input.allOrderIds.has(orderId)
-      ? { kind: 'other_vehicle', orderId }
-      : { kind: 'unknown', orderId };
-  }
+  // The app only knows this vehicle's orders, so another vehicle's order and a made-up one look the same.
+  if (!input.vehicleOrderIds.has(orderId)) return { kind: 'unknown', orderId };
   return input.scanned.has(orderId) ? { kind: 'already', orderId } : { kind: 'ok', orderId };
 }
 
@@ -43,9 +38,7 @@ export function pickupScanMessage(result: PickupScanResult, label?: string): str
       return '미트박스 주문 QR이 아닙니다';
     case 'wrong_date':
       return `다른 날짜(${result.date})의 주문입니다`;
-    case 'other_vehicle':
-      return '다른 차량에 배정된 주문입니다';
     case 'unknown':
-      return '오늘 배차에 없는 주문입니다';
+      return '이 차량 배송 목록에 없는 주문입니다';
   }
 }

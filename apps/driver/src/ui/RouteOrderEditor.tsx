@@ -22,6 +22,7 @@ import {
 import { Button, SequenceBadge, T } from './common';
 import { colors, radius, TOUCH_MIN } from './theme';
 
+const FIXED_LABEL: Record<string, string> = { current: '진행 중', done: '완료', skipped: '미배송' };
 const ROW_BASE_HEIGHT = 84;
 const ROW_GAP = 6;
 const LIST_PADDING_TOP = 8;
@@ -33,12 +34,15 @@ const DRAG_ACTIVATION_DISTANCE = 2;
 // Drag editor for pending stops only. A stop moves with all of its orders.
 export function RouteOrderEditor({
   stops,
+  fixedStops,
   isSaving,
   onCancel,
   onSave,
   onSuggest,
 }: {
   stops: Stop[];
+  /** Stops that already started or finished: shown, never moved. */
+  fixedStops: Stop[];
   isSaving: boolean;
   onCancel(): void;
   onSave(stopKeys: string[]): void;
@@ -94,7 +98,7 @@ export function RouteOrderEditor({
         </Pressable>
         <View style={styles.headingCopy}>
           <T style={styles.title}>순서 편집</T>
-          <T style={styles.description}>대기 중인 배송지만 이동합니다</T>
+          <T style={styles.description}>대기 중인 배송지만 이동합니다 · 진행·완료 배송지는 고정</T>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -107,6 +111,18 @@ export function RouteOrderEditor({
           </T>
         </Pressable>
       </View>
+      {fixedStops.length > 0 ? (
+        <View style={styles.fixed}>
+          <T style={styles.fixedTitle}>고정된 배송지 {fixedStops.length}곳 · 순서를 바꿀 수 없습니다</T>
+          {fixedStops.map((stop) => (
+            <View key={stop.key} style={styles.fixedRow}>
+              <SequenceBadge tone={stop.status === 'current' ? 'current' : 'done'} value={stop.sequence} />
+              <T numberOfLines={1} style={styles.fixedName}>{stop.name}</T>
+              <T style={styles.fixedStatus}>{FIXED_LABEL[stop.status] ?? ''}</T>
+            </View>
+          ))}
+        </View>
+      ) : null}
       <View style={styles.suggest}>
         <Button busy={suggesting} disabled={isSaving} label="자동 생성" onPress={() => void suggest()} tone="secondary" />
         {note ? <T accessibilityRole={note.error ? 'alert' : undefined} style={note.error ? styles.noteError : styles.note}>{note.text}</T> : null}
@@ -256,6 +272,11 @@ function DraggableStopRow({
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: colors.background, flex: 1 },
+  fixed: { backgroundColor: colors.surface, borderBottomColor: colors.border, borderBottomWidth: 1, gap: 6, padding: 12 },
+  fixedTitle: { color: colors.muted, fontSize: 13, fontWeight: '700' },
+  fixedRow: { alignItems: 'center', flexDirection: 'row', gap: 8, opacity: 0.8 },
+  fixedName: { flex: 1, fontSize: 14 },
+  fixedStatus: { color: colors.muted, fontSize: 12 },
   suggest: { gap: 6, paddingHorizontal: 12, paddingTop: 8 },
   note: { color: colors.muted, fontSize: 13 },
   noteError: { color: colors.error, fontSize: 13 },

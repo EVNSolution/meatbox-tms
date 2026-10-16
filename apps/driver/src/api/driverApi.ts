@@ -8,11 +8,13 @@ import {
   readRoute,
   readStopDetail,
   readSuggestion,
+  readVehicleList,
   type DriverRoute,
   type EventReply,
   type HistoryItem,
   type RouteSuggestion,
   type StopDetail,
+  type VehicleList,
 } from './driverContracts';
 
 // The driver endpoints of docs/api-reference.md. Errors are ApiError(status, problem+json code); callers branch on
@@ -21,8 +23,26 @@ const UPLOAD_TIMEOUT_MS = 60_000;
 const base = (date: string) => `/api/dispatch-data/days/${date}/driver`;
 const vehicleQuery = (vehicleId: string) => `vehicleId=${encodeURIComponent(vehicleId)}`;
 
+export type RouteRead = { notModified: true } | { notModified: false; route: DriverRoute; etag: string | null };
+
+/** The vehicle's whole day. With the ETag of the last read, an unchanged day answers `notModified`. */
+export async function pollRoute(date: string, vehicleId: string, etag: string | null): Promise<RouteRead> {
+  const response = await request(`${base(date)}/route?${vehicleQuery(vehicleId)}`, {
+    headers: etag ? { 'If-None-Match': etag } : {},
+  });
+  if (response.status === 304) return { notModified: true };
+  if (!response.ok) throw await toError(response);
+  return { notModified: false, route: readRoute(await response.json()), etag: response.headers.get('ETag') };
+}
+
 export async function fetchRoute(date: string, vehicleId: string): Promise<DriverRoute> {
-  return readRoute(await requestJson(`${base(date)}/route?${vehicleQuery(vehicleId)}`));
+  const read = await pollRoute(date, vehicleId, null);
+  return read.notModified ? fetchRoute(date, vehicleId) : read.route;
+}
+
+/** Every vehicle of the day, for the vehicle choice. */
+export async function fetchVehicles(date: string): Promise<VehicleList> {
+  return readVehicleList(await requestJson(`${base(date)}/vehicles`));
 }
 
 export async function fetchStop(date: string, vehicleId: string, stopId: string): Promise<StopDetail> {

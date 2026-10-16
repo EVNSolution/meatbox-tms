@@ -1,6 +1,5 @@
 import { API_BASE_URL, API_ORIGIN } from '../config';
-import type { DayState } from '../domain/dispatch';
-import { readDayState, readMessages, readSession } from './contracts';
+import { readMessages, readSession } from './contracts';
 import { ApiError, type DriverMessage, type SessionUser } from './types';
 
 // Native networking owns the HttpOnly cookie. Confirm login through /api/session
@@ -72,23 +71,6 @@ export async function getSession(): Promise<SessionUser | null> {
 export async function logout(): Promise<void> {
   const response = await request('/logout', { method: 'POST', headers: { Accept: 'text/html' } });
   if (!response.ok) throw await toError(response);
-}
-
-export type StateResult =
-  | { notModified: true }
-  | { notModified: false; state: DayState; etag: string | null };
-
-export async function fetchDayState(date: string, etag: string | null): Promise<StateResult> {
-  const response = await request(`/api/dispatch-data/days/${date}/state`, {
-    headers: etag ? { 'If-None-Match': etag } : {},
-  });
-  if (response.status === 304) return { notModified: true };
-  if (!response.ok) throw await toError(response);
-  return {
-    notModified: false,
-    state: readDayState(await response.json()),
-    etag: response.headers.get('ETag'),
-  };
 }
 
 export async function registerPushToken(body: {

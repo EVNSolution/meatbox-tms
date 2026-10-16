@@ -37,7 +37,9 @@ export function serverStopOrder(
   }
   const queue = pendingKeys.map((key) => idByKey.get(key));
   const pending = route.stops.filter((stop) => stop.status === 'pending').length;
-  if (queue.length !== pending || queue.some((id) => id === undefined) || new Set(queue).size !== pending) {
+  const waiting = new Set(route.stops.filter((stop) => stop.status === 'pending').map((stop) => stop.stopId));
+  // The edited list must be exactly the waiting stops: a closed stop in it would be duplicated and another lost.
+  if (queue.length !== pending || queue.some((id) => id === undefined || !waiting.has(id)) || new Set(queue).size !== pending) {
     throw new Error('배송지 순서를 다시 확인해 주세요.');
   }
   return route.stops.map((stop) => (stop.status === 'pending' ? queue.shift() as string : stop.stopId));

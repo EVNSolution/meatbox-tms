@@ -54,10 +54,11 @@ globalThis.FormData = class extends NativeFormData {
   }
 } as typeof FormData;
 
-const { fetchDayState, login } = await import('../src/api/client');
+const { login } = await import('../src/api/client');
 const driverApi = await import('../src/api/driverApi');
 const { ApiError } = await import('../src/api/types');
-const { seoulToday, groupStops, vehicleDeliveries } = await import('../src/domain/dispatch');
+const { seoulToday } = await import('../src/domain/dispatch');
+const { routeStops } = await import('../src/domain/routeStops');
 const { detailSections, etaLabel } = await import('../src/domain/routeView');
 const { suggestedKeys, serverStopOrder, suggestionSummary } = await import('../src/domain/routeDraft');
 const { buildStopEvent } = await import('../src/domain/stopEvents');
@@ -70,11 +71,21 @@ const say = (label: string, value: unknown) => console.log(`${label}: ${JSON.str
 const user = await login(username, password);
 say('login', { username: user.username });
 
-// The operator confirms the day (web screen in production); the app never does this. Plain requests, not app code.
+// The operator confirms the day (web screen in production); the app never does this and never reads the day state.
+// These are plain requests, not app code.
+type OperatorState = {
+  boot: string;
+  revision: number;
+  dispatch?: { phase?: string; draftVersion?: number };
+  vehicleStates: Record<string, { truck?: { lat: number; lng: number; locationSource: string } }>;
+};
+async function operatorState(): Promise<OperatorState> {
+  const response = await fetch(`${process.env.EXPO_PUBLIC_MEATBOX_API_BASE_URL}/api/dispatch-data/days/${date}/state`);
+  assert.equal(response.status, 200);
+  return (await response.json()) as OperatorState;
+}
 async function operatorCommand(body: Record<string, unknown>): Promise<Record<string, unknown>> {
-  const current = await fetchDayState(date, null);
-  assert.ok(!current.notModified);
-  const snapshot = current.state as unknown as { boot: string; revision: number; dispatch?: { draftVersion?: number } };
+  const snapshot = await operatorState();
   const response = await fetch(`${process.env.EXPO_PUBLIC_MEATBOX_API_BASE_URL}/api/dispatch-data/days/${date}/commands`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: new URL(process.env.EXPO_PUBLIC_MEATBOX_API_BASE_URL as string).origin },
@@ -84,9 +95,7 @@ async function operatorCommand(body: Record<string, unknown>): Promise<Record<st
   assert.equal(response.status, 200, text);
   return JSON.parse(text) as Record<string, unknown>;
 }
-const open = await fetchDayState(date, null);
-assert.ok(!open.notModified);
-if ((open.state as unknown as { dispatch?: { phase?: string } }).dispatch?.phase !== 'published') {
+if ((await operatorState()).dispatch?.phase !== 'published') {
   await operatorCommand({ type: 'calculate_dispatch', vehicleIds: [vehicleId] });
   await operatorCommand({ type: 'publish_dispatch' });
 }
@@ -97,9 +106,20 @@ assert.equal(before.phase, 'idle');
 assert.ok(before.stops.length >= 2, 'the fixture needs two stops');
 assert.ok(before.stops.every((stop) => stop.eta === null), 'no ETA before departure');
 
-const stateAfterPublish = await fetchDayState(date, null);
-assert.ok(!stateAfterPublish.notModified);
-const stops = groupStops(vehicleDeliveries(stateAfterPublish.state, vehicleId));
+// New reads: the vehicle choice and the orders and positions that the route itself carries.
+const vehicleList = await driverApi.fetchVehicles(date);
+say('vehicles', { operable: vehicleList.operable, rows: vehicleList.vehicles.map((row) => [row.vehicleId, row.stops, row.orders, row.phase]) });
+assert.equal(vehicleList.operable, true);
+assert.equal(before.operable, true);
+assert.equal(before.vehicle.vehicleId, vehicleId);
+say('route orders', before.stops.map((stop) => ({ stopId: stop.stopId, orders: stop.orders.map((order) => order.orderId), coordinates: stop.coordinates })));
+assert.ok(before.stops.every((stop) => stop.coordinates !== null && stop.orders.length > 0), 'every stop has a position and orders');
+const firstRead = await driverApi.pollRoute(date, vehicleId, null);
+assert.ok(!firstRead.notModified && firstRead.etag);
+assert.deepEqual(await driverApi.pollRoute(date, vehicleId, firstRead.etag), { notModified: true });
+say('route poll', 'unchanged day answers 304');
+
+const stops = routeStops(before);
 const last = before.stops[before.stops.length - 1].stopId;
 const suggestion = await driverApi.suggestRoute(date, vehicleId, last);
 say('suggest', { lockFirst: last, stopOrder: suggestion.stopOrder, changed: suggestion.changed, summary: suggestionSummary(suggestion) });
@@ -141,10 +161,7 @@ assert.equal((await driverApi.sendDeparted({ ...departStamp, date, vehicleId }))
 const running = await driverApi.fetchRoute(date, vehicleId);
 assert.equal(running.phase, 'delivering');
 assert.ok(running.stops.every((stop) => stop.eta !== null), 'every open stop has an ETA after departure');
-const latest = await fetchDayState(date, null);
-assert.ok(!latest.notModified);
-const running2 = groupStops(vehicleDeliveries(latest.state, vehicleId));
-say('eta labels', running2.map((stop) => ({ name: stop.name, eta: etaLabel(stop, running) })));
+say('eta labels', routeStops(running).map((stop) => ({ name: stop.name, eta: etaLabel(stop, running) })));
 await assert.rejects(
   driverApi.sendRouteReordered({ ...driverApi.newEventStamp(), date, vehicleId }, [...running.stops].reverse().map((stop) => stop.stopId), running.revision),
   (error: unknown) => error instanceof ApiError && error.status === 409,
@@ -171,9 +188,7 @@ const firstResult = await tracker.record([
 ]);
 say('locations', { result: firstResult, batches: trackerBatches });
 assert.equal(firstResult, 'sent');
-const located = await fetchDayState(date, null);
-assert.ok(!located.notModified);
-const truck = (located.state.vehicleStates[vehicleId] as unknown as { truck: { lat: number; lng: number; locationSource: string } }).truck;
+const truck = (await operatorState()).vehicleStates[vehicleId].truck as { lat: number; lng: number; locationSource: string };
 say('truck after locations', { lat: truck.lat, lng: truck.lng, source: truck.locationSource });
 assert.equal(truck.locationSource, 'driver');
 assert.deepEqual([truck.lat, truck.lng], [newest.latitude, newest.longitude]);
@@ -229,7 +244,7 @@ const outbox = new Outbox({
 await outbox.init();
 for (const [index, kind] of plan.entries()) {
   const stopId = running.stops[index].stopId;
-  const draft = kind === 'completed' ? { kind: 'completed' as const, note: '문 앞 보관' }
+  const draft = kind === 'completed' ? { kind: 'completed' as const, note: '문 앞 보관', scannedCodes: ['LIVE-CODE-1', 'LIVE-CODE-2'] }
     : kind === 'failed' ? { kind: 'failed' as const, reasonCode: 'ABSENT' as const, note: '부재' }
       : { kind: 'partial' as const, note: '일부 품절', items: [{ sku: 'LIVE-1', name: '시험 품목', orderedQty: 3, deliveredQty: 1 }] };
   const { type, payload } = buildStopEvent(stopId, draft, running.stops[index].orderIds[0]);
@@ -256,6 +271,8 @@ assert.equal(outbox.list().every((item) => item.reply?.accepted === true), true)
 
 const history = await driverApi.fetchHistory(date, vehicleId);
 say('history', history.map((entry) => ({ stopId: entry.stopId, result: entry.result, reasonCode: entry.reasonCode, note: entry.note, photos: entry.photoIds.length })));
+say('scanned codes in history', history.filter((entry) => entry.scannedCodes.length > 0).map((entry) => [entry.stopId, entry.scannedCodes]));
+assert.equal(history.filter((entry) => entry.result === 'completed').every((entry) => entry.scannedCodes.join() === 'LIVE-CODE-1,LIVE-CODE-2'), true);
 assert.deepEqual(history.map((entry) => entry.stopId), plan.map((_kind: string, index: number) => running.stops[index].stopId));
 const expectedResult = { completed: 'completed', failed: 'failed', partial: 'partially_completed' } as const;
 assert.deepEqual(history.map((entry) => entry.result), plan.map((kind: string) => expectedResult[kind as keyof typeof expectedResult]));
@@ -274,6 +291,7 @@ const sentItem = outbox.list().find((item) => item.photos.length > 0) ?? outbox.
 const photoIds = sentItem.photos.map((photo) => photo.photoId);
 const again = await driverApi.sendStopEvent(sentItem.type, sentItem, photoIds.length > 0 ? { ...sentItem.payload, photoIds } : sentItem.payload);
 assert.equal(again.duplicate, true);
+assert.equal((await driverApi.fetchEvent(date, sentItem.eventId))?.duplicate, true, 'the stored result of a sent event can be read again');
 say('resend of a sent event', { duplicate: again.duplicate });
 assert.equal((await driverApi.fetchEvent(date, 'never-sent'))?.accepted ?? null, null);
 await outbox.pruneSent();

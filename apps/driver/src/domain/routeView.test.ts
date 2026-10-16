@@ -11,9 +11,10 @@ const delivery = (id: string, name: string, status: FleetDelivery['status'] = 'p
 const stops = groupStops([delivery('O1', 'A'), delivery('O2', 'A'), delivery('O3', 'B'), delivery('O4', 'C', 'done')]);
 const route = (overrides: Partial<DriverRoute['stops'][number]>[]): DriverRoute => ({
   date: '2026-11-02', vehicleId: 'G1', revision: 4, phase: 'delivering', next: null,
+  dispatchPhase: 'published', operable: true, vehicle: { vehicleId: 'G1', label: null, plate: null, region: null },
   stops: ['O1', 'O3', 'O4'].map((stopId, index) => ({
     stopId, sequence: index + 1, orderIds: stopId === 'O1' ? ['O1', 'O2'] : [stopId], name: stopId, address: '',
-    boxes: 1, status: 'pending', eta: '2026-11-02T09:40:00+09:00', estimated: true, ...overrides[index],
+    boxes: 1, status: 'pending', eta: '2026-11-02T09:40:00+09:00', estimated: true, coordinates: null, orders: [], ...overrides[index],
   })),
 });
 

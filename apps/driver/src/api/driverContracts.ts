@@ -12,19 +12,13 @@ export type RouteStopSummary = {
   status: 'pending' | 'current' | 'done' | 'skipped';
   eta: string | null;
   estimated: boolean | null;
+  /** `[lng, lat]`; null when no order of the stop has a position. */
+  coordinates: [number, number] | null;
 };
 
-export type DriverRoute = {
-  date: string;
-  vehicleId: string;
-  revision: number;
-  phase: 'idle' | 'preparing' | 'delivering' | 'done';
-  stops: RouteStopSummary[];
-  next: { stopId: string; eta: string | null } | null;
-};
+export type OrderItem = { sku?: string; name?: string | null; qty?: number; boxes?: number; barcode?: string | null };
 
-export type PreviousPhoto = { photoId: string; date: string; completedAt: string };
-
+/** One order of a stop, as the route and the stop detail both give it. */
 export type StopOrderDetail = {
   orderId: string;
   status: string;
@@ -33,12 +27,37 @@ export type StopOrderDetail = {
   address: string | null;
   detailAddress: string | null;
   boxes: number | null;
-  items: unknown;
+  items: OrderItem[] | null;
   customerRequests: unknown;
   tip: unknown;
   transportConditions: unknown;
   access: unknown;
+  deliveryType: string | null;
+  csNote: string | null;
 };
+
+export type RouteStop = RouteStopSummary & { orders: StopOrderDetail[] };
+
+export type VehicleInfo = { vehicleId: string; label: string | null; plate: string | null; region: string | null };
+
+export type DriverRoute = {
+  date: string;
+  vehicleId: string;
+  revision: number;
+  phase: 'idle' | 'preparing' | 'delivering' | 'done';
+  /** The date's dispatch stage, and whether it is confirmed (or being amended) so that vehicles can run. */
+  dispatchPhase: string;
+  operable: boolean;
+  vehicle: VehicleInfo;
+  stops: RouteStop[];
+  next: { stopId: string; eta: string | null } | null;
+};
+
+export type VehicleRow = VehicleInfo & { phase: DriverRoute['phase']; stops: number; orders: number };
+
+export type VehicleList = { date: string; dispatchPhase: string; operable: boolean; vehicles: VehicleRow[] };
+
+export type PreviousPhoto = { photoId: string; date: string; completedAt: string };
 
 export type StopDetail = RouteStopSummary & {
   assignmentUnitId: string;
@@ -87,6 +106,43 @@ function readSummary(value: unknown): RouteStopSummary {
     status: value.status as RouteStopSummary['status'],
     eta: nullableText(value.eta),
     estimated: typeof value.estimated === 'boolean' ? value.estimated : null,
+    coordinates: readCoordinates(value.coordinates),
+  };
+}
+
+function readCoordinates(value: unknown): [number, number] | null {
+  if (value == null) return null;
+  const pair = Array.isArray(value) && value.length === 2 && value.every((part) => typeof part === 'number' && Number.isFinite(part));
+  return pair ? [value[0] as number, value[1] as number] : fail();
+}
+
+function readOrder(order: unknown): StopOrderDetail {
+  if (!record(order)) return fail();
+  return {
+    orderId: text(order.orderId),
+    status: text(order.status),
+    orderNumber: nullableText(order.orderNumber),
+    name: nullableText(order.name),
+    address: nullableText(order.address),
+    detailAddress: nullableText(order.detailAddress),
+    boxes: typeof order.boxes === 'number' ? order.boxes : null,
+    items: Array.isArray(order.items) ? (order.items.filter(record) as OrderItem[]) : null,
+    customerRequests: order.customerRequests ?? null,
+    tip: order.tip ?? null,
+    transportConditions: order.transportConditions ?? null,
+    access: order.access ?? null,
+    deliveryType: nullableText(order.deliveryType),
+    csNote: nullableText(order.csNote),
+  };
+}
+
+function readVehicleInfo(value: unknown): VehicleInfo {
+  if (!record(value)) return fail();
+  return {
+    vehicleId: text(value.vehicleId),
+    label: nullableText(value.label),
+    plate: nullableText(value.plate),
+    region: nullableText(value.region),
   };
 }
 
@@ -103,8 +159,27 @@ export function readRoute(value: unknown): DriverRoute {
     vehicleId: text(value.vehicleId),
     revision: count(value.revision),
     phase: value.phase as DriverRoute['phase'],
-    stops: value.stops.map(readSummary),
+    dispatchPhase: text(value.dispatchPhase),
+    operable: typeof value.operable === 'boolean' ? value.operable : fail(),
+    vehicle: readVehicleInfo(value.vehicle),
+    stops: value.stops.map((stop) => {
+      if (!record(stop) || !Array.isArray(stop.orders)) return fail();
+      return { ...readSummary(stop), orders: stop.orders.map(readOrder) };
+    }),
     next: readNext(value.next),
+  };
+}
+
+export function readVehicleList(value: unknown): VehicleList {
+  if (!record(value) || !Array.isArray(value.vehicles) || typeof value.operable !== 'boolean') return fail();
+  return {
+    date: text(value.date),
+    dispatchPhase: text(value.dispatchPhase),
+    operable: value.operable,
+    vehicles: value.vehicles.map((row) => {
+      if (!record(row) || !PHASES.includes(String(row.phase))) return fail();
+      return { ...readVehicleInfo(row), phase: row.phase as VehicleRow['phase'], stops: count(row.stops), orders: count(row.orders) };
+    }),
   };
 }
 
@@ -114,23 +189,7 @@ export function readStopDetail(value: unknown): StopDetail {
   return {
     ...readSummary(value),
     assignmentUnitId: text(value.assignmentUnitId),
-    orders: value.orders.map((order) => {
-      if (!record(order)) return fail();
-      return {
-        orderId: text(order.orderId),
-        status: text(order.status),
-        orderNumber: nullableText(order.orderNumber),
-        name: nullableText(order.name),
-        address: nullableText(order.address),
-        detailAddress: nullableText(order.detailAddress),
-        boxes: typeof order.boxes === 'number' ? order.boxes : null,
-        items: order.items ?? null,
-        customerRequests: order.customerRequests ?? null,
-        tip: order.tip ?? null,
-        transportConditions: order.transportConditions ?? null,
-        access: order.access ?? null,
-      };
-    }),
+    orders: value.orders.map(readOrder),
     previousPhoto: previous == null ? null : readPreviousPhoto(previous),
   };
 }

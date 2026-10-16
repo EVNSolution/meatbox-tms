@@ -5,14 +5,16 @@ import { ActivityIndicator, AppState, Linking, Modal, Pressable, ScrollView, Sty
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchDayState, fetchMessages, getSession, logout, sendMessage } from '../api/client';
+import { fetchMessages, getSession, logout, sendMessage } from '../api/client';
 import { newEventStamp, sendDeparted, sendRouteReordered, suggestRoute } from '../api/driverApi';
 import type { DriverRoute } from '../api/driverContracts';
 import { ApiError, type DriverMessage, type SessionUser } from '../api/types';
 import { useDriverRoute } from './useDriverRoute';
 import { useOutbox } from './useOutbox';
 import { OPS_PHONE, POLL_INTERVAL_MS } from '../config';
-import { groupStops, isDispatchOperable, seoulToday, stopProgress, vehicleDeliveries, vehiclePhase, type DayState, type Stop } from '../domain/dispatch';
+import { seoulToday, stopProgress, type Stop } from '../domain/dispatch';
+import { editBlock } from '../domain/routeEditing';
+import { routeStops } from '../domain/routeStops';
 import { serverStopOrder, suggestedKeys, suggestionSummary } from '../domain/routeDraft';
 import { RetryAttempt } from '../domain/retryAttempt';
 import { departureLocation } from '../platform/location';
@@ -87,15 +89,13 @@ function SessionRoot() {
 }
 
 function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): void }) {
-  const [state, setState] = useState<DayState | null>(null);
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const [choiceReady, setChoiceReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<'delivery' | 'map'>('delivery');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [editing, setEditing] = useState<DayState | null>(null);
+  const [editing, setEditing] = useState<DriverRoute | null>(null);
   const [reporting, setReporting] = useState<string | null>(null);
   const [outboxOpen, setOutboxOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -104,21 +104,16 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   const [messageError, setMessageError] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ title: string; body: string } | null>(null);
   const [pushStatus, setPushStatus] = useState<PushStatus>('registering');
-  const stateRef = useRef<DayState | null>(null);
   const selectedVehicle = useRef<string | null>(null);
-  const etag = useRef<string | null>(null);
   const mutating = useRef(false);
-  const refreshOk = useRef(true);
-  const generation = useRef(0);
   const requests = useRef(new RequestGate());
   const messageGeneration = useRef(0);
   const active = useRef(true);
   const seenMessages = useRef(new Set<string>());
   const pushWork = useRef<Promise<unknown>>(Promise.resolve());
   const attempts = useRef(new RetryAttempt<ReturnType<typeof newEventStamp> & { problem: 'denied' | 'unavailable' | null }>());
-  const editBasis = useRef<DriverRoute | null>(null);
 
-  useEffect(() => { active.current = true; return () => { active.current = false; generation.current += 1; messageGeneration.current += 1; }; }, []);
+  useEffect(() => { active.current = true; return () => { active.current = false; messageGeneration.current += 1; }; }, []);
   useEffect(() => {
     void readVehicleChoice(date).then((choice) => {
       if (active.current) { selectedVehicle.current = choice; setVehicleId(choice); setChoiceReady(true); }
@@ -130,32 +125,12 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
     if (cause instanceof ApiError && cause.status === 401) onSignedOut();
     else setError(errorText(cause));
   }, [onSignedOut]);
-  const applyState = useCallback((next: DayState) => { stateRef.current = next; setState(next); }, []);
-  const refresh = useCallback(async (force = false) => {
-    if (mutating.current) return;
-    return requests.current.run(`state:${date}`, async () => {
-      if (!active.current || mutating.current) return;
-      const requestGeneration = ++generation.current;
-      try {
-        const result = await fetchDayState(date, force ? null : etag.current);
-        if (!active.current || requestGeneration !== generation.current) return;
-        if (!result.notModified) { etag.current = result.etag; applyState(result.state); }
-        refreshOk.current = true;
-        setError(null);
-      } catch (cause) { refreshOk.current = false; if (requestGeneration === generation.current) fail(cause); }
-      finally { if (active.current && requestGeneration === generation.current) setRefreshing(false); }
-    }, force);
-  }, [applyState, date, fail]);
-  useEffect(() => {
-    void refresh();
-    const timer = setInterval(() => { if (AppState.currentState === 'active') void refresh(); }, POLL_INTERVAL_MS);
-    const subscription = AppState.addEventListener('change', (value) => { if (value === 'active') void refresh(true); });
-    return () => { clearInterval(timer); subscription.remove(); };
-  }, [refresh]);
 
-  const { route, reload: reloadRoute } = useDriverRoute(date, vehicleId, state, onSignedOut);
+  // The whole day of the chosen vehicle comes from one place: the server's driver route.
+  const { route, failure, reload: reloadRoute } = useDriverRoute(date, vehicleId, onSignedOut);
+  const pollError = failure && !(failure instanceof ApiError && failure.status === 401) ? errorText(failure) : null;
   // Location collection follows the vehicle's run: on while it is delivering, off once the route is done.
-  const runPhase = state && vehicleId ? vehiclePhase(state, vehicleId) : null;
+  const runPhase = route?.phase ?? null;
   useEffect(() => {
     if (!vehicleId || !runPhase) return;
     if (runPhase === 'delivering') void ensureTracking(date, vehicleId).catch(() => undefined);
@@ -167,8 +142,8 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   }, []);
   const outbox = useOutbox({
     // Rereads the day after the server confirmed a report; true when the screen shows the server's state again.
-    onConfirmed: async () => { etag.current = null; await refresh(true); return refreshOk.current; },
-    onConflict: () => { etag.current = null; void refresh(true); },
+    onConfirmed: async () => (await reloadRoute()) !== null,
+    onConflict: () => { void reloadRoute(); },
     onSessionLost: onSignedOut,
   });
 
@@ -217,10 +192,10 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
       if (effect.banner) setBanner(effect.banner);
       if (effect.openMessages) setMessagesOpen(true);
       if (effect.reloadMessages) void loadMessages();
-      if (effect.refreshDay) { etag.current = null; void refresh(true); }
+      if (effect.refreshDay) void reloadRoute();
     });
     return () => { live = false; messageGeneration.current += 1; clearInterval(timer); unsubscribe(); unsubscribeToken(); foreground.remove(); };
-  }, [date, loadMessages, refresh, vehicleId]);
+  }, [date, loadMessages, reloadRoute, vehicleId]);
 
   async function chooseVehicle(next: string | null) {
     if (mutating.current) return;
@@ -229,7 +204,7 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
       await pushWork.current; await stopTracking(); await revokePush(date, vehicleId); await saveVehicleChoice(date, next);
       setMessages([]); setMessageError(null); setPushStatus('registering');
       selectedVehicle.current = next;
-      setVehicleId(next); setSelectedKey(null); setEditing(null); setBanner(null); setTab('delivery');
+      setVehicleId(next); setSelectedKey(null); setEditing(null); setBanner(null); setTab('delivery'); setError(null);
     } catch (cause) { fail(cause); }
     finally { mutating.current = false; setBusy(false); }
   }
@@ -241,42 +216,42 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
     } catch (cause) { fail(cause); }
     finally { mutating.current = false; if (active.current) setBusy(false); }
   }
+  // The chosen vehicle is not in today's plan (the plan was rebuilt): the vehicle choice is shown again.
+  const vehicleGone = failure instanceof ApiError && failure.status === 404 && failure.code === 'DRIVER_VEHICLE_NOT_FOUND';
+
   function act(_action: 'arrive' | 'complete', stop: Stop) { setReporting(stop.key); }
   // Order edits, the departure and the stop reports are driver events; the reports go through the device queue.
+  // Closed stops (current, done, skipped) keep their place, so the editor only moves the waiting ones.
   async function openEditor() {
-    if (!state || !vehicleId || mutating.current) return;
+    if (!vehicleId || mutating.current) return;
     setError(null);
     const fresh = await reloadRoute();
-    if (!fresh || fresh.revision !== stateRef.current?.revision) {
-      void refresh(true);
-      setError('최신 상태를 불러오는 중입니다. 잠시 후 다시 눌러 주세요.');
-      return;
-    }
-    editBasis.current = fresh;
-    setEditing(stateRef.current);
+    if (!fresh) { setError('최신 경로를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
+    const blocked = editBlock(fresh.phase, outbox.waiting);
+    if (blocked) { setError(blocked); return; }
+    setEditing(fresh);
   }
   async function suggestOrder(): Promise<{ keys: string[]; summary: string }> {
-    const basis = editBasis.current;
-    if (!vehicleId || !basis || !editing) throw new Error('순서 편집을 다시 열어 주세요.');
+    if (!vehicleId || !editing) throw new Error('순서 편집을 다시 열어 주세요.');
     const suggestion = await suggestRoute(date, vehicleId).catch((cause: unknown) => {
       if (cause instanceof ApiError && cause.status === 401) fail(cause);
       throw new Error(errorText(cause));
     });
-    if (suggestion.revision !== basis.revision) {
-      void refresh(true);
+    if (suggestion.revision !== editing.revision) {
+      void reloadRoute();
       throw new Error(errorText(new ApiError(409, 'REVISION_CONFLICT')));
     }
-    const editable = groupStops(vehicleDeliveries(editing, vehicleId)).filter((stop) => stop.status === 'pending');
-    const keys = suggestedKeys(editable, suggestion, basis);
+    const editable = routeStops(editing).filter((stop) => stop.status === 'pending');
+    const keys = suggestedKeys(editable, suggestion, editing);
     if (!keys) throw new Error('서버가 제안한 순서를 이 화면과 맞출 수 없습니다. 새로고침해 주세요.');
     return { keys, summary: suggestionSummary(suggestion) };
   }
   async function saveOrder(keys: string[]) {
-    const basis = editBasis.current;
-    if (!editing || !vehicleId || !basis || mutating.current) return;
-    mutating.current = true; generation.current += 1; setBusy(true); setError(null);
+    const basis = editing;
+    if (!basis || !vehicleId || mutating.current) return;
+    mutating.current = true; setBusy(true); setError(null);
     try {
-      const order = serverStopOrder(keys, groupStops(vehicleDeliveries(editing, vehicleId)), basis);
+      const order = serverStopOrder(keys, routeStops(basis), basis);
       const stamp = await attempts.current.get(
         `reorder:${basis.revision}:${order.join(',')}`,
         () => ({ ...newEventStamp(), problem: null }),
@@ -289,13 +264,13 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
       if (cause instanceof ApiError) { attempts.current.settle(); setEditing(null); }
       fail(cause);
     } finally {
-      mutating.current = false; etag.current = null;
-      if (active.current) { setBusy(false); void refresh(true); }
+      mutating.current = false;
+      if (active.current) { setBusy(false); void reloadRoute(); }
     }
   }
   async function depart() {
     if (!vehicleId || mutating.current) return;
-    mutating.current = true; generation.current += 1; setBusy(true); setError(null);
+    mutating.current = true; setBusy(true); setError(null);
     try {
       // A resend after a lost response must be the same request, so the stamp keeps its time and location.
       const stamp = await attempts.current.get('departed', async () => {
@@ -313,37 +288,37 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
       if (cause instanceof ApiError) attempts.current.settle();
       fail(cause);
     } finally {
-      mutating.current = false; etag.current = null;
-      if (active.current) { setBusy(false); void refresh(true); }
+      mutating.current = false;
+      if (active.current) { setBusy(false); void reloadRoute(); }
     }
   }
 
-  const chosenVehicle = state?.fleetVehicles.find((vehicle) => vehicle.id === vehicleId);
   if (!choiceReady) return <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>;
-  if (!vehicleId || (state && !chosenVehicle)) return <VehicleSelectScreen date={date} error={error} onLogout={() => void signOut()} onRetry={() => void refresh(true)} onSelect={(id) => void chooseVehicle(id)} state={state} />;
-  const deliveries = state ? vehicleDeliveries(state, vehicleId) : [];
-  const { stops, queued } = applyOutbox(groupStops(deliveries), outbox.items);
+  if (!vehicleId || vehicleGone) return <VehicleSelectScreen date={date} onLogout={() => void signOut()} onSelect={(id) => void chooseVehicle(id)} onSessionLost={onSignedOut} />;
+  const { stops, queued } = applyOutbox(route ? routeStops(route) : [], outbox.items);
+  const orders = stops.flatMap((stop) => stop.orders);
   const reportingStop = stops.find((stop) => stop.key === reporting && stop.status === 'current') ?? null;
   const labelFor = (item: { stopId: string }) => stops.find((stop) => stop.orders.some((order) => order.id === item.stopId))?.name ?? item.stopId;
-  const phase = state ? vehiclePhase(state, vehicleId) : 'idle';
-  const operable = !!state && isDispatchOperable(state);
+  const phase = route?.phase ?? 'idle';
   const pickup = phase === 'idle' || phase === 'preparing';
   const selectedStop = stops.find((stop) => stop.key === selectedKey) ?? null;
   const progress = stopProgress(stops);
   const opsCall = telUrl(OPS_PHONE);
+  const shownError = error ?? pollError;
   const etaFor = (stop: Stop) => etaLabel(stop, route);
   const infoFor = (stop: Stop) => {
     const entry = serverStop(stop, route);
-    return entry ? <StopInfo date={date} key={entry.stopId} onTipSaved={() => { etag.current = null; void refresh(true); }} stopId={entry.stopId} tipEditable={stop.status === 'pending' || stop.status === 'current'} vehicleId={vehicleId} /> : null;
+    return entry ? <StopInfo date={date} key={entry.stopId} onTipSaved={() => { void reloadRoute(); }} stopId={entry.stopId} tipEditable={stop.status === 'pending' || stop.status === 'current'} vehicleId={vehicleId} /> : null;
   };
   const pushLabel = { registering: '알림 연결 중', ready: '알림 연결됨', denied: '알림 권한이 꺼져 있습니다', unavailable: '푸시 알림 연결 안 됨 · 앱에서 메시지를 확인하세요' }[pushStatus];
+  const editingStops = editing ? routeStops(editing) : [];
 
   return <SafeAreaView style={styles.screen}>
     <View style={styles.header}><Logo /><View style={styles.headerButtons}>
       <Button disabled={busy} label="메시지" onPress={() => setMessagesOpen(true)} style={styles.headerButton} tone="secondary" />
       <Button disabled={busy} label="차량 변경" onPress={() => void chooseVehicle(null)} style={styles.headerButton} tone="secondary" />
     </View></View>
-    <View style={styles.summary}><T style={styles.driver}>{chosenVehicle?.driver ?? vehicleId}</T><T style={styles.caption}>{date} · 완료 {progress.done}/{progress.total}곳</T></View>
+    <View style={styles.summary}><T style={styles.driver}>{route?.vehicle.label ?? vehicleId}</T><T style={styles.caption}>{date} · 완료 {progress.done}/{progress.total}곳</T></View>
     {outbox.waiting > 0 ? <Pressable accessibilityRole="button" onPress={() => setOutboxOpen(true)} style={[styles.outboxBadge, outbox.rejected > 0 && styles.outboxBadgeRejected]}>
       <T style={styles.outboxBadgeText}>{outbox.rejected > 0 ? `전송 실패 ${outbox.rejected}건 · 확인이 필요합니다` : `전송 대기 ${outbox.waiting}건`}</T>
     </Pressable> : null}
@@ -352,20 +327,20 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
       {opsCall ? <Button label="운영팀 전화" onPress={() => { void Linking.openURL(opsCall).catch(() => setError('전화 앱을 열지 못했습니다.')); }} style={styles.headerButton} tone="secondary" /> : null}
     </View>
     <T style={[styles.pushStatus, pushStatus !== 'ready' && styles.warning]}>{pushLabel}</T>
-    {error ? <View style={styles.errorBox}><T accessibilityRole="alert" style={styles.error}>{error}</T><Button label="새로고침" onPress={() => void refresh(true)} tone="secondary" /></View> : null}
+    {shownError ? <View style={styles.errorBox}><T accessibilityRole="alert" style={styles.error}>{shownError}</T><Button label="새로고침" onPress={() => { setError(null); void reloadRoute(); }} tone="secondary" /></View> : null}
     {banner ? <Pressable accessibilityRole="button" onPress={() => { setMessagesOpen(true); setBanner(null); }} style={styles.banner}><T style={styles.bannerTitle}>{banner.title}</T><T numberOfLines={2} style={styles.bannerBody}>{banner.body}</T></Pressable> : null}
-    {!state ? <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>
-      : !operable ? <View style={styles.center}><T>오늘 배차가 확정되면 배송을 시작할 수 있습니다.</T><Button label="새로고침" onPress={() => void refresh(true)} /></View>
-      : editing ? <RouteOrderEditor isSaving={busy} onCancel={() => setEditing(null)} onSave={(keys) => void saveOrder(keys)} onSuggest={suggestOrder} stops={groupStops(vehicleDeliveries(editing, vehicleId)).filter((stop) => stop.status === 'pending')} />
-      : tab === 'delivery' && pickup ? <PickupScreen allOrderIds={new Set(state.fleetDeliveries.map((order) => order.id))} date={date} deliveries={deliveries} key={`${date}:${vehicleId}`} onEditOrder={() => void openEditor()} onStart={() => void depart()} starting={busy || !!error} vehicleId={vehicleId} />
-      : tab === 'delivery' ? <DeliveryScreen busy={busy || !!error} canEditOrder={false} etaFor={etaFor} queued={queued} infoFor={infoFor} onAction={act} onEditOrder={() => void openEditor()} onRefresh={() => { setRefreshing(true); void refresh(true); }} refreshing={refreshing} stops={stops} />
+    {!route ? <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>
+      : !route.operable ? <View style={styles.center}><T>오늘 배차가 확정되면 배송을 시작할 수 있습니다.</T><Button label="새로고침" onPress={() => void reloadRoute()} /></View>
+      : editing ? <RouteOrderEditor fixedStops={editingStops.filter((stop) => stop.status !== 'pending')} isSaving={busy} onCancel={() => setEditing(null)} onSave={(keys) => void saveOrder(keys)} onSuggest={suggestOrder} stops={editingStops.filter((stop) => stop.status === 'pending')} />
+      : tab === 'delivery' && pickup ? <PickupScreen date={date} deliveries={orders} key={`${date}:${vehicleId}`} onEditOrder={() => void openEditor()} onStart={() => void depart()} starting={busy || !!shownError} vehicleId={vehicleId} />
+      : tab === 'delivery' ? <DeliveryScreen busy={busy || !!shownError} canEditOrder={phase === 'delivering'} etaFor={etaFor} queued={queued} infoFor={infoFor} onAction={act} onEditOrder={() => void openEditor()} onRefresh={() => { void reloadRoute(); }} refreshing={false} stops={stops} />
       : <View style={styles.fill}><DeliveryRouteMap dimmedKeys={dimmedStopKeys(stops, route)} onMapPress={() => setSelectedKey(null)} onSelect={setSelectedKey} selectedKey={selectedKey} stops={stops} />
-        <BottomSheet onDismiss={() => setSelectedKey(null)} open={!!selectedStop}>{selectedStop ? <ScrollView style={styles.stopSheet}><StopDetails busy={busy || !!error} eta={etaFor(selectedStop)} info={infoFor(selectedStop)} onAction={act} stop={selectedStop} /><Button label="닫기" onPress={() => setSelectedKey(null)} tone="secondary" /></ScrollView> : null}</BottomSheet>
+        <BottomSheet onDismiss={() => setSelectedKey(null)} open={!!selectedStop}>{selectedStop ? <ScrollView style={styles.stopSheet}><StopDetails busy={busy || !!shownError} eta={etaFor(selectedStop)} info={infoFor(selectedStop)} onAction={act} stop={selectedStop} /><Button label="닫기" onPress={() => setSelectedKey(null)} tone="secondary" /></ScrollView> : null}</BottomSheet>
       </View>}
     {!editing ? <View style={styles.tabs}>{(['delivery', 'map'] as const).map((value) => <Pressable accessibilityRole="tab" accessibilityState={{ selected: tab === value }} key={value} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabSelected]}><T style={[styles.tabLabel, tab === value && styles.tabLabelSelected]}>{value === 'delivery' ? '배송' : '지도'}</T></Pressable>)}</View> : null}
     {historyOpen ? <HistoryScreen date={date} onClose={() => setHistoryOpen(false)} stops={stops} vehicleId={vehicleId} waiting={outbox.waiting} /> : null}
     {reportingStop ? <CompletionScreen date={date} onClose={() => setReporting(null)} onSubmit={outbox.enqueue} queuedPhotos={outbox.photos} stop={reportingStop} stopId={serverStop(reportingStop, route)?.stopId ?? reportingStop.orders[0].id} vehicleId={vehicleId} /> : null}
-    {outboxOpen ? <OutboxSheet items={outbox.items} labelFor={labelFor} onClose={() => setOutboxOpen(false)} onDiscard={(id) => { void outbox.discard(id).then(() => { etag.current = null; void refresh(true); }); }} onRetry={(id) => void outbox.retryNow(id)} /> : null}
+    {outboxOpen ? <OutboxSheet items={outbox.items} labelFor={labelFor} onClose={() => setOutboxOpen(false)} onDiscard={(id) => { void outbox.discard(id).then(() => { void reloadRoute(); }); }} onRetry={(id) => void outbox.retryNow(id)} /> : null}
     {messagesOpen ? <MessagesModal error={messageError} messages={messages} onClose={() => { setMessagesOpen(false); setBanner(null); }} onRefresh={() => loadMessages(true)} onSend={async (body) => { await sendMessage(date, vehicleId, body); await loadMessages(true); }} /> : null}
   </SafeAreaView>;
 }

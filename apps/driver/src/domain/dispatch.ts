@@ -15,24 +15,9 @@ export type FleetDelivery = {
   arrivedAt?: string | null;
   completedAt?: string | null;
   assignmentUnitId?: string | null;
+  /** The server's stop this order belongs to. Orders with the same `stopId` are one stop. */
+  stopId?: string;
   items?: { sku?: string; name?: string | null; qty?: number; boxes?: number; barcode?: string | null }[] | null;
-};
-
-export type FleetVehicle = {
-  id: string;
-  driver: string;
-  plate?: string | null;
-  region?: string | null;
-};
-
-export type DayState = {
-  boot?: string;
-  revision: number;
-  sourceData?: { date?: string; operatingDate?: string };
-  dispatch?: { phase?: string } | null;
-  fleetVehicles: FleetVehicle[];
-  fleetDeliveries: FleetDelivery[];
-  vehicleStates: Record<string, { phase?: VehiclePhase } | undefined>;
 };
 
 export type Stop = {
@@ -53,22 +38,7 @@ export function seoulToday(now = Date.now()): string {
   return new Date(now + 9 * 3_600_000).toISOString().slice(0, 10);
 }
 
-export function isDispatchOperable(state: DayState): boolean {
-  const phase = state.dispatch?.phase;
-  return phase === 'published' || phase === 'amending';
-}
-
-export function vehiclePhase(state: DayState, vehicleId: string): VehiclePhase {
-  return state.vehicleStates[vehicleId]?.phase ?? 'idle';
-}
-
-export function vehicleDeliveries(state: DayState, vehicleId: string): FleetDelivery[] {
-  return state.fleetDeliveries
-    .filter((delivery) => delivery.vehicleId === vehicleId)
-    .sort((a, b) => a.sequence - b.sequence);
-}
-
-// One destination bundle = one stop. Falls back to name+address, which is the server's bundle key.
+// One destination bundle = one stop. The server names the stop (`stopId`); without it the bundle key is name+address.
 export function stopKey(delivery: FleetDelivery): string {
   const normalize = (value: string) => value.normalize('NFC').trim();
   const name = normalize(delivery.name);
@@ -79,7 +49,7 @@ export function stopKey(delivery: FleetDelivery): string {
 export function groupStops(deliveries: readonly FleetDelivery[]): Stop[] {
   const stops = new Map<string, FleetDelivery[]>();
   for (const delivery of [...deliveries].sort((a, b) => a.sequence - b.sequence)) {
-    const key = stopKey(delivery);
+    const key = delivery.stopId ?? stopKey(delivery);
     stops.set(key, [...(stops.get(key) ?? []), delivery]);
   }
   return [...stops.entries()].map(([key, orders], index) => {

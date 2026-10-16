@@ -1,20 +1,34 @@
 import assert from 'node:assert/strict';
 import { test, type TestContext } from 'node:test';
 
-import { fetchEvent, fetchHistory, saveTip, sendLocations, fetchRoute, fetchStop, sendStopEvent, uploadPhoto, newEventId, newEventStamp, photoUrl, sendDeparted, sendRouteReordered, suggestRoute } from './driverApi';
+import { fetchEvent, fetchHistory, fetchVehicles, pollRoute, saveTip, sendLocations, fetchRoute, fetchStop, sendStopEvent, uploadPhoto, newEventId, newEventStamp, photoUrl, sendDeparted, sendRouteReordered, suggestRoute } from './driverApi';
 import { ApiError } from './types';
 
 const DATE = '2026-11-02';
 const NOW = '2026-11-02T00:30:00.000Z';
 const route = {
-  date: DATE, vehicleId: 'G1', revision: 8, phase: 'idle',
+  date: DATE, vehicleId: 'G1', revision: 8, phase: 'idle', dispatchPhase: 'published', operable: true,
+  vehicle: { vehicleId: 'G1', label: '기사', plate: null, region: null },
   stops: [
-    { stopId: 'O1', sequence: 1, orderIds: ['O1', 'O2'], name: '가게A', address: '서울', boxes: 2, status: 'pending', eta: null, estimated: null },
-    { stopId: 'O3', sequence: 2, orderIds: ['O3'], name: '가게B', address: '서울 2', boxes: 1, status: 'pending', eta: '2026-11-02T09:40:00+09:00', estimated: false },
+    {
+      stopId: 'O1', sequence: 1, orderIds: ['O1', 'O2'], name: '가게A', address: '서울', boxes: 2, status: 'pending', eta: null, estimated: null,
+      coordinates: [127.01, 37.5],
+      orders: [
+        { orderId: 'O1', status: 'pending', orderNumber: 'N1', name: '가게A', address: '서울', detailAddress: null, boxes: 1, items: [{ sku: 'S1', name: '삼겹살', qty: 3, barcode: '8801234567890' }], customerRequests: null, tip: null, transportConditions: null, access: null, deliveryType: 'fresh', csNote: null },
+        { orderId: 'O2', status: 'pending', orderNumber: 'N2', name: '가게A', address: '서울', detailAddress: null, boxes: 1, items: [], customerRequests: null, tip: null, transportConditions: null, access: null, deliveryType: null, csNote: null },
+      ],
+    },
+    {
+      stopId: 'O3', sequence: 2, orderIds: ['O3'], name: '가게B', address: '서울 2', boxes: 1, status: 'pending', eta: '2026-11-02T09:40:00+09:00', estimated: false,
+      coordinates: null,
+      orders: [
+        { orderId: 'O3', status: 'pending', orderNumber: 'N3', name: '가게B', address: '서울 2', detailAddress: null, boxes: 1, items: null, customerRequests: null, tip: null, transportConditions: null, access: null, deliveryType: null, csNote: null },
+      ],
+    },
   ],
   next: { stopId: 'O1', eta: null },
 };
-const { sequence: _position, ...stopSummary } = route.stops[0];
+const { sequence: _position, orders: _orders, ...stopSummary } = route.stops[0];
 const detail = {
   ...stopSummary, assignmentUnitId: 'U1',
   orders: [{ orderId: 'O1', status: 'pending', orderNumber: 'N1', name: '가게A', address: '서울', detailAddress: null, boxes: 2, items: [], customerRequests: ['문 앞'], tip: null, transportConditions: null, access: null }],
@@ -195,4 +209,34 @@ test('a tip is posted with the vehicle, a request ID and the text, and a refusal
   t.mock.restoreAll();
   mockFetch(t, () => json({ accepted: true }));
   await assert.rejects(saveTip(DATE, 'G1', 'O1', 'req-3', '팁'), (error: unknown) => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
+});
+
+test('a route poll sends the last ETag, takes a 304 as unchanged and keeps the new ETag of a changed route', async (t) => {
+  const calls = mockFetch(t, ({ init }) => (new Headers(init.headers).get('If-None-Match') === 'W/"route-1"'
+    ? new Response(null, { status: 304 })
+    : new Response(JSON.stringify(route), { headers: { ETag: 'W/"route-2"' } })));
+  assert.deepEqual(await pollRoute(DATE, 'G1', 'W/"route-1"'), { notModified: true });
+  const changed = await pollRoute(DATE, 'G1', null);
+  assert.equal(changed.notModified, false);
+  if (!changed.notModified) {
+    assert.equal(changed.etag, 'W/"route-2"');
+    assert.equal(changed.route.stops[0].orders[0].items?.[0].barcode, '8801234567890');
+    assert.deepEqual(changed.route.stops[0].coordinates, [127.01, 37.5]);
+    assert.equal(changed.route.vehicle.label, '기사');
+    assert.equal(changed.route.operable, true);
+  }
+  assert.equal(new Headers(calls[0].init.headers).get('If-None-Match'), 'W/"route-1"');
+  assert.equal(new Headers(calls[1].init.headers).has('If-None-Match'), false);
+});
+
+test('the vehicle list is read with its counts, and a malformed one is refused', async (t) => {
+  const row = { vehicleId: 'G1', label: '기사', plate: null, region: '서울', phase: 'idle', stops: 3, orders: 4 };
+  const calls = mockFetch(t, () => json({ date: DATE, dispatchPhase: 'published', operable: true, vehicles: [row] }));
+  const list = await fetchVehicles(DATE);
+  assert.equal(calls[0].path, `/api/dispatch-data/days/${DATE}/driver/vehicles`);
+  assert.deepEqual(list.vehicles, [row]);
+  assert.equal(list.operable, true);
+  t.mock.restoreAll();
+  mockFetch(t, () => json({ date: DATE, dispatchPhase: 'published', operable: true, vehicles: [{ ...row, phase: 'lost' }] }));
+  await assert.rejects(fetchVehicles(DATE), (error: unknown) => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
 });
