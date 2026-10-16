@@ -129,7 +129,7 @@
 - 한 주문의 메시지는 순서대로 나간다. 앞 메시지가 재시도 중이면 뒤 메시지는 기다린다.
 - `429`는 `5xx`처럼 재시도하고, 그 밖의 `4xx`·`3xx`는 재시도 없이 `failedAt`을 남기고 알림(`meatbox-outbound`/`DELIVERY_STATUS_REJECTED`)을 보낸다. 한 메시지가 11번 실패하면 `DELIVERY_STATUS_UNREACHABLE` 알림을 보낸다.
 - 인증은 `MEATBOX_API_TOKEN`이 있을 때만 `Authorization: Bearer`를 붙인다. 고정 IP 허용은 배포 쪽 과제다.
-- 온도(3.3)는 보내지 않는다. ETA(3.2)는 출발과 재산출(위 3.2)에서 보낸다. 송신함의 `kind`로 나중에 얹는다.
+- ETA(3.2)는 출발과 재산출(아래 3.2)에서, 온도(3.3)는 1분 묶음(아래 3.3)으로 보낸다. 둘 다 `kind`로 같은 발송기를 탄다. 온도 메시지는 날짜 체크포인트가 아니라 차량별 `telemetry/{vehicleId}/outbox.json`에 쌓인다.
 
 ### 3.2 ETA
 
@@ -177,6 +177,18 @@
 }
 ```
 
+**구현됨(수신 끝점부터 송신까지).** 온도 단말(또는 그 게이트웨이)이 `POST /api/telemetry/temperature`([API 참조](api-reference.md#온도-단말-수신과-조회-kotlin-api-전용))로 밀어 넣은 측정값을 서버가 저장하고, 1분마다 차량·센서별로 묶어 `kind: "temperature"` 메시지로 송신함에 넣는다. 발송기가 `POST {MEATBOX_API_BASE_URL}/tms/temperature`로 보낸다. 계약과 다른 점:
+
+- **STEGO 단말의 통신 방식·수신 규격은 모른다.** 수신 본문은 우리가 정한 일반 형식(`vehicleId`, `sensorId`, `measurements[{measuredAt, celsius, compartment?}]`)이다. 단말 규격 변환은 이 본문을 만들어 보내는 `integrations/stego/` 어댑터로 얹는다. 지금은 코드가 없다.
+- 센서마다 메시지를 나눈다(본문 `sensorId`가 하나이므로). 한 메시지는 최대 500건이고 넘으면 같은 분의 다음 메시지로 나눈다.
+- `messageId`는 `{vehicleId}-{묶은 분 yyyyMMddHHmm}-{sensorId}`이고 `Idempotency-Key`와 같다. 같은 분에 다시 묶으면 `-2`, `-3`을 붙인다. 한 차량의 메시지는 앞 메시지가 끝나야 나간다.
+- 묶음은 **도착한 순서**로 만든다. 측정 시각이 오래된 측정이 늦게 와도 다음 묶음에 들어간다. 묶음에 빠진 구간은 그대로 비어 있고 `gap` 같은 표시는 없다. 측정은 `measuredAt` 오름차순이다.
+- 본문에 `compartment`·수신 시각은 넣지 않는다. `measuredAt`은 `+09:00` 초 단위, `celsius`는 단말이 보낸 값 그대로다. 단위 변환·보정은 하지 않는다.
+- 서버 시계와 5분 넘게 어긋난 미래 측정, 7일보다 오래된 측정, -60~60 밖의 값은 수신에서 거절한다. 단말 시계가 느리거나 빠른 것은 보정하지 않는다.
+- `MEATBOX_API_BASE_URL`이 비어 있으면 묶지 않는다. 측정은 저장되고, 주소를 정하면 최근 8일 안에서 아직 묶지 않은 것부터 한꺼번에 나간다.
+- 이 메시지가 거절(`4xx`)되면 알림 `meatbox-outbound` / `TEMPERATURE_REJECTED`를 보내고 재시도하지 않는다. 한 메시지가 11번 실패하면 `TEMPERATURE_UNREACHABLE`을 보낸다.
+- 미트박스 실 수신은 확인하지 않았다. 우리 모의 수신기까지만 통과했다.
+
 ## 4. 미트박스 → 서버 주문 수신
 
 미트박스가 주문을 밀어 넣는 방식을 제안한다. 당기는 방식이면 같은 본문을 조회 응답으로 쓴다.
@@ -221,7 +233,7 @@
 
 미트박스 명세 전까지 PoC는 우리 서버의 `/mock/meatbox/*`가 3장의 본문을 받아 `202`를 돌려주는 것으로 통과시킨다. 첫 송신 구현과 같은 작업 단위에서 만들었다.
 
-**구현됨.** `meatbox.mock-receiver.enabled=true`일 때만 뜨는 테스트 전용 수신기다. 필수 키·`Idempotency-Key`를 검사하고 최근 200건을 `GET /mock/meatbox/received`로 보여 준다. 세션이 없으므로 운영에 켜지 않는다. 경로와 오류는 [API 참조](api-reference.md#모의-수신기-mockmeatbox-테스트-전용)에 있다. 송신기가 `{base}/tms/<종류>`로 보내므로 수신기는 `/mock/meatbox/tms/<종류>`도 받는다(기본 주소 `.../mock/meatbox`). 3.2 본문은 출발과 재산출이 보낸다. 3.3 본문은 검사만 하고 송신기는 아직 보내지 않는다.
+**구현됨.** `meatbox.mock-receiver.enabled=true`일 때만 뜨는 테스트 전용 수신기다. 필수 키·`Idempotency-Key`를 검사하고 최근 200건을 `GET /mock/meatbox/received`로 보여 준다. 세션이 없으므로 운영에 켜지 않는다. 경로와 오류는 [API 참조](api-reference.md#모의-수신기-mockmeatbox-테스트-전용)에 있다. 송신기가 `{base}/tms/<종류>`로 보내므로 수신기는 `/mock/meatbox/tms/<종류>`도 받는다(기본 주소 `.../mock/meatbox`). 3.2 본문은 출발과 재산출이 보낸다. 3.3 본문은 온도 묶음이 보낸다.
 
 ## 6. 미트박스에 확인할 것
 

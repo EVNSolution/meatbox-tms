@@ -4,6 +4,7 @@ import com.evnsolution.meatbox.dispatch.DispatchStore
 import com.evnsolution.meatbox.integrations.meatbox.outbound.OutboxItem
 import com.evnsolution.meatbox.integrations.meatbox.outbound.OutboxOutcome
 import com.evnsolution.meatbox.ops.ErrorAlerts
+import com.evnsolution.meatbox.telemetry.TemperatureOutbox
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.http.HttpTimeoutException
@@ -20,6 +21,7 @@ class OutboxSender(
     private val client: MeatboxClient,
     private val alerts: ErrorAlerts,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val telemetryOutbox: TemperatureOutbox? = null,
 ) : AutoCloseable {
     private val executor = ScheduledThreadPoolExecutor(1) { task ->
         Thread(task, "meatbox-outbox").apply { isDaemon = true }
@@ -38,7 +40,8 @@ class OutboxSender(
 
     /** One pass over everything due now. Public so tests can drive it with their own clock. */
     fun tick() {
-        store.dueOutbox(clock(), BATCH).forEach { item ->
+        val due = store.dueOutbox(clock(), BATCH) + telemetryOutbox?.due(clock(), BATCH).orEmpty()
+        due.forEach { item ->
             runCatching { deliver(item) }.onFailure { log.warn("Outbox record failed: {}", it.javaClass.simpleName) }
         }
     }
@@ -46,7 +49,10 @@ class OutboxSender(
     private fun deliver(item: OutboxItem) {
         val (outcome, status) = attempt(item)
         val at = clock()
-        val attempts = store.recordOutbox(item, outcome, status, at, at + backoff(item.attempts + 1))
+        val next = at + backoff(item.attempts + 1)
+        // Temperature batches live in the telemetry files, not in a date checkpoint.
+        val attempts = telemetryOutbox?.takeIf { item.kind == "temperature" }?.record(item, outcome, status, at, next)
+            ?: store.recordOutbox(item, outcome, status, at, next)
         val code = item.kind.uppercase().replace('-', '_')
         when {
             outcome == OutboxOutcome.REJECTED ->

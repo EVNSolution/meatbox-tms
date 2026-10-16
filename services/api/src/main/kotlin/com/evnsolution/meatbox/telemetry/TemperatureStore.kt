@@ -120,6 +120,15 @@ class TemperatureStore(
             .also { indexes[vehicleId to day] = it }
     }
 
+    /** Runs [action] with every write to the telemetry files held off, in this process and in a second one. */
+    @Synchronized
+    fun <T> exclusive(action: () -> T): T = try {
+        Files.createDirectories(directory)
+        fileLock.withLock(action)
+    } catch (error: IOException) {
+        throw DispatchException(SERVICE_UNAVAILABLE, "TELEMETRY_WRITE_FAILED", "TELEMETRY_WRITE_FAILED", error)
+    }
+
     /** The newest measurement of every sensor that has ever reported. */
     fun latest(): List<Latest> = newest.values.sortedWith(compareBy({ it.vehicleId }, { it.sensorId }))
 

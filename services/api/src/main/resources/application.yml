@@ -72,6 +72,8 @@ meatbox:
     # frozen or chilled: the range for vehicles that name none (no compartment, no entry in telemetry/ranges.json).
     # Empty leaves them unjudged.
     default-kind: ${MEATBOX_TELEMETRY_DEFAULT_KIND:}
+    # Seconds between passes that turn new measurements into Meatbox messages (contract 3.3: one-minute batches).
+    batch-seconds: ${MEATBOX_TELEMETRY_BATCH_SECONDS:60}
 
   outbound:
     # Empty base URL keeps messages in the outbox without sending. The token is sent as a Bearer header when set.

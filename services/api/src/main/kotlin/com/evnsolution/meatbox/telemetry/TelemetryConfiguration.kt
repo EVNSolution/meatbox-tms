@@ -4,6 +4,7 @@ import com.evnsolution.meatbox.auth.SessionVerifier
 import com.evnsolution.meatbox.dispatch.DispatchStore
 import com.evnsolution.meatbox.dispatch.TemperatureSource
 import com.evnsolution.meatbox.integrations.meatbox.inbound.MeatboxInboundFilter
+import com.evnsolution.meatbox.integrations.meatbox.outbound.MeatboxClient
 import com.evnsolution.meatbox.ops.ErrorAlerts
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
@@ -45,6 +46,23 @@ class TelemetryConfiguration {
         return TemperatureWatch(store, ranges, alerts).also {
             dispatch.temperatures = TemperatureSource(it::perVehicle)
         }
+    }
+
+    @Bean
+    fun temperatureOutbox(
+        store: TemperatureStore,
+        @Value("\${meatbox.dispatch.state-dir:}") stateDirectory: String,
+    ): TemperatureOutbox = TemperatureOutbox(store, Path.of(stateDirectory).resolve("telemetry"))
+
+    /** Batches only while a Meatbox address is set; without one the measurements simply wait in their day files. */
+    @Bean(destroyMethod = "close")
+    fun temperatureBatcher(
+        outbox: TemperatureOutbox,
+        client: MeatboxClient,
+        alerts: ErrorAlerts,
+        @Value("\${meatbox.telemetry.batch-seconds:60}") batchSeconds: Long,
+    ): TemperatureBatcher = TemperatureBatcher(outbox, alerts).also {
+        if (client.enabled) it.start(batchSeconds.coerceAtLeast(1))
     }
 
     @Bean

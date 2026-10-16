@@ -49,6 +49,7 @@
 | `GET` | `/api/telemetry/temperature/latest` | 차량·센서별 최신 온도와 마지막 수신 경과 (Kotlin API 전용) |
 | `GET` | `/api/telemetry/temperature/{vehicleId}?from=&to=&resolution=` | 한 차량의 온도 이력, 최대 24시간 (Kotlin API 전용) |
 | `GET` | `/api/ops/alerts` | 최근 서버 오류 알림 50건과 채널 종류 (Kotlin API 전용) |
+| `GET` | `/api/ops/telemetry` | 온도 메시지 송신 대기·거절·완료 건수, 차량별 (Kotlin API 전용) |
 | `GET` | `/api/ops/outbox?date=` | 미트박스 송신 대기·거절·완료 건수와 최근 20건 (Kotlin API 전용) |
 | `POST` `GET` | `/mock/meatbox/*` | 미트박스 모의 수신기. **테스트 전용**, 기본 꺼짐 (Kotlin API 전용) |
 | `GET` | `/api/resources` | 차량·지역 코드 등록부 |
@@ -651,6 +652,16 @@ STEGO 단말의 통신 방식·수신 규격은 정해지지 않았다. 이 끝�
 - `pending`은 미전송(재시도 대기 포함), `failed`는 `4xx` 거절로 멈춘 건, `sent`는 전송 완료 건이다. 완료·거절 건은 24시간, 최대 1000건까지 남는다. 미전송 건은 지우지 않는다.
 - `recent`는 가장 늦게 쌓인 순 20건이다. `lastStatus`는 HTTP 상태 코드 또는 `timeout`·`connect-failed`다.
 - 주문 본문·사진 URL·토큰은 넣지 않는다.
+
+### `GET /api/ops/telemetry`
+
+세션이 필요하다. 온도 메시지의 송신함(차량별 `telemetry/{vehicleId}/outbox.json`)을 요약한다. 날짜 상태 모듈이 꺼져 있으면 경로가 없다. 메시지 본문은 넣지 않는다.
+
+```json
+{ "vehicles": [{ "vehicleId": "V-021", "pending": 0, "failed": 0, "sent": 12 }], "pending": 0, "failed": 0, "sent": 12 }
+```
+
+`pending`은 미전송(재시도 대기 포함), `failed`는 `4xx` 거절로 멈춘 건, `sent`는 전송 완료 건이다. 완료·거절 건은 24시간, 최대 1000건까지 남는다.
 
 ### 모의 수신기 `/mock/meatbox/*` (테스트 전용)
 

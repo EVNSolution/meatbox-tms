@@ -132,6 +132,7 @@ published ── begin_dispatch_revision ──► amending
 - 같은 센서·같은 초는 한 번만 남는다. 프로세스는 파일별 키 집합을 메모리에 두고, 파일 크기가 자기가 쓴 값과 다르면(다른 프로세스가 썼으면) 다시 읽는다.
 - 차량별 최신 값은 메모리에 있고 시작할 때 각 차량의 마지막 파일에서 복원한다. 오늘 날짜 snapshot이 `vehicleStates[v].temperature`로 덧씌워 보여 주고(`DriverLocationOverlay`와 같은 방식, 체크포인트에는 쓰지 않음) 기사 경로 조회가 같은 값을 읽는다. 이탈 판정 상태(`outOfRange`)는 메모리에만 있다.
 - 허용 범위는 `telemetry/ranges.json`(차량별 `kind` 또는 `min`·`max`)이 가진다. **임시 위치다.** 자원 등록부 `vehicles` 필드로 옮길 예정이며, 옮기면 이 파일과 `MEATBOX_TELEMETRY_DEFAULT_KIND`는 없어진다.
+- 미트박스로 보낼 온도 메시지는 차량별 `outbox.json`이 소유한다: `{cursor: {날짜: 바이트 위치}, outbox: [배송 상태 송신함과 같은 항목]}`. 위치는 "그 날짜 파일에서 여기까지는 메시지에 담았다"는 뜻이고 측정 시각이 아니라 도착 순서를 따른다. 새 메시지와 앞당겨진 위치는 한 번의 원자적 파일 교체로 같이 쓴다(체크포인트가 상태·결과·송신함을 한 번에 쓰는 것과 같은 이유). 위치는 최근 8일 파일만 갖는다. 항목의 ID·재시도·보존 규칙은 날짜 송신함과 같고 `orderId` 자리에 `vehicleId`가 들어간다. 날짜 체크포인트는 온도 메시지를 모른다.
 - `telemetry/.telemetry.lock`이 쓰기를 직렬화한다. `DriverFileLock`을 같은 방식으로 쓴다.
 
 ## 미트박스가 보낸 주문(API 원본)

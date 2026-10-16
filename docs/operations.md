@@ -277,6 +277,7 @@ Kotlin API는 5xx를 내면 담당자 알림을 한 번 보낸다. 채널 설정
 | --- | --- | --- | --- |
 | `MEATBOX_TELEMETRY_TOKEN` | 수신 시 필수 | 없음 | 단말 게이트웨이가 `Authorization: Bearer`로 보내는 토큰이다. 미트박스 주문 토큰(`MEATBOX_INBOUND_TOKEN`)과 다른 값을 쓴다. **비우면 `POST /api/telemetry/temperature`가 없다(404).** 16자 미만이면 시작에 실패한다. 비밀값이므로 `api.env`(0600)에만 두고 로그·알림에 넣지 않는다. 이미 받은 값은 토큰이 없어도 조회에 보인다. |
 | `MEATBOX_TELEMETRY_DEFAULT_KIND` | 선택 | 비어 있음 | `frozen`·`chilled`. `compartment`도 `ranges.json` 항목도 없는 차량에 적용할 허용 범위. 비우면 그런 차량은 판정하지 않는다(냉장 차량에 냉동 기준을 걸면 상시 경보가 나기 때문). 그 밖의 값은 시작에 실패한다. |
+| `MEATBOX_TELEMETRY_BATCH_SECONDS` | 선택 | `60` | 새 측정을 미트박스 메시지로 묶는 주기(초). 계약은 1분 묶음이므로 바꿀 이유가 없고, 시험에서만 줄인다. `MEATBOX_API_BASE_URL`이 있을 때만 돈다. |
 | `MEATBOX_TELEMETRY_STALE_MINUTES` | 선택 | `10` | 이 시간(1~1440분) 동안 새 값이 없으면 센서를 `stale`로 본다. |
 
 - 보관: **보관 기한이 없다.** 지우는 코드가 없고, 차량 한 대·센서 한 개가 30초 간격으로 보내면 하루 약 190 KB다. 차량 30대면 한 해 약 2 GB로 추정한다(측정한 값이 아니다). 정리가 필요하면 오래된 `*.jsonl`을 운영자가 직접 지운다. 한 차량의 하루 파일은 100,000줄(약 9 MB)을 넘으면 `409 TELEMETRY_CAPACITY`다.
@@ -284,6 +285,9 @@ Kotlin API는 5xx를 내면 담당자 알림을 한 번 보낸다. 채널 설정
 - 쓰기: 파일 하나를 줄 단위로 덧붙이고 `telemetry/.telemetry.lock`으로 프로세스 사이를 막는다. 블루/그린 전환 중 두 프로세스가 함께 써도 같은 센서·같은 초는 한 번만 남는다. 쓰다가 끊겨 줄이 잘리면 다음 쓰기가 잘린 끝을 자른다.
 - 게이트웨이(**배포 측 설정 필요**): 웹 게이트웨이(`apps/web`)와 Caddyfile은 `/api/telemetry/*`를 Kotlin API로 보내지 않는다. 단말 게이트웨이가 호출하고 웹이 조회하려면 배포 쪽에서 이 경로를 API(`127.0.0.1`)로 연결하고, 단말 게이트웨이의 고정 IP만 허용한다. 라우팅은 이 저장소 밖(운영 Caddyfile)과 `apps/web`(수정 금지)에 있어 이 저장소는 바꾸지 않았다.
 - 토큰이 새면 가짜 온도를 넣을 수 있다. 토큰을 바꾸려면 `api.env`를 고치고 슬롯을 다시 시작한다. 값 범위(-60~60)·미래 시각·건수 검사가 마지막 방어선이다.
+- 송신: 수신은 바로 보내지 않는다. 1분마다 묶는 작업이 차량·센서별 미송신 측정을 메시지 하나로 만들어 차량별 `telemetry/{vehicleId}/outbox.json`에 쌓고, 발송기(`MEATBOX_OUTBOX_INTERVAL_SECONDS`)가 `POST {MEATBOX_API_BASE_URL}/tms/temperature`로 보낸다. 파일에는 메시지와 "어디까지 묶었는지"(날짜 파일별 바이트 위치)가 함께 들어 있고 둘은 한 번의 원자적 쓰기로 바뀐다. 재시작해도 안 보낸 메시지는 이어서 나가고 보낸 측정은 다시 묶이지 않는다. 상태는 `GET /api/ops/telemetry`에서 본다.
+- 송신 알림: `meatbox-outbound` / `TEMPERATURE_REJECTED`(미트박스가 `4xx`로 거절, 재시도 없음), `TEMPERATURE_UNREACHABLE`(한 메시지 11번 실패), `telemetry` / `BATCH_FAILED`(그 차량의 묶기 실패, 본문에 `vehicleId`). 거절된 메시지는 `failed`로 남고 그 뒤 메시지는 계속 나간다.
+- 미트박스 주소가 없는 동안 쌓인 측정은 주소를 정하면 최근 8일 범위에서 한꺼번에 묶여 나간다(메시지당 500건). 처음 켤 때 한 번 있는 일이다.
 - 허용 범위: `telemetry/ranges.json`에 차량별로 적는다. 파일 수정 시각이 바뀌면 다시 읽으므로 재시작은 필요 없다. **임시 방식이다.** 자원 등록부 `vehicles`에 냉동/냉장 필드가 생기면 거기로 옮긴다.
   ```json
   { "V-021": { "kind": "frozen" }, "V-030": { "min": 0, "max": 5 } }

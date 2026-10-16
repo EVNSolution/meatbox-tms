@@ -2,6 +2,8 @@ package com.evnsolution.meatbox.integrations.meatbox.outbound
 
 import com.evnsolution.meatbox.dispatch.DispatchStore
 import com.evnsolution.meatbox.ops.ErrorAlerts
+import com.evnsolution.meatbox.telemetry.TemperatureOutbox
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
@@ -21,6 +23,9 @@ class OutboundConfiguration {
         store: DispatchStore,
         client: MeatboxClient,
         alerts: ErrorAlerts,
+        telemetryOutbox: ObjectProvider<TemperatureOutbox>,
         @Value("\${meatbox.outbound.interval-seconds:5}") intervalSeconds: Long,
-    ): OutboxSender = OutboxSender(store, client, alerts).also { it.start(intervalSeconds.coerceAtLeast(1)) }
+    ): OutboxSender = OutboxSender(store, client, alerts, telemetryOutbox = telemetryOutbox.ifAvailable).also {
+        it.start(intervalSeconds.coerceAtLeast(1))
+    }
 }
