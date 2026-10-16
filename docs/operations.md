@@ -341,6 +341,42 @@ SERVICE_NAME=meatbox-gateway.service
 journalctl -u "$SERVICE_NAME" --since '30 minutes ago' --no-pager --priority=warning
 ```
 
+## 계약 종료 데이터 내보내기 (Kotlin API)
+
+계약 종료 때 미트박스에 운영 데이터를 한 파일로 넘긴다 (업무요구서 20번). 형식은 [내보내기 형식](data-export-format.md)이다. 계정·비밀번호 해시·세션·기사 앱 토큰은 들어가지 않는다. 고객 전화번호·출입 정보·위치·사진은 들어가므로 승인된 인수자에게만, 암호화된 경로로 전달한다.
+
+내보내기는 읽기만 한다. 서버를 멈추지 않아도 된다. 전체 잠금이 없어서 내보내는 동안 바뀐 파일은 `manifest.json`에 `changedDuringExport: true`로 남는다. 완전한 시점 일치가 필요하면 서버를 멈추고 CLI로 만든다.
+
+두 경로가 같은 코드를 쓴다.
+
+**서버 경로 (로그인한 운영자)**
+
+1. `POST /api/ops/export`로 작업을 시작한다 (본문 선택: `from`·`to`·`include`). 응답의 `jobId`를 적어 둔다.
+2. `GET /api/ops/export/{jobId}`가 `done`이 될 때까지 본다. `bytes`와 `sha256`을 기록한다.
+3. `GET /api/ops/export/{jobId}/download`로 받는다. 받은 파일의 SHA-256이 `sha256`과 같은지 대조한다.
+4. 압축을 풀어 `manifest.json`의 `files[]` 크기·SHA-256을 대조한다. `warnings`가 비어 있는지 본다.
+
+**CLI 경로 (호스트, 서버가 꺼져 있어도 된다)**
+
+서비스와 같은 환경 변수(`api.env`)에 아래를 더해 JAR을 한 번 실행한다. 출력 경로는 정규화된 절대 경로이고 파일이 이미 있으면 실패한다 (덮어쓰지 않는다).
+
+```bash
+set -a; . /etc/meatbox/api.env; set +a
+java -jar meatbox-api.jar --spring.main.web-application-type=none \
+  --meatbox.export.out=/var/tmp/meatbox-export.zip \
+  --meatbox.export.from=2026-10-01 --meatbox.export.to=2026-10-31
+```
+
+`from`·`to`·`include`(쉼표 목록)는 선택이다. 끝에 `경로 크기 SHA-256` 한 줄을 찍는다. 서비스와 같은 사용자로 실행해야 상태 파일이 읽힌다. 서비스 포트를 열지 않으므로 운영 중 서버와 충돌하지 않는다.
+
+**규칙**
+
+- 동시에 하나만 돈다 (`409 EXPORT_IN_PROGRESS`). 디스크 여유가 대상 크기의 2배보다 작으면 시작하지 않는다 (`507 EXPORT_DISK_SPACE`). CLI는 출력 위치의 여유를 직접 확인한다.
+- 서버 경로의 아카이브는 `{state-dir}/exports/`에 7일 보관 뒤 자동 삭제된다. 전달을 마치면 바로 지운다 (`{jobId}.zip`과 `{jobId}.json`). CLI 출력은 사람이 지운다.
+- 전달 후 수신 확인과 삭제 시각을 변경 기록에 남긴다. 이 사본은 보관 기한이 없는 운영 데이터와 별개의 복제본이다.
+- 장애 대응 중에는 시작하지 않는다. 사진이 많으면 수 GB까지 커질 수 있으니 디스크와 전송 시간을 먼저 본다.
+- 이전·복원(import) 도구는 없다. 수신 쪽이 형식 문서로 읽는다.
+
 ## 계정 운영
 
 `scripts/manage-access.js`는 서버 파일을 변경하는 관리 도구다. 공개 관리자 API는 없다.

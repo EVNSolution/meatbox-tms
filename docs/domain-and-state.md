@@ -195,6 +195,8 @@ published ── begin_dispatch_revision ──► amending
 
 - 선택 `etas`: 차량별 최신 도착 예정 시각 `{vehicleId: {computedAt, reason, departedAt, departureTimeSource, recomputes, reported:[{stopId, eta}], stops:[{stopId, sequence, eta, estimated, actualAt?}]}}`. **ETA의 소유자는 날짜 체크포인트의 이 필드다.** 운행 엔진(`OperationalState`)은 모른다. `departed` 명령 묶음이 같은 파일 쓰기로 `etas`와 ETA 메시지를 함께 넣으므로, ETA만 있고 출발이 없거나 그 반대인 경우가 없다. 공개 상태를 만들 때 `vehicleStates[vehicleId].eta`로 덧씌우고 기사 조회가 이를 읽는다. 재시작해도 파일에서 복원한다. 이 필드가 없는 기존 v2 파일을 그대로 복원하고 schema 버전은 올리지 않았다. 출발이 처음 쓰고, 완료·미배송·권역 진입·출발 후 순서 변경이 같은 차량 항목을 덮어쓴다. 닫힌 배송지의 항목은 이전 `eta`를 남기고 `actualAt`을 더한다. `recomputes`는 재산출 횟수(출발은 0), `reported`는 마지막으로 미트박스에 보낸 열린 배송지 ETA다(`recomputes`·`reported`·`actualAt`이 없는 기존 파일도 복원하며 첫 재산출에서 메시지를 남긴다). ETA 메시지의 `messageId`는 출발이 `{date}-{revision}-eta-{vehicleId}`, 재산출이 뒤에 `-r{recomputes}`를 붙인 값이다.
 
+체크포인트·기사 상태·사진·수신 주문·온도 시계열·자원 등록부는 계약 종료 때 한 아카이브로 내보낼 수 있다. 내보내기는 읽기만 하며 상태를 바꾸지 않는다. 형식은 [내보내기 형식](data-export-format.md)이다.
+
 확정 엔진의 내부 체크포인트는 schema v1이며 변경된 경로·주문·차량 상태, 사건과 화면 내 알림만 저장한다. schema v2 안의 `confirmedEngineCheckpoint`로 포함된다. `createDispatchOperations`에 직접 전달한 변경 이력 있는 schema v1 체크포인트는 확정된 레거시 상태로 받아 다음 내보내기에서 v2 외피로 감싼다. HTTP 라우터의 디스크 로더는 schema v2 파일만 허용하므로 schema v1 파일을 `DISPATCH_STATE_DIR`에 그대로 놓으면 복원하지 않고 `DISPATCH_STATE_INVALID`로 닫힌다.
 
 `presentationContentVersion`은 확정 엔진 체크포인트 안에 있다. 값 `0`은 기존 확정 배차에 합성 표현 콘텐츠를 소급하지 않으며, `1`은 현재 표현 기본값을 허용한다. 그 밖의 값은 복원을 거부한다.

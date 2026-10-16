@@ -51,6 +51,8 @@
 | `GET` | `/api/ops/alerts` | 최근 서버 오류 알림 50건과 채널 종류 (Kotlin API 전용) |
 | `GET` | `/api/ops/telemetry` | 온도 메시지 송신 대기·거절·완료 건수, 차량별 (Kotlin API 전용) |
 | `GET` | `/api/ops/outbox?date=` | 미트박스 송신 대기·거절·완료 건수와 최근 20건 (Kotlin API 전용) |
+| `POST` | `/api/ops/export` | 운영 데이터 내보내기 작업 시작 (Kotlin API 전용) |
+| `GET` | `/api/ops/export`, `/api/ops/export/{jobId}`, `/api/ops/export/{jobId}/download` | 작업 목록·상태, 아카이브 받기 (Kotlin API 전용) |
 | `POST` `GET` | `/mock/meatbox/*` | 미트박스 모의 수신기. **테스트 전용**, 기본 꺼짐 (Kotlin API 전용) |
 | `GET` | `/api/resources` | 차량·지역 코드 등록부 |
 | `POST` | `/api/resources/region-codes` | 지역 코드 생성 |
@@ -662,6 +664,28 @@ STEGO 단말의 통신 방식·수신 규격은 정해지지 않았다. 이 끝�
 ```
 
 `pending`은 미전송(재시도 대기 포함), `failed`는 `4xx` 거절로 멈춘 건, `sent`는 전송 완료 건이다. 완료·거절 건은 24시간, 최대 1000건까지 남는다.
+
+### 운영 데이터 내보내기 `/api/ops/export` (Kotlin API 전용)
+
+계약 종료 때 보관 데이터를 한 파일로 내려받는다. 형식은 [내보내기 형식](data-export-format.md), 절차는 [운영 런북](operations.md)을 따른다. 모든 경로에 세션이 필요하다(`/api/ops/*` 공통, 없으면 `401 LOGIN_REQUIRED`). 날짜 상태 모듈이 꺼져 있으면 `503 EXPORT_UNAVAILABLE`이다. 아카이브에 고객 전화번호·출입 정보가 들어 있으므로 시작과 다운로드마다 서버 로그에 사용자 이름이 한 줄 남는다(`EXPORT_START`·`EXPORT_DOWNLOAD`).
+
+`POST /api/ops/export` — 본문(선택): `{"from":"2026-10-01","to":"2026-10-31","include":["orders","dispatch","driver","photos","telemetry","resources"]}`. 세 필드 모두 선택이다. 날짜는 양끝 포함이고 생략하면 전체다. `include`를 생략하면 여섯 묶음 전부다.
+
+```json
+{ "jobId": "5f1c…", "state": "running", "requestedBy": "alice", "createdAt": "2026-10-16T08:00:00Z",
+  "range": { "from": "2026-10-01", "to": "2026-10-31" }, "include": ["orders", "dispatch"] }
+```
+
+- `202`로 작업을 시작하고 바로 답한다. 서버가 `{state-dir}/exports/{jobId}.zip`을 비동기로 만든다.
+- 동시에 하나만 돈다. 이미 도는 작업이 있으면 `409 EXPORT_IN_PROGRESS`.
+- 남은 디스크가 대상 파일 크기의 2배보다 작으면 `507 EXPORT_DISK_SPACE`(아무것도 쓰지 않는다).
+- 날짜 형식·순서 오류, 모르는 필드, 모르는 묶음 이름은 `400 INVALID_EXPORT`.
+
+`GET /api/ops/export/{jobId}` — `state`는 `running`·`done`·`failed`. 끝나면 `finishedAt`, `bytes`, `sha256`과 `download` 경로가 붙는다. 실패하면 `error`(예외 종류만)가 붙는다. 없는 `jobId`는 `404 EXPORT_NOT_FOUND`. `GET /api/ops/export`는 `{"exports":[…]}`(최근 순)이다. 서버를 다시 시작해도 끝난 작업은 남는다.
+
+`GET /api/ops/export/{jobId}/download` — `application/zip`을 스트리밍한다(`Content-Disposition: attachment`). 끝나지 않은 작업은 `409 EXPORT_NOT_READY`.
+
+끝난 아카이브와 기록은 7일 뒤 자동으로 지운다(6시간마다 점검, 새 작업 시작 때도 점검).
 
 ### 모의 수신기 `/mock/meatbox/*` (테스트 전용)
 

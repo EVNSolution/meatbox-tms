@@ -45,7 +45,7 @@
 | [x] 명령 결과를 요청 ID로 영속 조회, 응답 유실 후 중복 적용 방지 | 로컬 검증 | `DispatchStoreTest`(재전송·본문 불일치·재시작·저장 실패·보존 한도), `test/api-connection/kotlin-state-owner.test.mjs`(HTTP 재전송·GET·재시작). 날짜당 500건·24시간·8MiB. [다음 기능 계획](next-feature-delivery-plan.md) F04 |
 | [ ] 테넌트·소속·역할 권한 (3) | 미착수 | F05·F06 |
 | [ ] 원본 변경 시 기존 배차 재사용 차단 | 미착수 | F02 |
-| [ ] 계약 종료 시 운영 데이터 일괄 내보내기 (20) | 미착수 | |
+| [x] 계약 종료 시 운영 데이터 일괄 내보내기 (20) | 로컬 검증 | `export/ExportWriterTest`(manifest 크기·SHA-256 대조, 내보낸 체크포인트로 새 state-dir의 `DispatchStore`가 같은 snapshot 복원, 사진 색인=`stop_completed`의 `photoIds`, 온도 줄 수, 자원 JSON 왕복, 토큰·세션 제외, 빈 범위, 쓰는 중인 줄 처리), `ExportJobsTest`(동시 실행 409, 디스크 507, 없는 jobId 404, 재시작 뒤 조회, 7일 삭제, CLI), `ExportHttpTest`(세션 없음 401, 202→done→다운로드 SHA-256, 400). 실제 JAR 시나리오: 주문 3건 수신→배차 확정→출발·사진·완료→온도 수신→`POST /api/ops/export`→내려받아 manifest 8파일 전부 일치, CLI(`--meatbox.export.out`)도 같은 형식. [형식 명세](data-export-format.md)·[런북](operations.md). 서버 반영·실제 규모(사진 수 GB) 시험은 안 했다. 역할 권한은 없고 세션 + 감사 로그만이다(권한 단위에서 제한) |
 | [ ] 미디어 6개월 Standard 후 장기 보관 이전 (26) | 미착수 | |
 
 ## 트랙 B. 앱↔서버 이벤트와 미트박스 송신 계약
