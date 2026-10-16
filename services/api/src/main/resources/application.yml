@@ -84,3 +84,10 @@ meatbox:
   # TEST ONLY: stands in for Meatbox's API with no session check. Never enable in production.
   mock-receiver:
     enabled: ${MEATBOX_MOCK_RECEIVER_ENABLED:false}
+
+  export:
+    # Command-line export (needs --spring.main.web-application-type=none); empty out means the server runs normally.
+    out: ${MEATBOX_EXPORT_OUT:}
+    from: ${MEATBOX_EXPORT_FROM:}
+    to: ${MEATBOX_EXPORT_TO:}
+    include: ${MEATBOX_EXPORT_INCLUDE:}

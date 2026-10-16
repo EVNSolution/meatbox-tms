@@ -205,6 +205,9 @@ class DispatchStore(
         return updated.path("attempts").asInt()
     }
 
+    /** The day JSON behind [date]'s orders (prepared CSV bundle or Meatbox orders), or null when there is none. */
+    fun sourceDay(date: String): ByteArray? = runCatching { reader.sourceOf(date)?.raw }.getOrNull()
+
     @Synchronized
     fun outboxSummary(date: String, recent: Int): ObjectNode = Outbox.summary(date, entry(date).outbox, recent)
 

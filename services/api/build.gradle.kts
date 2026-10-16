@@ -32,6 +32,14 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+// The archive manifest names the server that wrote it. No build time: it would make every build of one commit differ.
+springBoot {
+    buildInfo {
+        excludes = setOf("time")
+        properties { additional = mapOf("commit" to (System.getenv("GITHUB_SHA") ?: "unknown")) }
+    }
+}
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }

@@ -20,7 +20,7 @@ class OpsSessionFilter(private val verifier: ObjectProvider<SessionVerifier>) : 
         response.setHeader("X-Content-Type-Options", "nosniff")
         try {
             val active = verifier.ifAvailable ?: throw SessionUnavailableException("SESSION_UNAVAILABLE")
-            active.verify(request.getHeader("Cookie"))
+            request.setAttribute(USER_ATTRIBUTE, active.verify(request.getHeader("Cookie")))
             chain.doFilter(request, response)
         } catch (_: LoginRequiredException) {
             writeProblem(response, HttpServletResponse.SC_UNAUTHORIZED, "LOGIN_REQUIRED")
@@ -29,5 +29,9 @@ class OpsSessionFilter(private val verifier: ObjectProvider<SessionVerifier>) : 
         }
     }
 
-    private companion object { const val BASE = "/api/ops" }
+    companion object {
+        /** The verified user name, for the audit line of endpoints that hand out personal data. */
+        const val USER_ATTRIBUTE = "meatbox.ops.user"
+        private const val BASE = "/api/ops"
+    }
 }
