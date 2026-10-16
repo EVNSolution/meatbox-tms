@@ -66,6 +66,10 @@ CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--max-old-space-size=2048 CMAKE_BUILD_PARA
 - 큐는 AsyncStorage(메타데이터)와 사진 파일에 저장되어 앱 재시작 후 복구됩니다. 전송은 앱이 열려 있을 때만 합니다(시작, 새 항목, 전경 복귀, 재시도 시각). 백그라운드 전송은 없습니다.
 - 서버는 현재(`current`) 배송지만 완료로 받습니다. 앱은 `arrived` 이벤트를 보내지 않으며 `stop_*` 한 번에 도착과 완료가 처리됩니다.
 
+## 상품 확인 (바코드·QR 스캔과 수기 입력)
+
+배송 완료 화면은 그 배송지 품목에 `barcode`가 하나라도 있으면 "상품 확인" 구역을 보입니다. 카메라로 스캔하거나 코드를 직접 입력하면 품목 바코드와 대조해 일치 / 이미 읽음 / 품목에 없음을 알립니다(`src/domain/scanMatch.ts`). 공백·하이픈·대소문자는 무시하고, 수량은 비교하지 않습니다. 읽지 못한 품목이나 품목에 없는 코드가 있으면 경고 후 완료할 수 있습니다(`src/domain/scanPolicy.ts`의 `ALLOW_COMPLETION_ON_SCAN_MISMATCH`). 읽은 코드는 전부 `stop_completed.scannedCodes`에 실립니다. 바코드가 없는 배송지는 이 단계가 없습니다. 미트박스의 바코드·상품 매핑 자료를 받기 전에는 이 대조를 확정 규칙으로 쓰지 않습니다.
+
 ## 위치 수집, 배차 알림, 이력, 운영 전화, 배송팁
 
 - **위치 수집**(`src/tracking/LocationTracker.ts`, `src/platform/tracking.ts`): 출발 뒤 위치 포그라운드 서비스(`expo-location` + `expo-task-manager`, 상단 알림 "운행 중 위치를 운영팀에 전송하고 있습니다")가 30초마다 위치를 받습니다. 위치 작업이 불릴 때 마지막 시도 후 1분이 지났으면 200건씩 `POST locations`로 보냅니다(별도 타이머 없음). 네트워크가 없으면 단말에 보관하고 1시간이 지나거나 240건을 넘으면 오래된 것부터 버립니다. 마지막 배송지 완료, 로그아웃, 차량 변경 때 남은 위치를 한 번 보내고 멈춥니다. 상수는 `src/domain/trackingPolicy.ts`입니다.

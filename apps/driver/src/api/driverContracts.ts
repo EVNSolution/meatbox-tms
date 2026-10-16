@@ -163,6 +163,7 @@ export type HistoryItem = {
   reasonCode: string | null;
   note: string | null;
   photoIds: string[];
+  scannedCodes: string[];
 };
 
 export function readTipReply(value: unknown): { duplicate: boolean; body: string } {
@@ -181,6 +182,7 @@ export function readHistory(value: unknown): HistoryItem[] {
       reasonCode: nullableText(item.reasonCode),
       note: nullableText(item.note),
       photoIds: item.photoIds == null ? [] : strings(item.photoIds),
+      scannedCodes: item.scannedCodes == null ? [] : strings(item.scannedCodes),
     };
   });
 }

@@ -12,6 +12,7 @@ export type HistoryRow = {
   reason: string | null;
   note: string | null;
   photos: number;
+  codes: number;
 };
 
 const RESULT: Record<HistoryItem['result'], { label: string; tone: HistoryRow['tone'] }> = {
@@ -38,6 +39,7 @@ export function historyRows(items: readonly HistoryItem[], stops: readonly Stop[
         reason,
         note: item.note?.trim() || null,
         photos: item.photoIds.length,
+        codes: item.scannedCodes.length,
       } satisfies HistoryRow,
     };
   });

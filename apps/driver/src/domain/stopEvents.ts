@@ -1,4 +1,5 @@
 import type { FleetDelivery } from './dispatch';
+import { MAX_CODE_LENGTH, MAX_SCANNED_CODES } from './scanPolicy';
 
 // What the driver reports for one stop, and the event the server expects for it (docs/integration-contract.md 2).
 
@@ -17,7 +18,7 @@ export type ReasonCode = (typeof REASON_CODES)[number]['code'];
 export type PartialItem = { sku: string; name: string; orderedQty: number; deliveredQty: number };
 
 export type StopDraft =
-  | { kind: 'completed'; note: string }
+  | { kind: 'completed'; note: string; scannedCodes?: string[] }
   | { kind: 'failed'; reasonCode: ReasonCode | null; note: string }
   | { kind: 'partial'; items: PartialItem[]; note: string };
 
@@ -38,10 +39,17 @@ export function partialItemsFor(orders: readonly FleetDelivery[]): PartialItem[]
   return items.length > 0 ? items : null;
 }
 
+/** Codes the server accepts: at most 200, each 1 to 128 characters without spaces, none twice. */
+function validCodes(codes: readonly string[]): boolean {
+  return codes.length <= MAX_SCANNED_CODES && new Set(codes).size === codes.length
+    && codes.every((code) => code.length > 0 && code.length <= MAX_CODE_LENGTH && !/\s/u.test(code));
+}
+
 /** The sentence to show when the draft cannot be sent, else null. */
 export function draftProblem(draft: StopDraft, photoCount: number, requirePhoto: boolean): string | null {
   if (draft.note.trim().length > NOTE_MAX) return `특이사항은 ${NOTE_MAX}자까지 쓸 수 있습니다.`;
   if (draft.kind === 'completed' && requirePhoto && photoCount < 1) return '완료 사진을 1장 이상 첨부해 주세요.';
+  if (draft.kind === 'completed' && !validCodes(draft.scannedCodes ?? [])) return '읽은 코드 목록을 확인해 주세요.';
   if (draft.kind === 'failed' && !draft.reasonCode) return '미배송 사유를 선택해 주세요.';
   if (draft.kind === 'partial') {
     const valid = draft.items.length > 0 && draft.items.every((item) =>
@@ -69,7 +77,10 @@ export function buildStopEvent(
   const withNote = (payload: Record<string, unknown>) => (note ? { ...payload, note } : payload);
   switch (draft.kind) {
     case 'completed':
-      return { type: 'stop_completed', payload: withNote({ stopId }) };
+      return {
+        type: 'stop_completed',
+        payload: withNote({ stopId, ...(draft.scannedCodes?.length ? { scannedCodes: draft.scannedCodes } : {}) }),
+      };
     case 'failed':
       return { type: 'stop_failed', payload: withNote({ stopId, reasonCode: draft.reasonCode }) };
     case 'partial':

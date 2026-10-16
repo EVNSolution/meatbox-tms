@@ -248,6 +248,8 @@
 - 주문의 `deliveryDate`가 바뀔 수 있는가. 지금은 `422`로 막는다. 바뀐다면 이전 날짜 취소와 새 날짜 등록을 어떤 식으로 보낼지.
 - 완료 사진 첨부가 필수인가. 앱은 지금 배송 완료에 1장 이상을 요구하고(미배송·부분 완료는 선택) 서버는 사진 없는 완료도 받는다. 요구서의 "사진 첨부 필수 규칙 여부"가 미확인이다. 필수가 아니거나 예외가 있으면 앱의 상수 하나(`REQUIRE_COMPLETION_PHOTO`)만 바꾼다.
 - 한 배송지에 주문이 여러 건일 때 부분 완료를 어떻게 알릴지. 지금은 `stop_partially_completed`가 `orderId`를 지정하면 그 주문 하나에만 `partially_delivered`를 보내고 배송지의 나머지 주문은 상태를 보내지 못한다. `orderId`를 빼면 모든 주문에 같은 품목이 간다. 그래서 앱은 주문이 1건인 배송지에서만 부분 완료를 연다. 다중 주문 묶음에서 주문별 수량을 어떻게 받을지 정해야 한다.
+- 바코드 확인에서 불일치(품목을 읽지 못함, 품목에 없는 코드)가 나오면 배송 완료를 막을지 경고만 할지. 앱은 지금 경고 후 완료를 허용한다(상수 `ALLOW_COMPLETION_ON_SCAN_MISMATCH`). 읽은 코드는 모두 `scannedCodes`로 보낸다.
+- 주문 품목의 `barcode`가 SKU 단위인지 박스(포장) 단위인지, `qty`가 개수인지 중량인지. 앱은 코드가 품목 바코드와 같은지만 보고 읽은 횟수나 수량은 비교하지 않는다. 박스 단위라면 박스마다 스캔하는 규칙과 수량 비교 기준이 필요하다.
 - 배차 확정 뒤의 변경·취소·신규 주문을 어떻게 다룰지. 지금은 반영하지 않고 경고만 남긴다. 확정 뒤 반영을 기대하는지, 그때 기사에게 알릴지.
 
 ## 7. 끝점 요약 (GET / POST)
@@ -257,7 +259,7 @@
 
 ### 7.1 앱 → 우리 서버
 
-**앱 사용 중:** 배송원 앱(`apps/driver`)은 `GET route`, `GET stops/{stopId}`, `GET photos/{photoId}`(직전 완료 사진), `POST route/suggest`, `POST photos`, `GET events/{eventId}`, `GET history`, `POST locations`(운행 중 30초 수집·1분 전송), `POST stops/{stopId}/tip`, `POST events`의 `departed`·`route_reordered`·`stop_completed`·`stop_failed`·`stop_partially_completed`를 쓴다. `zone_entered`는 아직 쓰지 않는다. 서버가 보내는 `route_changed` 푸시는 [API 참조](api-reference.md#배차-변경-푸시-route_changed)를 따른다. 지도 핀 좌표와 차량 선택은 `GET route`에 없어 날짜 상태(`GET state`, 읽기 전용)에서 읽는다.
+**앱 사용 중:** 배송원 앱(`apps/driver`)은 `GET route`, `GET stops/{stopId}`, `GET photos/{photoId}`(직전 완료 사진), `POST route/suggest`, `POST photos`, `GET events/{eventId}`, `GET history`, `POST locations`(운행 중 30초 수집·1분 전송), `POST stops/{stopId}/tip`, `POST events`의 `departed`·`route_reordered`·`stop_completed`(읽은 상품 코드 `scannedCodes` 포함)·`stop_failed`·`stop_partially_completed`를 쓴다. `zone_entered`는 아직 쓰지 않는다. 서버가 보내는 `route_changed` 푸시는 [API 참조](api-reference.md#배차-변경-푸시-route_changed)를 따른다. 지도 핀 좌표와 차량 선택은 `GET route`에 없어 날짜 상태(`GET state`, 읽기 전용)에서 읽는다.
 
 구현됨(현행 경로): 아래 7개 끝점이 모두 `/api/dispatch-data/days/{date}/driver/{route|stops/{stopId}|history|events|events/{eventId}|photos|photos/{photoId}|locations}`에 있다. 표의 `/api/driver/...` 경로는 기사 계정 권한 단위에서 옮길 목표 경로다. 조회는 `vehicleId` 쿼리를 받고, `route`의 `eta`는 출발 전 `null`이고 출발 뒤 값이 채워지며, 배송지 상세의 출입정보는 아직 제한 없이 나간다.
 

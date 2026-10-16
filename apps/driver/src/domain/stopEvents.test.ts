@@ -60,3 +60,14 @@ test('a completion needs a photo when the policy says so, and a note has a lengt
   assert.match(draftProblem({ kind: 'completed', note: 'x'.repeat(NOTE_MAX + 1) }, 1, true) ?? '', /500자/u);
   assert.equal(draftProblem({ kind: 'completed', note: 'x'.repeat(NOTE_MAX) }, 1, true), null);
 });
+
+test('a completion carries the codes read, and refuses a list the server would refuse', () => {
+  const draft = (scannedCodes: string[]): StopDraft => ({ kind: 'completed', note: '', scannedCodes });
+  assert.deepEqual(buildStopEvent('O1', draft(['8801', 'AB1234']), 'O1').payload, { stopId: 'O1', scannedCodes: ['8801', 'AB1234'] });
+  assert.deepEqual(buildStopEvent('O1', draft([]), 'O1').payload, { stopId: 'O1' });
+  assert.match(draftProblem(draft(['a b']), 1, true) ?? '', /코드/u);
+  assert.match(draftProblem(draft(['a', 'a']), 1, true) ?? '', /코드/u);
+  assert.match(draftProblem(draft(['x'.repeat(129)]), 1, true) ?? '', /코드/u);
+  assert.match(draftProblem(draft(Array.from({ length: 201 }, (_unused, index) => `c${index}`)), 1, true) ?? '', /코드/u);
+  assert.equal(draftProblem(draft(Array.from({ length: 200 }, (_unused, index) => `c${index}`)), 1, true), null);
+});

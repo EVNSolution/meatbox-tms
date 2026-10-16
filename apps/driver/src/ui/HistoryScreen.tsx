@@ -62,7 +62,7 @@ export function HistoryScreen({
                 <T style={styles.time}>{row.time ?? '--:--'}</T>
               </View>
               <T style={[styles.result, row.tone === 'failed' && styles.resultFailed]}>
-                {row.result}{row.reason ? ` · ${row.reason}` : ''}{row.photos > 0 ? ` · 사진 ${row.photos}장` : ''}
+                {row.result}{row.reason ? ` · ${row.reason}` : ''}{row.photos > 0 ? ` · 사진 ${row.photos}장` : ''}{row.codes > 0 ? ` · 확인 코드 ${row.codes}개` : ''}
               </T>
               {row.note ? <T style={styles.note}>{row.note}</T> : null}
             </View>

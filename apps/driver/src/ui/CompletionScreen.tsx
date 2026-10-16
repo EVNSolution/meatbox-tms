@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchStop, newEventId, photoUrl } from '../api/driverApi';
 import type { PreviousPhoto } from '../api/driverContracts';
 import type { Stop } from '../domain/dispatch';
 import { MAX_QUEUED_PHOTOS, REQUIRE_COMPLETION_PHOTO } from '../domain/photoPolicy';
+import { cleanCode, expectedScanItems, hasScanMismatch, matchScan, summarizeScans, type ScanResult } from '../domain/scanMatch';
+import { ALLOW_COMPLETION_ON_SCAN_MISMATCH } from '../domain/scanPolicy';
 import {
   buildStopEvent, draftProblem, NOTE_MAX, partialItemsFor, REASON_CODES, type PartialItem, type ReasonCode, type StopDraft,
 } from '../domain/stopEvents';
 import type { NewOutboxItem } from '../outbox/Outbox';
 import { compressAndStore, deleteEventPhotos, deleteStoredPhoto, pickPhoto, type PhotoSource } from '../platform/photoFiles';
+import { CodeScanner } from './CodeScanner';
 import { Button, T } from './common';
 import { PhotoStrip } from './PhotoStrip';
 import { colors, radius, TOUCH_MIN } from './theme';
@@ -56,6 +59,13 @@ export function CompletionScreen({
   const [items, setItems] = useState<PartialItem[]>(baseItems ?? []);
   const [problem, setProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [scans, setScans] = useState<string[]>([]);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [typed, setTyped] = useState('');
+  const [typedNote, setTypedNote] = useState<string | null>(null);
+  const scansRef = useRef<string[]>([]);
+  const expected = useMemo(() => expectedScanItems(stop.orders), [stop.orders]);
+  const summary = useMemo(() => summarizeScans(expected, scans), [expected, scans]);
   const counter = useRef(0);
   const submitted = useRef(false);
   const previous = usePreviousPhoto(date, vehicleId, stopId);
@@ -87,15 +97,55 @@ export function CompletionScreen({
       : item));
   }
 
+  // One reading, from the camera or typed: compared with the stop's items, kept when it is new.
+  function readCode(raw: string): ScanResult {
+    const result = matchScan(raw, expected, scansRef.current);
+    if (result.kind === 'matched' || result.kind === 'unregistered') {
+      scansRef.current = [...scansRef.current, result.code];
+      setScans(scansRef.current);
+    }
+    return result;
+  }
+  function addTyped() {
+    const result = readCode(typed);
+    setTypedNote(result.kind === 'matched' ? `일치 · ${result.items.map((item) => item.name).join(', ')}`
+      : result.kind === 'duplicate' ? '이미 입력한 코드입니다.'
+        : result.kind === 'unregistered' ? '이 배송지 품목에 없는 코드입니다. 목록에 기록했습니다.' : '코드를 확인해 주세요.');
+    if (result.kind !== 'duplicate' && result.kind !== 'invalid') setTyped('');
+  }
+  function removeCode(code: string) {
+    scansRef.current = scansRef.current.filter((taken) => taken !== code);
+    setScans(scansRef.current);
+  }
+
+  function confirmMismatch(): Promise<boolean> {
+    if (mode !== 'completed' || expected.length === 0 || !hasScanMismatch(summary)) return Promise.resolve(true);
+    const lines = [
+      ...summary.missing.map((item) => `읽지 못함: ${item.name}`),
+      ...summary.unregistered.map((code) => `품목에 없는 코드: ${code}`),
+    ].join('\n');
+    if (!ALLOW_COMPLETION_ON_SCAN_MISMATCH) {
+      setProblem(`상품 확인이 끝나지 않았습니다.\n${lines}`);
+      return Promise.resolve(false);
+    }
+    return new Promise<boolean>((resolve) => {
+      Alert.alert('상품 확인에 문제가 있습니다', `${lines}\n\n그래도 완료할까요?`, [
+        { text: '돌아가기', style: 'cancel', onPress: () => resolve(false) },
+        { text: '그래도 완료', onPress: () => resolve(true) },
+      ], { cancelable: true, onDismiss: () => resolve(false) });
+    });
+  }
+
   async function submit() {
     if (saving) return;
-    const draft: StopDraft = mode === 'completed' ? { kind: 'completed', note }
+    const draft: StopDraft = mode === 'completed' ? { kind: 'completed', note, scannedCodes: scans }
       : mode === 'failed' ? { kind: 'failed', reasonCode, note }
         : { kind: 'partial', items, note };
     const message = draftProblem(draft, photos.length, REQUIRE_COMPLETION_PHOTO)
       ?? (queuedPhotos + photos.length > MAX_QUEUED_PHOTOS
         ? '전송 대기 중인 사진이 너무 많습니다. 네트워크에 연결해 전송을 마친 뒤 이어서 처리해 주세요.' : null);
     if (message) { setProblem(message); return; }
+    if (!(await confirmMismatch())) return;
     setSaving(true); setProblem(null);
     try {
       const { type, payload } = buildStopEvent(stopId, draft, stop.orders[0].id);
@@ -197,6 +247,42 @@ export function CompletionScreen({
             </View>
           ) : null}
 
+          {mode === 'completed' && expected.length > 0 ? (
+            <View style={styles.group}>
+              <T style={styles.label}>상품 확인 (선택) · {summary.items.filter((item) => item.read).length}/{summary.items.length}</T>
+              {summary.items.map((item) => (
+                <T key={`${item.orderId}:${item.sku}`} style={item.read ? styles.itemRead : styles.itemUnread}>
+                  {item.read ? '✓' : '○'} {item.name}
+                </T>
+              ))}
+              {summary.unregistered.map((code) => (
+                <View key={code} style={styles.codeRow}>
+                  <T style={styles.itemBad}>품목에 없는 코드 {code}</T>
+                  <Pressable accessibilityLabel={`코드 ${code} 지우기`} accessibilityRole="button" onPress={() => removeCode(code)} style={styles.step}>
+                    <T style={styles.stepText}>×</T>
+                  </Pressable>
+                </View>
+              ))}
+              <Button label="카메라로 스캔" onPress={() => setScannerOpen(true)} tone="secondary" />
+              <View style={styles.codeRow}>
+                <TextInput
+                  accessibilityLabel="코드 직접 입력"
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={128}
+                  onChangeText={(value) => { setTyped(value); setTypedNote(null); }}
+                  onSubmitEditing={addTyped}
+                  placeholder="코드 직접 입력"
+                  placeholderTextColor={colors.muted}
+                  style={[styles.note, styles.codeInput]}
+                  value={typed}
+                />
+                <Button disabled={!cleanCode(typed)} label="추가" onPress={addTyped} style={styles.addCode} tone="secondary" />
+              </View>
+              {typedNote ? <T style={styles.hint}>{typedNote}</T> : null}
+            </View>
+          ) : null}
+
           <PhotoStrip busy={picking} error={photoError} onAdd={(source) => void add(source)} onRemove={remove} uris={photos.map((photo) => photo.localPath)} />
 
           <View style={styles.group}>
@@ -224,6 +310,14 @@ export function CompletionScreen({
           />
         </View>
       </SafeAreaView>
+      {scannerOpen ? (
+        <CodeScanner
+          onClose={() => setScannerOpen(false)}
+          onScan={readCode}
+          readCount={summary.items.filter((item) => item.read).length}
+          total={summary.items.length}
+        />
+      ) : null}
     </Modal>
   );
 }
@@ -272,4 +366,10 @@ const styles = StyleSheet.create({
   hint: { color: colors.muted, fontSize: 12 },
   footer: { backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1, gap: 8, padding: 12 },
   problem: { color: colors.error, fontSize: 14 },
+  itemRead: { color: colors.green, fontSize: 15 },
+  itemUnread: { color: colors.muted, fontSize: 15 },
+  itemBad: { color: colors.error, flex: 1, fontSize: 14 },
+  codeRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  codeInput: { flex: 1, minHeight: TOUCH_MIN + 4 },
+  addCode: { minWidth: 72 },
 });

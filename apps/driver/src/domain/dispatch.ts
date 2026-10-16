@@ -15,7 +15,7 @@ export type FleetDelivery = {
   arrivedAt?: string | null;
   completedAt?: string | null;
   assignmentUnitId?: string | null;
-  items?: { sku?: string; name?: string | null; qty?: number; boxes?: number }[] | null;
+  items?: { sku?: string; name?: string | null; qty?: number; boxes?: number; barcode?: string | null }[] | null;
 };
 
 export type FleetVehicle = {
