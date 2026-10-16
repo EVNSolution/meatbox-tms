@@ -42,6 +42,10 @@ class DriverConfiguration {
     fun driverAssignments(@Value("\${meatbox.dispatch.state-dir:}") directory: String): DriverAssignments =
         DriverAssignments(Path.of(directory).resolve("driver-assignments.json"))
 
+    @Bean
+    fun driverProfiles(@Value("\${meatbox.dispatch.state-dir:}") directory: String): DriverProfiles =
+        DriverProfiles(Path.of(directory).resolve("driver-profiles.json"))
+
     /** Wires operator route changes to the drivers' phones. */
     @Bean
     fun routeChangeNotifier(dispatch: DispatchStore, store: DriverStore, sender: FcmSender): RouteChangeNotifier =

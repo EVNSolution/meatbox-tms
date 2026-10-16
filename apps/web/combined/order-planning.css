@@ -294,3 +294,12 @@
 .order-type-filter[hidden] { display: none; }
 .order-zone-note { margin: 8px 0 0; font-size: 12px; line-height: 1.6; }
 .order-zone-note:empty { display: none; }
+.capa-alert { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); font-size: 13px; }
+.capa-alert[hidden] { display: none; }
+.capa-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 20px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; color: var(--text); }
+.capa-dialog::backdrop { background: #11182770; }
+.capa-dialog h2 { margin: 0 0 8px; font-size: 18px; }
+.capa-list { display: grid; gap: 8px; margin: 12px 0; padding: 0; list-style: none; }
+.capa-row { display: grid; gap: 2px; width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.capa-row:hover, .capa-row:focus-visible { border-color: var(--action); }
+.capa-actions { display: flex; justify-content: end; }

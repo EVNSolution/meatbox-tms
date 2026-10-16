@@ -29,6 +29,7 @@ private val PHOTO_FILE = Regex("^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4
 private val EVENT_KEYS = listOf("eventId", "type", "vehicleId", "stopId", "occurredAt")
 private val COUNT_KEYS = listOf(
     "orders", "dispatchDates", "driverDates", "photos", "telemetryReadings", "vehicles", "regionCodes",
+    "driverProfiles",
 )
 
 /** What the archive is built from. Everything but [state] is read through these, so the writer owns no store. */
@@ -183,6 +184,7 @@ class ExportWriter(
             name.endsWith(".jsonl") -> add("telemetryReadings", content!!.count { it == '\n'.code.toByte() }.toLong())
             name == "resources/vehicles.json" -> add("vehicles", listSize(content, "vehicles"))
             name == "resources/region-codes.json" -> add("regionCodes", listSize(content, "regionCodes"))
+            name == "resources/driver-profiles.json" -> add("driverProfiles", listSize(content, "profiles"))
         }
     }
 
@@ -301,12 +303,15 @@ class ExportWriter(
     }
 
     private fun resources(): List<Item> {
-        val database = sources.resourceDatabase?.takeIf(::regular) ?: return emptyList()
+        // The driver master holds personal data (contact, address, contract); it leaves with the rest of the archive.
+        val profiles = sources.state.resolve("driver-profiles.json").takeIf(::regular)
+            ?.let { Item("resources/driver-profiles.json", size(it), it) }
+        val database = sources.resourceDatabase?.takeIf(::regular) ?: return listOfNotNull(profiles)
         val registry = lazy { runCatching { readRegistry(database) }.getOrNull() }
         return listOf(
             Item("resources/vehicles.json", make = { registry.value?.first }),
             Item("resources/region-codes.json", make = { registry.value?.second }),
-        )
+        ) + listOfNotNull(profiles)
     }
 
     private fun dated(directory: Path, pattern: Regex, request: ExportRequest) =

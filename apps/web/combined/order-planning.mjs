@@ -862,6 +862,19 @@ export function mountOrderPlanning({
       if (externalSelectionChanged && !externalSelectedId) selectedDeliveryId = null;
       updateVehicles(); ensureMap(); renderScene(); renderOrderList();
     },
+    /** Moves the map to a vehicle's main zone (its zone with the most boxes) and selects that vehicle. */
+    focusVehicle(vehicleId) {
+      const source = deliveriesFor(data) || [];
+      const own = source.filter(delivery => vehicleIdFor(delivery, null) === vehicleId);
+      if (!own.length) return false;
+      selectedVehicleId = vehicleId; selectedDeliveryId = null; overlapIds = [];
+      const zone = zoneVolumes(data?.dispatchRegions, own).rows[0]?.zoneId ?? null;
+      fitVehicleRequested = !zone;
+      updateVehicles();
+      if (zone) applyZone(zone, true); else renderScene();
+      canvas.scrollIntoView?.({ block: 'center' });
+      return true;
+    },
     destroy() {
       destroyed = true;
       if (dragStart) stopDrag();

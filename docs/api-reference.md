@@ -58,6 +58,8 @@
 | `GET` | `/api/ops/driver-assignments` | 기사 계정-차량 배정과 기사 계정 목록 (Kotlin API 전용) | ops |
 | `PUT` | `/api/ops/driver-assignments/{vehicleId}` | 차량에 기사 계정을 배정하거나 해제 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/driver-notes?date=` | 그날 기사가 완료·미배송 때 남긴 특이사항 목록 (Kotlin API 전용) | ops |
+| `GET` | `/api/ops/driver-profiles` | 기사 계정별 기준정보(권역·숙련도·연락처·주소·계약정보·차종·탑 사양·최대 Capa) (Kotlin API 전용) | ops |
+| `PUT` | `/api/ops/driver-profiles/{username}` | 기사 한 명의 기준정보를 저장하거나 지움 (Kotlin API 전용) | ops |
 | `POST` | `/api/ops/export` | 운영 데이터 내보내기 작업 시작 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/export`, `/api/ops/export/{jobId}`, `/api/ops/export/{jobId}/download` | 작업 목록·상태, 아카이브 받기 (Kotlin API 전용) | ops |
 | `POST` `GET` | `/mock/meatbox/*` | 미트박스 모의 수신기. **테스트 전용**, 기본 꺼짐 (Kotlin API 전용) | (테스트 전용, 세션 없음) |
@@ -96,6 +98,32 @@
 ```
 
 `result`는 `completed`·`partially_completed`·`failed`, `reasonCode`는 미배송일 때만 있다. `name`·`address`는 날짜에서 읽으므로 배송지가 날짜에서 빠졌으면 빈 문자열이다. `at`은 서버가 이벤트를 받은 시각이다. 날짜 형식이 틀리면 `400 INVALID_DATE`다. 이벤트 기록은 날짜마다 상한이 있어 오래된 이벤트는 빠질 수 있다.
+
+### `GET /api/ops/driver-profiles`
+
+기사 계정(역할 `driver`) 전체와 그 기준정보다. 개인정보(연락처·주소·계약정보)가 들어 있어 운영자만 부른다.
+
+```json
+{ "revision": 3, "drivers": [{
+  "username": "kim", "displayName": "김기사", "known": true, "disabled": false,
+  "region": "강남", "skill": "상", "phone": "010-0000-0000", "address": null, "contract": null,
+  "vehicleType": "1톤 냉동", "topSpec": null, "capa": { "stops": 30, "boxes": 120.5, "weightKg": null } }] }
+```
+
+없는 항목은 `null`이다. `capa`의 `null`은 "설정 안 함"이며 Capa 초과 점검에서 빠진다. 계정이 없어진 기사의 기준정보는 `known: false`로 끝에 남는다.
+
+### `PUT /api/ops/driver-profiles/{username}`
+
+`Origin`이 공개 origin과 같아야 한다. 본문은 `{"revision": 3, "profile": {...}}`이고 `profile`이 `null`이면 그 기사의 기준정보를 지운다. `revision`은 마지막으로 읽은 값이어야 한다. 텍스트는 앞뒤 공백을 자르고 빈 값은 없는 것으로 저장한다(권역·차종 100자, 숙련도·연락처 50자, 주소·계약정보 300자, 탑 사양 200자). `capa.stops`는 0 이상의 정수, `boxes`·`weightKg`는 0 이상의 수(소수 셋째 자리까지)다. 성공하면 `200 {"revision", "username"}`이다. 변경은 서버 로그(INFO)에 기사 계정과 수정자만 남긴다.
+
+| 상태 | `code` | 뜻 |
+|---|---|---|
+| `400` | `INVALID_INPUT` | 알 수 없는 필드, 길이·범위·형식 위반 |
+| `400` | `DRIVER_NOT_FOUND` | `driver` 역할 계정이 아님(저장 때만 검사) |
+| `403` | `ORIGIN_REQUIRED` | `Origin` 불일치 |
+| `404` | `PROFILE_NOT_FOUND` | 지우려는 기준정보가 없음 |
+| `409` | `PROFILE_REVISION_CONFLICT` | `revision`이 낡음 |
+| `500` | `DRIVER_PROFILES_INVALID` | 파일이 깨짐(닫힘) |
 
 ### `GET /api/ops/driver-assignments`
 

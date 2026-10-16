@@ -9,6 +9,8 @@ import { mountVehicleControl } from './vehicle-control.mjs';
 import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from './vehicle-operations-model.mjs';
 import { mountResourceManagement } from './resource-management.mjs';
 import { createDriverAssignmentClient } from './driver-assignment-client.ts';
+import { createDriverProfileClient } from './driver-profile-client.ts';
+import { masterMarkup, mountDriverMaster } from './driver-master.ts';
 import { sourceVehicleContext } from './source-context.mjs';
 import { mountDatePicker } from './date-picker.mjs';
 import { seoulToday, validOperatingDate } from './operating-date.mjs';
@@ -91,7 +93,10 @@ const orderPlanning = mountDatedDispatch({ element: byId('order-planning'), onSe
     return { ...result, shared: true };
   }, onContextChange: () => { if (state.data) renderSummary(); renderStatusNotification(); },
   notify: notice => { state.dispatchNotice = notice.message ? notice : null; renderProgress(); } });
-mountResourceManagement({ element: byId('resource-management'), assignmentClient: createDriverAssignmentClient(), onEmptyChange: empty => { resourcesEmpty = empty; renderStatusNotification(); } });
+const driverAssignments = createDriverAssignmentClient();
+byId('driver-master').innerHTML = masterMarkup();
+mountDriverMaster({ element: byId('driver-master'), client: createDriverProfileClient(), refreshAssignments: () => driverAssignments.load(), assignedVehicles: username => (driverAssignments.snapshot?.assignments ?? []).filter(item => item.driver === username).map(item => item.vehicleId) });
+mountResourceManagement({ element: byId('resource-management'), assignmentClient: driverAssignments, onEmptyChange: empty => { resourcesEmpty = empty; renderStatusNotification(); } });
 // A command that moved a route answers with what the server told the drivers; show it for a moment on every screen.
 let noticeSeq = 0;
 async function sendCommand(type, extra) {

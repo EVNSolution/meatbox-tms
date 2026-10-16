@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 63,
+  "authoredFileCount": 70,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "f53137bc049a1690abfcc8e0b98884bf7aaa1338d08097b711e7e66e78790f7d",
+      "targetSha256": "1400ca34e6ba79db7433ad655ef462cb3c3e98b17a10016bb196685557013e97",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -44,7 +44,8 @@
         "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only.",
         "Route the temperature tab of the control screen and open it for the vehicle chosen in the temperature dialog.",
         "Give the resource screen the driver assignment client.",
-        "Show what the server told the drivers after a route-changing command."
+        "Show what the server told the drivers after a route-changing command.",
+        "Mount the driver master under the resource list."
       ],
       "status": "active"
     },
@@ -427,7 +428,7 @@
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "62a9ffc3bd07951943e9d69ebd920bdb78c2405d1db5615c485f8d58f681ca30",
+      "targetSha256": "2b18dbb7ce15e87ddf539f03d910a8967d5e81497bd4049c4db2341dfdacf1dc",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Remove unused escaping helper, selection value and catch binding; retain update argument position",
@@ -437,7 +438,8 @@
         "Use the shared date navigation with a today shortcut and drop the candidate-vehicle count from the date summary.",
         "Report loading and failure notices through a notify callback instead of an in-flow message and retry button.",
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
-        "Place orders that came without zones into zones from their coordinates and add the delivery-kind view filter, leaving the day and every command untouched."
+        "Place orders that came without zones into zones from their coordinates and add the delivery-kind view filter, leaving the day and every command untouched.",
+        "Show the Capa overrun line and list after the dispatch is confirmed."
       ],
       "status": "active"
     },
@@ -814,7 +816,7 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "f5879693b1bea27a62f069d7272d712fde782e52f43c666991d63d43549a248a",
+      "targetSha256": "5cf4fa02d988e4277cda57ece3a25dcde4e73ab6b21a02953f0ed753bde267d2",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -828,7 +830,8 @@
         "Drop the page description under the title.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Load the temperature stylesheet for the control screen.",
-        "Load the all-vehicle map stylesheet."
+        "Load the all-vehicle map stylesheet.",
+        "Add the host of the driver master."
       ],
       "status": "active"
     },
@@ -956,7 +959,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "518c796724f8be2b174d9ad346623fd9c6c21f5f834a3215e992c98593bb47b2",
+      "targetSha256": "c842ff63054f23a29365fe7602915bfe58d2fb80d29ec5395b341cddaa13c486",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -981,7 +984,8 @@
         "Zone volume list: fixed column widths, tabular numerals, 48px rows and row hover.",
         "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it.",
         "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only.",
-        "Style the delivery-kind filter and the zone note."
+        "Style the delivery-kind filter and the zone note.",
+        "Style the Capa line and its list."
       ],
       "status": "active"
     },
@@ -989,7 +993,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "ae4f8bd45a4593da01d12bc2033fd1d587b70e47c403f0876360c4fc2407f7f7",
+      "targetSha256": "407f83d33ecc32d3464ae94a53e796d99b3684d1b22ffbc0cf79e84620b1ed38",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1009,7 +1013,8 @@
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
         "Overview map fits the middle 80% of stops so far-away outliers do not zoom out to the whole country.",
-        "Sum item weights per order for popups and zone volumes and show the notes about weight and derived zones under the zone table."
+        "Sum item weights per order for popups and zone volumes and show the notes about weight and derived zones under the zone table.",
+        "Move the map to a vehicle's main zone on request."
       ],
       "status": "active"
     },
@@ -1105,7 +1110,7 @@
       "source": "apps/combined/resource-management.css",
       "sourceSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
       "target": "apps/web/combined/resource-management.css",
-      "targetSha256": "5006b58b212ac7ce7c5748225b11bb154a80ad04c3e6be1e3ef09b17df976170",
+      "targetSha256": "18d59c5e9f6d2cdb20a2032b4c3aa42dc4bc97fc6dc9c1a7be2ffbd022070e4d",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px",
@@ -1113,7 +1118,8 @@
         "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px.",
         "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it.",
         "Center the vehicle count of each region code row against its input and button.",
-        "Style the driver column and let the table scroll inside its box on narrow screens."
+        "Style the driver column and let the table scroll inside its box on narrow screens.",
+        "Style the driver master list and form."
       ],
       "status": "active"
     },
@@ -2690,6 +2696,55 @@
       "reason": "Verify the driver note list: escaping, wording, loading only when opened, failures.",
       "status": "active",
       "sha256": "0d5e2a7fa44111fd6aec980ffb9a7d158a4b295960f9e5956105725ce4659ed1"
+    },
+    {
+      "path": "apps/web/combined/driver-profile-client.ts",
+      "origin": "authored",
+      "reason": "Read and save the driver master with revisions.",
+      "status": "active",
+      "sha256": "987c6eb203e4fbb56c26749ab97531169795b451dec2c47bd8eea848098bb62b"
+    },
+    {
+      "path": "apps/web/combined/driver-master.ts",
+      "origin": "authored",
+      "reason": "The driver master screen: register of driver details and largest load.",
+      "status": "active",
+      "sha256": "2df563a372526939c089b586af4d8d7a733bf8b71cfe788f51c8d45ff6546383"
+    },
+    {
+      "path": "apps/web/combined/driver-master.test.mjs",
+      "origin": "authored",
+      "reason": "Verify the driver master client and screen.",
+      "status": "active",
+      "sha256": "f425184556d4df12fa952ab23ebc8a7b32ae34d0e515297502f0e5d811694b49"
+    },
+    {
+      "path": "apps/web/combined/capa-check.ts",
+      "origin": "authored",
+      "reason": "Compare each vehicle's stops, boxes and weight with its driver's Capa.",
+      "status": "active",
+      "sha256": "e9c1804f2f4a82740069c057c0ff3c6e9cbc36df9398f6d2ca81a9d362e87c95"
+    },
+    {
+      "path": "apps/web/combined/capa-check.test.mjs",
+      "origin": "authored",
+      "reason": "Verify the Capa comparison.",
+      "status": "active",
+      "sha256": "786f9f8148b37a2dc979c56a18725bfc713832039b2d33a1115ff92b06f1eb8c"
+    },
+    {
+      "path": "apps/web/combined/capa-alert.ts",
+      "origin": "authored",
+      "reason": "The Capa overrun line and list shown after the dispatch is confirmed.",
+      "status": "active",
+      "sha256": "528f71cdcf7a68fe3b855b997c1e404f57c8df25db2a659dc613b073be5ac71d"
+    },
+    {
+      "path": "apps/web/combined/capa-alert.test.mjs",
+      "origin": "authored",
+      "reason": "Verify the Capa overrun line, list and automatic opening.",
+      "status": "active",
+      "sha256": "b1a9ce94dfed9bff89958ced6901b4096afc354a9a83be9e0a03487389c66333"
     }
   ],
   "historicalTargetFileCount": 163,

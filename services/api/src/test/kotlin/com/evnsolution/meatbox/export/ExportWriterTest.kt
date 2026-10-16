@@ -162,6 +162,19 @@ class ExportWriterTest {
     }
 
     @Test
+    fun `the driver master leaves with the archive and is counted`() {
+        val w = world()
+        Files.writeString(
+            w.fixture.state.resolve("driver-profiles.json"),
+            """{"version":1,"revision":1,"profiles":{"kim":{"phone":"010-0000-0000","capa":{"boxes":100}}}}""",
+        )
+        val archive = export(w.writer)
+        assertThat(archive.json("resources/driver-profiles.json").path("profiles").path("kim").path("phone").asString())
+            .isEqualTo("010-0000-0000")
+        assertThat(archive.manifest.path("counts").path("driverProfiles").asInt()).isEqualTo(1)
+    }
+
+    @Test
     fun `the resource register round trips through the exported JSON`() {
         val w = world()
         val archive = export(w.writer)

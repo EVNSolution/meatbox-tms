@@ -27,6 +27,7 @@ telemetry/{vehicleId}/outbox.json   온도 송신 상태
 telemetry/ranges.json               차량별 허용 온도 범위 (있을 때만)
 resources/vehicles.json             차량 등록부
 resources/region-codes.json         지역 코드
+resources/driver-profiles.json      기사 기준정보 (개인정보 포함, 있을 때만)
 ```
 
 `{date}`는 배송일 `YYYY-MM-DD`다. 범위를 주면 그 범위(양끝 포함)의 날짜 파일만 들어간다. `resources/`·`telemetry/*/outbox.json`·`telemetry/ranges.json`은 날짜가 없어 항상 전체가 들어간다. 해당 데이터가 없으면 파일이 없다.
@@ -41,7 +42,7 @@ resources/region-codes.json         지역 코드
 | `serverVersion`, `serverCommit` | 만든 서버의 버전과 커밋. 빌드 정보가 없으면 `unknown` |
 | `range` | `{from, to}` 요청 범위. 없으면 `null` (전체) |
 | `include` | 들어간 묶음: `orders`·`dispatch`(+`source`)·`driver`·`photos`·`telemetry`·`resources` |
-| `counts` | `orders`(주문 건수, `orders/` 파일의 `order` 배열 길이 합), `dispatchDates`, `driverDates`, `photos`(사진 파일 수), `telemetryReadings`(측정 줄 수), `vehicles`, `regionCodes` |
+| `counts` | `orders`(주문 건수, `orders/` 파일의 `order` 배열 길이 합), `dispatchDates`, `driverDates`, `photos`(사진 파일 수), `telemetryReadings`(측정 줄 수), `vehicles`, `regionCodes`, `driverProfiles`(기사 기준정보 수) |
 | `files[]` | `path`, `size`(바이트), `sha256`(소문자 16진), 선택 `changedDuringExport` |
 | `warnings[]` | 일부 파일을 못 넣은 이유. 비어 있어야 완전하다 |
 
@@ -141,6 +142,14 @@ SQLite 차량 등록부를 JSON으로 푼 것이다.
 | `source` | `kind`(가져온 출처), `importedCount`, `excludedCount` |
 | `vehicles[]` | `id`, `plate`(번호판), `originalCode`(원본 카탈로그 코드, 없으면 `null`), `active`(false면 운행 제외), `regionCode`(지역 코드, 없으면 `null`) |
 | `region-codes.json` `regionCodes[]` | 지역 코드 문자열 목록 (영문 대문자·숫자) |
+
+### resources/driver-profiles.json
+운영자가 입력한 기사 기준정보다. 서버 상태 디렉터리의 `driver-profiles.json`을 그대로 넣는다. **연락처·주소·계약정보가 들어 있는 개인정보**이므로 받는 쪽이 보관·접근 기준을 정한다.
+
+| 필드 | 뜻 |
+|---|---|
+| `revision` | 변경 번호 |
+| `profiles{계정}` | 기사 계정 이름 → `region`(권역), `skill`(숙련도), `phone`, `address`, `contract`, `vehicleType`(차종), `topSpec`(탑 사양), `capa{stops, boxes, weightKg}`(최대 착지수·Box·중량). 비워 둔 항목은 키가 없다 |
 
 ## 복원 방법
 

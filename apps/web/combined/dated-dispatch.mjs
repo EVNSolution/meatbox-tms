@@ -5,6 +5,7 @@ import { mountDispatchWorkflow } from './dispatch-workflow.mjs';
 import { seoulToday, validOperatingDate } from './operating-date.mjs';
 import { dateNavActions, dateSummaryToolbar, mountDateSummaryToolbar } from './date-summary-toolbar.mjs';
 import { withDerivedZones } from './zone-assignment.ts';
+import { capaAlertMarkup, createCapaSources, mountCapaAlert } from './capa-alert.ts';
 import { filterByType, hasTypes, typeCounts, typeNote, TYPE_FILTERS } from './delivery-type.ts';
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -43,8 +44,8 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   const response = await fetch(url, { signal });
   if (!response.ok) { const error = new Error('자료를 불러오지 못했습니다.'); error.status = response.status; throw error; }
   return response.json();
-}, planningFactory = mountOrderPlanning, datePickerFactory = mountDatePicker, workflowFactory = mountDispatchWorkflow, notify = () => {} }) {
-  element.innerHTML = `${dateSummaryToolbar({ label: '배차 날짜', actionsClass: 'date-nav', attributes: 'data-dispatch-toolbar hidden', summaryLabel: '선택 배차일 요약', actions: dateNavActions('배차일', 'data-dispatch-date'), context: '<span class="dispatch-readonly" data-dispatch-readonly hidden>이력 조회 (읽기 전용)</span>' })}<div data-dispatch-workflow hidden></div>${typeFilterMarkup()}<div data-dispatch-planning hidden></div>`;
+}, planningFactory = mountOrderPlanning, datePickerFactory = mountDatePicker, workflowFactory = mountDispatchWorkflow, notify = () => {}, capaSources = createCapaSources() }) {
+  element.innerHTML = `${dateSummaryToolbar({ label: '배차 날짜', actionsClass: 'date-nav', attributes: 'data-dispatch-toolbar hidden', summaryLabel: '선택 배차일 요약', actions: dateNavActions('배차일', 'data-dispatch-date'), context: '<span class="dispatch-readonly" data-dispatch-readonly hidden>이력 조회 (읽기 전용)</span>' })}<div data-dispatch-workflow hidden></div>${capaAlertMarkup()}${typeFilterMarkup()}<div data-dispatch-planning hidden></div>`;
   const query = selector => element.querySelector(selector);
   const toolbar = query('[data-dispatch-toolbar]');
   const toolbarSummary = mountDateSummaryToolbar(toolbar);
@@ -59,6 +60,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   const todayButton = query('[data-date-today]');
   let manifest = null, regions = null, planning = null, operationalData = null, typeFilter = 'all';
   const typeBox = query('[data-dispatch-type-filter]');
+  const capaBox = query('[data-capa-alert]') ? mountCapaAlert({ element, sources: capaSources, onFocus: vehicleId => planning?.focusVehicle?.(vehicleId) }) : null;
   let started = false, available = null, loading = true, current = null, epoch = 0, controller = null, destroyed = false, confirmedEmpty = false;
   const cache = new Map();
   const listeners = [];
@@ -108,6 +110,7 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     else planning?.update(display(), null);
     workflowHost.hidden = !operational?.dispatch;
     workflow.update(operational, Boolean(operational));
+    capaBox?.update(operational ? { date: current.date, phase: operational.dispatch?.phase ?? '', vehicles: operational.fleetVehicles || [], deliveries: withDerivedZones(regions, operational.dispatchOrders || operational.fleetDeliveries || []), regions } : { date: current.date, phase: 'unplanned', vehicles: [], deliveries: [], regions });
   }
   function retryLoad() { if (regions && manifest) selectDate(selectedDate); else start(); }
   function message(text, failed = false) {
@@ -218,6 +221,6 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     usesSource: () => available !== false,
     status: () => ({ date: selectedDate, empty: confirmedEmpty && !loading }),
     summary: () => loading ? null : current?.summary || null,
-    destroy() { destroyed = true; epoch++; controller?.abort(); notify({ message: '', failed: false, retry: null }); planning?.destroy(); workflow.destroy(); datePicker.destroy(); listeners.forEach(remove => remove()); },
+    destroy() { destroyed = true; epoch++; capaBox?.destroy(); controller?.abort(); notify({ message: '', failed: false, retry: null }); planning?.destroy(); workflow.destroy(); datePicker.destroy(); listeners.forEach(remove => remove()); },
   };
 }
