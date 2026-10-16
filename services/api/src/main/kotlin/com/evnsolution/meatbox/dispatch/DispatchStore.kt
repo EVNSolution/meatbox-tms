@@ -6,6 +6,7 @@ import com.evnsolution.meatbox.compat.DispatchDataException
 import jakarta.servlet.http.HttpServletResponse
 import java.io.IOException
 import tools.jackson.core.StreamReadFeature
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.node.ObjectNode
 import java.nio.ByteBuffer
@@ -37,16 +38,50 @@ class DispatchStore(
     @Synchronized
     fun command(date: String, command: ObjectNode): ObjectNode {
         if (!command.path("expectedBoot").isString) fail(HttpServletResponse.SC_BAD_REQUEST, "INVALID_COMMAND")
+        val requestId = requestId(command)
+        // A stored result is answered before the CAS, so a resend after a lost response or restart is not a conflict.
+        val hash = requestId?.let { CommandResults.digest(command) }
+        if (requestId != null) {
+            CommandResults.find(entry(date).results, requestId, clock())?.let {
+                if (it.hash != hash) fail(
+                    HttpServletResponse.SC_CONFLICT,
+                    "REQUEST_ID_MISMATCH",
+                    "같은 요청 ID에 다른 명령이 들어왔습니다.",
+                )
+                return copyObject(it.response)
+            }
+        }
         if (command.path("expectedBoot").asString() != boot) {
             fail(HttpServletResponse.SC_CONFLICT, "BOOT_MISMATCH", "서버가 다시 시작되었습니다. 최신 상태를 다시 불러와 주세요.")
         }
         val current = entry(date)
         val candidate = DispatchPlan(current.day, current.sourceId, clock, current.plan.exportCheckpoint())
         val output = candidate.command(command)
-        save(date, candidate.exportCheckpoint())
-        entries[date] = current.copy(plan = candidate)
         output.set("state", publicState(output.path("state") as ObjectNode))
+        val results = if (requestId == null) current.results else CommandResults.retained(
+            current.results + StoredResult(requestId, hash!!, clock(), copyObject(output)), clock(),
+        )
+        // One file write carries the new state and its result, so neither can exist without the other.
+        save(date, candidate.exportCheckpoint().also { checkpoint ->
+            if (results.isNotEmpty()) checkpoint.set("commandResults", CommandResults.toNode(results))
+        })
+        entries[date] = current.copy(plan = candidate, results = results)
         return output
+    }
+
+    @Synchronized
+    fun result(date: String, requestId: String): ObjectNode {
+        if (!CommandResults.validId(requestId)) fail(HttpServletResponse.SC_BAD_REQUEST, "INVALID_COMMAND")
+        val found = CommandResults.find(entry(date).results, requestId, clock())
+            ?: fail(HttpServletResponse.SC_NOT_FOUND, "REQUEST_NOT_FOUND", "저장된 명령 결과가 없습니다.")
+        return copyObject(found.response)
+    }
+
+    private fun requestId(command: ObjectNode): String? {
+        val node = command.get("requestId") ?: return null
+        if (!node.isString) fail(HttpServletResponse.SC_BAD_REQUEST, "INVALID_COMMAND")
+        return node.asString().takeIf(CommandResults::validId)
+            ?: fail(HttpServletResponse.SC_BAD_REQUEST, "INVALID_COMMAND")
     }
 
     private fun entry(date: String): Entry {
@@ -69,7 +104,7 @@ class DispatchStore(
             if (saved == null) throw error
             fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_INVALID")
         }
-        return Entry(day, sourceId, plan).also { entries[date] = it }
+        return Entry(day, sourceId, plan, CommandResults.fromCheckpoint(saved)).also { entries[date] = it }
     }
 
     private fun checkpoint(date: String, sourceId: String): ObjectNode? {
@@ -154,7 +189,12 @@ class DispatchStore(
         code: String, message: String = code): Nothing = throw DispatchException(status, code, message,
     )
 
-    private data class Entry(val day: ObjectNode, val sourceId: String, val plan: DispatchPlan)
+    private data class Entry(
+        val day: ObjectNode,
+        val sourceId: String,
+        val plan: DispatchPlan,
+        val results: List<StoredResult> = emptyList(),
+    )
 
     companion object {
         private const val CHECKPOINT_SCHEMA = 2

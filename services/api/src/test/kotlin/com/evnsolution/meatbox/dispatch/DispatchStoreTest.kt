@@ -8,6 +8,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.springframework.http.HttpStatus
+import tools.jackson.databind.node.ObjectNode
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -60,6 +61,129 @@ class DispatchStoreTest {
         assertNoCheckpoint()
     }
 
+    @Test
+    fun `answers a resent request id with the first result and applies it once`() {
+        val store = fixture()
+        val first = store.command(DATE, calculate(store).put("requestId", "req-1"))
+        val resent = store.command(DATE, calculate(store).put("requestId", "req-1"))
+
+        assertSameJson(resent, first)
+        assertThat(store.snapshot(DATE).path("revision").asLong()).isEqualTo(1)
+        assertThat(first.path("state").path("revision").asLong()).isEqualTo(1)
+        assertSameJson(store.result(DATE, "req-1"), first)
+    }
+
+    @Test
+    fun `rejects a reused request id with a different body and leaves the state alone`() {
+        val store = fixture()
+        store.command(DATE, calculate(store).put("requestId", "req-1"))
+        val other = calculate(store, 1).put("requestId", "req-1").apply {
+            set("vehicleIds", dispatchMapper.createArrayNode())
+        }
+
+        assertCode(HttpStatus.CONFLICT, "REQUEST_ID_MISMATCH") { store.command(DATE, other) }
+        assertThat(store.snapshot(DATE).path("revision").asLong()).isEqualTo(1)
+    }
+
+    @Test
+    fun `ignores key order and the request id itself when comparing bodies`() {
+        val store = fixture()
+        val first = store.command(DATE, calculate(store).put("requestId", "req-1"))
+        val reordered = dispatchMapper.createObjectNode().apply {
+            set("vehicleIds", dispatchMapper.createArrayNode().add("G1"))
+            put("requestId", "req-1")
+            put("expectedRevision", 0)
+            put("expectedBoot", store.boot)
+            put("type", "calculate_dispatch")
+        }
+
+        assertSameJson(store.command(DATE, reordered), first)
+    }
+
+    @Test
+    fun `answers a resent request id after a restart even though the boot changed`() {
+        val store = fixture()
+        val first = store.command(DATE, calculate(store).put("requestId", "req-1"))
+        val restarted = DispatchStore(reader(), directory.resolve("state"), ::now)
+
+        assertThat(restarted.boot).isNotEqualTo(store.boot)
+        assertSameJson(restarted.command(DATE, calculate(store).put("requestId", "req-1")), first)
+        assertSameJson(restarted.result(DATE, "req-1"), first)
+        assertThat(restarted.snapshot(DATE).path("revision").asLong()).isEqualTo(1)
+        assertCode(HttpStatus.NOT_FOUND, "REQUEST_NOT_FOUND") { restarted.result(DATE, "req-2") }
+    }
+
+    @Test
+    fun `keeps neither result nor state when the checkpoint write fails`() {
+        val store = fixture()
+        store.command(DATE, calculate(store))
+        val target = directory.resolve("state/$DATE.json")
+        val saved = Files.readAllBytes(target)
+        Files.delete(target)
+        Files.createDirectory(target)
+
+        assertCode(HttpStatus.INTERNAL_SERVER_ERROR, "DISPATCH_STATE_WRITE_FAILED") {
+            store.command(DATE, calculate(store, 1).put("requestId", "req-2"))
+        }
+        assertThat(store.snapshot(DATE).path("revision").asLong()).isEqualTo(1)
+        assertCode(HttpStatus.NOT_FOUND, "REQUEST_NOT_FOUND") { store.result(DATE, "req-2") }
+        Files.delete(target)
+        Files.write(target, saved)
+        assertThat(String(Files.readAllBytes(target))).doesNotContain("req-2")
+    }
+
+    @Test
+    fun `drops the oldest results past the count limit and past 24 hours`() {
+        val store = fixture()
+        repeat(501) { store.command(DATE, calculate(store, it.toLong()).put("requestId", "req-$it")) }
+
+        assertCode(HttpStatus.NOT_FOUND, "REQUEST_NOT_FOUND") { store.result(DATE, "req-0") }
+        assertThat(store.result(DATE, "req-1").path("state").path("revision").asLong()).isEqualTo(2)
+        assertThat(store.result(DATE, "req-500").path("state").path("revision").asLong()).isEqualTo(501)
+        val restarted = DispatchStore(reader(), directory.resolve("state"), ::now)
+        assertSameJson(restarted.result(DATE, "req-500"), store.result(DATE, "req-500"))
+
+        clockMillis += 24 * 60 * 60 * 1000L
+        assertCode(HttpStatus.NOT_FOUND, "REQUEST_NOT_FOUND") { store.result(DATE, "req-500") }
+    }
+
+    @Test
+    fun `restores an existing checkpoint that has no stored results`() {
+        val store = fixture()
+        store.command(DATE, calculate(store))
+        assertThat(String(Files.readAllBytes(directory.resolve("state/$DATE.json")))).doesNotContain("commandResults")
+
+        val restarted = DispatchStore(reader(), directory.resolve("state"), ::now)
+        assertThat(restarted.snapshot(DATE).path("revision").asLong()).isEqualTo(1)
+        assertCode(HttpStatus.NOT_FOUND, "REQUEST_NOT_FOUND") { restarted.result(DATE, "req-1") }
+    }
+
+    @Test
+    fun `rejects a malformed request id`() {
+        val store = fixture()
+        for (bad in listOf("", "a".repeat(65), "has space", "x;y")) {
+            assertCode(HttpStatus.BAD_REQUEST, "INVALID_COMMAND") {
+                store.command(DATE, calculate(store).put("requestId", bad))
+            }
+        }
+        assertCode(HttpStatus.BAD_REQUEST, "INVALID_COMMAND") {
+            store.command(DATE, calculate(store).apply { put("requestId", 7) })
+        }
+        assertNoCheckpoint()
+    }
+
+    // Clients see bytes, so compare the serialized form.
+    private fun assertSameJson(actual: ObjectNode, expected: ObjectNode) {
+        assertThat(dispatchMapper.writeValueAsString(actual)).isEqualTo(dispatchMapper.writeValueAsString(expected))
+    }
+
+    private fun assertCode(status: HttpStatus, code: String, block: () -> Unit) {
+        assertThatThrownBy(block).isInstanceOfSatisfying(DispatchException::class.java) {
+            assertThat(it.status).isEqualTo(status.value())
+            assertThat(it.code).isEqualTo(code)
+        }
+    }
+
     private fun fixture(): DispatchStore {
         // macOS temporary paths can contain the /var symlink; use the actual safe directory.
         directory = directory.toRealPath()
@@ -109,7 +233,9 @@ class DispatchStoreTest {
         Files.list(directory.resolve("state")).use { assertThat(it.count()).isZero() }
     }
 
-    private fun now() = Instant.parse("2026-10-05T01:00:00Z").toEpochMilli()
+    private var clockMillis = Instant.parse("2026-10-05T01:00:00Z").toEpochMilli()
+
+    private fun now() = clockMillis
 
     companion object {
         private const val DATE = "2026-10-05"
