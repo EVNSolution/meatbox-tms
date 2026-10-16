@@ -50,6 +50,10 @@ class DispatchController(
         return json(request, state, etag)
     }
 
+    @GetMapping("/{date}/commands/{requestId}")
+    fun result(@PathVariable date: String, @PathVariable requestId: String, request: HttpServletRequest) =
+        json(request, store.result(date, requestId))
+
     @PostMapping("/{date}/commands")
     fun command(@PathVariable date: String, request: HttpServletRequest): ResponseEntity<ByteArray> {
         if (request.getHeader("Origin") != origin) fail(HttpServletResponse.SC_FORBIDDEN, "ORIGIN_REQUIRED")

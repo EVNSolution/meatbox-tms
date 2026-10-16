@@ -42,7 +42,7 @@
 | --- | --- | --- |
 | [x] RFC 9457 공통 오류 응답 (19) | 로컬 검증 | `ProblemResponseTest`(DispatchException·429·500·404·405), `ApiPathGuardHttpTest`(필터 401·400, 실서버 404), `DriverHttpTest`(429 Retry-After). `error`·`message` 호환 필드는 프런트가 `code`로 옮긴 뒤 제거 |
 | [ ] 오류 자동 감지·담당자 알림 (19) | 미착수 | 지원시간 내 대응, 운영 시간 외 범위는 별도 기준 |
-| [ ] 명령 결과를 요청 ID로 영속 조회, 응답 유실 후 중복 적용 방지 | 미착수 | [다음 기능 계획](next-feature-delivery-plan.md) F04 |
+| [x] 명령 결과를 요청 ID로 영속 조회, 응답 유실 후 중복 적용 방지 | 로컬 검증 | `DispatchStoreTest`(재전송·본문 불일치·재시작·저장 실패·보존 한도), `test/api-connection/kotlin-state-owner.test.mjs`(HTTP 재전송·GET·재시작). 날짜당 500건·24시간·8MiB. [다음 기능 계획](next-feature-delivery-plan.md) F04 |
 | [ ] 테넌트·소속·역할 권한 (3) | 미착수 | F05·F06 |
 | [ ] 원본 변경 시 기존 배차 재사용 차단 | 미착수 | F02 |
 | [ ] 계약 종료 시 운영 데이터 일괄 내보내기 (20) | 미착수 | |
@@ -66,6 +66,8 @@
 
 1차 종료다. 아래는 요구서 대비 부족 기능 메모이며 착수 여부는 결정 기록에 따른다.
 `코드 없음`은 2026-10-16 키워드 검색 결과이고 실제 화면 확인은 아니다.
+
+후속: 웹이 날짜 명령에 `requestId`를 보내고 응답 유실 시 같은 요청을 재전송하도록 한다. 서버는 이미 받는다([API 참조](api-reference.md)).
 
 | 항목 | 상태 | 근거·메모 |
 | --- | --- | --- |

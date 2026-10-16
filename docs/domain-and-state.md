@@ -104,6 +104,8 @@ published ── begin_dispatch_revision ──► amending
 
 ## 동시성 계약
 
+요청 ID가 있는 명령은 먼저 저장된 결과를 조회한다. 같은 `(date, requestId)`가 이미 성공했으면 아래 세 겹을 건너뛰고 처음 응답을 돌려준다. 응답을 잃은 재전송과 서버 재시작 뒤 재전송이 `REVISION_CONFLICT`·`BOOT_MISMATCH`로 거절되지 않게 하기 위해서다. 요청 ID 조회는 CAS보다 먼저다.
+
 명령은 세 겹으로 오래된 쓰기를 막는다.
 
 1. `expectedBoot`: 서버 재시작 이전 상태면 `BOOT_MISMATCH`.
@@ -122,6 +124,7 @@ published ── begin_dispatch_revision ──► amending
 - 외부 `revision`, `phase`, `draftVersion`, `confirmedVersion`
 - `candidateIds`, `draftAssignments`
 - `confirmedEngineCheckpoint`
+- 선택 `commandResults`: 요청 ID별 `requestId`, 본문 `hash`, `savedAt`, 처음 `response`. 없으면 결과 없음이다. 같은 파일 쓰기로 저장해 상태와 결과가 따로 남지 않는다. schema 버전은 올리지 않았다. 이 필드가 없는 기존 v2 파일을 그대로 복원하고, 요청 ID 없는 명령은 이 필드를 쓰지 않아 파일이 이전과 같다.
 
 확정 엔진의 내부 체크포인트는 schema v1이며 변경된 경로·주문·차량 상태, 사건과 화면 내 알림만 저장한다. schema v2 안의 `confirmedEngineCheckpoint`로 포함된다. `createDispatchOperations`에 직접 전달한 변경 이력 있는 schema v1 체크포인트는 확정된 레거시 상태로 받아 다음 내보내기에서 v2 외피로 감싼다. HTTP 라우터의 디스크 로더는 schema v2 파일만 허용하므로 schema v1 파일을 `DISPATCH_STATE_DIR`에 그대로 놓으면 복원하지 않고 `DISPATCH_STATE_INVALID`로 닫힌다.
 

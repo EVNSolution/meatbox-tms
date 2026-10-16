@@ -468,6 +468,35 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     assert.deepEqual(normalized(checkpoint), normalized(demoFreeGolden(golden)));
   });
 
+  await t.test('returns the first result for a resent requestId, also after restart, and serves it by GET', async () => {
+    const commands = `/api/dispatch-data/days/${fixture.today}/commands`;
+    const body = { ...commandFor(actualState, 'begin_dispatch_revision'), requestId: 'a0b1c2d3-0000-4000-8000-000000000001' };
+    const first = await requestJson(fixture, commands, { method: 'POST', cookie, body });
+    assert.equal(first.response.status, 200, JSON.stringify(first.body));
+    const resent = await requestJson(fixture, commands, { method: 'POST', cookie, body });
+    assert.deepEqual(resent.body, first.body);
+    const changed = await requestJson(fixture, commands, { method: 'POST', cookie, body: { ...body, expectedRevision: 0 } });
+    assert.equal(changed.response.status, 409);
+    assert.equal(changed.body.error, 'REQUEST_ID_MISMATCH');
+    await fixture.restart();
+    cookie = await login(fixture);
+    const afterRestart = await requestJson(fixture, commands, { method: 'POST', cookie, body });
+    assert.deepEqual(afterRestart.body, first.body);
+    const fetched = await requestJson(fixture, `${commands}/${body.requestId}`, { cookie });
+    assert.equal(fetched.response.status, 200);
+    assert.deepEqual(fetched.body, first.body);
+    const state = (await requestJson(fixture, `/api/dispatch-data/days/${fixture.today}/state`, { cookie })).body;
+    assert.equal(state.revision, first.body.state.revision);
+    const missing = await requestJson(fixture, `${commands}/unknown-id`, { cookie });
+    assert.equal(missing.response.status, 404);
+    assert.equal(missing.body.error, 'REQUEST_NOT_FOUND');
+    assert.equal((await requestJson(fixture, `${commands}/${body.requestId}`)).response.status, 401);
+    // Keep the shared golden flow in step for the tests that follow.
+    golden.command({ type: 'begin_dispatch_revision', expectedRevision: golden.revision });
+    actualState = state;
+    await compareCommand('discard_dispatch_revision');
+  });
+
   await t.test('executes driver bundles with conflict guards atomic saves and arrival restoration', async () => {
     const statePath = `/api/dispatch-data/days/${fixture.today}/state`;
     const commandPath = `/api/dispatch-data/days/${fixture.today}/commands`;

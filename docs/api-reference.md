@@ -35,6 +35,7 @@
 | `GET` | `/api/dispatch-data/destinations` | 선택일까지의 누적 배송지 검색 |
 | `GET` | `/api/dispatch-data/days/{date}/state` | 날짜별 배차·운행 snapshot |
 | `POST` | `/api/dispatch-data/days/{date}/commands` | 날짜별 배차·운행 명령 |
+| `GET` | `/api/dispatch-data/days/{date}/commands/{requestId}` | 저장된 명령 결과 조회 |
 | `GET` | `/api/resources` | 차량·지역 코드 등록부 |
 | `POST` | `/api/resources/region-codes` | 지역 코드 생성 |
 | `PATCH` | `/api/resources/region-codes/{code}` | 지역 코드 이름 변경 |
@@ -193,7 +194,27 @@
 }
 ```
 
-`state`는 축약 응답이 아니라 상태 조회와 같은 전체 snapshot이다. 명령 결과가 불명확하게 끊기면 클라이언트는 같은 명령을 자동 재전송하지 않고 최신 state를 다시 읽는다. 명령 ID 기반 멱등성은 구현되어 있지 않다.
+`state`는 축약 응답이 아니라 상태 조회와 같은 전체 snapshot이다.
+
+#### 요청 ID (선택)
+
+본문에 `requestId`를 넣으면 응답이 끊겨도 같은 요청을 다시 보낼 수 있다.
+
+```json
+{ "requestId": "3f6c1d52-8a4e-4b0e-9c7a-2d5e8f1a6b90" }
+```
+
+- 형식: 영문·숫자·`-`·`_` 1~64자. UUID를 권장한다. 그 밖의 값과 문자열이 아닌 값은 `400 INVALID_COMMAND`다.
+- 없으면 지금과 같다. 재전송 보호가 없다.
+- 같은 `(date, requestId)`가 이미 성공했으면 서버는 CAS(`expectedBoot`·`expectedRevision`·`draftVersion`)보다 먼저 저장된 응답을 그대로 돌려준다. 상태는 바꾸지 않는다. 서버가 재시작되어 `boot`가 바뀌었어도 같다. 응답의 `state.boot`는 처음 응답 값이다.
+- 같은 `requestId`인데 `requestId`를 뺀 본문이 다르면 `409 REQUEST_ID_MISMATCH`다. 본문 비교는 키 순서를 정렬한 JSON의 SHA-256이다.
+- 성공(`200`)한 명령만 저장한다. 실패한 명령은 상태를 바꾸지 않았으므로 같은 `requestId`로 다시 보낼 수 있다.
+- 결과는 날짜 체크포인트와 같은 파일 쓰기로 저장한다. 저장에 실패하면 상태도 결과도 남지 않는다.
+- 보존: 날짜당 최근 500건, 24시간, 결과 본문 합계 8MiB 중 먼저 닿는 한도까지다. 넘으면 오래된 것부터 제거한다. 제거된 `requestId`를 다시 보내면 새 명령으로 처리한다.
+
+### `GET /api/dispatch-data/days/{date}/commands/{requestId}`
+
+저장된 결과가 있으면 `POST`가 처음 돌려준 것과 같은 `200` 본문이다. 없거나 보존 한도로 제거됐으면 `404 REQUEST_NOT_FOUND`다. 세션 쿠키가 필요하다. 상태를 바꾸지 않는다. 응답을 받지 못한 클라이언트는 `POST`를 다시 보내지 않고 이 경로로 결과만 확인할 수도 있다.
 
 ### 배차 명령
 
@@ -264,6 +285,8 @@
 | `400` | `INVALID_COMMAND`, `INVALID_CANDIDATES`, `INVALID_ASSIGNMENT` | 본문·필드·업무 규칙을 수정한다 |
 | `409` | `BOOT_MISMATCH` | state를 다시 읽거나 페이지를 새로 연다 |
 | `409` | `REVISION_CONFLICT` | 최신 state를 읽고 사용자 결정을 다시 적용한다 |
+| `409` | `REQUEST_ID_MISMATCH` | 같은 `requestId`에 다른 본문이다. 새 `requestId`로 보낸다 |
+| `404` | `REQUEST_NOT_FOUND` | 결과 조회 경로 전용. 저장된 결과가 없다. 명령은 적용되지 않았거나 보존 한도로 제거됐다. state를 읽어 확인한다 |
 | `409` | `DRAFT_CONFLICT` | 최신 계산안과 `draftVersion`을 다시 확인한다 |
 | `409` | `DATE_READ_ONLY` | 과거 날짜는 조회만 한다 |
 | `409` | `PROTECTED_DESTINATION` | 진행·완료 배송지 묶음을 수정안에서 제외한다 |
