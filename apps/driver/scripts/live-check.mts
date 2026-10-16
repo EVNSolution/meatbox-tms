@@ -151,6 +151,52 @@ await assert.rejects(
 );
 say('reorder after departure', 'refused 409');
 
+// Location tracking through the app's own buffer: two readings go out as one batch after the first minute.
+const { LocationTracker } = await import('../src/tracking/LocationTracker');
+let tracked: string | null = null;
+let trackerClock = Date.now();
+const trackerBatches: number[] = [];
+const tracker = new LocationTracker({
+  load: async () => (tracked ? JSON.parse(tracked) : null),
+  save: async (next) => { tracked = next ? JSON.stringify(next) : null; },
+  now: () => trackerClock,
+  send: async (day, id, samples) => { trackerBatches.push(samples.length); await driverApi.sendLocations(day, id, samples); },
+});
+await tracker.start(date, vehicleId);
+trackerClock += 60_000;
+const newest = { latitude: 37.5605, longitude: 126.9705 };
+const firstResult = await tracker.record([
+  { coords: { latitude: 37.55, longitude: 126.95, accuracy: 6 }, timestamp: trackerClock - 30_000 },
+  { coords: { ...newest, accuracy: 5 }, timestamp: trackerClock },
+]);
+say('locations', { result: firstResult, batches: trackerBatches });
+assert.equal(firstResult, 'sent');
+const located = await fetchDayState(date, null);
+assert.ok(!located.notModified);
+const truck = (located.state.vehicleStates[vehicleId] as unknown as { truck: { lat: number; lng: number; locationSource: string } }).truck;
+say('truck after locations', { lat: truck.lat, lng: truck.lng, source: truck.locationSource });
+assert.equal(truck.locationSource, 'driver');
+assert.deepEqual([truck.lat, truck.lng], [newest.latitude, newest.longitude]);
+await assert.rejects(
+  driverApi.sendLocations(date, vehicleId, Array.from({ length: 201 }, (_unused, index) => ({ at: new Date(trackerClock + index).toISOString(), lat: 37.5, lng: 127 }))),
+  (error: unknown) => error instanceof ApiError && error.status === 400,
+);
+say('201 samples', 'refused 400');
+assert.equal(await tracker.stop(), 'idle');
+
+// The delivery tip of an open stop: written once per request, shown in the stop detail.
+const { tipBody } = await import('../src/domain/routeView');
+const tipStop = running.stops[running.stops.length - 1].stopId;
+const tipRequest = driverApi.newEventId();
+const savedTip = await driverApi.saveTip(date, vehicleId, tipStop, tipRequest, '뒷문 이용, 벨 없음');
+assert.deepEqual(savedTip, { duplicate: false, body: '뒷문 이용, 벨 없음' });
+assert.equal((await driverApi.saveTip(date, vehicleId, tipStop, tipRequest, '뒷문 이용, 벨 없음')).duplicate, true);
+const tipDetail = await driverApi.fetchStop(date, vehicleId, tipStop);
+say('tip in stop detail', { tip: tipBody(tipDetail), sections: detailSections(tipDetail).map((section) => section.title) });
+assert.equal(tipBody(tipDetail), '뒷문 이용, 벨 없음');
+await assert.rejects(driverApi.saveTip(date, vehicleId, tipStop, driverApi.newEventId(), '<b>'), (error: unknown) => error instanceof ApiError && error.status === 400);
+await assert.rejects(driverApi.saveTip(date, vehicleId, tipStop, driverApi.newEventId(), '뒷문 이용, 벨 없음'), (error: unknown) => error instanceof ApiError && error.status === 400);
+
 // Stop reports through the app's own device queue. Its storage and clock are in memory; its network is the app's code.
 const plan = (process.env.LIVE_CHECK_PLAN ?? 'completed,failed').split(',');
 assert.ok(plan.length <= running.stops.length, 'the plan has more results than the route has stops');
@@ -232,5 +278,13 @@ say('resend of a sent event', { duplicate: again.duplicate });
 assert.equal((await driverApi.fetchEvent(date, 'never-sent'))?.accepted ?? null, null);
 await outbox.pruneSent();
 assert.equal(outbox.list().length, 0);
+
+// A closed stop keeps its tip: a new tip is refused, while the finished request still answers from its record.
+await assert.rejects(
+  driverApi.saveTip(date, vehicleId, tipStop, driverApi.newEventId(), '늦은 팁'),
+  (error: unknown) => error instanceof ApiError && error.status === 409,
+);
+assert.equal((await driverApi.saveTip(date, vehicleId, tipStop, tipRequest, '뒷문 이용, 벨 없음')).duplicate, true);
+say('tip on a closed stop', 'refused 409; the earlier request still answers duplicate');
 rmSync(folder, { recursive: true, force: true });
 console.log('LIVE CHECK OK');

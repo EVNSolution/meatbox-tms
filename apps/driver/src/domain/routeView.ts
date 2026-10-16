@@ -12,7 +12,7 @@ export function serverStop(stop: Stop, route: DriverRoute | null): RouteStopSumm
 export type EtaLabel = { text: string; dimmed: boolean };
 
 // Asia/Seoul has no DST, so a fixed +9h shift is exact. The server already sends +09:00 times.
-function seoulClock(iso: string): string | null {
+export function seoulClock(iso: string): string | null {
   const time = Date.parse(iso);
   return Number.isFinite(time) ? new Date(time + 9 * 3_600_000).toISOString().slice(11, 16) : null;
 }
@@ -96,4 +96,13 @@ export function detailSections(detail: StopDetail): DetailSection[] {
     },
   ];
   return sections.filter((section) => section.lines.length > 0);
+}
+
+/** The current tip text of a stop (its first order that has one), or an empty string. */
+export function tipBody(detail: StopDetail): string {
+  for (const order of detail.orders) {
+    const tip = order.tip as { body?: unknown } | null;
+    if (tip && typeof tip.body === 'string' && tip.body.trim()) return tip.body;
+  }
+  return '';
 }

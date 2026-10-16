@@ -1,7 +1,7 @@
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,7 +11,7 @@ import type { DriverRoute } from '../api/driverContracts';
 import { ApiError, type DriverMessage, type SessionUser } from '../api/types';
 import { useDriverRoute } from './useDriverRoute';
 import { useOutbox } from './useOutbox';
-import { POLL_INTERVAL_MS } from '../config';
+import { OPS_PHONE, POLL_INTERVAL_MS } from '../config';
 import { groupStops, isDispatchOperable, seoulToday, stopProgress, vehicleDeliveries, vehiclePhase, type DayState, type Stop } from '../domain/dispatch';
 import { serverStopOrder, suggestedKeys, suggestionSummary } from '../domain/routeDraft';
 import { RetryAttempt } from '../domain/retryAttempt';
@@ -19,6 +19,7 @@ import { departureLocation } from '../platform/location';
 import { ensureTracking, flushTracking, showTrackingGuides, stopTracking } from '../platform/tracking';
 import { registerPush, revokePush, subscribePush, subscribePushToken, type PushStatus } from '../platform/pushNotifications';
 import { applyOutbox } from '../domain/outboxView';
+import { telUrl } from '../domain/phone';
 import { pushEffect } from '../domain/pushEffect';
 import { dimmedStopKeys, etaLabel, serverStop } from '../domain/routeView';
 import { RequestGate } from '../platform/requestQueue';
@@ -33,6 +34,7 @@ import { LoginScreen } from '../ui/LoginScreen';
 import { PickupScreen } from '../ui/PickupScreen';
 import { RouteOrderEditor } from '../ui/RouteOrderEditor';
 import { StopDetails } from '../ui/StopDetails';
+import { HistoryScreen } from '../ui/HistoryScreen';
 import { StopInfo } from '../ui/StopInfo';
 import { VehicleSelectScreen } from '../ui/VehicleSelectScreen';
 import { colors, fontFamily, radius, TOUCH_MIN } from '../ui/theme';
@@ -96,6 +98,7 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   const [editing, setEditing] = useState<DayState | null>(null);
   const [reporting, setReporting] = useState<string | null>(null);
   const [outboxOpen, setOutboxOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [messages, setMessages] = useState<DriverMessage[]>([]);
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -327,10 +330,11 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   const pickup = phase === 'idle' || phase === 'preparing';
   const selectedStop = stops.find((stop) => stop.key === selectedKey) ?? null;
   const progress = stopProgress(stops);
+  const opsCall = telUrl(OPS_PHONE);
   const etaFor = (stop: Stop) => etaLabel(stop, route);
   const infoFor = (stop: Stop) => {
     const entry = serverStop(stop, route);
-    return entry ? <StopInfo date={date} key={entry.stopId} stopId={entry.stopId} vehicleId={vehicleId} /> : null;
+    return entry ? <StopInfo date={date} key={entry.stopId} onTipSaved={() => { etag.current = null; void refresh(true); }} stopId={entry.stopId} tipEditable={stop.status === 'pending' || stop.status === 'current'} vehicleId={vehicleId} /> : null;
   };
   const pushLabel = { registering: '알림 연결 중', ready: '알림 연결됨', denied: '알림 권한이 꺼져 있습니다', unavailable: '푸시 알림 연결 안 됨 · 앱에서 메시지를 확인하세요' }[pushStatus];
 
@@ -343,6 +347,10 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
     {outbox.waiting > 0 ? <Pressable accessibilityRole="button" onPress={() => setOutboxOpen(true)} style={[styles.outboxBadge, outbox.rejected > 0 && styles.outboxBadgeRejected]}>
       <T style={styles.outboxBadgeText}>{outbox.rejected > 0 ? `전송 실패 ${outbox.rejected}건 · 확인이 필요합니다` : `전송 대기 ${outbox.waiting}건`}</T>
     </Pressable> : null}
+    <View style={styles.actionsRow}>
+      <Button label="오늘 이력" onPress={() => setHistoryOpen(true)} style={styles.headerButton} tone="secondary" />
+      {opsCall ? <Button label="운영팀 전화" onPress={() => { void Linking.openURL(opsCall).catch(() => setError('전화 앱을 열지 못했습니다.')); }} style={styles.headerButton} tone="secondary" /> : null}
+    </View>
     <T style={[styles.pushStatus, pushStatus !== 'ready' && styles.warning]}>{pushLabel}</T>
     {error ? <View style={styles.errorBox}><T accessibilityRole="alert" style={styles.error}>{error}</T><Button label="새로고침" onPress={() => void refresh(true)} tone="secondary" /></View> : null}
     {banner ? <Pressable accessibilityRole="button" onPress={() => { setMessagesOpen(true); setBanner(null); }} style={styles.banner}><T style={styles.bannerTitle}>{banner.title}</T><T numberOfLines={2} style={styles.bannerBody}>{banner.body}</T></Pressable> : null}
@@ -355,6 +363,7 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
         <BottomSheet onDismiss={() => setSelectedKey(null)} open={!!selectedStop}>{selectedStop ? <ScrollView style={styles.stopSheet}><StopDetails busy={busy || !!error} eta={etaFor(selectedStop)} info={infoFor(selectedStop)} onAction={act} stop={selectedStop} /><Button label="닫기" onPress={() => setSelectedKey(null)} tone="secondary" /></ScrollView> : null}</BottomSheet>
       </View>}
     {!editing ? <View style={styles.tabs}>{(['delivery', 'map'] as const).map((value) => <Pressable accessibilityRole="tab" accessibilityState={{ selected: tab === value }} key={value} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabSelected]}><T style={[styles.tabLabel, tab === value && styles.tabLabelSelected]}>{value === 'delivery' ? '배송' : '지도'}</T></Pressable>)}</View> : null}
+    {historyOpen ? <HistoryScreen date={date} onClose={() => setHistoryOpen(false)} stops={stops} vehicleId={vehicleId} waiting={outbox.waiting} /> : null}
     {reportingStop ? <CompletionScreen date={date} onClose={() => setReporting(null)} onSubmit={outbox.enqueue} queuedPhotos={outbox.photos} stop={reportingStop} stopId={serverStop(reportingStop, route)?.stopId ?? reportingStop.orders[0].id} vehicleId={vehicleId} /> : null}
     {outboxOpen ? <OutboxSheet items={outbox.items} labelFor={labelFor} onClose={() => setOutboxOpen(false)} onDiscard={(id) => { void outbox.discard(id).then(() => { etag.current = null; void refresh(true); }); }} onRetry={(id) => void outbox.retryNow(id)} /> : null}
     {messagesOpen ? <MessagesModal error={messageError} messages={messages} onClose={() => { setMessagesOpen(false); setBanner(null); }} onRefresh={() => loadMessages(true)} onSend={async (body) => { await sendMessage(date, vehicleId, body); await loadMessages(true); }} /> : null}
@@ -388,7 +397,8 @@ const styles = StyleSheet.create({
   fill: { flex: 1 }, screen: { backgroundColor: colors.background, flex: 1 },
   center: { alignItems: 'center', backgroundColor: colors.background, flex: 1, gap: 16, justifyContent: 'center', padding: 24 },
   notice: { textAlign: 'center' }, header: { alignItems: 'center', backgroundColor: colors.surface, flexDirection: 'row', justifyContent: 'space-between', padding: 12 },
-  headerButtons: { flexDirection: 'row', gap: 6 }, headerButton: { minHeight: TOUCH_MIN, paddingHorizontal: 10 },
+  headerButtons: { flexDirection: 'row', gap: 6 },
+  actionsRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 12, paddingBottom: 6 }, headerButton: { minHeight: TOUCH_MIN, paddingHorizontal: 10 },
   summary: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
   driver: { fontSize: 17, fontWeight: '800' }, caption: { color: colors.muted, fontSize: 13 },
   pushStatus: { color: colors.green, fontSize: 12, paddingHorizontal: 12, paddingBottom: 6 }, warning: { color: colors.amber },

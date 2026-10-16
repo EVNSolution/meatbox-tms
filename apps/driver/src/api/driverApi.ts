@@ -4,6 +4,7 @@ import {
   readEventReply,
   readHistory,
   readPhotoReceipt,
+  readTipReply,
   readRoute,
   readStopDetail,
   readSuggestion,
@@ -92,6 +93,20 @@ export async function sendLocations(
   samples: { at: string; lat: number; lng: number; accuracyM?: number }[],
 ): Promise<void> {
   await requestJson(`${base(date)}/locations`, jsonInit('POST', { vehicleId, samples }));
+}
+
+/** Saves the delivery tip of a stop. The same [requestId] and text can be sent again after a lost answer. */
+export async function saveTip(
+  date: string,
+  vehicleId: string,
+  stopId: string,
+  requestId: string,
+  body: string,
+): Promise<{ duplicate: boolean; body: string }> {
+  return readTipReply(await requestJson(
+    `${base(date)}/stops/${encodeURIComponent(stopId)}/tip`,
+    jsonInit('POST', { vehicleId, requestId, body }),
+  ));
 }
 
 export async function fetchHistory(date: string, vehicleId: string): Promise<HistoryItem[]> {

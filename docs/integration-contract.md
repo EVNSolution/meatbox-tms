@@ -257,7 +257,7 @@
 
 ### 7.1 앱 → 우리 서버
 
-**앱 사용 중:** 배송원 앱(`apps/driver`)은 `GET route`, `GET stops/{stopId}`, `GET photos/{photoId}`(직전 완료 사진), `POST route/suggest`, `POST photos`, `GET events/{eventId}`, `POST events`의 `departed`·`route_reordered`·`stop_completed`·`stop_failed`·`stop_partially_completed`를 쓴다. `zone_entered`·`locations`·`history`는 아직 쓰지 않는다(`history`는 점검 스크립트만 읽는다). 지도 핀 좌표와 차량 선택은 `GET route`에 없어 날짜 상태(`GET state`, 읽기 전용)에서 읽는다.
+**앱 사용 중:** 배송원 앱(`apps/driver`)은 `GET route`, `GET stops/{stopId}`, `GET photos/{photoId}`(직전 완료 사진), `POST route/suggest`, `POST photos`, `GET events/{eventId}`, `GET history`, `POST locations`(운행 중 30초 수집·1분 전송), `POST stops/{stopId}/tip`, `POST events`의 `departed`·`route_reordered`·`stop_completed`·`stop_failed`·`stop_partially_completed`를 쓴다. `zone_entered`는 아직 쓰지 않는다. 서버가 보내는 `route_changed` 푸시는 [API 참조](api-reference.md#배차-변경-푸시-route_changed)를 따른다. 지도 핀 좌표와 차량 선택은 `GET route`에 없어 날짜 상태(`GET state`, 읽기 전용)에서 읽는다.
 
 구현됨(현행 경로): 아래 7개 끝점이 모두 `/api/dispatch-data/days/{date}/driver/{route|stops/{stopId}|history|events|events/{eventId}|photos|photos/{photoId}|locations}`에 있다. 표의 `/api/driver/...` 경로는 기사 계정 권한 단위에서 옮길 목표 경로다. 조회는 `vehicleId` 쿼리를 받고, `route`의 `eta`는 출발 전 `null`이고 출발 뒤 값이 채워지며, 배송지 상세의 출입정보는 아직 제한 없이 나간다.
 
@@ -268,6 +268,7 @@
 | `GET` | `/api/driver/days/{date}/history` | 당일 완료·미배송 이력 (57) | 완료 시각·배송지 기준 |
 | `GET` | `/api/driver/events/{eventId}` | 응답을 잃었을 때 처리 결과 재확인 | `202`와 같은 본문. 없으면 `404` → 재전송 |
 | `POST` | `/api/driver/days/{date}/route/suggest` | 자동 배송 순서 제안. 상태를 바꾸지 않음 | 본문 없음 또는 `{ "lockFirst" }`. 응답 `{ stopOrder, totalMinutes, totalKm, placed, changed, revision }`. 앱이 `route_reordered`로 적용 |
+| `POST` | `/api/driver/days/{date}/stops/{stopId}/tip` | 배송팁 등록(요구서 47). `requestId` 멱등 | `{ "vehicleId", "requestId", "body" }`. 응답 `{ stopId, tip }`. 닫힌 배송지는 `409` |
 | `POST` | `/api/driver/photos` | 사진 업로드 | `multipart`, 압축본. 응답 `{ "photoId" }` |
 | `POST` | `/api/driver/events` | 이벤트 6종 (2절) | 봉투 + `payload`. 응답 `202` |
 | `POST` | `/api/driver/locations` | 위치 1분 배치 | `samples[]`. 응답 `202` |

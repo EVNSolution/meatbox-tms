@@ -165,6 +165,11 @@ export type HistoryItem = {
   photoIds: string[];
 };
 
+export function readTipReply(value: unknown): { duplicate: boolean; body: string } {
+  if (!record(value) || value.accepted !== true || !record(value.tip)) return fail();
+  return { duplicate: value.duplicate === true, body: text(value.tip.body) };
+}
+
 export function readHistory(value: unknown): HistoryItem[] {
   if (!record(value) || !Array.isArray(value.items)) return fail();
   return value.items.map((item) => {

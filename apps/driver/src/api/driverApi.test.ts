@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, type TestContext } from 'node:test';
 
-import { fetchEvent, fetchHistory, sendLocations, fetchRoute, fetchStop, sendStopEvent, uploadPhoto, newEventId, newEventStamp, photoUrl, sendDeparted, sendRouteReordered, suggestRoute } from './driverApi';
+import { fetchEvent, fetchHistory, saveTip, sendLocations, fetchRoute, fetchStop, sendStopEvent, uploadPhoto, newEventId, newEventStamp, photoUrl, sendDeparted, sendRouteReordered, suggestRoute } from './driverApi';
 import { ApiError } from './types';
 
 const DATE = '2026-11-02';
@@ -182,4 +182,17 @@ test('a location batch goes to the locations endpoint with the vehicle and its s
   t.mock.restoreAll();
   mockFetch(t, () => problem(409, 'DRIVER_DATE_READ_ONLY'));
   await assert.rejects(sendLocations(DATE, 'G1', samples), (error: unknown) => error instanceof ApiError && error.code === 'DRIVER_DATE_READ_ONLY');
+});
+
+test('a tip is posted with the vehicle, a request ID and the text, and a refusal reaches the caller', async (t) => {
+  const calls = mockFetch(t, () => json({ accepted: true, duplicate: false, stopId: 'O1', tip: { body: '뒷문 이용', author: '기사', updatedAt: 'x' } }));
+  assert.deepEqual(await saveTip(DATE, 'G1', 'O 1', 'req-1', '뒷문 이용'), { duplicate: false, body: '뒷문 이용' });
+  assert.equal(calls[0].path, `/api/dispatch-data/days/${DATE}/driver/stops/O%201/tip`);
+  assert.deepEqual(JSON.parse(String(calls[0].init.body)), { vehicleId: 'G1', requestId: 'req-1', body: '뒷문 이용' });
+  t.mock.restoreAll();
+  mockFetch(t, () => problem(409, 'OPERATION_REVISION_CONFLICT'));
+  await assert.rejects(saveTip(DATE, 'G1', 'O1', 'req-2', '팁'), (error: unknown) => error instanceof ApiError && error.status === 409);
+  t.mock.restoreAll();
+  mockFetch(t, () => json({ accepted: true }));
+  await assert.rejects(saveTip(DATE, 'G1', 'O1', 'req-3', '팁'), (error: unknown) => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
 });
