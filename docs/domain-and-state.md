@@ -152,7 +152,7 @@ published ── begin_dispatch_revision ──► amending
 
 - 확정 뒤에는 `applied`가 바뀌지 않아 `sourceId`와 체크포인트가 그대로다. 확정·진행·완료 기록은 수신으로 바뀌지 않는다. 보류된 변경을 반영하는 운영자 경로는 아직 없다([다음 기능 계획](next-feature-delivery-plan.md) F11).
 - 더 낮은 version은 무시하고, 같은 version·같은 본문은 중복이며, 같은 version·다른 본문은 `409 ORDER_VERSION_CONFLICT`다. 판정은 적용 여부와 무관하게 마지막으로 받은 version 기준이다.
-- 계산안을 버릴 때의 순서는 체크포인트 삭제가 먼저다. 삭제 뒤 쓰기가 실패하면 이전 주문에 계산안만 없는 상태이고 송신자가 재시도한다. 파일을 먼저 쓰면 크래시 사이에 체크포인트가 사라진 원본을 가리켜 `DISPATCH_STATE_SOURCE_MISMATCH`가 된다.
+- 계산안을 버릴 때의 순서는 체크포인트 삭제가 먼저다. 삭제 뒤 쓰기가 실패하면 이전 주문에 계산안만 없는 상태이고 송신자가 재시도한다. 파일을 먼저 쓰면 크래시 사이에 체크포인트가 사라진 원본을 가리켜 원본 변경 상태(`SOURCE_CHANGED`, 아래 체크포인트 절)가 된다.
 - 경고는 snapshot `sourceData.inbound`(`kind`, `stamp`, `received`, `applied`, 최근 50건 `warnings[]`)에 나온다. CSV 날짜 snapshot에는 이 필드가 없다. `stamp`는 수신 파일이 바뀔 때마다 오르고 날짜 상태 ETag에 반영된다.
 - 후보 차량은 합성 그룹 `api-g01`…이다(`MEATBOX_INBOUND_GROUP_COUNT`, 기본 8). 실제 차량이 아니며 다른 합성 후보와 같이 미검증 후보로 표시한다. 모든 주문의 초기 `groupId`는 첫 그룹이고 계산이 다시 배정한다.
 - 좌표가 없는 주문은 `coordinates: null`로 들어가(웹 포크가 필드 자체를 요구한다) 박스 수 균형으로만 배정한다. 모든 주문의 `zoneIds`는 빈 배열이다. 주소 정제·좌표화는 하지 않는다.
@@ -204,6 +204,16 @@ published ── begin_dispatch_revision ──► amending
 `presentationContentVersion`은 확정 엔진 체크포인트 안에 있다. 값 `0`은 기존 확정 배차에 합성 표현 콘텐츠를 소급하지 않으며, `1`은 현재 표현 기본값을 허용한다. 그 밖의 값은 복원을 거부한다.
 
 원본 `sourceId`, 날짜, 주문·차량 구성 또는 체크포인트 구조가 맞지 않으면 fail closed 한다. 체크포인트가 손상됐을 때 새 미배차 상태로 조용히 시작하지 않는다.
+
+### 원본 변경과 `contentHash`
+
+체크포인트는 선택 필드 `contentHash`를 가진다. 값은 그 날짜 day 파일 바이트의 SHA-256(16진 64자)이다. 매 쓰기가 현재 값을 같이 쓴다. `schemaVersion`은 2 그대로여서 이 필드를 모르는 서버도 파일을 읽는다.
+
+- `sourceId`는 CSV 번들 전체의 해시라서 번들의 모든 날짜가 같다. 번들을 다시 만들면 day 파일이 한 바이트도 안 바뀌어도 모든 날짜가 달라진다. 반대로 같은 번들 해시에서 한 날짜 파일만 바뀌는 것은 `sourceId`로 잡히지 않는다. `contentHash`가 이것을 잡는다.
+- 날짜를 읽을 때마다(warm cache 포함) 현재 `sourceId`·`contentHash`를 체크포인트·캐시와 비교한다. 하나라도 다르면 원본 변경 상태다: `GET state`는 `sourceConflict`를 돌려주고, 명령과 기사 읽기는 `409 SOURCE_CHANGED`다(계약 종료 내보내기는 막지 않고 체크포인트 파일을 그대로 담으며 그 날짜의 상태 요약만 비운다). 체크포인트 바이트와 캐시된 계획은 바꾸지 않는다. 원본을 되돌리면 충돌이 사라진다.
+- `contentHash`가 없는 이전 체크포인트: `sourceId`가 현재와 같으면 같은 번들이므로 내용 변경의 증거가 없다. 현재 내용으로 지문을 계산해 체크포인트를 제자리 승격하고 INFO 로그를 남긴다. `sourceId`가 다르면 충돌이다. 이 경우 현재 파일을 원래 원본으로 자동 인정하지 않는다.
+- 해소는 운영자 끝점이다([API 참조](api-reference.md)). `keep-checkpoint`는 계획을 새 원본에 다시 묶는다(`published`·`amending`은 거절: 출발 가능한 계획의 주문이 어긋날 수 있다). `discard-checkpoint`는 체크포인트를 `{date}.json.discarded-{UTC시각}`로 옮기고 날짜를 미계획으로 되돌린다. 체크포인트 삭제·캐시 초기화로 우회하지 않는다.
+- 미트박스 주문(API) 날짜의 `sourceId`는 적용된 활성 주문 집합이고, 체크포인트만 과거로 되돌려 집합이 맞지 않는 경우도 같은 충돌로 닫힌다.
 
 ## 화면별로 보이는 상태
 

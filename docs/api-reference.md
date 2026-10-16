@@ -54,6 +54,7 @@
 | `GET` | `/api/ops/alerts` | 최근 서버 오류 알림 50건과 채널 종류 (Kotlin API 전용) |
 | `GET` | `/api/ops/telemetry` | 온도 메시지 송신 대기·거절·완료 건수, 차량별 (Kotlin API 전용) |
 | `GET` | `/api/ops/outbox?date=` | 미트박스 송신 대기·거절·완료 건수와 최근 20건 (Kotlin API 전용) |
+| `POST` | `/api/ops/days/{date}/source-conflict/resolve` | 원본이 바뀐 날짜의 체크포인트를 유지·보관 (Kotlin API 전용) |
 | `POST` | `/api/ops/export` | 운영 데이터 내보내기 작업 시작 (Kotlin API 전용) |
 | `GET` | `/api/ops/export`, `/api/ops/export/{jobId}`, `/api/ops/export/{jobId}/download` | 작업 목록·상태, 아카이브 받기 (Kotlin API 전용) |
 | `POST` `GET` | `/mock/meatbox/*` | 미트박스 모의 수신기. **테스트 전용**, 기본 꺼짐 (Kotlin API 전용) |
@@ -200,6 +201,25 @@
 
 `stale`은 모든 센서가 10분(설정) 넘게 새 값을 보내지 않았다는 뜻이고, `outOfRange`는 어느 센서든 허용 범위를 벗어난 것이 확정됐다는 뜻이다. 아무것도 바뀌지 않아도 차량이 stale로 바뀌면 화면이 달라지므로 `sourceData.temperatureVersion`이 함께 바뀐다.
 
+**원본이 바뀐 날짜(Kotlin API 전용).** 날짜의 저장된 체크포인트가 묶인 원본(`sourceId`)이나 그 날짜 파일의 내용(`contentHash`)이 현재와 다르면 계획을 읽을 수 없다. 이때는 오류 대신 200으로 아래 모양을 돌려준다. 계획을 읽지 못하므로 `dispatch`는 `null`이고 다른 필드는 없다. 이 경우의 ETag에는 `-c{detectedAt}`가 붙는다.
+
+```json
+{
+  "date": "2026-10-05",
+  "boot": "서버-프로세스-UUID",
+  "dispatch": null,
+  "sourceConflict": {
+    "expectedSourceId": "체크포인트가 묶인 sourceId",
+    "actualSourceId": "지금 원본의 sourceId",
+    "detectedAt": "2026-10-05T01:00:00Z",
+    "checkpointPhase": "draft",
+    "reason": "source"
+  }
+}
+```
+
+`reason`은 `sourceId`가 다르면 `source`, 같은데 날짜 파일 내용만 다르면 `content`다. `detectedAt`은 이 서버 프로세스가 같은 변경을 처음 본 시각이다. 서버는 어느 쪽도 자동으로 고르지 않는다. 해소는 `POST /api/ops/days/{date}/source-conflict/resolve`다. `contentHash`가 없는 이전 체크포인트는 `sourceId`가 현재와 같으면 현재 내용으로 지문을 계산해 제자리 승격하고(충돌이 아니다), 다르면 충돌이다.
+
 서버는 `ETag: "source-{boot}-{date}-{revision}-{today}"`를 보낸다. 기사 앱 위치를 받은 날짜는 `-l{위치 버전}`, ETA를 재산출한 날짜는 `-e{재산출 횟수 합}`이 뒤에 붙는다. 온도가 보이는 날짜는 `-t{온도 버전}`도 붙는다(값·stale·이탈 중 하나라도 바뀌면 달라진다). 클라이언트의 `If-None-Match`가 같으면 본문 없이 `304`다. 서울 날짜가 바뀌면 revision이 같아도 ETag와 `dispatch.readOnly`가 바뀔 수 있다.
 
 ## 날짜 명령
@@ -322,10 +342,11 @@
 | `409` | `DATE_READ_ONLY` | 과거 날짜는 조회만 한다 |
 | `409` | `PROTECTED_DESTINATION` | 진행·완료 배송지 묶음을 수정안에서 제외한다 |
 | `409` | `DISPATCH_NOT_PUBLISHED`, `DISPATCH_ALREADY_PUBLISHED` | 현재 `dispatch.phase`에 맞는 명령을 사용한다 |
+| `409` | `SOURCE_CHANGED` | 날짜 원본이 체크포인트와 달라졌다. 명령은 적용되지 않았다. `GET state`의 `sourceConflict`를 확인하고 운영자가 해소한다 |
 | `413` | `COMMAND_TOO_LARGE` | 본문을 제한 안으로 줄인다 |
 | `429` | `COMMAND_RATE_LIMITED` | `Retry-After` 이후 최신 state부터 다시 확인한다 |
 | `500` | `DISPATCH_STATE_WRITE_FAILED` | 기존 상태는 유지된다. 저장소를 복구한 뒤 state부터 확인한다 |
-| `500` | `DISPATCH_STATE_INVALID`, `DISPATCH_STATE_SOURCE_MISMATCH` | 체크포인트 또는 원본 불일치를 복구해야 한다 |
+| `500` | `DISPATCH_STATE_INVALID` | 체크포인트가 손상됐다. 파일을 보존한 채 복구한다. 원본 불일치는 더 이상 이 코드가 아니라 `409 SOURCE_CHANGED`다 |
 | `503` | `SOURCE_OPERATIONS_CAPACITY` | 변경 중인 날짜가 모두 사용 중이다. 잠시 후 다시 조회한다 |
 
 업무 규칙 오류 중 코드가 따로 없는 것은 `400 INVALID_COMMAND`와 최대 300자의 사용자 메시지로 반환될 수 있다.
@@ -591,6 +612,7 @@
 | `409` | `REQUEST_ID_MISMATCH` | 같은 `eventId`에 다른 본문 |
 | `409` | `DISPATCH_NOT_PUBLISHED` | 배차를 전송하기 전 |
 | `409` | `DRIVER_DATE_READ_ONLY` | 과거 날짜 |
+| `409` | `SOURCE_CHANGED` | 날짜 원본이 바뀌어 운영자 확인을 기다린다. 앱의 대기 중 보고는 지워지지 않는다 |
 | `409` | `PHOTO_CAPACITY` | 날짜당 사진 5000장 초과 |
 | `413` | `DRIVER_BODY_TOO_LARGE`, `PHOTO_TOO_LARGE` | 본문 또는 사진이 한도를 넘음 |
 | `415` | `UNSUPPORTED_PHOTO_TYPE` | jpeg·png가 아님 |
@@ -735,6 +757,17 @@ STEGO 단말의 통신 방식·수신 규격은 정해지지 않았다. 이 끝�
 - `pending`은 미전송(재시도 대기 포함), `failed`는 `4xx` 거절로 멈춘 건, `sent`는 전송 완료 건이다. 완료·거절 건은 24시간, 최대 1000건까지 남는다. 미전송 건은 지우지 않는다.
 - `recent`는 가장 늦게 쌓인 순 20건이다. `lastStatus`는 HTTP 상태 코드 또는 `timeout`·`connect-failed`다.
 - 주문 본문·사진 URL·토큰은 넣지 않는다.
+
+### `POST /api/ops/days/{date}/source-conflict/resolve`
+
+세션이 필요하고 `Origin`이 공개 origin과 같아야 한다(`403 ORIGIN_REQUIRED`). 본문은 `{"action": "keep-checkpoint" | "discard-checkpoint"}`다. 서버는 어느 쪽도 자동으로 고르지 않는다. 누가 어느 날짜에 무엇을 골랐는지 서버 로그(INFO)에 남는다.
+
+| action | 하는 일 |
+|---|---|
+| `keep-checkpoint` | 저장된 계획을 현재 원본(`sourceId`·`contentHash`)에 다시 묶는다. 계획 내용·`revision`은 그대로다. `published`·`amending`이면 `409 SOURCE_CHANGE_UNSAFE`로 거절한다. 새 원본이 저장된 계획을 담을 수 없으면(차량 구성이 다름 등) `409 SOURCE_CHANGE_INCOMPATIBLE`이다 |
+| `discard-checkpoint` | 체크포인트를 삭제하지 않고 `{date}.json.discarded-{UTC시각}`로 옮기고 그 날짜를 미계획으로 되돌린다. 백업에는 명령 결과·송신함(미전송 메시지 포함)·ETA가 그대로 있다 |
+
+성공하면 `200 {"date", "action", "previousPhase", "backup"}`이다(`backup`은 discard일 때만 파일 이름). 충돌이 없으면 `409 NO_SOURCE_CONFLICT`, 모르는 action은 `400 INVALID_ACTION`, 날짜 형식 오류는 `400 INVALID_DATE`, 원본이 없으면 `404 DISPATCH_DATA_NOT_FOUND`다. 거절된 요청은 파일을 바꾸지 않는다. 새 충돌은 운영 알림(kind `dispatch`, code `SOURCE_CHANGED`)으로 한 번 알리고 같은 코드는 10분 창에서 합친다.
 
 ### `GET /api/ops/telemetry`
 

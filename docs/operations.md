@@ -227,13 +227,27 @@ curl --silent --show-error --output /dev/null \
 | 모든 로그인 실패 | 계정 파일 존재·소유자·모드·해시, 잠금 디렉터리 | 살아 있는 작성자가 없는지 확인하기 전에는 `.lock`을 제거하지 않는다. |
 | `/api/resources` 503 | DB 경로·파일·권한·read-only SQLite 검사 | v1이면 API 조회도 이행을 시작할 수 있으므로 먼저 백업·승인한다. |
 | 배차 데이터 404 | 데이터 경로, manifest, 요청 날짜 | 데이터 미설치와 날짜 미존재를 구분한다. 데모 자료로 자동 대체하지 않는다. |
-| `DISPATCH_STATE_SOURCE_MISMATCH` | manifest 지문과 checkpoint `sourceId` | 체크포인트 삭제로 우회하지 않는다. 올바른 데이터셋 또는 복구 지점을 선택한다. |
+| `SOURCE_CHANGED`(날짜 원본이 체크포인트와 다름) | `GET state`의 `sourceConflict`(`reason`: `source`=번들 지문, `content`=날짜 파일 내용), 알림 `dispatch SOURCE_CHANGED` | 체크포인트 삭제·캐시 초기화로 우회하지 않는다. 아래 "원본 변경 복구"에 따라 올바른 원본으로 되돌리거나 `resolve`로 유지·보관을 고른다. |
 | `DISPATCH_STATE_INVALID` | JSON 구문, schema/date/source, 릴리스 호환성 | 손상 파일을 보존한 채 백업 복원을 검토한다. |
 | `BOOT_MISMATCH`/`REVISION_CONFLICT` | 시작 시각, 최신 boot/revision | 동일 명령을 자동 재전송하지 않는다. 최신 상태와 결과를 사람이 확인한다. |
 | `DISPATCH_STATE_WRITE_FAILED` | 상태 디렉터리 권한·용량·파일시스템 | 성공으로 간주하지 않는다. 이전 revision 유지 여부를 조회한다. |
 | `DATE_READ_ONLY` | 선택 날짜와 KST 오늘 | 보호 동작이다. 서버 시간이나 날짜를 바꿔 우회하지 않는다. |
 | 자원 revision 409 | 최신 자원 revision | 최신 목록과 변경 의도를 다시 비교한다. |
 | 사진 완료 분쟁 | checkpoint 사건과 브라우저 동작 | 서버에는 사진이 없다. `hasPhoto`를 증빙으로 판단하지 않는다. |
+
+### 원본 변경 복구 (Kotlin API)
+
+준비 스크립트로 CSV 자료를 다시 만들었거나 날짜 파일이 바뀌면, 저장된 계획이 있는 날짜는 계획을 읽지 않고 멈춘다. 계획이 없던 날짜는 새 자료를 그대로 따른다.
+
+1. 알림 `dispatch SOURCE_CHANGED`(`date=`, `reason=`)를 받거나 `GET /api/dispatch-data/days/{date}/state`에서 `sourceConflict`를 본다. `expectedSourceId`·`actualSourceId`·`checkpointPhase`를 기록한다. 같은 변경은 프로세스마다 한 번 알린다. 재시작하면 한 번 더 알릴 수 있다.
+2. 먼저 바뀌면 안 되는 변경인지 판단한다. 잘못 교체한 자료면 원래 번들·날짜 파일을 되돌린다. 서버를 다시 시작하지 않아도 다음 요청에서 충돌이 사라진다.
+3. 의도한 변경이면 `POST /api/ops/days/{date}/source-conflict/resolve`로 고른다(세션 쿠키와 `Origin` 필요).
+   - `keep-checkpoint`: 초안·미계획 단계의 계획을 새 원본에 다시 묶는다. 출발 가능한 계획(`published`·`amending`)은 거절된다. 새 원본에 맞는 계획이 아니면 `SOURCE_CHANGE_INCOMPATIBLE`이다. 이때는 `discard-checkpoint`를 쓴다.
+   - `discard-checkpoint`: 계획을 `state/{date}.json.discarded-{UTC시각}`로 옮기고 날짜를 미계획으로 돌린다. 계획과 미전송 송신함이 그 파일에 있으므로 지우지 않는다. 출발한 날짜에 쓰면 기사 앱의 경로가 사라진다. 사람이 영향을 확인한 뒤에만 쓴다.
+4. 응답의 `backup` 이름과 `previousPhase`를 인수인계 기록에 남긴다. 서버 로그(INFO)에 `Resolved dispatch source conflict`가 남는다.
+5. 충돌 중 기사 앱은 `409 SOURCE_CHANGED`를 받고 "배차 원본이 바뀌어 확인 중" 안내를 보인다. 기기에 쌓인 보고는 지워지지 않고 해소 뒤 다시 보낼 수 있다. 송신함의 미전송 미트박스 메시지도 해소 때까지 멈춘다.
+
+배포 직후: `contentHash`가 없는 이전 체크포인트는 `sourceId`가 현재와 같으면 첫 조회에서 자동으로 지문이 붙는다(INFO `Bound legacy dispatch checkpoint`). 이 로그가 없는 채로 충돌이 나면 그 날짜는 번들이 달라진 것이다.
 
 ### 서버 오류 자동 알림 (Kotlin API)
 
@@ -263,7 +277,7 @@ Kotlin API는 5xx를 내면 담당자 알림을 한 번 보낸다. 채널 설정
 | `MEATBOX_INBOUND_TOKEN` | 수신 시 필수 | 없음 | 미트박스가 `Authorization: Bearer`로 보내는 토큰이다. **비우면 `/api/meatbox/*` 경로가 없다(404).** 16자 미만이면 시작에 실패한다. 비밀값이므로 `api.env`(0600)에만 두고 로그·알림에 넣지 않는다. 이미 받은 주문은 토큰이 없어도 날짜 조회에 보인다. |
 | `MEATBOX_INBOUND_GROUP_COUNT` | 선택 | `8` | 미트박스 주문 날짜에 만드는 합성 후보 차량 수(1~50). 실제 차량이 아니다. 바꾸면 이미 받은 날짜의 후보 목록도 바뀐다. |
 
-- 백업·복원: `inbound/`는 `DISPATCH_STATE_DIR`의 일부다. 체크포인트와 같이 백업하고 같이 복원한다. 체크포인트만 과거로 되돌려 주문 집합이 맞지 않으면 `DISPATCH_STATE_SOURCE_MISMATCH`로 닫힌다(조용히 새로 시작하지 않는다).
+- 백업·복원: `inbound/`는 `DISPATCH_STATE_DIR`의 일부다. 체크포인트와 같이 백업하고 같이 복원한다. 체크포인트만 과거로 되돌려 주문 집합이 맞지 않으면 원본 변경 상태(`SOURCE_CHANGED`)로 닫힌다(조용히 새로 시작하지 않는다).
 - 게이트웨이: 웹 게이트웨이(`apps/web`)는 `/api/meatbox/*`를 Kotlin API로 보내지 않는다. 미트박스가 호출하려면 배포 쪽에서 이 경로만 API(`127.0.0.1`)로 연결하고, 미트박스 고정 IP만 허용한다. 이 저장소는 웹을 바꾸지 않았다.
 - 알림: 확정 이후 도착한 변경·취소·신규 주문은 `meatbox-inbound` / `ORDER_CHANGED_AFTER_DISPATCH`·`ORDER_CANCELLED_AFTER_DISPATCH`·`ORDER_ADDED_AFTER_DISPATCH`·`ORDER_CHANGED_AFTER_COMPLETION`으로 알린다. 같은 코드는 10분 창에서 한 번만 알리고 나머지는 요약으로 센다. 건별 경고는 날짜 상태 `sourceData.inbound.warnings`에 남는다. 이 경고를 해소하는 화면은 아직 없다.
 - 장애: 저장 실패는 `500 INBOUND_WRITE_FAILED`이고 미트박스가 같은 요청을 다시 보낸다. 계산안 중 변경이 계산안을 버릴 때 저장이 실패하면 계산안만 사라진 상태이므로 운영자가 다시 계산한다.

@@ -22,7 +22,7 @@
 | 날짜의 기사 표기 그룹으로 번호판과 차량 기준 위치를 합성한다. 계획에서는 `live=true`도 부여한다. | 표시·이름이 실제 차량이나 GPS의 증거가 되지 않는다. 합성 정보 사용을 먼저 차단한다. | [DispatchFleet](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchFleet.kt), [DispatchPlan](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchPlan.kt) |
 | 기존 자원 인수 도구도 합성 fleet를 사용한다. SQLite에 저장됐다는 사실만으로 실제 번호판이 검증되지 않는다. | 기존 등록 자료의 출처를 보존하고 실제 명부로 자동 승격하지 않는다. | [자원 인수 도구](../scripts/import-resource-catalog.mjs), [기존 저장 모델](../lib/resource-store.js) |
 | 자원 등록부와 날짜별 배차 후보가 연결되지 않았다. 차량 생성·기사 등록 API도 없다. | 실제 차량 등록과 명시적 후보 연결을 별도 기능으로 구현한다. | [DispatchConfiguration](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchConfiguration.kt), [ResourceController](../services/api/src/main/kotlin/com/evnsolution/meatbox/resources/ResourceController.kt) |
-| 날짜 상태는 전체 CSV 해시를 source ID로 쓰며 warm cache는 날짜의 유효한 내용 변경을 구분하지 않는다. | 원본 버전 변경을 기존 배차 상태와 대조해야 한다. | [DispatchStore](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchStore.kt) |
+| (F02 이전) 날짜 상태는 전체 CSV 해시만 source ID로 썼고 warm cache는 날짜의 유효한 내용 변경을 구분하지 않았다. 번들이 바뀌면 모든 날짜가 500으로 닫혔다. | F02에서 날짜 파일 해시(`contentHash`)를 체크포인트에 묶어 해소했다(로컬 검증). 운영자 해소 경로는 `source-conflict/resolve`다. | [DispatchStore](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchStore.kt) |
 | 명령은 CAS로 충돌을 검사하지만 처리 결과를 요청 ID로 영속 조회하지 않는다. | 응답 유실 후 성공 여부를 확정할 수 없다. | [DispatchController](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchController.kt), [source-client](../apps/web/combined/source-client.mjs) |
 | 업무 인가는 로그인 여부에 한정된다. | 실제 외부 사용자에게 자료를 제공하기 전에 테넌트·소속·역할 권한을 구현해야 한다. | [SessionVerifier](../services/api/src/main/kotlin/com/evnsolution/meatbox/auth/SessionVerifier.kt), [업무 필터](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchSessionFilter.kt) |
 
@@ -35,7 +35,7 @@
 | ID | 사용자 또는 운영 결과 | 선행 조건 | 상태 |
 | --- | --- | --- | --- |
 | F01 | 미검증 번호판·차량 위치를 실제 정보로 보거나 사용하지 않는다. | 현재 코드와 보존 fixture | 착수 가능 |
-| F02 | 원본 내용이 바뀌면 기존 배차를 조용히 재사용하지 않는다. | 기존 버전·checkpoint 이행 방식 결정 | 설계·재현 가능 |
+| F02 | 원본 내용이 바뀌면 기존 배차를 조용히 재사용하지 않는다. | 기존 버전·checkpoint 이행 방식 결정(2026-10-16 결정 아래) | 구현·로컬 검증 |
 | F03 | 같은 저장소에 두 writer가 동작하지 않으며 저장·복구 결과가 명확하다. | 단일 writer 유지, 파일 시스템 검증 | 착수 가능 |
 | F04 | 응답이 유실돼도 명령 결과를 확인하고 같은 변경을 중복 적용하지 않는다. | F02·F03, 결과·감사 저장 계약 | 설계 가능 |
 | F05 | 다른 회사·소속의 주문·차량·상태에 접근하지 못한다. | 테넌트 의미·계정 소속·기존 계정 이행표 | 계약 입력 필요 |
@@ -83,9 +83,17 @@ F01의 명령 범위는 다음과 같다. 현재 날짜·boot/revision CAS 등 �
   - 날짜별 내용 버전과 캐시·checkpoint의 대응을 검사한다. 전체 CSV 해시가 같아도 내용 변경을 구분한다.
 - C2 `Fix: Preserve legacy dispatch state during source version adoption`
   - 원본 지문이 없는 기존 v2의 이행·거부·복구 절차를 구현한다. 최초 조회에서 현재 파일을 원래 원본으로 자동 인정하지 않는다.
+  - **이행 결정(2026-10-16):** "자동 채택 금지"는 원본이 달라진 경우에만 적용한다. (i) 지문(`contentHash`)이 없는 v2의 `sourceId`가 현재와 같으면 같은 번들이라 내용 변경의 증거가 없으므로, 현재 day 내용으로 지문을 계산해 제자리 승격하고 INFO 로그 한 줄을 남긴다(운영 알림이 아니다). (ii) `sourceId`가 다르면 충돌로 분류하고 운영자가 수동으로 해소한다. TEST에 v2가 여러 날짜 있어 전부 수동이면 배포 직후 운영이 멈추기 때문이다.
 - **범위:** 기존 v2는 원본 전체를 보관하지 않는 sparse checkpoint다. 대응 원본이 입증되지 않으면 현재 파일로 과거 상태를 재구성하지 않는다. 원본·checkpoint를 보존하고 원본 확인 필요 상태를 표시한다. 변경 주문의 업무 적용은 F10·F11에서 수행한다.
 - **완료 조건:** cold/warm cache·재시작에서 원본 변경을 감지한다. 대응 근거가 없으면 변경 명령을 거부하고 기존 상태를 보존한다. 정상 원본의 바이트·ETag와 기존 날짜 경계를 유지한다.
 - **검증:** 같은 CSV 해시·같은 날짜의 수량·주소·그룹·좌표 변경, 이전 checkpoint, 파일/gzip 불일치와 재시작·복구를 재현한다. checkpoint 삭제·캐시 초기화·현재 원본 자동 채택으로 우회하지 않는다. 이행 후보는 격리 경로에서 대조하고 TEST 업무 파일을 임의 재작성하지 않는다.
+
+- **구현 결과(로컬 검증, 서버 반영 전):**
+  - 체크포인트에 선택 필드 `contentHash`(그 날짜 day 파일 바이트의 SHA-256)를 쓴다. `schemaVersion`은 2 그대로다. 이전 서버가 읽어도 무시하므로 슬롯을 되돌릴 수 있다.
+  - warm cache도 요청마다 현재 `sourceId`·`contentHash`와 비교한다. day 바이트를 이미 읽고 있어 추가 파일 읽기는 없다.
+  - 충돌이면 `GET state`는 200과 `sourceConflict`(`dispatch: null`)를 돌려주고, 변경 명령과 기사 읽기는 `409 SOURCE_CHANGED`다. 계약 종료 내보내기는 막지 않고 체크포인트 파일을 그대로 담으며 그 날짜의 상태 요약만 비운다. 체크포인트 바이트는 바뀌지 않는다.
+  - 해소는 운영자 몫이다: `keep-checkpoint`(draft·미계획만, 출발 가능한 단계는 `SOURCE_CHANGE_UNSAFE`), `discard-checkpoint`(백업 이름으로 보존). 자동 결정은 없다.
+  - 남은 것: 웹 화면의 충돌 표시(`apps/web` 변경 금지), 출발 후 변경 주문의 업무 적용(F10·F11), 실제 TEST의 v2 승격 확인.
 
 ### F03 — 단일 writer와 저장·복구 보호
 
