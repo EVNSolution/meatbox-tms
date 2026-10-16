@@ -4,6 +4,7 @@ import com.evnsolution.meatbox.integrations.meatbox.outbound.OutboundDraft
 import com.evnsolution.meatbox.integrations.meatbox.outbound.Outbox
 import com.evnsolution.meatbox.integrations.meatbox.outbound.OutboxItem
 import com.evnsolution.meatbox.integrations.meatbox.outbound.OutboxOutcome
+import com.evnsolution.meatbox.integrations.meatbox.outbound.superseded
 import com.evnsolution.meatbox.integrations.meatbox.outbound.deliveryStatusBody
 import com.evnsolution.meatbox.integrations.meatbox.outbound.seoulStamp
 import com.evnsolution.meatbox.legacy.DispatchDataReader
@@ -114,8 +115,8 @@ class DispatchStore(
             current.results + StoredResult(requestId, hash!!, clock(), copyObject(output)), clock(),
         )
         val outbox = if (drafts.isEmpty()) current.outbox else Outbox.retained(
-            current.outbox + drafts.map {
-                Outbox.entry(Outbox.messageId(date, candidate.revision, it.orderId), it, clock())
+            superseded(current.outbox, drafts) + drafts.map {
+                Outbox.entry(Outbox.messageId(date, candidate.revision, it.orderId, it.idSuffix), it, clock())
             },
             clock(),
         )

@@ -19,17 +19,20 @@ class EtaStop(val stopId: String, val sequence: Int, val eta: Instant, val estim
 
 /**
  * The first model's knobs (contract 3.2 has no say in them). Travel time is straight-line distance times
- * [detourFactor] at [speedKmh]; every stop adds [serviceMinutes] of work before the next leg.
+ * [detourFactor] at [speedKmh]; every stop adds [serviceMinutes] of work before the next leg. A recomputed ETA that
+ * moved by [delayThresholdMinutes] or more from the last one sent to Meatbox is sent again.
  */
 data class EtaConfig(
     val detourFactor: Double = 1.4,
     val speedKmh: Double = 25.0,
     val serviceMinutes: Int = 5,
+    val delayThresholdMinutes: Int = 10,
 ) {
     init {
         require(detourFactor.isFinite() && detourFactor > 0) { "meatbox.eta.detour-factor must be above 0" }
         require(speedKmh.isFinite() && speedKmh > 0) { "meatbox.eta.speed-kmh must be above 0" }
         require(serviceMinutes >= 0) { "meatbox.eta.service-minutes must not be negative" }
+        require(delayThresholdMinutes >= 1) { "meatbox.eta.delay-threshold-minutes must be at least 1" }
     }
 }
 

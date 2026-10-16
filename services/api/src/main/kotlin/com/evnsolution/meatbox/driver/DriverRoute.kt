@@ -84,19 +84,14 @@ internal fun planEvent(
         "route_reordered" -> listOf(reorderedStep(route, event.payload))
         else -> stopSteps(route, event, handled!!)
     }
-    val departed = event.type == "departed"
+    val effect = EtaEffect(event, receivedAt, eta, route.eta, handled)
     CommandBatch(
         steps,
         outbound = { after ->
             val shown = Route(after, event.vehicleId)
-            val etaDrafts = if (departed) etaMessages(event, shown) else emptyList()
-            deliveryMessages(event, handled, shown, photoBase) + etaDrafts
+            deliveryMessages(event, handled, shown, photoBase) + effect.messages(shown)
         },
-        etas = { after ->
-            if (!departed) return@CommandBatch emptyMap()
-            val set = etaOf(event, receivedAt, eta, Route(after, event.vehicleId), "departed")
-            mapOf(event.vehicleId to set)
-        },
+        etas = { after -> effect.etas(Route(after, event.vehicleId)) },
     ) { after -> reply(Route(after, event.vehicleId), handled?.stopId, receivedAt) }
 }
 

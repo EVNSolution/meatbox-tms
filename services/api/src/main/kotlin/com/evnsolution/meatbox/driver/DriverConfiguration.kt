@@ -23,9 +23,10 @@ class DriverConfiguration {
         @Value("\${meatbox.eta.detour-factor:1.4}") detourFactor: Double,
         @Value("\${meatbox.eta.speed-kmh:25}") speedKmh: Double,
         @Value("\${meatbox.eta.service-minutes:5}") serviceMinutes: Int,
+        @Value("\${meatbox.eta.delay-threshold-minutes:10}") delayThresholdMinutes: Int,
     ): DriverStore = DriverStore(dispatch, Path.of(directory), isSessionActive = { digest, username ->
         auth.ifAvailable?.isSessionActive(digest, username) == true
-    }, publicOrigin = origin, etaConfig = EtaConfig(detourFactor, speedKmh, serviceMinutes))
+    }, publicOrigin = origin, etaConfig = EtaConfig(detourFactor, speedKmh, serviceMinutes, delayThresholdMinutes))
 
     @Bean
     fun fcmSender(

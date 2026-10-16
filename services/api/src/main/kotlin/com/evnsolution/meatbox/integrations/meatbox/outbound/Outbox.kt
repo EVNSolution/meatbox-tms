@@ -11,8 +11,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
-/** A message that a state change wants sent to Meatbox. The store gives it its `messageId` when it commits. */
-class OutboundDraft(val kind: String, val orderId: String, val body: ObjectNode)
+/** A message that a state change wants sent to Meatbox. The store gives it its `messageId` when it commits.
+ * [idSuffix] keeps ids apart when several messages of one key share an engine revision. */
+class OutboundDraft(val kind: String, val orderId: String, val body: ObjectNode, val idSuffix: String = "")
 
 /** One message that is due now, as the sender sees it. */
 class OutboxItem(val date: String, val messageId: String, val kind: String, val body: ObjectNode, val attempts: Int)
@@ -56,6 +57,17 @@ fun etaBody(vehicleId: String, computedAt: String, reason: String, stops: JsonNo
     }
 
 /**
+ * An ETA message lists the whole vehicle, so a newer one replaces an unsent older one of the same vehicle instead of
+ * queueing behind it. Sent and rejected entries stay.
+ */
+internal fun superseded(list: List<ObjectNode>, drafts: List<OutboundDraft>): List<ObjectNode> {
+    val keys = drafts.filter { it.kind == "eta" }.map { it.orderId }.toSet()
+    return list.filterNot {
+        Outbox.pending(it) && it.path("kind").asString() == "eta" && it.path("orderId").asString() in keys
+    }
+}
+
+/**
  * The outbox of one date: messages that a committed state change owes Meatbox. The list lives in the date's
  * checkpoint, so a message and the change that caused it are written by the same file write.
  */
@@ -65,7 +77,8 @@ internal object Outbox {
     private const val FINISHED_RETENTION_MILLIS = 24 * 60 * 60 * 1000L
     private val ID = Regex("[^A-Za-z0-9._-]")
 
-    fun messageId(date: String, revision: Long, orderId: String): String = "$date-$revision-${ID.replace(orderId, "_")}"
+    fun messageId(date: String, revision: Long, orderId: String, suffix: String = ""): String =
+        "$date-$revision-${ID.replace(orderId, "_")}$suffix"
 
     fun entry(messageId: String, draft: OutboundDraft, now: Long): ObjectNode =
         dispatchMapper.createObjectNode().apply {
