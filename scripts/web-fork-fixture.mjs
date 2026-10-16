@@ -88,7 +88,7 @@ function listen(server, port) {
   });
 }
 
-async function startKotlin({ apiOrigin, dataDirectory, port, resources, resourceDatabasePath, publicOrigin, native, accessFile, stateDirectory }) {
+async function startKotlin({ apiOrigin, dataDirectory, port, resources, resourceDatabasePath, publicOrigin, native, accessFile, stateDirectory, telemetryToken = '', telemetryStaleMinutes = '' }) {
   const libraries = path.join(root, 'services/api/build/libs');
   const jars = (await fs.readdir(libraries)).filter(name => name.endsWith('.jar') && !name.endsWith('-plain.jar'));
   if (jars.length !== 1) throw new Error('Build exactly one Kotlin bootJar before starting the connected fixture');
@@ -111,6 +111,8 @@ async function startKotlin({ apiOrigin, dataDirectory, port, resources, resource
     `--meatbox.auth.enabled=${native}`, `--meatbox.auth.access-file=${accessFile}`,
     `--meatbox.auth.public-origin=${publicOrigin}`, `--meatbox.dispatch.enabled=${native}`,
     `--meatbox.dispatch.state-dir=${stateDirectory}`, `--meatbox.dispatch.public-origin=${publicOrigin}`,
+    // Optional: lets a seeding script push synthetic temperatures (scripts/seed-control-fixture.mjs).
+    ...(telemetryToken ? [`--meatbox.telemetry.token=${telemetryToken}`, `--meatbox.telemetry.stale-minutes=${telemetryStaleMinutes || 10}`] : []),
   ], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
   let logs = '';
   let startupError;
@@ -146,7 +148,7 @@ async function startKotlin({ apiOrigin, dataDirectory, port, resources, resource
   }
 }
 
-export async function startForkFixture({ connected = false, resources = false, native = false, apiPort = 3001, webPort = 4173, kotlinPort = 8081 } = {}) {
+export async function startForkFixture({ connected = false, resources = false, native = false, apiPort = 3001, webPort = 4173, kotlinPort = 8081, telemetryToken = '', telemetryStaleMinutes = '' } = {}) {
   if (native) { connected = true; resources = true; }
   if (resources && !connected) throw new Error('Kotlin resource ownership requires a connected fixture');
   for (const port of [apiPort, webPort, ...(connected ? [kotlinPort] : [])]) {
@@ -202,7 +204,7 @@ export async function startForkFixture({ connected = false, resources = false, n
       demo = createDemo({ accessFile, dispatchDataDir, dispatchStateDir, resourceDatabasePath, resourceOwner:resources ? 'kotlin' : 'node', origin: publicOrigin });
       await listen(demo.server, apiPort);
     }
-    const kotlinSettings = { apiOrigin, dataDirectory: dispatchDataDir, port: kotlinPort, resources, resourceDatabasePath, publicOrigin, native, accessFile, stateDirectory:dispatchStateDir };
+    const kotlinSettings = { apiOrigin, dataDirectory: dispatchDataDir, port: kotlinPort, resources, resourceDatabasePath, publicOrigin, native, accessFile, stateDirectory:dispatchStateDir, telemetryToken, telemetryStaleMinutes };
     if (connected) kotlin = await startKotlin(kotlinSettings);
     gateway = createLegacyGateway({ apiOrigin, kotlinApiOrigin: kotlin?.origin, kotlinResources:resources, kotlinAuth:native, kotlinDispatch:native, publicOrigin, distDirectory });
     await listen(gateway.server, webPort);
@@ -228,6 +230,8 @@ async function main() {
     apiPort: fixturePort('MEATBOX_FORK_FIXTURE_API_PORT', 3001),
     webPort: fixturePort('MEATBOX_FORK_FIXTURE_WEB_PORT', 4173),
     kotlinPort: fixturePort('MEATBOX_FORK_FIXTURE_KOTLIN_PORT', 8081),
+    telemetryToken: process.env.MEATBOX_FORK_FIXTURE_TELEMETRY_TOKEN ?? '',
+    telemetryStaleMinutes: process.env.MEATBOX_FORK_FIXTURE_TELEMETRY_STALE_MINUTES ?? '',
   });
   async function stop() {
     if (stopping) return;
@@ -238,7 +242,7 @@ async function main() {
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => void stop());
   try {
     const fixture = await startup;
-    if (!stopping) console.log(JSON.stringify({ status: 'ready', origin: fixture.origin, kotlinOrigin: fixture.kotlinOrigin, synthetic: true }));
+    if (!stopping) console.log(JSON.stringify({ status: 'ready', origin: fixture.origin, kotlinOrigin: fixture.kotlinOrigin, synthetic: true, accessFile: fixture.accessFile }));
   }
   catch (error) {
     console.error(`Synthetic web fork fixture failed: ${error.code || error.message}`);

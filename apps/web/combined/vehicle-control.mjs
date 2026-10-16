@@ -11,6 +11,7 @@ import { readTemperature, sortByTemperature, stateOf, temperatureView } from './
 import { mountTemperatureOverview, temperatureOverviewMarkup } from './temperature-overview.ts';
 import { mountTemperaturePanel, temperaturePanelMarkup } from './temperature-panel.ts';
 import { seoulToday } from './operating-date.mjs';
+import { etaFor, etaNote, etaText, readEta } from './server-eta.ts';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const count = (value, unit = '') => value === null || value === undefined ? '미확인' : `${value.toLocaleString('ko-KR')}${unit}`;
@@ -33,6 +34,14 @@ const factRows = facts => facts.length ? facts.map(fact => `<li><time>${esc(fact
 
 // The temperature the day state carries for one vehicle (today only), as a view; none when the vehicle sent nothing.
 const temperatureOf = (data, vehicleId) => temperatureView(readTemperature(stateOf(data?.vehicleStates, vehicleId)));
+// The ETA the server computed after the driver's departure, for a vehicle row or a stop; null until the driver has left.
+const serverEtaOf = (data, row) => readEta(data?.vehicleStates?.[row?.vehicle?.id]?.eta);
+const planEta = stop => stop?.preciseTimeText || stop?.calculatedEta || '미확인';
+const etaNoteHtml = (data, row, source) => {
+  const eta = serverEtaOf(data, row);
+  if (eta) return `<p class="muted control-timing-note" data-server-eta>${esc(etaNote(eta))}</p>`;
+  return source && row.remaining.length ? '<p class="muted control-timing-note" data-server-eta>기사 앱에서 출발하면 서버가 계산한 ETA가 표시됩니다. 지금 ETA는 계획 추정치입니다.</p>' : '';
+};
 const temperatureLine = view => view.kind === 'none' ? '' : `<small class="control-temp" data-temp-kind="${view.kind}"><span class="badge ${view.tone}">${esc(view.label)}</span> ${esc(view.valueText)}</small>`;
 
 export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery, onOpenManagement, onOpenRoute = () => {}, onOpenTemperature = id => onSelectVehicle(id),
@@ -106,7 +115,8 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
 
   function renderSummary() {
     const source = Boolean(data?.sourceData);
-    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.driver || '배송원 미등록')}</h2><p>${esc(plateLabel(row.vehicle))}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span>${temperatureBadge(row)}</div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><details class="control-running-details"${factsOpen ? ' open' : ''}><summary>운행 상세<span>${esc(row.current?.name ? `현재 ${row.current.name}, ETA ${row.current.preciseTimeText || row.current.calculatedEta || '미확인'}` : '현재 배송지 없음')}</span>${referenceIcon('next')}</summary><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(row.current?.preciseTimeText || row.current?.calculatedEta || '미확인')}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` : row.timing ? '<p class="muted control-timing-note">기존 이동과 하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}</details>` : '<p class="control-unit-note">미배정</p>';
+    find('[data-control-summary]').innerHTML = row ? `<div class="panel-heading"><div><h2>${esc(row.vehicle.driver || '배송원 미등록')}</h2><p>${esc(plateLabel(row.vehicle))}</p></div><span class="badge">${source ? '운영 현황' : row.vehicle.live ? '시뮬레이션' : '예시 배정'}</span>${temperatureBadge(row)}</div><div class="control-workload"><div><span>남은 배송지</span><strong>${count(row.remainingStops, '곳')}</strong></div><div><span>남은 박스</span><strong>${count(row.remainingBoxes, '박스')}</strong></div><div><span>예상 소요 시간</span><strong>${esc(remainingText(row))}</strong></div></div><details class="control-running-details"${factsOpen ? ' open' : ''}><summary>운행 상세<span>${esc(row.current?.name ? `현재 ${row.current.name}, ETA ${currentEta(row)}` : '현재 배송지 없음')}</span>${referenceIcon('next')}</summary><dl class="control-running-facts"><div><dt>현재 배송지</dt><dd>${esc(row.current?.name || (row.remaining.length ? '출발 또는 배정 상태 확인' : '모든 배송 완료'))}</dd></div><div><dt>현재 도착 ETA</dt><dd>${esc(currentEta(row))}</dd></div><div><dt>고정 출발 기준</dt><dd>${esc(row.fixedDepartureText || '미등록')}${row.vehicle.departure && !source ? ' (시나리오)' : ''}</dd></div><div><dt>마지막 도착 ETA</dt><dd>${esc(row.lastArrivalEta || '미확인')}</dd></div><div><dt>전체 인도 완료</dt><dd>${esc(completionText(row))}</dd></div><div><dt>보류 배송지</dt><dd>${count(row.heldStops, '곳')}</dd></div></dl>${source ? `<p class="muted control-timing-note">${esc(data.sourceData.date || '기준일')} 승인 운영 계획 추정치입니다. 실시간 GPS와 도로 ETA는 연결되지 않았습니다.</p>` 
+  : row.timing ? '<p class="muted control-timing-note">기존 이동과 하차 시간으로 계산한 시뮬레이션 예측입니다. 보류 배송이 있는 차량은 완료 예측에서 제외합니다.</p>' : ''}${etaNoteHtml(data, row, source)}</details>` : '<p class="control-unit-note">미배정</p>';
     find('[data-control-detail-title]').textContent = row ? `${row.vehicle.driver || row.vehicle.id} 상세` : '차량 상세';
   }
 
@@ -116,8 +126,15 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     find('[data-control-detail-title]').textContent = '차량 상세';
   }
 
+  // The server's ETA when the driver has left, else the plan estimate, so a stop never shows a stale-looking blank.
+  function stopEta(stop) {
+    const entry = etaFor(serverEtaOf(data, row), stop);
+    return entry ? `${etaText(entry)} (서버 계산)` : planEta(stop);
+  }
+  const currentEta = item => (item.current ? stopEta(item.current) : '미확인');
+
   function stopContents(stop) {
-    return `<div class="control-stop-body"><p class="muted">${esc(stop.address || '주소 미등록')}</p><dl class="control-stop-facts"><div><dt>배정 박스</dt><dd>${count(stop.boxes, '박스')}</dd></div><div><dt>도착 ETA</dt><dd>${esc(stop.preciseTimeText || stop.calculatedEta || '미확인')}</dd></div></dl><section class="control-request">${renderCustomerRequests(stop)}</section><section class="control-tip"><h4>배송원 팁</h4><p>${esc(stop.tip?.body || '등록된 배송팁이 없습니다.')}</p>${stop.tip ? `<small>${esc(stop.tip.author)}${stop.tip.updatedAt ? ` (${esc(stop.tip.updatedAt)})` : ''}</small>` : ''}</section><button type="button" class="button control-open-records" data-control-manage="${esc(stop.id)}">기록 보기</button></div>`;
+    return `<div class="control-stop-body"><p class="muted">${esc(stop.address || '주소 미등록')}</p><dl class="control-stop-facts"><div><dt>배정 박스</dt><dd>${count(stop.boxes, '박스')}</dd></div><div><dt>도착 ETA</dt><dd>${esc(stopEta(stop))}</dd></div></dl><section class="control-request">${renderCustomerRequests(stop)}</section><section class="control-tip"><h4>배송원 팁</h4><p>${esc(stop.tip?.body || '등록된 배송팁이 없습니다.')}</p>${stop.tip ? `<small>${esc(stop.tip.author)}${stop.tip.updatedAt ? ` (${esc(stop.tip.updatedAt)})` : ''}</small>` : ''}</section><button type="button" class="button control-open-records" data-control-manage="${esc(stop.id)}">기록 보기</button></div>`;
   }
 
   function renderStops() {

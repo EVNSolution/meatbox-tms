@@ -42,6 +42,16 @@ make check-api-connection
 
 `make dev-web`은 `127.0.0.1:5173`에서 실행하며 `/api`만 프록시한다. `/scenario/api`와 `/ws/simulation` 개발 프록시는 없다. raw Vite preview는 정적 확인용이므로 인증·Origin·보호 자산·owner 장애 계약은 보호 게이트웨이에서 검사한다.
 
+관제 화면의 온도·ETA·기사 배정을 브라우저로 확인하려면 native fixture를 텔레메트리 토큰과 함께 띄우고 합성 자료를 채운다. 아래 값은 임시 합성 값이다.
+
+```sh
+MEATBOX_FORK_FIXTURE_TELEMETRY_TOKEN=fixture-telemetry-token-0001 MEATBOX_FORK_FIXTURE_TELEMETRY_STALE_MINUTES=1 node scripts/web-fork-fixture.mjs --native
+# 출력의 accessFile 경로를 써서 다른 터미널에서:
+node scripts/seed-control-fixture.mjs --access-file <accessFile> --token fixture-telemetry-token-0001 --keep-alive
+```
+
+`seed-control-fixture.mjs`는 두 차량의 배차를 확정하고 오늘의 온도(정상 차량, 범위 밖 차량, 곧 조용해지는 차량)를 넣고, 기사 계정(`fork-driver` / `local-driver-1234`)을 만들어 한 차량에 배정한 뒤 출발 이벤트를 보내 서버 ETA를 만든다. 합성 자료만 쓰며 fixture 밖에는 아무것도 쓰지 않는다.
+
 합성 fixture의 로그인은 `fork-reviewer` / `local-fork-1234`이며 3주문·2차량의 로컬 합성 자료만 사용한다. `Ctrl-C` 또는 SIGTERM으로 종료한다. 합성 fixture는 임시 access JSON, 날짜 원본, checkpoint, SQLite를 만들고 종료 때 제거한다. 실자료 경로를 사용하지 않는다. Connected fixture는 이전 혼합 소유 계약의 비교·롤백용이고, native fixture는 Node API 없이 Kotlin이 인증·세션·네 원본 읽기·자원·날짜별 state/commands를 모두 소유한다.
 
 ## 게이트웨이와 API 계약

@@ -458,3 +458,22 @@ test('온도 현황에서 고른 차량은 온도 탭으로 열린다', () => {
   assert.match(source, /onSelectVehicle: id => onOpenTemperature\(id\)/);
   assert.deepEqual([opened, selected], [[], []]);
 });
+
+test('기사가 출발하면 서버가 계산한 ETA를 배송지와 운행 상세에 보이고 출발 전에는 계획 추정치임을 알린다', () => {
+  const { element, node } = fixture();
+  const control = mountVehicleControl({ element, onSelectVehicle() {}, onSelectDelivery() {}, mapFactory });
+  const planned = deliveries.map(stop => ({ ...stop, calculatedEta: '09:00', status: stop.id === 'V2-S1' ? 'current' : 'pending' }));
+  const before = { fleetVehicles: [vehicle], fleetDeliveries: planned, events: [], sourceData: { date: '2026-11-02' } };
+  control.update(before, 'V2', 'V2-S1');
+  assert.match(node('[data-control-stops]').innerHTML, /<dt>도착 ETA<\/dt><dd>09:00<\/dd>/);
+  assert.match(node('[data-control-summary]').innerHTML, /기사 앱에서 출발하면 서버가 계산한 ETA가 표시됩니다\. 지금 ETA는 계획 추정치입니다\./);
+
+  const eta = { computedAt: '2026-11-02T09:12:10+09:00', reason: 'reordered', departedAt: '2026-11-02T09:12:03+09:00', departureTimeSource: 'device', recomputes: 1,
+    stops: [{ stopId: 'V2-S1', sequence: 1, eta: '2026-11-02T09:40:00+09:00', estimated: true }, { stopId: 'V2-S2', sequence: 2, eta: '2026-11-02T09:58:00+09:00', estimated: false }] };
+  control.update({ ...before, vehicleStates: { V2: { eta } } }, 'V2', 'V2-S1');
+  assert.match(node('[data-control-stops]').innerHTML, /<dt>도착 ETA<\/dt><dd>09:40 \(서버 계산\)<\/dd>/);
+  assert.match(node('[data-control-summary]').innerHTML, /현재 도착 ETA<\/dt><dd>09:40 \(서버 계산\)/);
+  assert.match(node('[data-control-summary]').innerHTML, /서버 ETA: 출발 09:12\(기기 시각\), 산출 09:12, 재산출 1회, 사유 순서 변경\./);
+  assert.doesNotMatch(node('[data-control-summary]').innerHTML, /기사 앱에서 출발하면/);
+  control.destroy();
+});

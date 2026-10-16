@@ -60,3 +60,16 @@
 .resource-region-list { max-height: 260px; overflow: auto; }
 .resource-region-list form { align-items: center; }
 .resource-region-list form > span { font-size: 12px; }
+
+/* 기사 column: the driver account of a vehicle, saved row by row. */
+.resource-table thead th:nth-child(4):not(:last-child) { width: 230px; }
+.resource-driver small.resource-driver-state { display: block; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 11px; line-height: 1.2; }
+.resource-driver small[data-kind="saved"] { color: #0e662f; }
+.resource-driver small[data-kind="failed"], .resource-driver small[data-kind="warn"] { color: #9f1239; }
+.resource-table tbody td.resource-driver { height: 48px; padding-top: 4px; padding-bottom: 4px; }
+.resource-driver-message { margin: 6px 0; }
+@media (max-width: 740px) {
+  .resource-table thead th:nth-child(4):not(:last-child) { width: 132px; }
+  /* With the driver column the table scrolls inside its box rather than squeezing the plate to nothing. */
+  .resource-table:has(thead th:nth-child(5)) { min-width: 470px; }
+}

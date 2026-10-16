@@ -41,6 +41,11 @@
 .temperature-tip { min-height: 20px; margin: 8px 0 0; font-size: 12px; font-variant-numeric: tabular-nums; }
 .temperature-stats { margin: 4px 0 0; font-size: 13px; line-height: 1.6; }
 .temperature-note { margin: 8px 0 0; font-size: 12px; line-height: 1.6; }
+/* A narrow screen scrolls the graph inside its box instead of shrinking its numbers to nothing. */
+@media (max-width: 740px) {
+  .temperature-chart { overflow-x: auto; }
+  .temperature-svg { min-width: 520px; }
+}
 @media (min-width: 1271px) {
   #control-temperature-panel { flex: 1 1 auto; min-height: 0; overflow: auto; }
 }

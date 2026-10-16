@@ -8,6 +8,7 @@ import { operatorRoute, routeHash, subtabs, controlDataPresentation, resolveDeli
 import { mountVehicleControl } from './vehicle-control.mjs';
 import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from './vehicle-operations-model.mjs';
 import { mountResourceManagement } from './resource-management.mjs';
+import { createDriverAssignmentClient } from './driver-assignment-client.ts';
 import { sourceVehicleContext } from './source-context.mjs';
 import { mountDatePicker } from './date-picker.mjs';
 import { seoulToday, validOperatingDate } from './operating-date.mjs';
@@ -89,7 +90,7 @@ const orderPlanning = mountDatedDispatch({ element: byId('order-planning'), onSe
     return { ...result, shared: true };
   }, onContextChange: () => { if (state.data) renderSummary(); renderStatusNotification(); },
   notify: notice => { state.dispatchNotice = notice.message ? notice : null; renderProgress(); } });
-mountResourceManagement({ element: byId('resource-management'), onEmptyChange: empty => { resourcesEmpty = empty; renderStatusNotification(); } });
+mountResourceManagement({ element: byId('resource-management'), assignmentClient: createDriverAssignmentClient(), onEmptyChange: empty => { resourcesEmpty = empty; renderStatusNotification(); } });
 function selectDelivery(id) {
   state.selectedId = id;
   const selected = (state.data?.fleetDeliveries || state.data?.deliveries || []).find(item => item.id === id);

@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 48,
+  "authoredFileCount": 52,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "730436b9e33261738124c17e3686e16dafea65e8e854c44afa7b1e5b999da5c4",
+      "targetSha256": "379cf58d651d1d79b56635708f6fc552a53424925995c621a7165ae1d5878092",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -42,7 +42,8 @@
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
         "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only.",
-        "Route the temperature tab of the control screen and open it for the vehicle chosen in the temperature dialog."
+        "Route the temperature tab of the control screen and open it for the vehicle chosen in the temperature dialog.",
+        "Give the resource screen the driver assignment client."
       ],
       "status": "active"
     },
@@ -1096,14 +1097,15 @@
       "source": "apps/combined/resource-management.css",
       "sourceSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
       "target": "apps/web/combined/resource-management.css",
-      "targetSha256": "30c6a867e1161f63ea9fb2ce392d6ef5690bf4b27f50a00e50c98b15f8d50c49",
+      "targetSha256": "5006b58b212ac7ce7c5748225b11bb154a80ad04c3e6be1e3ef09b17df976170",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px",
         "Remove retired demo selectors and apply shared card/control dimensions while retaining current operational and guide specimens.",
         "자원 관리: toolbar as a white card with the count on the right, header/value text aligned at 16px, 12px card radius on the table; page title row fixed at 57px.",
         "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it.",
-        "Center the vehicle count of each region code row against its input and button."
+        "Center the vehicle count of each region code row against its input and button.",
+        "Style the driver column and let the table scroll inside its box on narrow screens."
       ],
       "status": "active"
     },
@@ -1111,13 +1113,14 @@
       "source": "apps/combined/resource-management.mjs",
       "sourceSha256": "ca056a6b1398e24f5651cd2809b835192c1cd879a73aebd51bf07b42d2fbdd26",
       "target": "apps/web/combined/resource-management.mjs",
-      "targetSha256": "412cfa2ff368461fdc5309421aaf2ab7ebc43e2450c887a8afdf2e5f2e26aab3",
+      "targetSha256": "2bcc7afbdfacd60d020137ebefdadfe1e6fe5fc6ebe337713ffa21ab481cc4cb",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events.",
         "Mark every listed plate as unverified and add a screen note until a real vehicle registry exists",
         "Drop the unverified-plate explanation note.",
-        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
+        "Add the driver column: choose a driver account per vehicle, saved at once with a confirmation for release, conflict and failure notices and an unavailable state that keeps region editing."
       ],
       "status": "active"
     },
@@ -1125,11 +1128,12 @@
       "source": "apps/combined/resource-management.test.mjs",
       "sourceSha256": "44615c6e7c1e03176b84950823376125d3913f946b27b745932d83f5de7b54f5",
       "target": "apps/web/combined/resource-management.test.mjs",
-      "targetSha256": "7b7dcb57374cb13aabeb82fb0dce16755fc0084064a4cc2d62a858ebf2d2e037",
+      "targetSha256": "a38551ff271b95465e0874a6891ed33a692797e5d54220ad0d42d747b2d51278",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Preserve the resource workspace and drafts with unknown/error/empty distinction, guarded edits and transient empty events.",
-        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
+        "Verify the driver column: options, immediate save, release confirmation, failures, unavailable state, empty accounts and driver search."
       ],
       "status": "active"
     },
@@ -1591,7 +1595,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "eef2382c277fd6c12afedc4545be5fbb255325f4a20e592f6dfed53aa4c90482",
+      "targetSha256": "c586332f7f6b5d2bfe87820e9a550bbae835b30c392949302ab3cf147e2edc1a",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1609,7 +1613,8 @@
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
         "Add a Zoom to fit button that also frames the vehicle; the default view frames the stops only.",
         "Show each vehicle's temperature state (range-out, silent, normal) in the fleet row, the running summary and the vehicle marker, sort by it, and open the all-vehicle temperature dialog.",
-        "Add the vehicle temperature tab (current value and day graph) to the selected vehicle details and open it from the temperature dialog."
+        "Add the vehicle temperature tab (current value and day graph) to the selected vehicle details and open it from the temperature dialog.",
+        "Show the server-computed ETA of a departed vehicle beside the plan estimate in the stop details and running details, with its departure source, recomputation count and reason."
       ],
       "status": "active"
     },
@@ -1617,7 +1622,7 @@
       "source": "apps/combined/vehicle-control.test.mjs",
       "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
       "target": "apps/web/combined/vehicle-control.test.mjs",
-      "targetSha256": "50f19e49e4c3a952f190a4db49d92de60794ff7ab0783c209ca47a8429f016ca",
+      "targetSha256": "e9a89b935e840ab3e1c1f74ac1803c29f5dafc53ee4ae8e852aeb6aaf70d12f3",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -1626,7 +1631,8 @@
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
         "Verify the temperature state in the fleet rows, summary badge and sorting, and the temperature dialog button's enabled state.",
-        "Verify the temperature tab, the temperature dialog selection route and the dated vehicle details wiring."
+        "Verify the temperature tab, the temperature dialog selection route and the dated vehicle details wiring.",
+        "Verify the server ETA beside the plan estimate before and after the driver departs."
       ],
       "status": "active"
     },
@@ -2535,7 +2541,7 @@
       "origin": "authored",
       "reason": "Style temperature rows, summary badge, vehicle marker state and the temperature dialog with the shared operational tokens.",
       "status": "active",
-      "sha256": "2aeefe671550602bbafe6ab991e8920b1b0e047090e577e40a4bde82b2141516"
+      "sha256": "c45f8b498791c3f45c4094ca9fb920c68ffa75e6c0061c41c049de717cc53baf"
     },
     {
       "path": "apps/web/combined/temperature-graph.ts",
@@ -2564,6 +2570,34 @@
       "reason": "Verify the temperature tab for today and past dates, reload rules, stale answers, failures, unavailable module and pointer and key reading.",
       "status": "active",
       "sha256": "364ab18834bb625eb6a4ddf34932494ca04ab981cd2d402d790485996c3f7d1d"
+    },
+    {
+      "path": "apps/web/combined/driver-assignment-client.ts",
+      "origin": "authored",
+      "reason": "Read and change which driver account drives which vehicle with per-vehicle revision comparison, naming lost races, refusals and a missing route instead of overwriting.",
+      "status": "active",
+      "sha256": "b20d966fa016687a5c4944e644bafca87dd915aa98ccc451b6f592d81668106a"
+    },
+    {
+      "path": "apps/web/combined/driver-assignment-client.test.mjs",
+      "origin": "authored",
+      "reason": "Verify list validation, the revision sent with each change, lost-race reload and named refusals of the driver assignment client.",
+      "status": "active",
+      "sha256": "c5c9a80cbbb93adeeb60088ca3dd58ef555805afd65bd59e5a33d0f1360b5226"
+    },
+    {
+      "path": "apps/web/combined/server-eta.ts",
+      "origin": "authored",
+      "reason": "Read the server-computed ETA of a departed vehicle and write it, its departure source and its reason without replacing the plan estimate before departure.",
+      "status": "active",
+      "sha256": "9f8b11b0356ea681ed6eff136b7ac7efd108307b7552eef1a7cc4e367d37dcde"
+    },
+    {
+      "path": "apps/web/combined/server-eta.test.mjs",
+      "origin": "authored",
+      "reason": "Verify server ETA reading, bundle matching by order, Seoul clock text, unknown position and actual arrival wording.",
+      "status": "active",
+      "sha256": "1d6b2a006767b4a86e761dd8f7bda95399e1c82bca6e6d375e876064495b5f5f"
     }
   ],
   "historicalTargetFileCount": 163,
