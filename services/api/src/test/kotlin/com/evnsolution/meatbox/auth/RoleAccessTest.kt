@@ -54,7 +54,8 @@ class RoleAccessTest {
             "/api/dispatch-data/manifest", "/api/dispatch-data/regions", "/api/dispatch-data/destinations",
             "/api/dispatch-data/days/2026-10-05", "/api/dispatch-data/days/2026-10-05/state",
             "/api/dispatch-data/days/2026-10-05/commands", "/api/resources", "/api/resources/vehicles/G1",
-            "/api/ops/alerts", "/api/ops/export", "/api/ops/driver-assignments", "/api/telemetry/temperature/latest",
+            "/api/ops/alerts", "/api/ops/export", "/api/ops/driver-assignments", "/api/ops/driver-notes",
+            "/api/telemetry/temperature/latest",
             "/api/something-new",
         )
         assertThat(passes("GET", driverApp, "ops")).isTrue()

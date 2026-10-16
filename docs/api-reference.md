@@ -57,6 +57,7 @@
 | `POST` | `/api/ops/days/{date}/source-conflict/resolve` | 원본이 바뀐 날짜의 체크포인트를 유지·보관 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/driver-assignments` | 기사 계정-차량 배정과 기사 계정 목록 (Kotlin API 전용) | ops |
 | `PUT` | `/api/ops/driver-assignments/{vehicleId}` | 차량에 기사 계정을 배정하거나 해제 (Kotlin API 전용) | ops |
+| `GET` | `/api/ops/driver-notes?date=` | 그날 기사가 완료·미배송 때 남긴 특이사항 목록 (Kotlin API 전용) | ops |
 | `POST` | `/api/ops/export` | 운영 데이터 내보내기 작업 시작 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/export`, `/api/ops/export/{jobId}`, `/api/ops/export/{jobId}/download` | 작업 목록·상태, 아카이브 받기 (Kotlin API 전용) | ops |
 | `POST` `GET` | `/mock/meatbox/*` | 미트박스 모의 수신기. **테스트 전용**, 기본 꺼짐 (Kotlin API 전용) | (테스트 전용, 세션 없음) |
@@ -83,6 +84,18 @@
 - 사진 `GET driver/photos/{photoId}`와 `GET driver/events/{eventId}`는 차량에 묶이지 않는다. 식별자를 모르면 읽을 수 없다는 점에 기댄다.
 - 알 수 없는 `role` 값의 계정은 `/api/session`만 쓸 수 있다.
 - Node가 인증을 소유하는 호환 모드(`legacy-api-origin`)는 역할을 모르므로 모든 계정이 `ops`다.
+
+### `GET /api/ops/driver-notes?date=`
+
+그날 기사 이벤트(`stop_completed`·`stop_partially_completed`·`stop_failed`) 가운데 `note`가 비어 있지 않은 것을 최신순으로 돌려준다. 읽기 전용이며 운영자만 부른다.
+
+```json
+{ "date": "2026-10-17", "items": [
+  { "vehicleId": "G1", "driver": "김기사", "stopId": "O1", "name": "가게", "address": "서울",
+    "result": "failed", "reasonCode": "ABSENT", "note": "부재", "at": "2026-10-17T10:00:00+09:00" } ] }
+```
+
+`result`는 `completed`·`partially_completed`·`failed`, `reasonCode`는 미배송일 때만 있다. `name`·`address`는 날짜에서 읽으므로 배송지가 날짜에서 빠졌으면 빈 문자열이다. `at`은 서버가 이벤트를 받은 시각이다. 날짜 형식이 틀리면 `400 INVALID_DATE`다. 이벤트 기록은 날짜마다 상한이 있어 오래된 이벤트는 빠질 수 있다.
 
 ### `GET /api/ops/driver-assignments`
 

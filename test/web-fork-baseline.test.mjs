@@ -59,6 +59,7 @@ const authoredPaths = [
   'apps/web/combined/driver-notice.ts', 'apps/web/combined/driver-notice.test.mjs',
   'apps/web/combined/zone-assignment.ts', 'apps/web/combined/zone-assignment.test.mjs',
   'apps/web/combined/delivery-type.ts', 'apps/web/combined/delivery-type.test.mjs',
+  'apps/web/combined/driver-notes.ts', 'apps/web/combined/driver-notes.test.mjs',
 ].sort();
 const inventory = JSON.parse(readFileSync(path.join(root, 'apps/web/fork-inventory.json'), 'utf8'));
 const git = args => execFileSync('git', args, { cwd: root, maxBuffer: 16 * 1024 * 1024 });

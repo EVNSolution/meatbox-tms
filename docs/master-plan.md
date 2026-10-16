@@ -96,7 +96,7 @@
 | [ ] 운영 대시보드 (24) | 미착수 | 코드 없음 |
 | [ ] Capa 초과 경고 (28) | 미확인 | |
 | [ ] 일일 목표 초과 인센티브 계산 (29) | 미착수 | 코드 없음 |
-| [ ] 앱 특이사항 조회·이력 (30) | 미착수 | 코드 없음 |
+| [x] 앱 특이사항 조회·이력 (30) | 로컬 검증 | 서버 `GET /api/ops/driver-notes?date=`(운영자 전용)가 그날 기사 이벤트 중 `note`가 있는 완료·일부 완료·미배송을 최신순으로 돌려준다(`DriverQueriesTest`, `RoleAccessTest`). 웹은 배송 관제 기록 탭의 "기사 특이사항" 목록(배송지·결과·사유·기사·주소·시각), `driver-notes.test.mjs`. 브라우저 `docs/evidence/w2-driver-notes-2026-10-17.jpg`(합성 `--notes` 시드). 이력은 날짜별 기사 이벤트 파일(최근 이벤트 상한 안)이며 상한을 넘은 오래된 이벤트는 목록에서 빠진다 |
 | [x] 배차 변경 시 기사 알림 발송 (31) | 로컬 검증 | 서버 `RouteChangeNotifier`(트랙 D)가 경로가 바뀐 차량의 기기에 FCM을 보내고, 이제 명령 응답에 `driverNotice`(`vehicles`·`push: queued/unconfigured`·차량별 문구)를 더해 웹이 "기사 알림 발송 N대" 또는 "0대, 푸시 설정이 없어 보내지 않았습니다"를 배차 배너와 상단 알림에 보인다. 서버 `DriverNoticeTest`·`RouteChangeNotifierTest`, 웹 `driver-notice.test`·`dispatch-workflow.test`·`source-client.test`, 브라우저 `docs/evidence/w2-driver-notice-2026-10-17.jpg`(FCM 미설정 fixture). 푸시 발송은 비동기라 결과는 "요청함"까지만 보이고 **기기 수신·FCM 실발송은 확인하지 못했다** |
 | [ ] 주소 검증·정제 UI (7) | 미착수 | 지도 API + 과거 배송지 DB |
 | [x] 출발 처리·ETA 산출 관리 화면 (1) | 로컬 검증 | **출발 처리는 기사 앱, 설정은 환경 변수, 웹은 표시·관리.** 기사 앱이 `departed`를 보내면 서버가 계산한 ETA(`vehicleStates[v].eta`)를 관제 배송지 상세와 운행 상세에 "(서버 계산)"으로 보이고(`estimated:false`는 위치 미확인, 닫힌 배송지는 예정과 실제), 출발 시각(기기/서버)·재산출 횟수·사유를 적는다. 출발 전에는 계획 추정치임을 안내한다. 순서 변경 관리는 기존 "배송 순서 관리"다. 웹에서 출발을 처리하는 버튼과 ETA 설정 화면은 만들지 않았다. 웹 `server-eta.test`·`vehicle-control.test`, 브라우저에서 합성 출발 뒤 "ETA 23:00 (서버 계산)" 확인. 실제 GPS·도로 ETA와의 오차는 측정하지 않았다 |

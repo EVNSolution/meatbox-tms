@@ -129,6 +129,38 @@ class DriverQueries internal constructor(private val store: DriverStore) {
         driverJson.createObjectNode().put("date", date).put("vehicleId", vehicleId).apply { set("items", array(items)) }
     }
 
+    /**
+     * What drivers wrote on completion or failure across the day's vehicles, newest first. Only events with a
+     * non-blank `note` are listed; the stop's name and address come from the date, so a stop that left the date shows
+     * without them.
+     */
+    fun notes(date: String): ObjectNode = synchronized(store) {
+        store.validate(date)
+        val snapshot = store.dispatch.snapshot(date)
+        val routes = HashMap<String, Route>()
+        val items = store.load(date).path("events").toList().filter {
+            it.path("type").asString() in STOP_RESULTS && it.path("note").asString("").isNotBlank()
+        }.map { record ->
+            val vehicleId = record.path("vehicleId").asString()
+            val stopId = record.path("stopId").asString("")
+            val route = routes.getOrPut(vehicleId) { Route(snapshot, vehicleId) }
+            val stop = route.stops.firstOrNull { it.stopId == stopId }
+            val vehicle = snapshot.path("fleetVehicles").firstOrNull { it.path("id").asString() == vehicleId }
+            driverJson.createObjectNode().apply {
+                put("vehicleId", vehicleId)
+                put("driver", vehicle?.path("driver")?.asString("") ?: "")
+                put("stopId", stopId)
+                put("name", stop?.deliveries?.first()?.path("name")?.asString("") ?: "")
+                put("address", stop?.deliveries?.first()?.path("address")?.asString("") ?: "")
+                put("result", STOP_RESULTS.getValue(record.path("type").asString()))
+                put("note", record.path("note").asString())
+                if (record.has("reasonCode")) set("reasonCode", record.path("reasonCode").deepCopy())
+                put("at", record.path("receivedAt").asString(record.path("occurredAt").asString("")))
+            }
+        }.sortedByDescending { it.path("at").asString() }
+        driverJson.createObjectNode().put("date", date).apply { set("items", array(items)) }
+    }
+
     private fun summary(stop: RouteStop, sequence: Int?): ObjectNode = driverJson.createObjectNode().apply {
         put("stopId", stop.stopId)
         sequence?.let { put("sequence", it) }

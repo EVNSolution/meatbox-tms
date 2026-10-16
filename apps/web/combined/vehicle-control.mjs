@@ -10,6 +10,7 @@ import { createTemperatureClient } from './temperature-client.ts';
 import { readTemperature, sortByTemperature, stateOf, temperatureView } from './temperature-model.ts';
 import { mountTemperatureOverview, temperatureOverviewMarkup } from './temperature-overview.ts';
 import { mountTemperaturePanel, temperaturePanelMarkup } from './temperature-panel.ts';
+import { mountDriverNotes, notesMarkup } from './driver-notes.ts';
 import { seoulToday } from './operating-date.mjs';
 import { etaFor, etaNote, etaText, readEta } from './server-eta.ts';
 import { fleetCounts, fleetPositions, positionOf, positionText } from './fleet-map.ts';
@@ -71,6 +72,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
           <div class="control-record-filters" role="group" aria-label="기록 유형"><button type="button" data-control-record-filter="all" aria-pressed="true">전체</button><button type="button" data-control-record-filter="history" aria-pressed="false">처리 이력</button><button type="button" data-control-record-filter="notice" aria-pressed="false">고객 알림</button></div>
           <ol class="control-record-list" data-control-records tabindex="0" aria-label="선택 배송지 이력과 알림"></ol>
           <details class="control-common-events" data-control-common><summary>차량 공통 사건 이력</summary><ol class="control-fact-list" data-control-events></ol></details>
+          ${notesMarkup()}
         </div>
         <div data-control-route-view hidden><div id="route-editor"></div></div>
       </section>
@@ -91,6 +93,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   const recordList = find('[data-control-records]');
   const driverTools = mountDriverTools({ element });
   const temperatureOverview = mountTemperatureOverview({ element, client: temperatureClient, onSelectVehicle: id => onOpenTemperature(id) });
+  const driverNotes = mountDriverNotes({ element });
   const temperaturePanel = mountTemperaturePanel({ element, client: temperatureClient, isActive: () => find('#control-temperature-panel')?.hidden === false });
 
   function replacePreservingFocus(target, markup, selector) {
@@ -476,6 +479,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       row = resolveDefaultControlVehicle(data, rows, vehicleId, preferredDeliveryId); selectedId = preferredDeliveryId;
       driverTools.update(data, row);
       temperatureOverview.update(rows.map(item => item.vehicle));
+      driverNotes.update({ date: data?.sourceData?.date ?? '' });
       temperaturePanel.update({ date: data?.sourceData?.date ?? '', today: seoulToday(), vehicle: row?.vehicle ?? null, reading: readTemperature(stateOf(data?.vehicleStates, row?.vehicle?.id)) });
       if (!map) mapElement.innerHTML = '';
       setControlsDisabled(false);
@@ -488,6 +492,6 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       if (support.open) renderSupport();
       return row;
     },
-    destroy() { destroyed = true; driverTools.destroy(); temperatureOverview.destroy(); temperaturePanel.destroy(); if (support.open) support.close(); removeMap(); },
+    destroy() { destroyed = true; driverTools.destroy(); temperatureOverview.destroy(); temperaturePanel.destroy(); driverNotes.destroy(); if (support.open) support.close(); removeMap(); },
   };
 }

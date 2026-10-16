@@ -36,3 +36,9 @@
   body.driver-pickup-print .pickup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.driver-pickup-print .pickup-card { border-color: #999; break-inside: avoid; page-break-inside: avoid; }
 }
+.control-driver-notes { margin-top: 12px; }
+.control-driver-notes > summary { cursor: pointer; font-weight: 600; }
+.control-note-list { display: grid; gap: 8px; list-style: none; margin: 8px 0 0; padding: 0; max-height: 320px; overflow: auto; }
+.control-note-list li { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); }
+.control-note-list li > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.control-note-list p { margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; }

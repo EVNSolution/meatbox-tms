@@ -81,6 +81,25 @@ class DriverQueriesTest {
         assertThat(f.driver.queries.history(DRIVER_DATE, "G2").path("items").size()).isZero()
     }
 
+    @Test
+    fun `lists only the stops that carry a driver note, newest first, for the operator`() {
+        val f = routeFixture(directory)
+        assertThat(f.driver.queries.notes(DRIVER_DATE).path("items").size()).isZero()
+        f.send("go", "departed", "{}")
+        f.now.addAndGet(60_000)
+        f.send("late", "stop_failed", """{"stopId":"O1","reasonCode":"ABSENT","note":"부재"}""")
+        f.now.addAndGet(60_000)
+        f.send("quiet", "stop_completed", """{"stopId":"O3"}""")
+        f.now.addAndGet(60_000)
+        f.send("done", "stop_completed", """{"stopId":"O4","note":"문 앞"}""")
+        val items = f.driver.queries.notes(DRIVER_DATE).path("items").toList()
+        assertThat(items.map { it.path("stopId").asString() }).containsExactly("O4", "O1")
+        assertThat(items.map { it.path("result").asString() }).containsExactly("completed", "failed")
+        assertThat(items.last().path("reasonCode").asString()).isEqualTo("ABSENT")
+        assertThat(items.first().path("name").asString()).isNotBlank()
+        assertThat(items.first().path("vehicleId").asString()).isEqualTo("G1")
+    }
+
     private fun assertCode(status: Int, code: String, block: () -> Unit) {
         assertThatThrownBy(block).isInstanceOfSatisfying(DispatchException::class.java) {
             assertThat(it.status).isEqualTo(status)

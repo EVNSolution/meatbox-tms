@@ -92,6 +92,17 @@ if (route.phase !== 'delivering' && route.operable) {
     location: { lat: 37.5, lng: 126.8 },
   } });
 }
+if (args.notes) {
+  // Two stops closed with a driver note (--notes), for the "기사 특이사항" list of the control record area.
+  const open = (await call(driverCookie, `${day}/driver/route?vehicleId=TRUCK-1`)).stops.filter(stop => stop.status !== 'done' && stop.status !== 'skipped');
+  const closing = [['stop_failed', { reasonCode: 'ABSENT', note: '수령인 부재, 경비실에 문의했으나 보관 불가라고 함' }], ['stop_completed', { note: '정문이 잠겨 있어 후문으로 전달' }]];
+  for (const [index, [type, payload]] of closing.entries()) {
+    if (!open[index]) break;
+    await call(driverCookie, `${day}/driver/events`, { method: 'POST', body: {
+      eventId: `seed-note-${today}-${index}`, type, occurredAt: new Date().toISOString(), date: today, vehicleId: 'TRUCK-1', payload: { stopId: open[index].stopId, ...payload },
+    } });
+  }
+}
 // Where the vehicles are: TRUCK-1 reports from the driver app just now, TRUCK-2 was last heard of twenty minutes ago.
 const sample = (minutesAgo, lat, lng) => ({ at: new Date(Date.now() - minutesAgo * 60_000).toISOString(), lat, lng, accuracyM: 10 });
 await call(driverCookie, `${day}/driver/locations`, { method: 'POST', body: { vehicleId: 'TRUCK-1', samples: [sample(0.3, 37.5665, 126.978)] } });

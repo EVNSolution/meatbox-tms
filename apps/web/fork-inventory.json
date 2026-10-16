@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 61,
+  "authoredFileCount": 63,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -1607,7 +1607,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "adb8a43ed6e4e401b231c34135f64213b979842030922f45b22242f1a37b7d0b",
+      "targetSha256": "95f3f34e26f68b28e149546794b2da620442af0fefffb646adea83a2da5d706e",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1627,7 +1627,8 @@
         "Show each vehicle's temperature state (range-out, silent, normal) in the fleet row, the running summary and the vehicle marker, sort by it, and open the all-vehicle temperature dialog.",
         "Add the vehicle temperature tab (current value and day graph) to the selected vehicle details and open it from the temperature dialog.",
         "Show the server-computed ETA of a departed vehicle beside the plan estimate in the stop details and running details, with its departure source, recomputation count and reason.",
-        "Add the all-vehicle map with the selected vehicle's card, name driver-app positions with their age and reference places without GPS wording."
+        "Add the all-vehicle map with the selected vehicle's card, name driver-app positions with their age and reference places without GPS wording.",
+        "Show the day's driver notes in the control record area."
       ],
       "status": "active"
     },
@@ -2492,7 +2493,7 @@
       "origin": "authored",
       "reason": "Style the existing vehicle-detail driver tools and accessible dialogs with printable per-order QR cards using the shared operational design tokens. Exclude non-print content from layout and flatten the dialog ancestry during printing so QR cards paginate without blank operational pages. Keep the print document canvas white without changing screen backgrounds. Soft visual language: 12px cards, 16px panels, 8px controls, #f2f4f7 workspace, #e4e7ec dividers, no shadow, pill toggles, roomier 20/24px page padding and 16px gaps.",
       "status": "active",
-      "sha256": "1092aa5eaa697751df9e4551e313876e76c39f6a23bf907b8248eda46150dc26"
+      "sha256": "838f1a9de89e8842f714a4978d3a43468148397d469e14cbd9998c7b710a37c1"
     },
     {
       "path": "apps/web/combined/driver-tools.test.mjs",
@@ -2675,6 +2676,20 @@
       "reason": "Verify delivery-kind counts, filtering and notes.",
       "status": "active",
       "sha256": "70e87a434cc34afd2738eb2ff5db322f756fd376ca2954cad97428ce184bf7d9"
+    },
+    {
+      "path": "apps/web/combined/driver-notes.ts",
+      "origin": "authored",
+      "reason": "List what drivers noted at stops on the selected day in the control record area.",
+      "status": "active",
+      "sha256": "9fc6730c272c6a8fc94061f9eae5ad9f4b2d16b27132ffd1739095e6c10fa957"
+    },
+    {
+      "path": "apps/web/combined/driver-notes.test.mjs",
+      "origin": "authored",
+      "reason": "Verify the driver note list: escaping, wording, loading only when opened, failures.",
+      "status": "active",
+      "sha256": "0d5e2a7fa44111fd6aec980ffb9a7d158a4b295960f9e5956105725ce4659ed1"
     }
   ],
   "historicalTargetFileCount": 163,
