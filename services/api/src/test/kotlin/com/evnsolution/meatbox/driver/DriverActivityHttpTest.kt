@@ -119,6 +119,36 @@ class DriverActivityHttpTest {
     }
 
     @Test
+    fun `writes a delivery tip once per request and refuses what the engine refuses`() {
+        val tip = """{"vehicleId":"G1","requestId":"tip-1","body":"뒷문 이용"}"""
+        val first = post("/stops/O1/tip", tip)
+        assertThat(first.status).isEqualTo(200)
+        val json = driverJson.readTree(first.contentAsString)
+        assertThat(json.path("stopId").asString()).isEqualTo("O1")
+        assertThat(json.path("tip").path("body").asString()).isEqualTo("뒷문 이용")
+        assertThat(json.path("duplicate").asBoolean()).isFalse()
+        val resent = driverJson.readTree(post("/stops/O1/tip", tip).contentAsString)
+        assertThat(resent.path("duplicate").asBoolean()).isTrue()
+        val detail = driverJson.readTree(get("/stops/O1?vehicleId=G1").contentAsString)
+        assertThat(detail.path("orders").first().path("tip").path("body").asString()).isEqualTo("뒷문 이용")
+        assertProblem(post("/stops/O1/tip", tip.replace("뒷문 이용", "다른 팁")).contentAsString, 409, "REQUEST_ID_MISMATCH")
+        val markup = tip.replace("tip-1", "tip-2").replace("뒷문 이용", "<b>")
+        assertProblem(post("/stops/O1/tip", markup).contentAsString, 400, "INVALID_OPERATION")
+        assertProblem(post("/stops/O1/tip", "{").contentAsString, 400, "INVALID_JSON")
+        val numeric = """{"vehicleId":"G1","requestId":"t","body":1}"""
+        assertProblem(post("/stops/O1/tip", numeric).contentAsString, 400, "INVALID_INPUT")
+        val extra = """{"vehicleId":"G1","requestId":"t","body":"x","extra":1}"""
+        assertProblem(post("/stops/O1/tip", extra).contentAsString, 400, "INVALID_INPUT")
+        assertProblem(post("/stops/nope/tip", tip.replace("tip-1", "tip-4")).contentAsString, 404, "STOP_NOT_FOUND")
+        val noOrigin = mvc.perform(MockMvcRequestBuilders.post("$PATH/stops/O1/tip").header("Cookie", COOKIE)
+            .contentType("application/json").content(tip)).andReturn().response
+        assertProblem(noOrigin.contentAsString, 403, "ORIGIN_REQUIRED")
+        val anonymous = mvc.perform(MockMvcRequestBuilders.post("$PATH/stops/O1/tip").header("Origin", ORIGIN)
+            .contentType("application/json").content(tip)).andReturn().response
+        assertProblem(anonymous.contentAsString, 401, "LOGIN_REQUIRED")
+    }
+
+    @Test
     fun `accepts location batches up to 200 samples and 64 KiB`() {
         fun batch(count: Int) = """{"vehicleId":"G1","samples":[${(0 until count).joinToString(",") {
             """{"at":"2026-10-13T09:00:%02d+09:00","lat":37.5,"lng":127.0}""".format(it % 60)

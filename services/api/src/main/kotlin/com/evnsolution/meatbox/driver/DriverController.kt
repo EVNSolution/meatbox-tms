@@ -134,6 +134,17 @@ class DriverController(
         return store.queries.suggest(date, checked(vehicleId, ID_LENGTH), lockFirst)
     }
 
+    /** The driver's note on a stop, told to the next driver and the operator. Idempotent under `requestId`. */
+    @PostMapping("/stops/{stopId}/tip")
+    fun tip(@PathVariable date: String, @PathVariable stopId: String, request: HttpServletRequest): ObjectNode {
+        val body = mutation(request, setOf("vehicleId", "requestId", "body"))
+        if (!body.path("body").isString) driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_INPUT")
+        return store.activity.setTip(
+            date, string(body, "vehicleId", ID_LENGTH), checked(stopId, ID_LENGTH),
+            string(body, "requestId", REQUEST_ID_LENGTH, false), body.path("body").asString(),
+        ).body
+    }
+
     @GetMapping("/stops/{stopId}")
     fun stop(
         @PathVariable date: String,
@@ -222,6 +233,7 @@ class DriverController(
         private val PHOTO_TYPES = setOf("image/jpeg", "image/png")
         private val EVENT_FIELDS = setOf("eventId", "type", "occurredAt", "date", "vehicleId", "payload")
         private const val ID_LENGTH = 128
+        private const val REQUEST_ID_LENGTH = 64
         private const val TOKEN_LENGTH = 4096
         private const val MESSAGE_LENGTH = 1000
         private const val PLATFORM_LENGTH = 16

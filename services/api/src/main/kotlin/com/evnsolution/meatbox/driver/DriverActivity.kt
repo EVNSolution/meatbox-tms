@@ -1,5 +1,6 @@
 package com.evnsolution.meatbox.driver
 
+import com.evnsolution.meatbox.dispatch.CommandBatch
 import com.evnsolution.meatbox.dispatch.DriverLocationSource
 import com.evnsolution.meatbox.dispatch.DriverLocations
 import org.springframework.http.HttpStatus
@@ -23,6 +24,7 @@ private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
  * What the driver app sends: events (translated into operational commands under the event id), location batches and
  * photos. It runs under the driver store's lock, file lock and date checks.
  */
+@Suppress("TooManyFunctions")
 class DriverActivity internal constructor(private val store: DriverStore) {
     private val photos = DriverPhotos(store.directory)
     private val reported = ConcurrentHashMap<String, DriverLocations>()
@@ -50,6 +52,31 @@ class DriverActivity internal constructor(private val store: DriverStore) {
         record(date, event, result.response)
         Reply(result.response.put("duplicate", result.replayed), result.replayed)
     }
+
+    /**
+     * Writes the delivery tip of a stop (`set_delivery_tip`). [requestId] makes a resend answer from the stored result
+     * instead of applying it twice; the hash covers the whole request, so a different tip under the same ID is a 409.
+     */
+    fun setTip(date: String, vehicleId: String, stopId: String, requestId: String, text: String): Reply =
+        synchronized(store) {
+            store.validate(date, vehicleId, writable = true)
+            val request = driverJson.createObjectNode().put("kind", "tip").put("vehicleId", vehicleId)
+                .put("stopId", stopId).put("body", text)
+            val result = store.dispatch.batch(date, requestId, request) { snapshot ->
+                val route = Route(snapshot, vehicleId)
+                val stop = route.stop(stopId)
+                val step = driverJson.createObjectNode().put("type", "set_delivery_tip").put("vehicleId", vehicleId)
+                    .put("orderId", stop.stopId).put("body", text)
+                CommandBatch(listOf(step)) { after ->
+                    val updated = Route(after, vehicleId).stop(stop.stopId)
+                    driverJson.createObjectNode().put("accepted", true).put("duplicate", false)
+                        .put("stopId", updated.stopId).apply {
+                            set("tip", updated.deliveries.first().path("tip").deepCopy())
+                        }
+                }
+            }
+            Reply(result.response.put("duplicate", result.replayed), result.replayed)
+        }
 
     fun eventResult(date: String, eventId: String): ObjectNode {
         if (!validEventId(eventId)) invalidInput()

@@ -39,6 +39,7 @@
 | `POST` | `/api/dispatch-data/days/{date}/driver/events` | 기사 앱 이벤트 6종 수신 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/events/{eventId}` | 이벤트 처리 결과 재확인 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/route` | 차량의 배송지 순서·상태 (Kotlin API 전용) |
+| `POST` | `/api/dispatch-data/days/{date}/driver/stops/{stopId}/tip` | 배송팁 등록, `requestId` 멱등 (Kotlin API 전용) |
 | `POST` | `/api/dispatch-data/days/{date}/driver/route/suggest` | 자동 배송 순서 제안, 상태 불변 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/stops/{stopId}` | 배송지 상세 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/history` | 당일 완료·미배송 이력 (Kotlin API 전용) |
@@ -288,7 +289,7 @@
 | `complete_stop` | `vehicleId`, `stopId`, `hasPhoto: true`, `confirmedRequestIds: string[]` | 도착 상태, 사진 확인 플래그, 모든 필수 요청 ID |
 | `set_route_order` | `vehicleId`, `order`, `expectedOrder`, `expectedStatuses`, `expectedPhase` | 경로 전체와 차량 상태에 대한 추가 CAS, 배송지 묶음 연속성 |
 | `toggle_skip` | `vehicleId`, `stopId` | 묶음 전체가 대기 또는 보류일 때 전환 |
-| `set_delivery_tip` | `vehicleId`, `stopId`, `body` | 비어 있지 않은 평문 최대 500자, 완료 묶음 변경 금지 |
+| `set_delivery_tip` | `vehicleId`, `orderId`, `body` | 엔진 명령이며 날짜 명령 끝점(`commands`)은 받지 않는다. 기사 끝점 `POST .../driver/stops/{stopId}/tip`이 쓴다. 비어 있지 않은 평문 500자 이하(`<`·`>`·제어문자 불가), 묶음의 모든 주문에 같은 팁, 완료·미배송 묶음과 바뀐 내용이 없는 경우는 거절 |
 | `send_customer_notice` | `vehicleId`, `stopId`, `body`, 선택 `author` | 평문 최대 300자, snapshot에 고객 팝업 기록 |
 
 완료 요청 예(변경 가능한 날짜의 최신 상태를 조회한 후 사용):
@@ -457,6 +458,27 @@
 
 - `POST events`가 돌려준 `202` 본문과 같은 본문을 `200`으로 돌려주며 `duplicate`는 항상 `true`다. 없거나 보존 한도로 제거됐으면 `404 REQUEST_NOT_FOUND`다. `eventId` 형식이 틀리면 `400 INVALID_INPUT`이다.
 - 날짜 명령의 `requestId`로 저장된 결과 중 이벤트가 아닌 것은 돌려주지 않는다.
+
+### `POST .../driver/stops/{stopId}/tip`
+
+기사가 배송지에 남기는 배송팁이다(요구서 47). 다음 기사와 운영자가 배송지 상세에서 읽는다. 세션과 정확한 `Origin`이 필요하고 쓰기 한도(분당 30)를 쓴다. `stopId`는 같은 묶음의 아무 주문 ID여도 된다.
+
+```json
+{ "vehicleId": "G1", "requestId": "3f1c…", "body": "뒷문 이용, 벨 없음" }
+```
+
+```json
+{
+  "accepted": true, "duplicate": false, "stopId": "O1",
+  "tip": { "body": "뒷문 이용, 벨 없음", "author": "(Z001) 합성 기사", "updatedAt": "2026-11-02T09:12:00+09:00" }
+}
+```
+
+- `body`는 1~500자 평문이다. 앞뒤 공백을 지우고 줄바꿈을 `\n`으로 맞춘다. `<`·`>`·제어문자는 `400 INVALID_OPERATION`이다. 지금 팁과 같은 내용도 `400 INVALID_OPERATION`(변경 없음)이다.
+- 묶음의 모든 주문에 같은 팁이 들어가고 `author`는 차량 기사 라벨이다. 날짜 상태의 `orders[].tip`과 배송지 상세에 바로 보인다. 운행 이벤트에 `delivery_tip`으로 기록된다.
+- 이미 완료·미배송으로 닫힌 묶음은 `409 OPERATION_REVISION_CONFLICT`다. 출발 전과 출발 뒤 대기·현재 배송지는 바꿀 수 있다.
+- `requestId`는 영문·숫자·`-`·`_` 64자 이하다. 같은 `requestId`와 같은 요청의 재전송은 저장된 결과를 `duplicate: true`로 돌려주고 상태를 바꾸지 않는다. 같은 `requestId`에 다른 내용은 `409 REQUEST_ID_MISMATCH`다. 이벤트의 `eventId`와 같은 ID 공간을 쓴다.
+- 그 차량의 배송지가 아니면 `404 STOP_NOT_FOUND`다.
 
 ### 자동 배송 순서 제안
 

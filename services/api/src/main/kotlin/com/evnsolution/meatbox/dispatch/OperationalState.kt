@@ -157,6 +157,7 @@ class OperationalState(
             "arrive_stop" -> arriveStop(command)
             "complete_stop" -> completeStop(command)
             "skip_stop" -> skipStop(command)
+            "set_delivery_tip" -> setTip(command)
             else -> invalid("지원하지 않는 운행 명령입니다.")
         }
         mutableRevision += 1
@@ -346,6 +347,29 @@ class OperationalState(
             result.putNull("nextStopId")
         }
         return result
+    }
+
+    // The driver writes the delivery tip of a stop: every order of the bundle gets the same note, as in the legacy
+    // engine (lib/source-operations.mjs). A closed bundle keeps its tip.
+    private fun setTip(command: ObjectNode): ObjectNode {
+        val vehicleId = requireVehicle(command.string("vehicleId"))
+        val requested = requireStop(command.string("orderId"))
+        if (requested["vehicleId"].asString() != vehicleId) invalid("이 차량의 배송지가 아닙니다.")
+        val body = plainTip(command.string("body")) ?: invalid("배송 팁 내용을 확인해 주세요.")
+        val bundle = bundleFor(requested)
+        if (bundle.any { it["status"].asString() in setOf("done", "skipped") }) conflict("완료된 배송지의 팁은 바꿀 수 없습니다.")
+        if (bundle.all { it["tip"]?.get("body")?.asString() == body }) invalid("변경된 배송 팁이 없습니다.")
+        val tip = dispatchMapper.createObjectNode().put("body", body)
+            .put("author", vehicles.getValue(vehicleId)["driver"].asString()).put("updatedAt", clock())
+        bundle.forEach { it.setCopy("tip", tip) }
+        val primary = bundle.first()
+        record("delivery_tip", vehicleId, primary["id"].asString(), "${primary["name"].asString()} 배송 팁 수정", bundle.map { it["id"].asString() })
+        return dispatchMapper.createObjectNode().apply {
+            put("type", "set_delivery_tip")
+            put("vehicleId", vehicleId)
+            put("stopId", primary["id"].asString())
+            set("orderIds", stringArray(bundle.map { it["id"].asString() }))
+        }
     }
 
     // The driver app reports a failed delivery at the stop, so unlike the legacy hold toggle this closes the arrived
@@ -1066,6 +1090,16 @@ private fun nullish(primary: JsonNode?, fallback: JsonNode?): JsonNode? =
 
 private fun JsonNode?.stringValuesOrNull(): List<String>? =
     (this as? ArrayNode)?.takeIf { array -> array.all(JsonNode::isString) }?.toList()?.map(JsonNode::asString)
+
+/** A tip is plain text of 1 to 500 characters without markup characters or control characters (legacy rule). */
+private fun plainTip(value: String?): String? {
+    val text = value?.replace("\r\n", "\n")?.replace('\r', '\n')?.trim() ?: return null
+    val allowed = text.isNotEmpty() && text.codePointCount(0, text.length) <= MAX_TIP_LENGTH &&
+        text.none { it == '<' || it == '>' || (it < ' ' && it != '\n' && it != '\t') || it == '\u007f' }
+    return text.takeIf { allowed }
+}
+
+private const val MAX_TIP_LENGTH = 500
 
 private fun ObjectNode.string(name: String): String? = get(name)?.takeIf(JsonNode::isString)?.asString()
 
