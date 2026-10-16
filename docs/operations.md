@@ -271,15 +271,17 @@ Kotlin API는 5xx를 내면 담당자 알림을 한 번 보낸다. 채널 설정
 
 ### 도착 예정 시각 (ETA) 설정 (Kotlin API)
 
-`departed` 이벤트가 배송지별 도착 예정 시각을 계산할 때 쓰는 값이다. 외부 경로 API는 쓰지 않는다(직선거리 모델). 바꾸면 슬롯을 다시 시작해야 하고, 이미 계산한 ETA는 그대로 둔다.
+`departed` 이벤트가 배송지별 도착 예정 시각을 계산하고, 배송지 완료·미배송, 권역 진입, 출발 후 순서 변경이 남은 배송지를 다시 계산할 때 쓰는 값이다. 외부 경로 API는 쓰지 않는다(직선거리 모델). 바꾸면 슬롯을 다시 시작해야 하고, 이미 계산한 ETA는 그대로 둔다.
 
 | 변수 | 필수 여부 | 기본값 | 의미 |
 | --- | --- | --- | --- |
 | `MEATBOX_ETA_DETOUR_FACTOR` | 선택 | `1.4` | 직선거리에 곱하는 우회계수. 0 이하이면 시작에 실패한다. |
 | `MEATBOX_ETA_SPEED_KMH` | 선택 | `25` | 평균 속도(km/h), 도심 기준. 0 이하이면 시작에 실패한다. |
 | `MEATBOX_ETA_SERVICE_MINUTES` | 선택 | `5` | 배송지 하나에서 쓰는 작업 시간(분). 음수이면 시작에 실패한다. |
+| `MEATBOX_ETA_DELAY_THRESHOLD_MINUTES` | 선택 | `10` | 재산출 임계(분). 배송지가 예정(ETA+작업시간)보다 이만큼 이르거나 늦게 닫히면 reason `delayed`다. 새 ETA가 마지막으로 미트박스에 보낸 ETA와 이만큼 벌어지면 ETA 메시지를 다시 보낸다. 1 미만이면 시작에 실패한다. |
 
-- 이 값들은 `application.yml`의 `meatbox.eta.detour-factor`·`speed-kmh`·`service-minutes`에 매핑된다.
+- 이 값들은 `application.yml`의 `meatbox.eta.detour-factor`·`speed-kmh`·`service-minutes`·`delay-threshold-minutes`에 매핑된다.
+- 임계는 근거 있는 값이 아닌 초기값이다. 너무 작으면 메시지가 잦고 너무 크면 지연이 늦게 전해진다. 미전송 ETA 메시지는 새 메시지가 오면 교체되므로 미트박스 장애 중에도 쌓이지 않는다.
 - 값은 실측으로 맞춘 것이 아니다. TEST·운영에서 실제 도착과 ETA를 비교해 조정한다.
 
 ### 미트박스 송신 (Kotlin API)

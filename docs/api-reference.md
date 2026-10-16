@@ -181,9 +181,9 @@
 }
 ```
 
-차량이 출발했으면 `vehicleStates[vehicleId].eta`에 그 차량의 도착 예정 시각(아래 "도착 예정 시각")이 들어간다. 출발 전 차량에는 이 필드가 없다. 웹은 모르는 필드를 읽지 않고 그대로 넘긴다. ETA는 `departed` 명령과 같은 쓰기로 바뀌므로 `revision`과 ETag도 함께 바뀐다.
+차량이 출발했으면 `vehicleStates[vehicleId].eta`에 그 차량의 도착 예정 시각(아래 "도착 예정 시각")이 들어간다. 출발 전 차량에는 이 필드가 없다. 웹은 모르는 필드를 읽지 않고 그대로 넘긴다. ETA는 `departed`·`stop_*`·출발 후 `route_reordered` 명령과 같은 쓰기로 바뀌므로 `revision`과 ETag도 함께 바뀐다. `zone_entered`의 재산출은 명령이 없어 `revision`이 그대로이므로 ETag의 `-e{재산출 횟수}`로 바뀐다.
 
-서버는 `ETag: "source-{boot}-{date}-{revision}-{today}"`를 보낸다. 기사 앱 위치를 받은 날짜는 `-l{위치 버전}`이 뒤에 붙는다. 클라이언트의 `If-None-Match`가 같으면 본문 없이 `304`다. 서울 날짜가 바뀌면 revision이 같아도 ETag와 `dispatch.readOnly`가 바뀔 수 있다.
+서버는 `ETag: "source-{boot}-{date}-{revision}-{today}"`를 보낸다. 기사 앱 위치를 받은 날짜는 `-l{위치 버전}`, ETA를 재산출한 날짜는 `-e{재산출 횟수 합}`이 뒤에 붙는다. 클라이언트의 `If-None-Match`가 같으면 본문 없이 `304`다. 서울 날짜가 바뀌면 revision이 같아도 ETag와 `dispatch.readOnly`가 바뀔 수 있다.
 
 ## 날짜 명령
 
@@ -346,11 +346,11 @@
 | `type` | `payload` | 서버 동작 |
 |---|---|---|
 | `departed` | 선택 `stopOrder: string[]` | `stopOrder`가 있으면 `set_route_order`, 이어서 `start_route`. 출발 시각·위치를 이벤트 기록에 남긴다 |
-| `zone_entered` | `zoneId` | 상태 변경 없음. `zoneId`·시각·위치를 이벤트 기록에 남긴다 |
+| `zone_entered` | `zoneId` | 상태 변경 없음. `zoneId`·시각·위치를 이벤트 기록에 남긴다. 그 차량에 저장된 ETA가 있으면 `location`이 필수(`400 LOCATION_REQUIRED`)이고 남은 배송지 ETA를 다시 계산한다. 권역 폴리곤이 있고 위치가 밖이면 `422 ZONE_MISMATCH`다 |
 | `stop_completed` | `stopId`, 선택 `orderIds`, `photoIds`, `note`, `scannedCodes` | 도착하지 않은 배송지면 `arrive_stop`, 이어서 `complete_stop`. `photoIds`는 올린 사진이어야 한다 |
 | `stop_failed` | `stopId`, `reasonCode`, 선택 `orderIds`, `photoIds`, `note` | 도착하지 않았으면 `arrive_stop`, 이어서 `skip_stop`. 배송지는 `skipped`가 된다 |
 | `stop_partially_completed` | `stopId`, `items[]`, 선택 `orderId`, `photoIds`, `note` | `stop_completed`와 같은 명령. `items`는 이벤트 기록에만 남고 품목 검증은 없다 |
-| `route_reordered` | `stopOrder`, 선택 `expectedRevision` | `set_route_order`. 차량 phase가 `delivering` 이후면 `409 ROUTE_LOCKED` |
+| `route_reordered` | `stopOrder`, 선택 `expectedRevision` | `set_route_order`. 출발 후(`delivering`)에도 아직 대기(`pending`)인 배송지끼리는 바꿀 수 있고 ETA를 다시 계산한다. 현재·완료·보류 배송지의 자리가 달라지거나 차량 phase가 `done`이면 `409 ROUTE_LOCKED` |
 
 - `stopId`는 배송지 묶음의 첫 주문 ID다. 같은 묶음의 다른 주문 ID도 받으며, 응답은 항상 첫 주문 ID를 돌려준다.
 - `stopOrder`는 그 차량의 배송지를 빠짐없이 한 번씩 나열한다. 모자라거나 겹치면 `400 INVALID_INPUT`이다.
@@ -375,7 +375,7 @@
 
 - `stop`은 `stop_*` 이벤트에만 있다. `status`는 `done` 또는 `skipped`다.
 - `next`는 다음 배송지다. 남은 배송지가 없으면 없다. `eta`는 차량이 출발해 ETA를 계산한 뒤에는 그 배송지의 도착 예정 시각이고, 출발 전에는 `null`이다.
-- `departed` 이벤트가 성공하면 같은 쓰기로 그 차량의 ETA를 계산해 저장하고, 미트박스 ETA 메시지(`kind: "eta"`)를 송신함에 남긴다. 계산과 설정은 아래 "도착 예정 시각(ETA)"를 따른다.
+- `departed` 이벤트가 성공하면 같은 쓰기로 그 차량의 ETA를 계산해 저장하고, 미트박스 ETA 메시지(`kind: "eta"`)를 송신함에 남긴다. 이어서 `stop_*`·`zone_entered`·출발 후 `route_reordered`가 성공하면 남은 배송지 ETA를 다시 계산해 저장하고, 응답의 `next.eta`도 새 값이다. 계산과 설정은 아래 "도착 예정 시각(ETA)"를 따른다.
 - `receivedAt`은 처음 받은 서버 시각이다. 재전송에도 같은 값이다.
 - 같은 `eventId`를 다시 보내면 처음 응답을 돌려주고 `duplicate`만 `true`다. 상태는 바꾸지 않는다. 서버가 재시작되어도 같다.
 - 같은 `eventId`에 다른 본문이면 `409 REQUEST_ID_MISMATCH`다.
@@ -459,6 +459,20 @@
 - 좌표 없는 배송지는 직전 도착에 작업시간만 더하고 `estimated: false`다. 다음 배송지의 이동은 마지막으로 좌표를 아는 배송지에서 이어 계산한다.
 - 출발 시각: 이벤트 `occurredAt`. 서버 수신 시각과 5분(`MAX_CLOCK_SKEW_MILLIS`)보다 더 다르면 수신 시각을 쓴다. `departureTimeSource`는 `"device"` 또는 `"server"`다.
 - 같은 `eventId` 재전송은 저장된 값을 바꾸지 않고 송신함에도 더하지 않는다. 한 차량에는 최신 ETA 하나만 남는다.
+
+재산출(`departed` 뒤, 그 차량에 저장된 ETA가 있을 때만. 웹 명령으로 출발한 차량은 ETA가 없어 재산출하지 않는다):
+
+| 트리거 | 기준 시각 | 기준 위치 | `reason` |
+|---|---|---|---|
+| `stop_completed`·`stop_partially_completed`·`stop_failed` | 이벤트 시각(5분 넘게 어긋나면 서버 시각) | 이벤트 `location`, 없으면 닫힌 배송지 좌표 | 닫힌 시각이 예정(그 배송지 ETA + 작업시간)과 임계 이상 다르면 `delayed`(이르거나 늦음), 아니면 `completed` |
+| `zone_entered` | 같음 | 이벤트 `location`(필수) | `zone_entered` |
+| 출발 후 `route_reordered` | 같음 | 이벤트 `location`, 없으면 최근 위치 샘플 | `reordered` |
+
+- 남은(열린) 배송지만 다시 계산한다. 첫 남은 배송지는 "기준 시각 + 이동"이고 작업시간은 배송지 사이에만 더한다. `sequence`는 전체 경로의 위치다.
+- 닫힌 배송지는 이전 `eta`를 그대로 두고 `actualAt`(실제 닫힌 시각)을 더한다. 필드 추가만 있고 이전 체크포인트는 그대로 읽힌다.
+- 저장 필드가 늘었다: `recomputes`(재산출 횟수), `reported`(마지막으로 미트박스에 보낸 열린 배송지 ETA `[{stopId, eta}]`). `reported`는 메시지를 보낼 때만 바뀐다.
+- 미트박스 메시지는 새 ETA가 `reported`와 임계 이상 벌어질 때만 남는다(`reordered`는 항상). 임계 미만이면 `etas`만 갱신한다. 미전송 ETA 메시지는 새 메시지로 교체된다. `reported`가 없는 이전 체크포인트는 첫 재산출에서 메시지를 남긴다.
+- 상태의 `sourceData.etaVersion`(재산출 횟수 합)이 ETag에 `-e{n}`으로 들어간다. `zone_entered`는 엔진 명령이 없어 `revision`이 안 바뀌기 때문이다.
 - 설정은 [운영](operations.md#도착-예정-시각-eta-설정-kotlin-api)에 있다.
 
 ### 기사 앱 끝점 오류
@@ -468,12 +482,14 @@
 | `400` | `INVALID_INPUT` | 봉투·payload·샘플 형식이 잘못됨. `date` 불일치 포함 |
 | `400` | `INVALID_EVENT_TYPE` | 정해지지 않은 `type` |
 | `400` | `INVALID_REASON_CODE` | 정해지지 않은 `reasonCode` |
+| `400` | `LOCATION_REQUIRED` | ETA가 저장된 차량의 `zone_entered`에 `location`이 없음 |
 | `400` | `PHOTO_NOT_FOUND` | `photoIds`에 올리지 않은 사진이 있음 |
 | `400` | `INVALID_PHOTO_ID` | `photoId`가 UUID 형식이 아님 |
 | `404` | `PHOTO_NOT_FOUND` | `GET`으로 없는 사진을 요청함 |
+| `422` | `ZONE_MISMATCH` | `zone_entered`의 위치가 그 `zoneId` 폴리곤 밖. 저장하지 않으며 같은 `eventId`로 다시 보내도 같다 |
 | `404` | `STOP_NOT_FOUND` | 이 차량의 배송지가 아님 |
 | `404` | `DRIVER_VEHICLE_NOT_FOUND` | 없는 차량 |
-| `409` | `ROUTE_LOCKED` | 출발한 차량의 순서 변경 |
+| `409` | `ROUTE_LOCKED` | 경로가 끝났거나, 출발한 차량의 현재·완료·보류 배송지를 옮기는 순서 변경 |
 | `409` | `REVISION_CONFLICT` | `expectedRevision`이 현재와 다름 |
 | `409` | `OPERATION_REVISION_CONFLICT` | 운행 상태 기계가 거부한 역행·순서 위반 |
 | `409` | `REQUEST_ID_MISMATCH` | 같은 `eventId`에 다른 본문 |

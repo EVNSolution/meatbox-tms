@@ -59,11 +59,11 @@
 | `type` | 뜻 | `payload` | 미트박스로 나가는 상태 |
 | --- | --- | --- | --- |
 | `departed` | 상차 완료 후 출발 | `{ "stopOrder": ["S-101","S-102"] }` | `departed` + 전체 ETA |
-| `zone_entered` | 배송 권역 진입 | `{ "zoneId": "Z-07" }` | ETA 재산출 |
+| `zone_entered` | 배송 권역 진입 | `{ "zoneId": "Z-07" }` | ETA 재산출(`reason: zone_entered`). 위치 필수, 권역 밖이면 `422` |
 | `stop_completed` | 배송 완료 | `{ "stopId", "orderIds": [], "photoIds": [], "note": "", "scannedCodes": [] }` | `delivered` |
 | `stop_failed` | 미배송 | `{ "stopId", "orderIds": [], "reasonCode", "note": "", "photoIds": [] }` | `failed` |
 | `stop_partially_completed` | 부분 완료 | `{ "stopId", "orderId", "items": [{ "sku", "deliveredQty", "orderedQty" }], "photoIds": [], "note": "" }` | `partially_delivered` |
-| `route_reordered` | 출발 전 순서 변경 | `{ "stopOrder": ["S-102","S-101"], "expectedRevision": 8 }` | 없음. 출발 후에는 `409` |
+| `route_reordered` | 순서 변경(출발 후에는 남은 배송지만) | `{ "stopOrder": ["S-102","S-101"], "expectedRevision": 8 }` | 출발 후에는 ETA 재산출(`reason: reordered`). 완료·현재·보류 배송지를 옮기면 `409` |
 
 `reasonCode`는 운영이 정하는 코드표다. 초안: `ABSENT`, `ACCESS_DENIED`, `ADDRESS_MISMATCH`, `REFUSED`, `NO_STORAGE`, `OTHER`.
 
@@ -129,7 +129,7 @@
 - 한 주문의 메시지는 순서대로 나간다. 앞 메시지가 재시도 중이면 뒤 메시지는 기다린다.
 - `429`는 `5xx`처럼 재시도하고, 그 밖의 `4xx`·`3xx`는 재시도 없이 `failedAt`을 남기고 알림(`meatbox-outbound`/`DELIVERY_STATUS_REJECTED`)을 보낸다. 한 메시지가 11번 실패하면 `DELIVERY_STATUS_UNREACHABLE` 알림을 보낸다.
 - 인증은 `MEATBOX_API_TOKEN`이 있을 때만 `Authorization: Bearer`를 붙인다. 고정 IP 허용은 배포 쪽 과제다.
-- 온도(3.3)는 보내지 않는다. ETA(3.2)는 `departed`에서만 보낸다. 송신함의 `kind`로 나중에 얹는다.
+- 온도(3.3)는 보내지 않는다. ETA(3.2)는 출발과 재산출(위 3.2)에서 보낸다. 송신함의 `kind`로 나중에 얹는다.
 
 ### 3.2 ETA
 
@@ -150,10 +150,13 @@
 
 `reason`은 `departed`, `zone_entered`, `reordered`, `delayed`, `completed` 중 하나.
 
-**구현됨(`departed`만).** 기사 앱 `departed` 이벤트가 성공하면 같은 체크포인트 쓰기로 송신함에 `kind: "eta"` 메시지를 남기고, 발송기가 `POST {MEATBOX_API_BASE_URL}/tms/eta`로 보낸다. 계산은 [API 참조](api-reference.md#도착-예정-시각-eta)를 따른다. 계약과 다른 점:
+**구현됨.** 기사 앱 `departed` 이벤트가 성공하면 같은 체크포인트 쓰기로 송신함에 `kind: "eta"` 메시지를 남기고, 발송기가 `POST {MEATBOX_API_BASE_URL}/tms/eta`로 보낸다. 계산은 [API 참조](api-reference.md#도착-예정-시각-eta)를 따른다. 계약과 다른 점:
 
-- `reason`은 `departed`만 보낸다. 순서 변경(`reordered`)·지연(`delayed`)·권역 진입(`zone_entered`)·완료(`completed`) 재산출은 후속이다.
-- `messageId`는 `{date}-{revision}-eta-{vehicleId}`이고 `Idempotency-Key`와 같다. 차량 하나의 ETA 메시지는 앞 메시지가 끝나야 나간다.
+- `reason` 다섯 가지를 모두 보낸다. `departed`는 출발, `completed`는 배송지 완료·미배송·부분 완료 뒤 재산출이다. `delayed`는 그 배송지가 예정(ETA+작업시간)보다 임계(기본 10분) 이상 이르거나 늦게 닫혔을 때다. 이른 경우도 `delayed`다. `zone_entered`는 권역 진입, `reordered`는 출발 후 순서 변경이다.
+- 재산출은 남은(열린) 배송지만 담고 `sequence`는 전체 경로의 위치다. 완료분은 담지 않는다. 배송지가 닫힌 시각이 기준이라 첫 남은 배송지는 "닫힌 시각 + 이동"이다.
+- 재산출 때마다 메시지를 보내지 않는다. 새 ETA가 마지막으로 보낸 ETA와 임계 이상 벌어질 때만 보낸다. `reordered`는 항상 보낸다.
+- 아직 보내지 않은 ETA 메시지가 있으면 새 메시지가 그것을 대체한다(차량 전체 목록이므로 최신본만 남는다). 이미 보낸 메시지는 그대로 남고 새 메시지가 따로 간다.
+- `messageId`는 출발이 `{date}-{revision}-eta-{vehicleId}`, 재산출은 `{date}-{revision}-eta-{vehicleId}-r{n}`(n은 재산출 횟수)이며 `Idempotency-Key`와 같다. 권역 진입은 엔진 revision을 바꾸지 않아 접미 없이는 id가 겹친다. 차량 하나의 ETA 메시지는 앞 메시지가 끝나야 나간다.
 - `stops[].orderIds`는 그 배송지 묶음의 주문들이고, `eta`는 분 단위 `+09:00` 시각이다. 우리 쪽에 있는 `estimated`(좌표 없음 표시)는 이 본문에 넣지 않는다. 미트박스에 보여 줄지는 미정이다.
 - 이동 시간은 직선거리 모델이라 실제 도로와 다를 수 있다. 설정(우회계수·속도·작업시간)은 [운영](operations.md#도착-예정-시각-eta-설정-kotlin-api)에 있다.
 - 이 메시지가 거절(`4xx`)되면 알림 `meatbox-outbound` / `ETA_REJECTED`를 보내고 재시도하지 않는다. 한 메시지가 11번 실패하면 `ETA_UNREACHABLE`을 보낸다.
@@ -218,7 +221,7 @@
 
 미트박스 명세 전까지 PoC는 우리 서버의 `/mock/meatbox/*`가 3장의 본문을 받아 `202`를 돌려주는 것으로 통과시킨다. 첫 송신 구현과 같은 작업 단위에서 만들었다.
 
-**구현됨.** `meatbox.mock-receiver.enabled=true`일 때만 뜨는 테스트 전용 수신기다. 필수 키·`Idempotency-Key`를 검사하고 최근 200건을 `GET /mock/meatbox/received`로 보여 준다. 세션이 없으므로 운영에 켜지 않는다. 경로와 오류는 [API 참조](api-reference.md#모의-수신기-mockmeatbox-테스트-전용)에 있다. 송신기가 `{base}/tms/<종류>`로 보내므로 수신기는 `/mock/meatbox/tms/<종류>`도 받는다(기본 주소 `.../mock/meatbox`). 3.2 본문은 `departed`가 보낸다. 3.3 본문은 검사만 하고 송신기는 아직 보내지 않는다.
+**구현됨.** `meatbox.mock-receiver.enabled=true`일 때만 뜨는 테스트 전용 수신기다. 필수 키·`Idempotency-Key`를 검사하고 최근 200건을 `GET /mock/meatbox/received`로 보여 준다. 세션이 없으므로 운영에 켜지 않는다. 경로와 오류는 [API 참조](api-reference.md#모의-수신기-mockmeatbox-테스트-전용)에 있다. 송신기가 `{base}/tms/<종류>`로 보내므로 수신기는 `/mock/meatbox/tms/<종류>`도 받는다(기본 주소 `.../mock/meatbox`). 3.2 본문은 출발과 재산출이 보낸다. 3.3 본문은 검사만 하고 송신기는 아직 보내지 않는다.
 
 ## 6. 미트박스에 확인할 것
 
