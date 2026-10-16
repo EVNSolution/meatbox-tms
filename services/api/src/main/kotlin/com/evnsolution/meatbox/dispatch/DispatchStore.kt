@@ -21,11 +21,15 @@ import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.node.ObjectNode
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.StandardCopyOption
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.security.MessageDigest
+import java.util.HexFormat
 import java.util.UUID
+import org.slf4j.LoggerFactory
 
 private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
 
@@ -47,6 +51,10 @@ class DispatchStore(
 
     /** Set by the telemetry module. Same rule: it must not wait for this store. */
     @Volatile var temperatures: TemperatureSource? = null
+
+    /** Set by the ops module. Told once per new source conflict; it must only queue work. */
+    @Volatile var onSourceConflict: ((String, SourceConflict) -> Unit)? = null
+    private val conflictSince = mutableMapOf<String, Pair<String, Long>>()
     private val parser = JsonMapper.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build()
     private val stateFiles = SafeSourceFiles(stateDirectory)
     private val outboxDates = sortedSetOf<String>()
@@ -62,6 +70,19 @@ class DispatchStore(
 
     @Synchronized
     fun snapshot(date: String): ObjectNode = entry(date).let { publicState(it.plan.snapshot(), it) }
+
+    /** Like [snapshot], but a source conflict is answered as a state of its own so that the operator can see it. */
+    @Synchronized
+    fun stateOrConflict(date: String): ObjectNode = try {
+        snapshot(date)
+    } catch (error: SourceChangedException) {
+        dispatchMapper.createObjectNode().apply {
+            put("date", date)
+            put("boot", boot)
+            putNull("dispatch")
+            set("sourceConflict", error.conflict.toNode())
+        }
+    }
 
     @Synchronized
     fun command(date: String, command: ObjectNode): ObjectNode {
@@ -144,7 +165,7 @@ class DispatchStore(
         )
         val etas = current.etas + newEtas
         // One file write carries the new state, its result, ETAs and owed messages: none exists without the rest.
-        write(date, candidate, results, outbox, etas)
+        write(date, candidate, results, outbox, etas, current.contentHash)
         entries[date] = current.copy(plan = candidate, results = results, outbox = outbox, etas = etas)
         if (drafts.isNotEmpty()) outboxDates += date
     }
@@ -155,8 +176,10 @@ class DispatchStore(
         results: List<StoredResult>,
         outbox: List<ObjectNode>,
         etas: Map<String, ObjectNode>,
+        contentHash: String,
     ) {
         save(date, plan.exportCheckpoint().also { checkpoint ->
+            checkpoint.put("contentHash", contentHash)
             if (results.isNotEmpty()) checkpoint.set("commandResults", CommandResults.toNode(results))
             if (outbox.isNotEmpty()) checkpoint.set("outbox", Outbox.toNode(outbox))
             if (etas.isNotEmpty()) checkpoint.set("etas", Etas.toNode(etas))
@@ -204,13 +227,13 @@ class DispatchStore(
         val current = entry(item.date)
         val old = current.outbox.firstOrNull { it.path("messageId").asString() == item.messageId }
         // A slot switch can leave an old process with a stale cache. Reload instead of writing over a newer checkpoint.
-        val onDisk = checkpoint(item.date, current.sourceId)
+        val onDisk = checkpoint(item.date)
         val stale = onDisk != null && onDisk.path("revision").asLong() != current.plan.revision
         if (stale) entries.remove(item.date)
         if (old == null || stale) return 0
         val updated = Outbox.withOutcome(old, outcome, status, at, next)
         val outbox = Outbox.retained(current.outbox.map { if (it === old) updated else it }, at)
-        write(item.date, current.plan, current.results, outbox, current.etas)
+        write(item.date, current.plan, current.results, outbox, current.etas, current.contentHash)
         entries[item.date] = current.copy(outbox = outbox)
         return updated.path("attempts").asInt()
     }
@@ -293,25 +316,140 @@ class DispatchStore(
         val source = reader.sourceOf(date) ?: fail(HttpServletResponse.SC_NOT_FOUND, "DISPATCH_DATA_NOT_FOUND")
         val sourceId = source.sourceId
         val rawDay = source.raw
+        val contentHash = sha256(rawDay)
         entries[date]?.let {
-            if (it.sourceId != sourceId) fail(
-                HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                "DISPATCH_STATE_SOURCE_MISMATCH",
-            )
+            if (it.sourceId != sourceId || it.contentHash != contentHash) {
+                conflict(date, it.plan.exportCheckpoint().path("phase").asString(), it.sourceId, sourceId, contentHash)
+            }
             return it
         }
         val day = parse(rawDay, "DISPATCH_DATA_INVALID")
-        val saved = checkpoint(date, sourceId)
+        val saved = checkpoint(date)
+        if (saved != null) verifyBinding(date, saved, sourceId, contentHash)
         val plan = try { DispatchPlan(day, sourceId, clock, saved) } catch (error: DispatchException) {
             if (saved == null) throw error
             fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_INVALID")
         }
         val results = CommandResults.fromCheckpoint(saved)
-        return Entry(day, sourceId, plan, results, Outbox.fromCheckpoint(saved), source.api, Etas.fromCheckpoint(saved))
-            .also { entries[date] = it }
+        val loaded = Entry(
+            day, sourceId, plan, results, Outbox.fromCheckpoint(saved), source.api,
+            Etas.fromCheckpoint(saved), contentHash,
+        ).also { entries[date] = it }
+        // Same source as before, so nothing shows that the content changed: the checkpoint is bound to it in place.
+        if (saved != null && !saved.path("contentHash").isString) {
+            runCatching { write(date, plan, loaded.results, loaded.outbox, loaded.etas, contentHash) }
+                .onSuccess { log.info("Bound legacy dispatch checkpoint to its source content: date={}", date) }
+        }
+        return loaded
     }
 
-    private fun checkpoint(date: String, sourceId: String): ObjectNode? {
+    /** A saved checkpoint must name the source and, when it knows it, the content that the date has now. */
+    private fun verifyBinding(date: String, saved: ObjectNode, sourceId: String, contentHash: String) {
+        val savedSource = saved.path("sourceId").asString()
+        val savedHash = saved.path("contentHash").takeIf { it.isString }?.asString()
+        if (savedSource != sourceId || (savedHash != null && savedHash != contentHash)) {
+            conflict(date, saved.path("phase").asString(), savedSource, sourceId, contentHash)
+        }
+    }
+
+    private fun conflict(
+        date: String,
+        phase: String,
+        expectedSource: String,
+        actualSource: String,
+        actualHash: String,
+    ): Nothing {
+        val reason = if (expectedSource != actualSource) "source" else "content"
+        val key = "$actualSource/$actualHash"
+        val since = conflictSince[date]?.takeIf { it.first == key } ?: (key to clock()).also {
+            conflictSince[date] = it
+            val first = SourceConflict(expectedSource, actualSource, phase, it.second, reason)
+            runCatching { onSourceConflict?.invoke(date, first) }
+        }
+        throw SourceChangedException(SourceConflict(expectedSource, actualSource, phase, since.second, reason))
+    }
+
+    /**
+     * An operator's answer to a source conflict. `keep-checkpoint` binds the saved plan to the date's current source
+     * (refused once vehicles can run); `discard-checkpoint` moves the saved plan aside under a backup name and returns
+     * the date to unplanned. Nothing is deleted, and nothing happens without a conflict to answer.
+     */
+    @Synchronized
+    fun resolveSourceConflict(date: String, action: String, by: String): ObjectNode {
+        if (action !in RESOLVE_ACTIONS) fail(HttpServletResponse.SC_BAD_REQUEST, "INVALID_ACTION")
+        verifyDirectory()
+        val source = reader.sourceOf(date) ?: fail(HttpServletResponse.SC_NOT_FOUND, "DISPATCH_DATA_NOT_FOUND")
+        val contentHash = sha256(source.raw)
+        val saved = checkpoint(date) ?: fail(HttpServletResponse.SC_CONFLICT, "NO_SOURCE_CONFLICT")
+        val savedHash = saved.path("contentHash").takeIf { it.isString }?.asString()
+        val moved = saved.path("sourceId").asString() != source.sourceId
+        val edited = savedHash != null && savedHash != contentHash
+        if (!moved && !edited) {
+            fail(HttpServletResponse.SC_CONFLICT, "NO_SOURCE_CONFLICT", "이 날짜에는 해소할 원본 충돌이 없습니다.")
+        }
+        val phase = saved.path("phase").asString()
+        val backup = if (action == "discard-checkpoint") {
+            discardCheckpoint(date)
+        } else {
+            rebindCheckpoint(date, saved, source.sourceId, source.raw, contentHash)
+            null
+        }
+        entries.remove(date)
+        conflictSince.remove(date)
+        log.info("Resolved dispatch source conflict: date={} action={} by={} phase={}", date, action, by, phase)
+        return dispatchMapper.createObjectNode().apply {
+            put("date", date)
+            put("action", action)
+            put("previousPhase", phase)
+            if (backup != null) put("backup", backup) else putNull("backup")
+        }
+    }
+
+    private fun rebindCheckpoint(
+        date: String,
+        saved: ObjectNode,
+        sourceId: String,
+        raw: ByteArray,
+        contentHash: String,
+    ) {
+        val phase = saved.path("phase").asString()
+        if (phase in OPERATING_PHASES) {
+            fail(
+                HttpServletResponse.SC_CONFLICT,
+                "SOURCE_CHANGE_UNSAFE",
+                "출발 가능한 배차는 새 원본에 다시 묶을 수 없습니다.",
+            )
+        }
+        val rebound = copyObject(saved).apply { put("sourceId", sourceId) }
+        val day = parse(raw, "DISPATCH_DATA_INVALID")
+        val plan = try { DispatchPlan(day, sourceId, clock, rebound) } catch (_: DispatchException) {
+            fail(
+                HttpServletResponse.SC_CONFLICT,
+                "SOURCE_CHANGE_INCOMPATIBLE",
+                "저장된 배차가 새 원본과 맞지 않습니다.",
+            )
+        }
+        write(
+            date, plan, CommandResults.fromCheckpoint(rebound), Outbox.fromCheckpoint(rebound),
+            Etas.fromCheckpoint(rebound), contentHash,
+        )
+    }
+
+    private fun discardCheckpoint(date: String): String {
+        val name = "$date.json.discarded-${BACKUP_STAMP.format(Instant.ofEpochMilli(clock()))}"
+        try {
+            val from = stateDirectory.resolve("$date.json")
+            Files.move(from, stateDirectory.resolve(name), StandardCopyOption.ATOMIC_MOVE)
+        } catch (_: IOException) {
+            fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_WRITE_FAILED")
+        }
+        return name
+    }
+
+    private fun sha256(bytes: ByteArray): String =
+        HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
+
+    private fun checkpoint(date: String): ObjectNode? {
         val path = stateDirectory.resolve("$date.json")
         if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) return null
         val bytes = try {
@@ -330,10 +468,6 @@ class DispatchStore(
             if (!matches || !it.path("sourceId").isString) fail(
                 HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                 "DISPATCH_STATE_INVALID",
-            )
-            if (it.path("sourceId").asString() != sourceId) fail(
-                HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                "DISPATCH_STATE_SOURCE_MISMATCH",
             )
         }
     }
@@ -400,9 +534,15 @@ class DispatchStore(
         val outbox: List<ObjectNode> = emptyList(),
         val api: Boolean = false,
         val etas: Map<String, ObjectNode> = emptyMap(),
+        val contentHash: String = "",
     )
 
     companion object {
+        private val log = LoggerFactory.getLogger(DispatchStore::class.java)
+        private val RESOLVE_ACTIONS = setOf("keep-checkpoint", "discard-checkpoint")
+        private val OPERATING_PHASES = setOf("published", "amending")
+        private val BACKUP_STAMP = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmssSSS'Z'")
+            .withZone(java.time.ZoneOffset.UTC)
         private const val CHECKPOINT_SCHEMA = 2
         private const val MAX_DATES = 2
         private const val MAX_FILE_BYTES = 16 * 1024 * 1024

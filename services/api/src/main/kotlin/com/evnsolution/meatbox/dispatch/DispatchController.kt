@@ -39,7 +39,7 @@ class DispatchController(
 
     @GetMapping("/{date}/state")
     fun state(@PathVariable date: String, request: HttpServletRequest): ResponseEntity<ByteArray> {
-        val state = store.snapshot(date)
+        val state = store.stateOrConflict(date)
         val revision = state.path("revision").asLong()
         val today = state.path("dispatch").path("today").asString()
         val locationVersion = state.path("sourceData").path("driverLocationVersion").asLong(0)
@@ -53,7 +53,9 @@ class DispatchController(
         // A shown temperature, or a vehicle turning stale, changes the day without a revision.
         val temperature = state.path("sourceData").path("temperatureVersion").asLong(0)
         val measured = if (temperature > 0) "-t$temperature" else ""
-        val etag = "\"source-${store.boot}-$date-$revision-$today$reported$pushed$estimated$measured\""
+        val detected = state.path("sourceConflict").path("detectedAt").asString("")
+        val unresolved = if (detected.isEmpty()) "" else "-c$detected"
+        val etag = "\"source-${store.boot}-$date-$revision-$today$reported$pushed$estimated$measured$unresolved\""
         if (request.getHeader("If-None-Match") == etag) {
             return ResponseEntity.status(HttpServletResponse.SC_NOT_MODIFIED)
                 .eTag(etag).header("Vary", "Accept-Encoding").build()

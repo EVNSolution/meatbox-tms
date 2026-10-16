@@ -474,6 +474,9 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     // `outbox` holds the Meatbox messages that publishing owes. Node has no outbound sender, so the golden has none.
     assert.equal(checkpoint.outbox.length, 4);
     delete checkpoint.outbox;
+    // `contentHash` binds the checkpoint to its day file's bytes; Node's golden has no such field.
+    assert.match(checkpoint.contentHash, /^[0-9a-f]{64}$/);
+    delete checkpoint.contentHash;
     assert.deepEqual(normalized(checkpoint), normalized(demoFreeGolden(golden)));
   });
 
@@ -635,7 +638,7 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     futureCheckpoint = await fs.readFile(path.join(fixture.stateDirectory, `${fixture.tomorrow}.json`));
   });
 
-  await t.test('rejects corrupt and source-mismatched checkpoints and recovers from the saved candidate', async () => {
+  await t.test('rejects corrupt checkpoints, shows a source conflict and recovers from the saved candidate', async () => {
     const checkpointPath = path.join(fixture.stateDirectory, `${fixture.tomorrow}.json`);
     await fixture.restart();
     await fs.writeFile(checkpointPath, '{', { mode: 0o600 });
@@ -651,8 +654,17 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     await fixture.restart();
     cookie = await login(fixture);
     result = await requestJson(fixture, `/api/dispatch-data/days/${fixture.tomorrow}/state`, { cookie });
-    assert.equal(result.response.status, 500);
-    assert.equal(result.body.error, 'DISPATCH_STATE_SOURCE_MISMATCH');
+    assert.equal(result.response.status, 200);
+    assert.equal(result.body.dispatch, null);
+    assert.equal(result.body.sourceConflict.reason, 'source');
+    assert.equal(result.body.sourceConflict.expectedSourceId, '0'.repeat(64));
+    assert.equal(result.body.sourceConflict.checkpointPhase, 'draft');
+    const { boot } = result.body;
+    result = await requestJson(fixture, `/api/dispatch-data/days/${fixture.tomorrow}/commands`, {
+      method: 'POST', cookie, body: { type: 'calculate_dispatch', expectedBoot: boot, expectedRevision: 1, vehicleIds: ['TRUCK-1'] },
+    });
+    assert.equal(result.response.status, 409);
+    assert.equal(result.body.error, 'SOURCE_CHANGED');
 
     await fs.writeFile(checkpointPath, futureCheckpoint, { mode: 0o600 });
     await fixture.restart();
