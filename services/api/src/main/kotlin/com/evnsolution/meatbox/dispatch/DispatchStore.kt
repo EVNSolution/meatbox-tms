@@ -3,20 +3,18 @@ package com.evnsolution.meatbox.dispatch
 import com.evnsolution.meatbox.compat.DispatchDataReader
 import com.evnsolution.meatbox.compat.SafeSourceFiles
 import com.evnsolution.meatbox.compat.DispatchDataException
+import com.evnsolution.meatbox.inbound.InboundOrder
+import com.evnsolution.meatbox.inbound.InboundOrders
+import com.evnsolution.meatbox.inbound.InboundReceipt
 import jakarta.servlet.http.HttpServletResponse
 import java.io.IOException
 import tools.jackson.core.StreamReadFeature
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.node.ObjectNode
-import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
-import java.nio.file.attribute.PosixFilePermissions
 import java.util.UUID
 
 // One lock and one file per date keep every command atomic; splitting the store would expose its internals.
@@ -25,6 +23,7 @@ class DispatchStore(
     private val reader: DispatchDataReader,
     private val stateDirectory: Path,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val inbound: InboundOrders? = null,
 ) {
     val boot: String = UUID.randomUUID().toString()
 
@@ -40,7 +39,7 @@ class DispatchStore(
     }
 
     @Synchronized
-    fun snapshot(date: String): ObjectNode = publicState(entry(date).plan.snapshot())
+    fun snapshot(date: String): ObjectNode = entry(date).let { publicState(it.plan.snapshot(), it) }
 
     @Synchronized
     fun command(date: String, command: ObjectNode): ObjectNode {
@@ -55,7 +54,7 @@ class DispatchStore(
         val current = entry(date)
         val candidate = DispatchPlan(current.day, current.sourceId, clock, current.plan.exportCheckpoint())
         val output = candidate.command(command)
-        output.set("state", publicState(output.path("state") as ObjectNode))
+        output.set("state", publicState(output.path("state") as ObjectNode, current))
         val published = command.path("type").asString() == "publish_dispatch"
         val drafts = if (published) dispatched(current.plan, candidate) else emptyList()
         commit(date, current, candidate, requestId, hash, output, drafts)
@@ -193,6 +192,43 @@ class DispatchStore(
         }
     }
 
+    /**
+     * Files one order message of Meatbox under its delivery date. A draft that the message invalidates is dropped
+     * first (checkpoint, then orders): a failure between the two leaves the old orders without a draft, and the sender
+     * retries. Writing the orders first would leave a checkpoint that names a source that no longer exists.
+     */
+    @Synchronized
+    fun receiveOrder(order: InboundOrder): InboundReceipt {
+        val orders = inbound ?: fail(HttpServletResponse.SC_NOT_FOUND, "NOT_FOUND")
+        if (reader.hasCsvDate(order.deliveryDate)) {
+            fail(HttpServletResponse.SC_CONFLICT, "SOURCE_CONFLICT", "이 날짜의 주문 원본은 준비된 자료입니다.")
+        }
+        val known = order.deliveryDate in orders.dates()
+        val snapshot = if (known) entry(order.deliveryDate).plan.snapshot() else null
+        val phase = snapshot?.path("dispatch")?.path("phase")?.asString() ?: "unplanned"
+        val done = snapshot?.path("dispatchOrders")?.toList().orEmpty()
+            .filter { it.path("status").asString() == "done" }.map { it.path("id").asString() }.toSet()
+        val outcome = orders.plan(order, phase, done)
+        val file = outcome.file ?: return outcome.receipt
+        if (outcome.resetDraft) dropCheckpoint(order.deliveryDate)
+        try {
+            orders.write(file)
+        } finally {
+            entries.remove(order.deliveryDate)
+        }
+        return outcome.receipt
+    }
+
+    private fun dropCheckpoint(date: String) {
+        verifyDirectory()
+        try {
+            Files.deleteIfExists(stateDirectory.resolve("$date.json"))
+        } catch (_: IOException) {
+            fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_WRITE_FAILED")
+        }
+        entries.remove(date)
+    }
+
     @Synchronized
     fun result(date: String, requestId: String): ObjectNode {
         if (!CommandResults.validId(requestId)) fail(HttpServletResponse.SC_BAD_REQUEST, "INVALID_COMMAND")
@@ -211,10 +247,9 @@ class DispatchStore(
     private fun entry(date: String): Entry {
         verifyDirectory()
         // Read-only source bundle and current manifest remain the authority, even with a warm cache.
-        val manifest = reader.loadManifest()
-        if (date !in manifest.dates) fail(HttpServletResponse.SC_NOT_FOUND, "DISPATCH_DATA_NOT_FOUND")
-        val sourceId = manifest.node.path("source").path("csvSha256").asString("")
-        val rawDay = reader.readDay(date)
+        val source = reader.sourceOf(date) ?: fail(HttpServletResponse.SC_NOT_FOUND, "DISPATCH_DATA_NOT_FOUND")
+        val sourceId = source.sourceId
+        val rawDay = source.raw
         entries[date]?.let {
             if (it.sourceId != sourceId) fail(
                 HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
@@ -228,7 +263,8 @@ class DispatchStore(
             if (saved == null) throw error
             fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_INVALID")
         }
-        return Entry(day, sourceId, plan, CommandResults.fromCheckpoint(saved), Outbox.fromCheckpoint(saved))
+        val results = CommandResults.fromCheckpoint(saved)
+        return Entry(day, sourceId, plan, results, Outbox.fromCheckpoint(saved), source.api)
             .also { entries[date] = it }
     }
 
@@ -267,7 +303,6 @@ class DispatchStore(
 
     private fun save(date: String, checkpoint: ObjectNode) {
         val target = stateDirectory.resolve("$date.json")
-        val temporary = stateDirectory.resolve(".$date.${UUID.randomUUID()}.tmp")
         try {
             verifyDirectory()
             val unsafeTarget = Files.exists(target, LinkOption.NOFOLLOW_LINKS) &&
@@ -275,24 +310,14 @@ class DispatchStore(
             if (Files.isSymbolicLink(target) || unsafeTarget) {
                 fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_WRITE_FAILED")
             }
-            val permissions = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))
             val bytes = parser.writeValueAsBytes(checkpoint)
             if (bytes.size > MAX_FILE_BYTES) fail(
                 HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                 "DISPATCH_STATE_WRITE_FAILED",
             )
-            val options = setOf(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
-            FileChannel.open(temporary, options, permissions).use {
-                val buffer = ByteBuffer.wrap(bytes)
-                while (buffer.hasRemaining()) it.write(buffer)
-                it.force(true)
-            }
-            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            writeAtomically(target, bytes)
         } catch (_: IOException) {
             fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_WRITE_FAILED")
-        } finally {
-            // A cleanup failure after atomic replacement must not report a failed commit.
-            runCatching { Files.deleteIfExists(temporary) }
         }
     }
 
@@ -307,8 +332,13 @@ class DispatchStore(
         }
     }
 
-    private fun publicState(state: ObjectNode): ObjectNode =
-        state.put("boot", boot).also { overlayDriverLocations(it, locations) }
+    private fun publicState(state: ObjectNode, entry: Entry): ObjectNode =
+        state.put("boot", boot).also { overlayDriverLocations(it, locations) }.also {
+            // Only dates fed by Meatbox carry this block, so prepared-CSV snapshots keep their bytes.
+            if (entry.api) inbound?.summary(state.path("sourceData").path("date").asString())?.let { summary ->
+                (state.path("sourceData") as ObjectNode).set("inbound", summary)
+            }
+        }
 
     private fun fail(
         status: Int,
@@ -321,6 +351,7 @@ class DispatchStore(
         val plan: DispatchPlan,
         val results: List<StoredResult> = emptyList(),
         val outbox: List<ObjectNode> = emptyList(),
+        val api: Boolean = false,
     )
 
     companion object {

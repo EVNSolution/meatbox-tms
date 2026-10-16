@@ -1,6 +1,7 @@
 package com.evnsolution.meatbox.compat
 
 import jakarta.servlet.http.HttpServletRequest
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -16,8 +17,9 @@ import java.nio.charset.StandardCharsets
 @ConditionalOnProperty(prefix = "meatbox.compat", name = ["enabled"], havingValue = "true")
 class DispatchDataController(
     settings: CompatSettings,
+    inbound: ObjectProvider<InboundDays>,
 ) {
-    private val reader = DispatchDataReader(settings)
+    private val reader = DispatchDataReader(settings, inbound.ifAvailable)
     private val destinations = DestinationCatalogReader(settings)
 
     @RequestMapping("/api/dispatch-data/manifest", method = [RequestMethod.GET, RequestMethod.HEAD])

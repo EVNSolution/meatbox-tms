@@ -3,6 +3,8 @@ package com.evnsolution.meatbox.compat
 import org.springframework.http.HttpStatus
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.databind.node.ArrayNode
+import tools.jackson.databind.node.ObjectNode
 import java.nio.file.Files
 import java.io.IOException
 import java.nio.file.LinkOption
@@ -17,6 +19,8 @@ import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.ResolverStyle
+import java.time.format.TextStyle
+import java.util.Locale
 import java.util.HexFormat
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
@@ -24,24 +28,68 @@ import java.util.zip.GZIPOutputStream
 @Suppress("TooManyFunctions")
 class DispatchDataReader(
     settings: CompatSettings,
+    private val inbound: InboundDays? = null,
 ) {
     internal val files = SafeSourceFiles(settings.dispatchDataDirectory)
     private val mapper = JsonMapper.builder().build()
 
     fun manifest(acceptEncoding: String?): DispatchFile {
         val loaded = loadManifest()
-        return selectFile(Path.of("manifest.json"), acceptEncoding, loaded.raw)
+        val extra = apiDates(loaded)
+        if (extra.isEmpty()) return selectFile(Path.of("manifest.json"), acceptEncoding, loaded.raw)
+        return generatedJson(mapper.writeValueAsBytes(withApiDates(loaded.node, extra)), acceptEncoding)
     }
 
     fun day(date: String, acceptEncoding: String?): DispatchFile {
         if (!isValidDate(date)) throw notFound()
         val manifest = loadManifest()
-        if (date !in manifest.dates) throw notFound()
+        if (date !in manifest.dates) {
+            val api = inbound?.source(date) ?: throw notFound()
+            return generatedJson(api.day, acceptEncoding)
+        }
         val raw = readDay(date)
         val selected = selectFile(Path.of("days", "$date.json"), acceptEncoding, raw)
         if (selected.contentEncoding == "gzip") requireGzipDayDate(date, selected.bytes)
         return selected
     }
+
+    /**
+     * Where a date's orders come from: the prepared CSV bundle or the orders Meatbox pushed. Null when neither has it.
+     * A date in both is a conflict that no caller may resolve silently.
+     */
+    internal fun sourceOf(date: String): DaySource? {
+        val manifest = loadManifest()
+        val api = inbound?.source(date)
+        if (date in manifest.dates) {
+            if (api != null) throw DispatchDataException(HttpStatus.INTERNAL_SERVER_ERROR, "DISPATCH_SOURCE_CONFLICT")
+            val csv = manifest.node.get("source")?.get("csvSha256")?.takeIf(JsonNode::isString)?.asString().orEmpty()
+            return DaySource(csv, readDay(date), api = false)
+        }
+        return api?.let { DaySource(it.sourceId, it.day, api = true) }
+    }
+
+    internal fun hasCsvDate(date: String): Boolean = date in loadManifest().dates
+
+    private fun apiDates(manifest: Manifest): List<String> =
+        inbound?.dates().orEmpty().filter { it !in manifest.dates }.sorted()
+
+    private fun withApiDates(node: JsonNode, extra: List<String>): JsonNode {
+        val copy = node.deepCopy() as ObjectNode
+        val entries = (copy.get("dates") as ArrayNode).toList().toMutableList()
+        for (date in extra) {
+            val summary = inbound?.source(date) ?: continue
+            entries.add(
+                mapper.createObjectNode().put("date", date).put("weekday", weekday(date)).put("source", "api")
+                    .put("orders", summary.orders).put("boxes", summary.boxes),
+            )
+        }
+        val sorted = entries.sortedBy { it.get("date").asString() }
+        copy.set("dates", mapper.createArrayNode().addAll(sorted))
+        return copy
+    }
+
+    private fun weekday(date: String): String =
+        LocalDate.parse(date, DATE_FORMAT).dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)
 
     internal fun readDay(date: String): ByteArray =
         files.readRequired(Path.of("days", "$date.json"), missingManifest = false).also { requireDayDate(date, it) }
@@ -163,6 +211,16 @@ class DispatchDataReader(
         private val DATE_FORMAT = DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT)
     }
 }
+
+/** Read side of the orders Meatbox pushed, one day per date. Implemented by the inbound module. */
+interface InboundDays {
+    fun dates(): Set<String>
+    fun source(date: String): InboundSource?
+}
+
+class InboundSource(val sourceId: String, val day: ByteArray, val orders: Int, val boxes: Double)
+
+internal class DaySource(val sourceId: String, val raw: ByteArray, val api: Boolean)
 
 internal data class Manifest(
     val raw: ByteArray,

@@ -44,7 +44,10 @@ class DispatchController(
         val today = state.path("dispatch").path("today").asString()
         val locationVersion = state.path("sourceData").path("driverLocationVersion").asLong(0)
         val reported = if (locationVersion > 0) "-l$locationVersion" else ""
-        val etag = "\"source-${store.boot}-$date-$revision-$today$reported\""
+        // Orders pushed by Meatbox change the day without a revision, so their change stamp belongs in the tag.
+        val received = state.path("sourceData").path("inbound").path("stamp").asLong(0)
+        val pushed = if (received > 0) "-n$received" else ""
+        val etag = "\"source-${store.boot}-$date-$revision-$today$reported$pushed\""
         if (request.getHeader("If-None-Match") == etag) {
             return ResponseEntity.status(HttpServletResponse.SC_NOT_MODIFIED)
                 .eTag(etag).header("Vary", "Accept-Encoding").build()

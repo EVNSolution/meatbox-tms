@@ -32,7 +32,7 @@ internal fun driverFixture(
          "boxes":1,"sourceRows":1,"sequence":1,"coordinates":[127.0,37.5],"zoneIds":["Z1"]}]}
     """.trimIndent())
     val reader = DispatchDataReader(CompatSettings(URI("http://127.0.0.1:1"), root.resolve("data")))
-    val dispatch = DispatchStore(reader, root.resolve("state")) { Instant.parse("${today}T01:00:00Z").toEpochMilli() }
+    val dispatch = DispatchStore(reader, root.resolve("state"), { Instant.parse("${today}T01:00:00Z").toEpochMilli() })
     return DriverStore(dispatch, root.resolve("state"), isSessionActive = isSessionActive) to root.resolve("state")
 }
 

@@ -21,7 +21,7 @@
 | 이름 | 현재 의미 | 수명과 주의점 |
 |---|---|---|
 | `date` | `YYYY-MM-DD` 운영 날짜 | URL, 원본, 체크포인트를 묶는 aggregate 키 |
-| `sourceId` | 현재 매니페스트 `source.csvSha256` | 체크포인트가 다른 원본에 붙는 것을 차단. 외부 주문 버전이나 이벤트 순서가 아님 |
+| `sourceId` | CSV 날짜는 매니페스트 `source.csvSha256`, 미트박스 주문(API) 날짜는 `api-` + 적용된 활성 주문 `id:version` 줄의 SHA-256 | 체크포인트가 다른 원본에 붙는 것을 차단. 외부 주문 버전이나 이벤트 순서가 아님 |
 | `order.id` | 준비 스크립트가 만든 날짜별 주문 ID | 주문·정렬·명령 참조. 회원 번호나 외부 공개 ID로 가정하지 않음 |
 | `group.id` | 원본 배송기사 표기 그룹에서 만든 후보 ID | 현재 `vehicleId` 후보로 사용하지만 검증된 기사 계정·차량 자산 ID는 아님 |
 | `vehicleId` | 계산안 또는 확정 운행에서 주문이 배정된 후보 ID | 기사 로그인과 연결되지 않음 |
@@ -121,6 +121,27 @@ published ── begin_dispatch_revision ──► amending
 - 이벤트 기록은 운행 명령이 성공한 뒤에 쓴다. 기록 쓰기가 실패하면 요청은 `503`이지만 상태는 이미 반영됐다. 같은 `eventId`를 다시 보내면 상태는 건드리지 않고 기록만 채운다.
 - 가장 최근 위치는 날짜 상태를 만들 때 합성 위치 위에 덮어 보여 준다(`location.source: "driver"`). 체크포인트에는 쓰지 않는다.
 - 사진 파일은 상태 디렉터리 `photos/{date}/`가 소유한다. 사진 ID는 서버가 만든 UUID이고, 이벤트는 ID로만 참조한다.
+
+## 미트박스가 보낸 주문(API 원본)
+
+날짜 원본은 준비된 CSV 묶음이거나 미트박스가 `POST /api/meatbox/orders`로 보낸 주문이다. 한 날짜의 원본은 하나다. 매니페스트에 있는 날짜로 주문이 오면 `409 SOURCE_CONFLICT`이고, 두 원본이 함께 있는 날짜는 `DISPATCH_SOURCE_CONFLICT`로 닫는다. 어느 쪽도 조용히 고르지 않는다.
+
+수신 파일(`{state-dir}/inbound/{date}.json`)은 주문마다 `received`(마지막으로 받은 version·본문 해시·status)와 `applied`(배차가 보는 version·본문)를 따로 둔다. 날짜 JSON과 `sourceId`는 `applied`의 활성 주문만으로 만든다. 같은 적용 집합은 같은 `sourceId`다.
+
+| 날짜 상태 | 더 높은 version이 오면 |
+|---|---|
+| `unplanned` | 적용한다. 신규는 추가, 변경은 교체, 취소는 제외. `sourceId`가 바뀐다 |
+| `draft` | 적용하고 계산안을 버린다(체크포인트 삭제 → 수신 파일 쓰기). 경고 `DRAFT_RESET_BY_INBOUND`(주문 id·version·시각)를 남기고 응답은 `draftReset: true`다. 적용 집합이 그대로면(처음 보는 주문의 취소) 버리지 않는다 |
+| `published`·`amending` | 적용하지 않는다. `received`만 갱신하고 경고를 남기며 운영 알림(`meatbox-inbound`)을 보낸다. 변경 `ORDER_CHANGED_AFTER_DISPATCH`, 취소 `ORDER_CANCELLED_AFTER_DISPATCH`, 처음 보는 활성 주문 `ORDER_ADDED_AFTER_DISPATCH` |
+| 해당 주문이 `done` | 위와 같고 코드는 `ORDER_CHANGED_AFTER_COMPLETION`이다(취소 포함) |
+
+- 확정 뒤에는 `applied`가 바뀌지 않아 `sourceId`와 체크포인트가 그대로다. 확정·진행·완료 기록은 수신으로 바뀌지 않는다. 보류된 변경을 반영하는 운영자 경로는 아직 없다([다음 기능 계획](next-feature-delivery-plan.md) F11).
+- 더 낮은 version은 무시하고, 같은 version·같은 본문은 중복이며, 같은 version·다른 본문은 `409 ORDER_VERSION_CONFLICT`다. 판정은 적용 여부와 무관하게 마지막으로 받은 version 기준이다.
+- 계산안을 버릴 때의 순서는 체크포인트 삭제가 먼저다. 삭제 뒤 쓰기가 실패하면 이전 주문에 계산안만 없는 상태이고 송신자가 재시도한다. 파일을 먼저 쓰면 크래시 사이에 체크포인트가 사라진 원본을 가리켜 `DISPATCH_STATE_SOURCE_MISMATCH`가 된다.
+- 경고는 snapshot `sourceData.inbound`(`kind`, `stamp`, `received`, `applied`, 최근 50건 `warnings[]`)에 나온다. CSV 날짜 snapshot에는 이 필드가 없다. `stamp`는 수신 파일이 바뀔 때마다 오르고 날짜 상태 ETag에 반영된다.
+- 후보 차량은 합성 그룹 `api-g01`…이다(`MEATBOX_INBOUND_GROUP_COUNT`, 기본 8). 실제 차량이 아니며 다른 합성 후보와 같이 미검증 후보로 표시한다. 모든 주문의 초기 `groupId`는 첫 그룹이고 계산이 다시 배정한다.
+- 좌표가 없는 주문은 `coordinates: null`로 들어가(웹 포크가 필드 자체를 요구한다) 박스 수 균형으로만 배정한다. 모든 주문의 `zoneIds`는 빈 배열이다. 주소 정제·좌표화는 하지 않는다.
+- 단일 writer 가정은 체크포인트와 같다. 이 수신 파일에도 프로세스 간 잠금이 없다.
 
 ## 날짜의 의미
 

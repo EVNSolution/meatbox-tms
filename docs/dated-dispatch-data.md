@@ -9,10 +9,19 @@
 | 원본 CSV·SHP | [prepare-dispatch-data.py](../scripts/prepare-dispatch-data.py) 입력 | 개인정보와 위치가 포함된 비공개 원본 |
 | `manifest.json`, `days/*.json`, gzip, `regions.geojson` | 위 스크립트 → [dispatch-data.js](../lib/dispatch-data.js) | 날짜별 주문·후보 그룹·공통 경계의 조회 자료 |
 | `destinations.json` | [prepare-destination-data.py](../scripts/prepare-destination-data.py) | 날짜 누적 배송처 집계. 일별 운행·현재 자원 등록부와 다름 |
+| 미트박스 주문 수신 파일 | Kotlin API `inbound/InboundOrders` | `POST /api/meatbox/orders`로 받은 주문의 날짜별 파일(`{state-dir}/inbound/{date}.json`). 준비 스크립트 산출물이 아니며 상태 디렉터리가 소유 |
 | 날짜별 체크포인트 | [source-operations-router.js](../lib/source-operations-router.js) | 계산안·확정 배차·진행 상태. 원본 산출물과 별도 저장 |
 | 자원 SQLite | [import-resource-catalog.mjs](../scripts/import-resource-catalog.mjs) | 명시적으로 가져온 차량·지역 코드 등록부. 일별 주문 DB가 아님 |
 
 `DISPATCH_DATA_DIR` 기본값은 저장소 아래 `.runtime/dispatch-data`입니다. 원본·산출물·체크포인트·계정 파일·자원 DB를 한 종류의 ‘데이터’로 묶어 교체하지 않습니다. `.runtime/`는 Git 제외 대상이지만 접근 통제·보존 기간을 대신하지 않습니다.
+
+## 날짜 원본의 두 종류
+
+한 날짜의 주문 원본은 **준비된 CSV 묶음**(매니페스트·`days/{date}.json`) 또는 **미트박스가 보낸 주문**(API 원본) 중 하나다. 읽기 경로(`manifest`, `days/{date}`)는 API 날짜를 매니페스트에 `source: "api"`(`weekday`, `orders`, `boxes` 포함)로 끼워 넣고 같은 모양의 날짜 JSON(`groups`는 합성 후보, `orders`는 활성 주문)을 만들어 돌려준다. API 날짜가 없으면 매니페스트 응답은 원본 바이트 그대로다.
+
+- `sourceId`는 CSV 날짜에서 매니페스트 `source.csvSha256`, API 날짜에서 `api-` + 적용된 활성 주문 `id:version`의 SHA-256이다. 체크포인트는 날짜마다 자기 원본의 `sourceId`에 묶인다.
+- 준비 디렉터리(`DISPATCH_DATA_DIR`)에는 API 주문을 쓰지 않는다. 같은 날짜가 두 원본에 있으면 닫는다. 변경·취소 정책과 저장 순서는 [도메인과 상태](domain-and-state.md#미트박스가-보낸-주문api-원본)에 있다.
+- 준비 완료 판단의 CSV 항목(원본 지문, 행 합계 등)은 API 날짜에 해당하지 않는다. API 날짜의 대사는 수신 파일의 `received`/`applied` 건수와 경고로 한다.
 
 ## 날짜와 식별자
 
