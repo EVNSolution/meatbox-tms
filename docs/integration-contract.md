@@ -37,6 +37,7 @@
 - 경로 접두사가 `/api/dispatch-data/days/{date}/driver/...`다.
 - `eventId`는 UUID가 아니어도 영문·숫자·`-`·`_` 1~64자면 받는다. 멱등 범위는 `(vehicleId, eventId)`가 아니라 날짜 안의 `eventId`다. 본문(차량 포함)이 다르면 `409 REQUEST_ID_MISMATCH`다.
 - `next.eta`는 차량이 출발해 ETA를 계산한 뒤에는 그 배송지의 도착 예정 시각이고 출발 전에는 `null`이다. 계산은 3.2의 구현됨 절을 따른다.
+- **앱 사용 중:** 배송원 앱은 `stop_completed`·`stop_failed`·`stop_partially_completed`를 단말 큐에서 보낸다. 사진은 먼저 올리고(`POST photos`) `photoIds`로 참조하며, 응답이 유실되면 `GET events/{eventId}`로 처리 결과를 확인한 뒤 같은 본문으로 다시 보낸다(재전송 본문은 시각·위치까지 같아야 한다). 앱은 `arrived` 이벤트를 보내지 않는다. 서버가 `stop_*` 한 번에 도착과 완료를 함께 처리하고 현재 배송지가 아니면 `409`로 거절한다. 부분 완료는 주문이 1건인 배송지에서만 보낸다.
 - 자동 배송 순서(요구서 62번)는 이벤트가 아니라 상태를 바꾸지 않는 `POST .../driver/route/suggest`가 제안하고, 앱이 받아 `route_reordered`로 적용한다. 시작점·알고리즘·한계(좌회전 제한·간선도로 위주는 도로 데이터가 없어 계산하지 않음)는 [API 참조](api-reference.md#자동-배송-순서-제안)를 따른다.
 - `stop_failed`의 `reasonCode`는 6개 코드 밖이면 `400 INVALID_REASON_CODE`다. 품목(`items`)은 검증하지 않고 기록만 한다.
 - `stopId`는 배송지 묶음의 첫 주문 ID다. 앱의 `S-104` 같은 값은 아직 없다.
@@ -245,6 +246,8 @@
 - 상차 완료 상태를 누가 만드는지. WMS에서 오는지, 기사 앱에서 찍는지.
 - 테스트 환경과 고정 IP 허용.
 - 주문의 `deliveryDate`가 바뀔 수 있는가. 지금은 `422`로 막는다. 바뀐다면 이전 날짜 취소와 새 날짜 등록을 어떤 식으로 보낼지.
+- 완료 사진 첨부가 필수인가. 앱은 지금 배송 완료에 1장 이상을 요구하고(미배송·부분 완료는 선택) 서버는 사진 없는 완료도 받는다. 요구서의 "사진 첨부 필수 규칙 여부"가 미확인이다. 필수가 아니거나 예외가 있으면 앱의 상수 하나(`REQUIRE_COMPLETION_PHOTO`)만 바꾼다.
+- 한 배송지에 주문이 여러 건일 때 부분 완료를 어떻게 알릴지. 지금은 `stop_partially_completed`가 `orderId`를 지정하면 그 주문 하나에만 `partially_delivered`를 보내고 배송지의 나머지 주문은 상태를 보내지 못한다. `orderId`를 빼면 모든 주문에 같은 품목이 간다. 그래서 앱은 주문이 1건인 배송지에서만 부분 완료를 연다. 다중 주문 묶음에서 주문별 수량을 어떻게 받을지 정해야 한다.
 - 배차 확정 뒤의 변경·취소·신규 주문을 어떻게 다룰지. 지금은 반영하지 않고 경고만 남긴다. 확정 뒤 반영을 기대하는지, 그때 기사에게 알릴지.
 
 ## 7. 끝점 요약 (GET / POST)
@@ -254,7 +257,7 @@
 
 ### 7.1 앱 → 우리 서버
 
-**앱 사용 중:** 배송원 앱(`apps/driver`)은 `GET route`, `GET stops/{stopId}`, `GET photos/{photoId}`(직전 완료 사진), `POST route/suggest`, `POST events`의 `departed`·`route_reordered`를 쓴다. `stop_*`·`zone_entered`·`locations`·`photos` 업로드·`history`는 아직 쓰지 않는다. 지도 핀 좌표는 `GET route`에 없어 날짜 상태에서 읽는다.
+**앱 사용 중:** 배송원 앱(`apps/driver`)은 `GET route`, `GET stops/{stopId}`, `GET photos/{photoId}`(직전 완료 사진), `POST route/suggest`, `POST photos`, `GET events/{eventId}`, `POST events`의 `departed`·`route_reordered`·`stop_completed`·`stop_failed`·`stop_partially_completed`를 쓴다. `zone_entered`·`locations`·`history`는 아직 쓰지 않는다(`history`는 점검 스크립트만 읽는다). 지도 핀 좌표와 차량 선택은 `GET route`에 없어 날짜 상태(`GET state`, 읽기 전용)에서 읽는다.
 
 구현됨(현행 경로): 아래 7개 끝점이 모두 `/api/dispatch-data/days/{date}/driver/{route|stops/{stopId}|history|events|events/{eventId}|photos|photos/{photoId}|locations}`에 있다. 표의 `/api/driver/...` 경로는 기사 계정 권한 단위에서 옮길 목표 경로다. 조회는 `vehicleId` 쿼리를 받고, `route`의 `eta`는 출발 전 `null`이고 출발 뒤 값이 채워지며, 배송지 상세의 출입정보는 아직 제한 없이 나간다.
 

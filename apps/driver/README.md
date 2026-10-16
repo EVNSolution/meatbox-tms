@@ -54,10 +54,17 @@ CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--max-old-space-size=2048 CMAKE_BUILD_PARA
 - 서울 기준 당일 차량을 선택합니다. 선택은 날짜별로 복원합니다. TEST 데모는 기존 TMS 계정의 수동 차량 선택 범위입니다.
 - 차량의 모든 주문을 `meatbox:YYYY-MM-DD:<orderId>` QR로 확인해야 배송 시작 버튼이 활성화됩니다. 다른 날짜·다른 차량·중복·미등록 QR을 구분합니다. 수령 확인은 이 기기에 저장되며 서버의 수령 증빙 기능은 아닙니다.
 - 배송·지도 두 탭. 배송 시작 전에만 대기 배송지를 묶음 단위로 편집합니다("자동 생성" 제안 포함). 배송 시작 뒤 편집은 다음 단위에서 엽니다.
-- 현재 배송지의 도착 처리 후 완료·다음 처리가 가능합니다. 서버 응답을 반영하고 상태 충돌 시 최신 상태를 불러옵니다.
+- 현재 배송지에서 "완료 · 미배송 처리"를 열어 완료 / 미배송(사유 6종) / 부분 완료(주문 1건 배송지만, 품목별 수량)를 사진 최대 3장(완료는 1장 이상 필수)과 특이사항(500자)과 함께 보냅니다. 보고는 단말 큐에 저장되고 화면에는 바로 닫힌 배송지로 보입니다. 전송 대기 건수는 상단 배지로, 멈춘 건은 빨간 배지와 목록 시트(다시 시도·삭제)로 확인합니다.
 - 지도는 실제 주문 좌표만 표시합니다. 좌표가 없는 배송지는 안내문으로 표시합니다. 마커를 누르면 상세 sheet가 열립니다. 내 위치는 지도 표시와 출발 이벤트의 위치 1회에만 사용합니다. 주기적 전송은 아직 없습니다.
 - 메시지 버튼에서 운영팀 내역을 확인하고 메시지를 보냅니다. FCM은 `meatbox-driver` 채널을 사용합니다. 현재 날짜·차량에 맞는 푸시만 처리합니다.
 - 실행 중 토큰이 바뀌면 새 토큰을 서버에 직접 등록합니다. 토큰 이벤트 안에서 토큰 조회를 다시 호출하지 않습니다. 앱이 foreground로 돌아오면 권한과 토큰을 재확인하되 권한 팝업을 반복해서 열지 않습니다.
+
+## 배송 완료 보고와 단말 큐
+
+- 사진: 시스템 카메라 또는 사진 선택기에서 받아 긴 변 1600px·JPEG 0.8로 줄이고(5MiB를 넘으면 0.6으로 한 번 더) 앱 문서 폴더 `outbox/{eventId}/`에 보관합니다. 상수는 `src/domain/photoPolicy.ts` 한 곳입니다(`REQUIRE_COMPLETION_PHOTO`, 최대 3장).
+- 큐(`src/outbox/Outbox.ts`): 저장 순서대로 한 번에 하나, 사진을 먼저 올린 뒤 `photoIds`를 넣어 이벤트를 보냅니다. 네트워크 오류·5xx·429·408은 5초→15초→45초→2분→5분 간격으로 무기한 재시도합니다. 응답이 유실됐을 수 있으면 `GET events/{eventId}`로 먼저 확인합니다. 400·401·403·413과 409는 `rejected`로 멈추고 뒤 항목도 기다립니다. 401로 멈춘 건은 다시 로그인하면 자동으로 재시도합니다.
+- 큐는 AsyncStorage(메타데이터)와 사진 파일에 저장되어 앱 재시작 후 복구됩니다. 전송은 앱이 열려 있을 때만 합니다(시작, 새 항목, 전경 복귀, 재시도 시각). 백그라운드 전송은 없습니다.
+- 서버는 현재(`current`) 배송지만 완료로 받습니다. 앱은 `arrived` 이벤트를 보내지 않으며 `stop_*` 한 번에 도착과 완료가 처리됩니다.
 
 ## 서버 기사 끝점 연결 (경로·상세·순서·출발)
 
@@ -68,7 +75,7 @@ CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--max-old-space-size=2048 CMAKE_BUILD_PARA
 - `POST .../driver/route/suggest`: 순서 편집기의 "자동 생성". 제안만 받고 서버 상태는 안 바뀝니다. 목록에 반영한 뒤 "완료"를 눌러야 `route_reordered`(`expectedRevision`)로 적용됩니다. `409 REVISION_CONFLICT`면 최신 상태를 다시 읽습니다.
 - `POST .../driver/events`: `departed`(전경 위치 1회 포함)와 `route_reordered`. 같은 요청을 다시 보낼 때는 `eventId`뿐 아니라 시각·위치까지 같은 본문이어야 서버가 `duplicate`로 답합니다(`domain/retryAttempt.ts`). 출발 뒤에는 순서 편집 버튼을 숨깁니다.
 - 위치는 출발 때만 읽습니다(`expo-location`, 전경 권한만). 권한이 없거나 읽지 못해도 출발은 막지 않습니다. 백그라운드 수집은 다음 단위입니다.
-- 도착·완료는 아직 `POST /commands`(`arrive_stop`, `complete_stop`)이고 지도 핀 좌표는 `GET /state`입니다. 완료 이벤트로 바꿀 때 정리합니다.
+- 쓰기는 모두 이벤트입니다. `POST /commands`와 `boot`·`expectedRevision`은 앱에서 쓰지 않습니다. `GET /state`는 읽기 전용으로 남아 차량 선택, QR 수령 확인, 지도 핀 좌표, 품목·오프라인 표시에 씁니다(서버 끝점 정리 단위 후).
 
 ## API 코드 라이브 점검
 
@@ -79,7 +86,7 @@ make run-native-fixture   # 다른 터미널, 합성 데이터 (계정은 script
 EXPO_PUBLIC_MEATBOX_API_BASE_URL=http://127.0.0.1:4173 LIVE_CHECK_USERNAME=... LIVE_CHECK_PASSWORD=... npx tsx scripts/live-check.mts
 ```
 
-로그인 → 경로 → 제안 → 순서 변경 → 오래된 revision 거부 → 출발 → ETA 라벨을 확인합니다. 출력 예는 `docs/evidence/driver-app-live-check-2026-10-16.txt`입니다. **Android 에뮬레이터·실기기에서 화면을 확인한 기록은 아직 없습니다.** 화면 렌더 테스트 도구(jest 등)도 없어서 화면은 뷰모델 테스트까지만 검사합니다.
+로그인 → 경로 → 제안 → 순서 변경 → 오래된 revision 거부 → 출발 → ETA 라벨 → 앱의 실제 큐 코드로 사진 업로드·완료·미배송·부분 완료 전송(응답 유실 흉내 포함)과 이력 확인까지 봅니다. 정차 결과는 `LIVE_CHECK_PLAN=completed,failed`처럼 경로 순서대로 정하고(`completed`·`failed`·`partial`) 실행마다 새 서버가 필요합니다. 출력 예는 `docs/evidence/driver-app-live-check-2026-10-16.txt`(경로·출발)와 `docs/evidence/driver-app-live-check-d2-2026-10-16.txt`(완료 보고, 2회)입니다. **Android 에뮬레이터·실기기에서 화면을 확인한 기록은 아직 없습니다.** 화면 렌더 테스트 도구(jest 등)도 없어서 화면은 뷰모델 테스트까지만 검사합니다.
 
 ## API 계약
 
@@ -88,7 +95,6 @@ EXPO_PUBLIC_MEATBOX_API_BASE_URL=http://127.0.0.1:4173 LIVE_CHECK_USERNAME=... L
 날짜별 기본 경로: `/api/dispatch-data/days/{date}`.
 
 - `GET /state`: ETag 지원. `boot`, `revision`, `fleetVehicles`, `fleetDeliveries`, `vehicleStates`, `dispatch.phase` 사용.
-- `POST /commands`: `expectedBoot`와 `expectedRevision` 필수. `start_route`, `arrive_stop`, `complete_stop`, `set_route_order`.
 - `PUT /driver/push-token`: `{vehicleId,token,deviceId,platform:'android'}`.
 - `DELETE /driver/push-token`: `{token}`. 저장된 등록 날짜로 해제합니다.
 - `GET /driver/messages?vehicleId=...`: `{messages:[{id,from,body,createdAt}]}`.
@@ -98,7 +104,7 @@ Kotlin 배송 도착/완료 값은 `HH:mm` 문자열 또는 null입니다. 상�
 
 ## 검증 경계
 
-순수 도메인·API 계약 테스트는 QR 구분, 묶음 순서/보호 위치, 현재 배송지 동작, 서울 날짜 전환, 잘못된 응답 거부, ETag/CAS 및 날짜별 메시지/토큰 경로를 확인합니다. 이 검사는 실제 Android QR 카메라, 네이티브 지도/위치 권한, 앱 재시작 후 cookie 복원, FCM 수신, TEST 배포 성공의 증거를 대신하지 않습니다.
+순수 도메인·API 계약 테스트는 QR 구분, 묶음 순서/보호 위치, 현재 배송지 동작, 서울 날짜 전환, 잘못된 응답 거부, ETag/CAS 및 날짜별 메시지/토큰 경로를 확인합니다. 전송 큐의 순서·재시도·재확인·멈춤·복원 규칙도 순수 테스트(`src/outbox/Outbox.test.ts`)로 확인합니다. 이 검사는 사진 촬영·압축·파일 보관, AsyncStorage 영속, 앱 강제 종료 뒤 복구, 완료 처리 화면 렌더, 실제 Android QR 카메라, 네이티브 지도/위치 권한, 앱 재시작 후 cookie 복원, FCM 수신, TEST 배포 성공의 증거를 대신하지 않습니다.
 
 ## 의존성 audit 잔여 사항
 

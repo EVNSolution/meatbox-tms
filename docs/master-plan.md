@@ -65,8 +65,9 @@
 | [x] ETA 송신 (2) | 서버 반영 | `driver/DriverEtaTest`(`departed` 한 번에 `kind=eta` 1건, 본문 키 `messageId·vehicleId·computedAt·reason·stops[{sequence,orderIds,eta}]`, `messageId`=`{date}-{revision}-eta-{vehicleId}`, 같은 `eventId` 재전송 시 `etas`·`outbox` 불변), `OutboxSenderTest`(시험 서버에 `/tms/eta` 추가), `test/api-connection/kotlin-state-owner.test.mjs`의 실제 JAR 시나리오(출발 → 발송기가 `/mock/meatbox/tms/eta`로 보내 `received?kind=eta`에 1건 도착, `ops/outbox` pending 0·failed 0). 재산출 4종(`completed`·`delayed`·`zone_entered`·`reordered`)은 아래 트랙 E 2·3행. 미트박스 실 수신은 관찰하지 않음 TEST 릴리스 `092f94bebb3e-9f924d3dce34b651`에서 관찰: `departed` 202 → 모의 수신기 `kind=eta` 1건(`reason departed`, `messageId`=`Idempotency-Key`), 재산출 3종(`delayed`·`zone_entered`·`reordered`)도 도착, `ops/outbox` pending 0·failed 0. 미트박스 실 수신은 아님. 근거 [2차 기록](history/test-poc-eta-telemetry-2026-10-16.md). |
 | [x] 미트박스 주문 수신 끝점과 API 원본 날짜 | 서버 반영 | `integrations/meatbox/inbound/InboundOrdersTest`(본문 매핑·검증 오류, 적용 집합 기준 `sourceId` 결정성, 정책 매트릭스: 배차 전 적용·계산안 폐기+경고·확정 뒤 보류 4종, 중복·낮은 version·본문 충돌, 과거 날짜·날짜 이동), `integrations/meatbox/inbound/DispatchStoreInboundTest`(3건→snapshot 3건, 계산안 중 변경→계산안 폐기, 확정 뒤 취소→주문 유지+경고+체크포인트 바이트 불변, CSV 날짜 충돌 409, 계산안 폐기 뒤 쓰기 실패 시 상태, 재시작), `integrations/meatbox/inbound/InboundDaysReaderTest`(매니페스트 병합·날짜 JSON), `integrations/meatbox/inbound/MeatboxOrdersHttpTest`(401·400·415·413·202/200/409, 주문 변경 시 상태 ETag 변경, 같은 코드 알림 1회), `integrations/meatbox/inbound/MeatboxOrdersDisabledHttpTest`(토큰 없음 404), `test/api-connection/kotlin-inbound-orders.test.mjs`의 실제 JAR 시나리오(주문 3건 → 계산 → 확정 → `stop_completed` → `/mock/meatbox/received`에 `delivered` → 확정 뒤 취소·완료 뒤 변경은 경고만 → 재시작 뒤 같은 상태). CSV 날짜의 기존 테스트는 그대로 통과. 미트박스 실제 송신·게이트웨이 경로 열기·고정 IP·확정 뒤 변경 반영(F11)·좌표화(7)·웹이 API 날짜를 그리는 모습은 남음 TEST 관찰([기록](history/test-poc-meatbox-flow-2026-10-16.md)): 토큰 없음 401, 주문 3건(같은 배송지 2건 포함) 202, 재전송 200 `duplicate`, 계산·확정 후 취소 202 `ORDER_CANCELLED_AFTER_DISPATCH`·주문 유지·알림 1건. 오늘 날짜는 CSV 매니페스트에 있어 미래 날짜 `2026-10-18`로 관찰. 웹 배차 화면은 관찰하지 못함. 게이트웨이가 `/api/meatbox/*`를 열지 않아 내부 포트로만 호출함. |
 | [ ] 고객 실시간 조회 예시 화면 1장 | 미착수 | 미트박스 설득용. 그 이상 그리지 않음 |
-| [ ] 미트박스에 계약 초안 전달 | 미착수 | 확인 질문 8개는 계약 문서 6절 |
+| [ ] 미트박스에 계약 초안 전달 | 미착수 | 확인 질문 10개는 계약 문서 6절 |
 | [ ] 미트박스 명세·인증·테스트 환경 수령 | 미착수 | 외부 의존 |
+| [ ] 기사 앱용 읽기 끝점 정리 | 미착수 | 앱이 `GET /state`를 읽기 전용으로 계속 쓰는 이유를 없애는 서버 단위: 기사용 차량 목록 끝점, `GET route`에 주문 목록(`orders`)과 좌표(`coordinates`) 포함. 차량 선택·QR 수령 확인·부분 완료 품목·오프라인 캐시가 여기에 걸려 있다 |
 
 ## 트랙 C. TMS 웹 (1차 종료)
 
@@ -103,16 +104,21 @@
 | [ ] 배송팁 조회·기사 등록 (46·47) | 미착수 | |
 | [ ] CS 요청사항 표시 (48) | 미착수 | |
 | [ ] 운영 연락처 전화 연결 (49) | 미착수 | |
-| [ ] 완료 사진 촬영·앨범, 기본 1장 최대 3장, 자동 압축 (50·52·53) | 미착수 | |
-| [ ] 직전 완료 사진 함께 표시 (51) | 미착수 | 동일 배송지 식별 기준 미정 |
-| [ ] 완료 특이사항 입력 (54) | 미착수 | |
+| [x] 완료 사진 촬영·앨범, 기본 1장 최대 3장, 자동 압축 (50·52·53) | 로컬 검증 | 완료 처리 화면이 시스템 카메라·사진 선택기로 최대 3장을 받고 긴 변 1600px·JPEG 0.8로 줄여(5MiB 초과 시 0.6 재시도) 앱 문서 폴더에 이벤트별로 보관한다. 완료는 1장 이상 필수(상수 `REQUIRE_COMPLETION_PHOTO`, 미트박스 확인 항목은 계약 6절). `domain/photoPolicy.test.ts`(상수, 긴 변만 축소·확대 없음, 장수 규칙), `driverApi.test.ts`(multipart 업로드, 413 `PHOTO_TOO_LARGE`), 라이브 점검 `docs/evidence/driver-app-live-check-d2-2026-10-16.txt`(업로드한 사진을 서버에서 내려받아 바이트 동일). **에뮬레이터·실기기 미확인**: 촬영·앨범·압축·파일 보관은 네이티브라 보지 못했고 새 네이티브 모듈 3개(`expo-image-picker`·`expo-image-manipulator`·`expo-file-system`)의 prebuild·APK 빌드도 하지 않았다 |
+| [x] 직전 완료 사진 함께 표시 (51) | 로컬 검증 | 완료 처리 화면 위쪽에 서버 배송지 상세의 `previousPhoto`(같은 `assignmentUnitId`의 최근 완료 사진)를 보여 준다. 오프라인이면 숨긴다. `driverApi.test.ts`(상세 읽기), 서버는 기존 `DriverQueriesTest`. **에뮬레이터·실기기 미확인**: 사진 요청에 쿠키가 실리는지는 보지 못했다. 동일 배송지 식별 기준(`assignmentUnitId`)은 미정 그대로 |
+| [x] 완료 특이사항 입력 (54) | 로컬 검증 | 세 갈래 모두 특이사항(최대 500자)을 받아 `note`로 보낸다. `domain/stopEvents.test.ts`(공백 제거, 비면 생략, 500자 제한), 라이브 점검에서 `note`가 이력에 돌아옴. **에뮬레이터·실기기 미확인**: 입력 화면은 보지 못했다 |
 | [ ] 바코드·QR 스캔과 수기 입력 (55·56) | 미착수 | 미트박스 매핑 자료 필요 |
 | [ ] 당일 완료 이력 (57) | 미착수 | |
-| [ ] 오프라인 임시 저장과 복구 후 재시도 (58·59) | 미착수 | 작업 식별자, 사진별 전송 상태, 응답 유실 시 재확인 |
-| [ ] 미배송 사유·사진 (60) | 미착수 | |
-| [ ] 부분 완료 (61) | 미착수 | 기본 제공 확정 |
+| [x] 오프라인 임시 저장과 복구 후 재시도 (58·59) | 로컬 검증 | 보고는 단말 큐(`src/outbox/Outbox.ts`, AsyncStorage + 사진 파일)에 먼저 저장되고 화면은 바로 닫힌 배송지로 보인다. 큐는 저장 순서대로 한 번에 하나, 사진을 먼저 올리고 `photoIds`를 넣어 보낸다. 재시도 5s→15s→45s→2m→5m 무기한, 응답 유실이면 `GET events/<built-in function id>`로 먼저 확인, 400·401·403·413과 409는 `rejected`로 멈춰 사용자가 "다시 시도"·"삭제"를 고른다. `outbox/Outbox.test.ts`(순서, 사진 먼저와 재업로드 안 함, 간격, 재확인 3경우, 4xx 차단, 409, 삭제·재시도, 파일 소실, 재시작 복원 14건), `domain/outboxView.test.ts`(낙관적 표시), 라이브 점검 `docs/evidence/driver-app-live-check-d2-2026-10-16.txt`(실서버에 대해 앱의 큐 코드로 응답 유실 → 조회 → 중복 없이 반영, 순서·이력 일치). **에뮬레이터·실기기 미확인**: AsyncStorage 영속과 앱 강제 종료 뒤 복구, 전송 대기 배지·목록 시트 화면은 보지 못했다. 큐는 앱이 열려 있을 때만 전송한다(백그라운드 전송 없음) |
+| [x] 미배송 사유·사진 (60) | 로컬 검증 | 미배송 갈래가 사유 6종(필수)·메모·사진(선택)을 `stop_failed`로 보낸다. `domain/stopEvents.test.ts`(사유 필수, 코드 6종 서버와 일치), 라이브 점검(`ABSENT`·사진이 이력에 `failed`로 돌아옴). **에뮬레이터·실기기 미확인** |
+| [x] 부분 완료 (61) | 로컬 검증 | 부분 완료 갈래가 주문 품목별 배송 수량(0~주문 수량, 하나 이상 줄어야 함)을 `stop_partially_completed`로 보낸다. **주문이 1건인 배송지에서만** 연다: 서버가 `orderId`를 지정한 부분 완료만 그 주문 하나의 상태를 미트박스에 알려서 다중 주문 묶음은 나머지 주문의 상태를 못 보낸다(계약 6절 질문). `domain/stopEvents.test.ts`(단일 주문만, 수량 범위·모두 같으면 거절), 라이브 점검(`partially_completed`가 이력에 돌아옴). **에뮬레이터·실기기 미확인**. 기본 제공 확정 |
 | [ ] 배차 변경 알림 수신 (31) | 미착수 | |
 | [ ] 스토어 배포·OS 호환 (36·37·38) | 미착수 | |
+
+후속 후보 (트랙 D):
+- 서버는 **현재(`current`) 배송지만** 도착·완료로 받는다. 앱은 `stop_*` 이벤트만 보내므로 현장에서 순서를 건너뛰어 다른 배송지를 먼저 완료하려면 먼저 순서를 바꿔야 한다(건너뛰기 요구가 오면 서버 상태 기계 변경이 필요하다). 오프라인에서 연달아 완료한 건은 큐 순서대로 처리되어 문제가 없다.
+- 큐는 앱이 열려 있을 때만 전송한다. 앱을 닫은 채 둘 때의 전송은 백그라운드 작업 단위로 다룬다.
+- 앱은 아직 `GET /state`를 읽기 전용으로 쓴다(차량 선택, QR 수령 확인, 품목·오프라인 캐시). 쓰기 경로(`POST commands`, `boot`, `expectedRevision`)는 앱에서 없앴다.
 
 ## 트랙 E. ETA·경로 (마지막)
 
