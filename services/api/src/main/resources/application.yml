@@ -46,6 +46,12 @@ meatbox:
     state-dir: ${MEATBOX_DISPATCH_STATE_DIR:}
     public-origin: ${MEATBOX_PUBLIC_ORIGIN:}
 
+  eta:
+    # First ETA model (no routing API): straight-line km x detour-factor / speed-kmh, plus service-minutes per stop.
+    detour-factor: ${MEATBOX_ETA_DETOUR_FACTOR:1.4}
+    speed-kmh: ${MEATBOX_ETA_SPEED_KMH:25}
+    service-minutes: ${MEATBOX_ETA_SERVICE_MINUTES:5}
+
   ops:
     # Empty webhook URL keeps the default WARN-log channel.
     alert-webhook-url: ${MEATBOX_ALERT_WEBHOOK_URL:}

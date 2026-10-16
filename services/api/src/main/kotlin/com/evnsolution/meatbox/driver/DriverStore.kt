@@ -5,6 +5,8 @@ import org.springframework.http.HttpStatus
 import com.evnsolution.meatbox.dispatch.DispatchException
 import com.evnsolution.meatbox.legacy.DispatchDataException
 import com.evnsolution.meatbox.dispatch.DispatchStore
+import com.evnsolution.meatbox.eta.EtaConfig
+import com.evnsolution.meatbox.eta.EtaModel
 import tools.jackson.core.StreamReadFeature
 import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.JsonNode
@@ -43,7 +45,10 @@ class DriverStore(
     internal val clock: () -> Instant = Instant::now,
     private val isSessionActive: (String, String) -> Boolean,
     internal val publicOrigin: String = "",
+    etaConfig: EtaConfig = EtaConfig(),
 ) {
+    internal val eta = EtaModel(etaConfig)
+
     private val fileLock = DriverFileLock(directory.resolve(".driver-state.lock"))
 
     /** Events, locations and photos that the driver app sends; they share this store's file, lock and checks. */

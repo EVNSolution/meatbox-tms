@@ -80,11 +80,13 @@ class DispatchStore(
         replay(date, requestId, hash)?.let { return BatchResult(it, true) }
         val current = entry(date)
         val candidate = DispatchPlan(current.day, current.sourceId, clock, current.plan.exportCheckpoint())
-        val planned = prepare(candidate.snapshot())
+        val planned = prepare(Etas.overlay(candidate.snapshot(), current.etas))
         planned.steps.forEach { candidate.command(copyObject(it).put("expectedRevision", candidate.revision)) }
         val after = candidate.snapshot()
-        val response = planned.respond(after)
-        commit(date, current, candidate, requestId, hash, response, planned.outbound(after))
+        val etas = planned.etas(after)
+        val shown = Etas.overlay(after, current.etas + etas)
+        val response = planned.respond(shown)
+        commit(date, current, candidate, requestId, hash, response, planned.outbound(shown), etas)
         return BatchResult(copyObject(response), false)
     }
 
@@ -106,6 +108,7 @@ class DispatchStore(
         hash: String?,
         output: ObjectNode,
         drafts: List<OutboundDraft> = emptyList(),
+        newEtas: Map<String, ObjectNode> = emptyMap(),
     ) {
         val results = if (requestId == null) current.results else CommandResults.retained(
             current.results + StoredResult(requestId, hash!!, clock(), copyObject(output)), clock(),
@@ -116,16 +119,24 @@ class DispatchStore(
             },
             clock(),
         )
-        // One file write carries the new state, its result and the messages it owes: none exists without the rest.
-        write(date, candidate, results, outbox)
-        entries[date] = current.copy(plan = candidate, results = results, outbox = outbox)
+        val etas = current.etas + newEtas
+        // One file write carries the new state, its result, ETAs and owed messages: none exists without the rest.
+        write(date, candidate, results, outbox, etas)
+        entries[date] = current.copy(plan = candidate, results = results, outbox = outbox, etas = etas)
         if (drafts.isNotEmpty()) outboxDates += date
     }
 
-    private fun write(date: String, plan: DispatchPlan, results: List<StoredResult>, outbox: List<ObjectNode>) {
+    private fun write(
+        date: String,
+        plan: DispatchPlan,
+        results: List<StoredResult>,
+        outbox: List<ObjectNode>,
+        etas: Map<String, ObjectNode>,
+    ) {
         save(date, plan.exportCheckpoint().also { checkpoint ->
             if (results.isNotEmpty()) checkpoint.set("commandResults", CommandResults.toNode(results))
             if (outbox.isNotEmpty()) checkpoint.set("outbox", Outbox.toNode(outbox))
+            if (etas.isNotEmpty()) checkpoint.set("etas", Etas.toNode(etas))
         })
     }
 
@@ -176,7 +187,7 @@ class DispatchStore(
         if (old == null || stale) return 0
         val updated = Outbox.withOutcome(old, outcome, status, at, next)
         val outbox = Outbox.retained(current.outbox.map { if (it === old) updated else it }, at)
-        write(item.date, current.plan, current.results, outbox)
+        write(item.date, current.plan, current.results, outbox, current.etas)
         entries[item.date] = current.copy(outbox = outbox)
         return updated.path("attempts").asInt()
     }
@@ -270,7 +281,7 @@ class DispatchStore(
             fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_INVALID")
         }
         val results = CommandResults.fromCheckpoint(saved)
-        return Entry(day, sourceId, plan, results, Outbox.fromCheckpoint(saved), source.api)
+        return Entry(day, sourceId, plan, results, Outbox.fromCheckpoint(saved), source.api, Etas.fromCheckpoint(saved))
             .also { entries[date] = it }
     }
 
@@ -340,6 +351,8 @@ class DispatchStore(
 
     private fun publicState(state: ObjectNode, entry: Entry): ObjectNode =
         state.put("boot", boot).also { overlayDriverLocations(it, locations) }.also {
+            Etas.overlay(it, entry.etas)
+        }.also {
             // Only dates fed by Meatbox carry this block, so prepared-CSV snapshots keep their bytes.
             if (entry.api) inbound?.summary(state.path("sourceData").path("date").asString())?.let { summary ->
                 (state.path("sourceData") as ObjectNode).set("inbound", summary)
@@ -358,6 +371,7 @@ class DispatchStore(
         val results: List<StoredResult> = emptyList(),
         val outbox: List<ObjectNode> = emptyList(),
         val api: Boolean = false,
+        val etas: Map<String, ObjectNode> = emptyMap(),
     )
 
     companion object {
@@ -369,12 +383,14 @@ class DispatchStore(
 }
 
 /**
- * One batch of operational commands, the messages that the resulting state owes Meatbox ([outbound]) and the reply
- * built from that state.
+ * One batch of operational commands, the messages that the resulting state owes Meatbox ([outbound]), the ETAs that
+ * it sets per vehicle ([etas], computed from the engine snapshot) and the reply built from that state. [outbound] and
+ * [respond] see the snapshot with the new ETAs laid over it.
  */
 class CommandBatch(
     val steps: List<ObjectNode>,
     val outbound: (ObjectNode) -> List<OutboundDraft> = { emptyList() },
+    val etas: (ObjectNode) -> Map<String, ObjectNode> = { emptyMap() },
     val respond: (ObjectNode) -> ObjectNode,
 )
 
