@@ -55,7 +55,7 @@ class RoleAccessTest {
             "/api/dispatch-data/days/2026-10-05", "/api/dispatch-data/days/2026-10-05/state",
             "/api/dispatch-data/days/2026-10-05/commands", "/api/resources", "/api/resources/vehicles/G1",
             "/api/ops/alerts", "/api/ops/export", "/api/ops/driver-assignments", "/api/ops/driver-notes",
-            "/api/ops/driver-profiles",
+            "/api/ops/driver-profiles", "/api/ops/dashboard",
             "/api/telemetry/temperature/latest",
             "/api/something-new",
         )

@@ -46,6 +46,14 @@ class DriverConfiguration {
     fun driverProfiles(@Value("\${meatbox.dispatch.state-dir:}") directory: String): DriverProfiles =
         DriverProfiles(Path.of(directory).resolve("driver-profiles.json"))
 
+    @Bean
+    fun incentiveRulesFile(@Value("\${meatbox.dispatch.state-dir:}") directory: String): IncentiveRulesFile =
+        IncentiveRulesFile(Path.of(directory).resolve("incentive-rules.json"))
+
+    @Bean
+    fun dashboard(store: DriverStore, assignments: DriverAssignments, rules: IncentiveRulesFile): Dashboard =
+        Dashboard(store, assignments, rules)
+
     /** Wires operator route changes to the drivers' phones. */
     @Bean
     fun routeChangeNotifier(dispatch: DispatchStore, store: DriverStore, sender: FcmSender): RouteChangeNotifier =

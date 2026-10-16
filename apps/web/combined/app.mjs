@@ -9,6 +9,7 @@ import { mountVehicleControl } from './vehicle-control.mjs';
 import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from './vehicle-operations-model.mjs';
 import { mountResourceManagement } from './resource-management.mjs';
 import { createDriverAssignmentClient } from './driver-assignment-client.ts';
+import { dashboardMarkup, mountDashboard } from './operations-dashboard.ts';
 import { createDriverProfileClient } from './driver-profile-client.ts';
 import { masterMarkup, mountDriverMaster } from './driver-master.ts';
 import { sourceVehicleContext } from './source-context.mjs';
@@ -22,6 +23,7 @@ const pages = {
   orders: { title: '배차 관리' },
   deliveries: { title: '자원 관리' },
   control: { title: '배송 관제' },
+  dashboard: { title: '운영 현황' },
 };
 let pointerRouteTarget = null;
 let resourcesEmpty = false;
@@ -38,7 +40,7 @@ const byId = id => document.getElementById(id);
 function mountOperationalShell() {
   document.body.dataset.viewer = 'operator';
   byId('app-header').innerHTML = '<a class="brand" href="/combined/"><img src="./assets/meatbox-logo.svg" width="126" height="30" alt="미트박스"><span>TMS</span></a>';
-  byId('app-navigation').innerHTML = '<nav class="app-nav-links" aria-label="운영 업무"><a href="#/orders" data-page-link="orders">배차 관리</a><a href="#/control" data-page-link="control">배송 관제</a><a href="#/deliveries" data-page-link="deliveries">자원 관리</a><div class="app-nav-account" role="group" aria-label="계정">'
+  byId('app-navigation').innerHTML = '<nav class="app-nav-links" aria-label="운영 업무"><a href="#/orders" data-page-link="orders">배차 관리</a><a href="#/control" data-page-link="control">배송 관제</a><a href="#/deliveries" data-page-link="deliveries">자원 관리</a><a href="#/dashboard" data-page-link="dashboard">운영 현황</a><div class="app-nav-account" role="group" aria-label="계정">'
     + `<button type="button" class="app-icon-button" aria-disabled="true" aria-label="설정" title="설정 (준비 중)">${settingsIcon}</button>`
     + `<button type="button" class="app-icon-button" aria-disabled="true" aria-label="내 계정" title="내 계정 (준비 중)">${accountIcon}</button>`
     + `<form class="app-logout" method="post" action="/logout"><button type="submit" class="app-icon-button" aria-label="로그아웃" title="로그아웃">${logoutIcon}</button></form>`
@@ -93,6 +95,8 @@ const orderPlanning = mountDatedDispatch({ element: byId('order-planning'), onSe
     return { ...result, shared: true };
   }, onContextChange: () => { if (state.data) renderSummary(); renderStatusNotification(); },
   notify: notice => { state.dispatchNotice = notice.message ? notice : null; renderProgress(); } });
+byId('operations-dashboard').innerHTML = dashboardMarkup();
+const operationsDashboard = mountDashboard({ element: byId('operations-dashboard') });
 const driverAssignments = createDriverAssignmentClient();
 byId('driver-master').innerHTML = masterMarkup();
 mountDriverMaster({ element: byId('driver-master'), client: createDriverProfileClient(), refreshAssignments: () => driverAssignments.load(), assignedVehicles: username => (driverAssignments.snapshot?.assignments ?? []).filter(item => item.driver === username).map(item => item.vehicleId) });
@@ -139,6 +143,7 @@ const operations = connectOperations({
     state.connectionMessage = message;
     state.errorNotice = '';
     byId('live-pages').hidden = false;
+  if (state.page === 'dashboard') operationsDashboard.show();
     render();
   },
   onError: message => {
@@ -228,7 +233,7 @@ function renderControlDate() {
 function renderProgress() {
   let notice = null;
   if (state.errorNotice) notice = { message: state.errorNotice, action: reloadAction, tone: 'error' };
-  else if (!state.connected && state.page !== 'deliveries') notice = { message: state.connectionMessage, action: reloadAction };
+  else if (!state.connected && state.page !== 'deliveries' && state.page !== 'dashboard') notice = { message: state.connectionMessage, action: reloadAction };
   else if (state.page === 'orders' && state.dispatchNotice) notice = { message: state.dispatchNotice.message, action: state.dispatchNotice.retry ? { label: '다시 불러오기', run: state.dispatchNotice.retry } : null, tone: state.dispatchNotice.failed ? 'error' : '' };
   else if (state.page === 'control' && !state.data) {
     const presentation = controlDataPresentation(state.dateContext, state.connectionMessage);
@@ -315,6 +320,7 @@ window.addEventListener('pagehide', event => {
   progressNotification.destroy();
   operations.close();
   orderPlanning.destroy();
+  operationsDashboard.destroy();
   vehicleControl.destroy();
   controlDatePicker.destroy();
 });

@@ -63,7 +63,8 @@ const authoredPaths = [
   'apps/web/combined/driver-profile-client.ts', 'apps/web/combined/driver-master.ts',
   'apps/web/combined/driver-master.test.mjs', 'apps/web/combined/capa-check.ts',
   'apps/web/combined/capa-check.test.mjs', 'apps/web/combined/capa-alert.ts',
-  'apps/web/combined/capa-alert.test.mjs',
+  'apps/web/combined/capa-alert.test.mjs', 'apps/web/combined/dashboard-model.ts',
+  'apps/web/combined/operations-dashboard.ts', 'apps/web/combined/operations-dashboard.test.mjs',
 ].sort();
 const inventory = JSON.parse(readFileSync(path.join(root, 'apps/web/fork-inventory.json'), 'utf8'));
 const git = args => execFileSync('git', args, { cwd: root, maxBuffer: 16 * 1024 * 1024 });

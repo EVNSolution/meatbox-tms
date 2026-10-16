@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 70,
+  "authoredFileCount": 73,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "1400ca34e6ba79db7433ad655ef462cb3c3e98b17a10016bb196685557013e97",
+      "targetSha256": "e1c3000db2028713c70f8cf0e730fffb64376a7e35af1d41a79512652306db2b",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -45,7 +45,8 @@
         "Route the temperature tab of the control screen and open it for the vehicle chosen in the temperature dialog.",
         "Give the resource screen the driver assignment client.",
         "Show what the server told the drivers after a route-changing command.",
-        "Mount the driver master under the resource list."
+        "Mount the driver master under the resource list.",
+        "Add the 운영 현황 page."
       ],
       "status": "active"
     },
@@ -816,7 +817,7 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "5cf4fa02d988e4277cda57ece3a25dcde4e73ab6b21a02953f0ed753bde267d2",
+      "targetSha256": "610030d12630485131e19f07ab06d1d4c7cb039d80f7479097130d51fbeff4f0",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -831,7 +832,8 @@
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Load the temperature stylesheet for the control screen.",
         "Load the all-vehicle map stylesheet.",
-        "Add the host of the driver master."
+        "Add the host of the driver master.",
+        "Add the host of the 운영 현황 page."
       ],
       "status": "active"
     },
@@ -915,14 +917,15 @@
       "source": "apps/combined/operations-model.mjs",
       "sourceSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
       "target": "apps/web/combined/operations-model.mjs",
-      "targetSha256": "a1a91cdccf030b0e3d5717cf7cc06cf72105a0434934b24a27ecc345846c0333",
+      "targetSha256": "ec7da076eb1c722b38c79239223caffb16ccb1a9fc0fac9c51ebad9801947d4c",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Distinguish confirmed empty delivery dates from loading, failed reads and invalid dates without creating operational state.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
-        "Add the temperature sub-tab to the control routes."
+        "Add the temperature sub-tab to the control routes.",
+        "Route the 운영 현황 page."
       ],
       "status": "active"
     },
@@ -930,13 +933,14 @@
       "source": "apps/combined/operations-model.test.mjs",
       "sourceSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732",
       "target": "apps/web/combined/operations-model.test.mjs",
-      "targetSha256": "b3a1f1ac537f311d370d6803e6fdad8bd05eaf994a0c49f194846f88e8d3cc26",
+      "targetSha256": "3cadf1cc9eacb9957037ef481252bbb73950cf5f10a949e26d34b8009cef00c2",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Verify control empty-date presentation does not turn loading, failures or invalid dates into confirmed absence.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
-        "Verify the temperature sub-tab route and its details-column behavior."
+        "Verify the temperature sub-tab route and its details-column behavior.",
+        "Verify the 운영 현황 route."
       ],
       "status": "active"
     },
@@ -1110,7 +1114,7 @@
       "source": "apps/combined/resource-management.css",
       "sourceSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
       "target": "apps/web/combined/resource-management.css",
-      "targetSha256": "18d59c5e9f6d2cdb20a2032b4c3aa42dc4bc97fc6dc9c1a7be2ffbd022070e4d",
+      "targetSha256": "1f1bb15fd540b8f9accc644a6e159a6d0c9b721fdb84d86d90d58890fbefdbca",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px",
@@ -1119,7 +1123,8 @@
         "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it.",
         "Center the vehicle count of each region code row against its input and button.",
         "Style the driver column and let the table scroll inside its box on narrow screens.",
-        "Style the driver master list and form."
+        "Style the driver master list and form.",
+        "Style the 운영 현황 tables."
       ],
       "status": "active"
     },
@@ -2745,6 +2750,27 @@
       "reason": "Verify the Capa overrun line, list and automatic opening.",
       "status": "active",
       "sha256": "b1a9ce94dfed9bff89958ced6901b4096afc354a9a83be9e0a03487389c66333"
+    },
+    {
+      "path": "apps/web/combined/dashboard-model.ts",
+      "origin": "authored",
+      "reason": "Group the dashboard days into periods and sum them.",
+      "status": "active",
+      "sha256": "bf376f5dae6bf01a40fbfa2cbbbf276ce27d3db036e9f54cc5864305a139aa22"
+    },
+    {
+      "path": "apps/web/combined/operations-dashboard.ts",
+      "origin": "authored",
+      "reason": "The 운영 현황 page: volumes, vehicle runs, zones and the extra fee.",
+      "status": "active",
+      "sha256": "f67ae1a8e5d2aed0f13aa2f89acb956f449faf78aa2bcd026f200584ab9d600b"
+    },
+    {
+      "path": "apps/web/combined/operations-dashboard.test.mjs",
+      "origin": "authored",
+      "reason": "Verify the 운영 현황 model and page.",
+      "status": "active",
+      "sha256": "1306f8f4b4d4911a5063bc52e17f12255f7ad6b000777ba450a1f819a4a59b66"
     }
   ],
   "historicalTargetFileCount": 163,

@@ -21,6 +21,7 @@ test('known operator links retain their page and control tab', () => {
     ['#/orders/list', {page:'orders', subtab:'list', controlTab:'monitor'}],
     ['#/orders/nope', {page:'orders', subtab:'plan', controlTab:'monitor'}],
     ['#/deliveries', {page:'deliveries', subtab:'', controlTab:'monitor'}],
+    ['#/dashboard', {page:'dashboard', subtab:'', controlTab:'monitor'}],
     ['#/control', {page:'control', subtab:'map', controlTab:'monitor'}],
     ['#/control/stops', {page:'control', subtab:'stops', controlTab:'monitor'}],
     ['#/control/records', {page:'control', subtab:'records', controlTab:'management'}],

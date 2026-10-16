@@ -88,3 +88,15 @@
 .driver-master-form input { min-height: 36px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; color: var(--text); font: inherit; font-size: 13px; }
 .driver-master-actions { display: flex; gap: 8px; margin-top: 12px; }
 .driver-master-table .button { white-space: nowrap; }
+.ops-dashboard { display: grid; gap: 12px; }
+.ops-dashboard h3 { margin: 16px 0 4px; font-size: 15px; }
+.ops-dashboard-range { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.ops-dashboard-range .field { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.ops-dashboard-range input[type="date"] { min-height: 36px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; font: inherit; }
+.ops-dashboard-presets, .ops-dashboard-grain { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
+.ops-dashboard-grain { margin-left: auto; }
+.ops-dashboard-note { margin: 0; font-size: 12px; }
+.ops-table { table-layout: auto; }
+.ops-table thead th, .ops-table tbody td, .ops-table tbody th { white-space: nowrap; }
+.ops-table td { font-variant-numeric: tabular-nums; }
+.ops-table thead th:first-child, .ops-table thead th:nth-child(3), .ops-table thead th:last-child { width: auto; }

@@ -5,7 +5,7 @@ export const subtabs = {
 
 export function operatorRoute(hash = '') {
   const [path, section] = hash.replace(/^#\//, '').split('/');
-  const page = ['orders', 'deliveries', 'control'].includes(path) ? path : path === 'manage' ? 'control' : 'orders';
+  const page = ['orders', 'deliveries', 'control', 'dashboard'].includes(path) ? path : path === 'manage' ? 'control' : 'orders';
   const manage = path === 'manage' || (page === 'control' && section === 'manage');
   const known = (subtabs[page] || []).map(([id]) => id);
   const subtab = manage ? 'records' : known.includes(section) ? section : known[0] || '';

@@ -57,6 +57,7 @@
 | `POST` | `/api/ops/days/{date}/source-conflict/resolve` | 원본이 바뀐 날짜의 체크포인트를 유지·보관 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/driver-assignments` | 기사 계정-차량 배정과 기사 계정 목록 (Kotlin API 전용) | ops |
 | `PUT` | `/api/ops/driver-assignments/{vehicleId}` | 차량에 기사 계정을 배정하거나 해제 (Kotlin API 전용) | ops |
+| `GET` | `/api/ops/dashboard?from=&to=` | 날짜 범위(최대 31일)의 일별 물량·차량별 운행·권역·추가 수수료 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/driver-notes?date=` | 그날 기사가 완료·미배송 때 남긴 특이사항 목록 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/driver-profiles` | 기사 계정별 기준정보(권역·숙련도·연락처·주소·계약정보·차종·탑 사양·최대 Capa) (Kotlin API 전용) | ops |
 | `PUT` | `/api/ops/driver-profiles/{username}` | 기사 한 명의 기준정보를 저장하거나 지움 (Kotlin API 전용) | ops |
@@ -86,6 +87,34 @@
 - 사진 `GET driver/photos/{photoId}`와 `GET driver/events/{eventId}`는 차량에 묶이지 않는다. 식별자를 모르면 읽을 수 없다는 점에 기댄다.
 - 알 수 없는 `role` 값의 계정은 `/api/session`만 쓸 수 있다.
 - Node가 인증을 소유하는 호환 모드(`legacy-api-origin`)는 역할을 모르므로 모든 계정이 `ops`다.
+
+### `GET /api/ops/dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD`
+
+운영 현황 대시보드의 자료다. 날짜 자료(스냅샷)에서 매번 계산하며 따로 저장하지 않는다. 범위는 양끝을 포함해 **31일까지**다(넘으면 `400 RANGE_TOO_LARGE`, 날짜 형식 오류는 `400 INVALID_DATE`, 종료가 시작보다 앞서면 `400 INVALID_RANGE`). 주문 자료가 없는 날짜는 `days`에 없다. 일·주·월 합계는 웹이 `days`를 더해 만든다.
+
+```json
+{ "from": "2026-10-13", "to": "2026-10-13",
+  "incentiveRules": { "unit": "boxes", "dailyTarget": 100, "ratePerUnit": 500, "targetsByDriver": {} },
+  "days": [{
+    "date": "2026-10-13", "phase": "published", "orders": 4, "boxes": 4.0, "stops": 3,
+    "vehicles": [{ "vehicleId": "G1", "plate": "12가 3456", "label": "김기사", "driver": "kim",
+      "stops": 3, "boxes": 4.0, "orders": 4, "stopsDone": 3, "boxesDelivered": 4.0, "ordersDone": 4, "stopsSkipped": 0,
+      "departedAt": "2026-10-13T10:00:00+09:00", "lastArrivedAt": "2026-10-13T10:25:00+09:00",
+      "finishedAt": "2026-10-13T10:30:00+09:00", "driveMinutes": 30.0,
+      "distanceKm": 12.3, "distanceBasis": "estimate", "actualKm": null,
+      "boxesPerStop": 1.3, "minutesPerStop": 10.0,
+      "incentive": { "target": 100.0, "delivered": 4.0, "excess": 0.0, "amount": 0, "stops": 3 } }],
+    "zones": [{ "zoneId": "Z1", "orders": 4, "boxes": 4.0, "stops": 3 }], "unlocatedOrders": 0,
+    "incentive": { "people": 0, "amount": 0 } }] }
+```
+
+- `vehicles`는 배차가 확정(`published`·`amending`)된 날만 채운다. 그 밖의 날은 빈 배열이다.
+- 시각은 엔진이 기록한 운영 사건에서 읽는다(`departedAt`은 출발, `lastArrivedAt`은 마지막 도착, `finishedAt`은 모든 착지를 닫은 뒤 마지막 완료·보류). 아직 닫지 못한 차량은 `finishedAt`·`driveMinutes`가 `null`이다.
+- `distanceKm`는 **추정**이다. 창고(`meatbox.route.depot-*`가 있으면)부터 좌표가 있는 착지를 현재 순서로 이은 직선거리에 ETA 모델의 우회 계수(`meatbox.eta.detour-factor`)를 곱한 값이다. 좌표가 하나도 없으면 `null`. 서버는 실제 주행 경로를 보관하지 않으므로(위치 샘플은 최근 120건) `actualKm`은 항상 `null`(미수신)이다.
+- `driver`는 차량의 **지금** 배정 계정이다. 날짜별 배정 기록은 없다.
+- `zones`는 주문의 `zoneIds`로 모은다. 미트박스 주문은 `zoneIds`가 비어 있어 `unlocatedOrders`로 센다(좌표로 권역을 정하는 일은 웹의 배차 화면이 한다).
+- `incentiveRules`가 `null`이면 규칙 파일이 없는 것이고 `incentive` 필드는 어디에도 없다. 파일이 깨졌으면 `incentiveRules` 대신 `incentiveRulesError: "INCENTIVE_RULES_INVALID"`가 오고 수수료는 계산하지 않는다. 계산은 [운영 런북](operations.md#추가-수수료-규칙-교체)을 따른다.
+- 날짜 자료가 원본과 맞지 않는 날은 `{ "date", "error": "<code>" }` 한 줄로 오고 집계하지 않는다.
 
 ### `GET /api/ops/driver-notes?date=`
 
