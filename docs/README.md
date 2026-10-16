@@ -4,7 +4,7 @@
 
 현행 제품 구조와 실행 기준은 아래 문서를 먼저 읽는다. 나머지 Node API·배포·화면 문서는 기존 계약과 이행 이력의 참고 자료이며 폐기한 고객·기사·시나리오 UI를 현행 제품으로 해석하지 않는다.
 
-- [마스터 계획서 (범위·결정·상태 정본)](master-plan.md), [앱·미트박스 연동 계약 초안](integration-contract.md)
+- [마스터 계획서 (범위·결정·상태 정본)](master-plan.md), [앱·미트박스 연동 계약 초안](integration-contract.md), [고객 실시간 조회 예시 화면](customer-tracking-example.html)
 - [이관 Git 기준점과 독립 검토](release-baseline-2026-10-05.md)
 - [단일 프런트·Kotlin 구조](new-stack-architecture.md), [기능별 파일 책임](project-structure.md)
 - [새 스택 설치·실행·검사](new-stack-development.md), [현재 UI 기준](../DESIGN.md)

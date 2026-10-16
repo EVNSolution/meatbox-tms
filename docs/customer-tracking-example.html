@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>고객 실시간 조회 예시</title>
+<style>
+  :root {
+    --bg: #f3f4f6; --card: #fff; --text: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --accent: #2563eb; --done: #16a34a; --fail: #dc2626; --tag-bg: #eef2ff; --tag-text: #3730a3;
+    --slot: #f9fafb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111827; --card: #1f2937; --text: #f3f4f6; --muted: #9ca3af; --line: #374151;
+      --accent: #60a5fa; --done: #4ade80; --fail: #f87171; --tag-bg: #312e81; --tag-text: #c7d2fe;
+      --slot: #111827;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  main { max-width: 440px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  h2 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 24px 0 8px; }
+  .lead { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .block { padding: 12px 0; border-top: 1px solid var(--line); }
+  .block:first-child { border-top: 0; padding-top: 0; }
+  .block:last-child { padding-bottom: 0; }
+  .title { font-weight: 600; margin: 0 0 6px; }
+  .src { display: inline-block; margin: 4px 0 0; padding: 1px 6px; border-radius: 4px; background: var(--tag-bg);
+         color: var(--tag-text); font: 11px/1.6 ui-monospace, Menlo, monospace; }
+  .note { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
+  .order { font-size: 13px; color: var(--muted); }
+  ol.steps { list-style: none; margin: 0; padding: 0; }
+  ol.steps li { position: relative; padding: 0 0 14px 28px; }
+  ol.steps li:last-child { padding-bottom: 0; }
+  ol.steps li::before { content: ""; position: absolute; left: 5px; top: 18px; bottom: -2px; width: 2px; background: var(--line); }
+  ol.steps li:last-child::before { display: none; }
+  ol.steps li::after { content: ""; position: absolute; left: 0; top: 4px; width: 12px; height: 12px; border-radius: 50%;
+                       background: var(--card); border: 2px solid var(--line); }
+  ol.steps li.done::after { background: var(--done); border-color: var(--done); }
+  ol.steps li.now::after { background: var(--accent); border-color: var(--accent); }
+  ol.steps li.fail::after { background: var(--fail); border-color: var(--fail); }
+  .when { color: var(--muted); font-size: 12px; }
+  .eta { font-size: 24px; font-weight: 700; }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--slot); border: 1px solid var(--line);
+          font-size: 12px; color: var(--muted); }
+  .was { color: var(--muted); font-size: 12px; text-decoration: line-through; }
+  .slot { display: flex; align-items: center; justify-content: center; min-height: 120px; border: 2px dashed var(--line);
+          border-radius: 8px; background: var(--slot); color: var(--muted); font-size: 13px; text-align: center; padding: 8px; }
+  .bad { color: var(--fail); font-weight: 600; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { fill: var(--muted); font-size: 10px; }
+  svg .grid { stroke: var(--line); stroke-width: 1; }
+  svg .line { fill: none; stroke: var(--accent); stroke-width: 2; }
+  svg .dot { fill: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 4px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; border-top: 0; }
+  footer { margin-top: 24px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>고객 실시간 조회 예시</h1>
+  <p class="lead">미트박스가 만들 화면의 그림이다. 우리 서버가 보내는 메시지만으로 이 정보를 채울 수 있는지 보여 준다. 모든 값은 합성 데이터다.</p>
+  <p class="lead">파란 라벨은 값이 오는 곳이다: <a href="integration-contract.md#3-서버--미트박스-송신-3종">연동 계약 3장</a>의 메시지(3.1 배송 상태, 3.2 ETA, 3.3 온도)와 필드 이름이다.</p>
+
+  <h2>A. 배송 중인 주문</h2>
+  <section class="card" aria-label="배송 중인 주문">
+    <div class="block">
+      <p class="title">주문 MB-20261102-48213</p>
+      <span class="order">품목 3개 · 합성 가게 배송</span><br>
+      <span class="src">3.1 · orderId, items[]</span>
+    </div>
+
+    <div class="block">
+      <p class="title">배송 상태</p>
+      <ol class="steps">
+        <li class="done">
+          <div>배차 완료</div><div class="when">09:05</div>
+          <span class="src">3.1 · status=dispatched · occurredAt</span>
+        </li>
+        <li class="done">
+          <div>기사 출발</div><div class="when">09:12</div>
+          <span class="src">3.1 · status=departed · occurredAt</span>
+        </li>
+        <li class="now">
+          <div>곧 도착</div><div class="when">다음 배송지가 되면 표시</div>
+          <span class="src">3.1 · status=arriving</span>
+          <p class="note">계약에는 있지만 현재 서버는 보내지 않는다(다음 배송지가 되는 시점을 아직 정하지 않았다).</p>
+        </li>
+        <li>
+          <div>배송 완료</div><div class="when">완료되면 시각 표시</div>
+          <span class="src">3.1 · status=delivered · occurredAt</span>
+        </li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <p class="title">도착 예정</p>
+      <div class="eta">오전 9:58</div>
+      <div><span class="was">오전 9:40</span> <span class="chip">앞 배송 순서가 바뀌어 갱신</span></div>
+      <span class="src">3.2 · stops[].eta (orderIds에 이 주문이 든 항목)</span><br>
+      <span class="src">3.2 · reason=reordered, computedAt</span>
+      <p class="note">ETA는 차량 전체 목록으로 온다. 이 주문의 항목을 <code>orderIds</code>로 찾는다. 갱신 이유는 <code>reason</code> 값으로 문구를 고른다.</p>
+      <table aria-label="reason 값과 문구">
+        <tr><th>reason</th><th>고객에게 보일 문구 예</th></tr>
+        <tr><td>departed</td><td>기사가 출발했습니다</td></tr>
+        <tr><td>reordered</td><td>배송 순서가 바뀌어 갱신했습니다</td></tr>
+        <tr><td>delayed</td><td>앞 배송이 지연되어 갱신했습니다</td></tr>
+        <tr><td>zone_entered</td><td>배송 지역에 들어와 갱신했습니다</td></tr>
+        <tr><td>completed</td><td>앞 배송이 끝나 갱신했습니다</td></tr>
+      </table>
+    </div>
+
+    <div class="block">
+      <p class="title">배송 사진</p>
+      <div class="slot">완료되면 사진이 여기에 표시된다</div>
+      <span class="src">3.1 · photos[] (status=delivered)</span><br>
+      <span class="src">3.1 · note</span>
+      <p class="note">사진 링크는 지금 우리 세션이 있어야 열린다. 미트박스가 받아 보여 주려면 서명 링크가 필요하다(후속 작업).</p>
+    </div>
+
+    <div class="block">
+      <p class="title">차량 온도</p>
+      <svg viewBox="0 0 320 120" role="img" aria-label="최근 5개 측정값 -18.4, -18.1, -18.3, -18.0, -18.2도">
+        <line class="grid" x1="30" y1="20" x2="310" y2="20"/>
+        <line class="grid" x1="30" y1="60" x2="310" y2="60"/>
+        <line class="grid" x1="30" y1="100" x2="310" y2="100"/>
+        <text x="2" y="23">-17</text><text x="2" y="63">-18</text><text x="2" y="103">-19</text>
+        <polyline class="line" points="50,52 112,68 174,60 236,76 298,64"/>
+        <circle class="dot" cx="50" cy="52" r="3"/><circle class="dot" cx="112" cy="68" r="3"/>
+        <circle class="dot" cx="174" cy="60" r="3"/><circle class="dot" cx="236" cy="76" r="3"/>
+        <circle class="dot" cx="298" cy="64" r="3"/>
+        <text x="40" y="44">-18.4</text><text x="102" y="86">-18.1</text><text x="164" y="52">-18.3</text>
+        <text x="226" y="94">-18.0</text><text x="288" y="56">-18.2</text>
+      </svg>
+      <span class="src">3.3 · measurements[].celsius</span>
+      <span class="src">3.3 · measurements[].measuredAt</span>
+      <span class="src">3.3 · vehicleId, sensorId</span>
+      <p class="note">온도는 차량 단위로 온다. 이 주문의 차량은 3.1의 <code>vehicleId</code>로 찾는다. 측정이 없는 구간은 비워 둔다.</p>
+    </div>
+  </section>
+
+  <h2>B. 배송하지 못한 주문</h2>
+  <section class="card" aria-label="배송하지 못한 주문">
+    <div class="block">
+      <p class="title">주문 MB-20261102-48220</p>
+      <span class="src">3.1 · orderId</span>
+    </div>
+    <div class="block">
+      <p class="title">배송 상태</p>
+      <ol class="steps">
+        <li class="done">
+          <div>배차 완료</div><div class="when">09:05</div>
+          <span class="src">3.1 · status=dispatched</span>
+        </li>
+        <li class="done">
+          <div>기사 출발</div><div class="when">09:12</div>
+          <span class="src">3.1 · status=departed</span>
+        </li>
+        <li class="fail">
+          <div class="bad">배송하지 못했습니다</div><div class="when">10:03</div>
+          <span class="src">3.1 · status=failed · occurredAt</span>
+        </li>
+      </ol>
+    </div>
+    <div class="block">
+      <p class="title">사유</p>
+      <div>받을 사람이 없어 전달하지 못했습니다.</div>
+      <span class="src">3.1 · failure.reasonCode=ABSENT</span><br>
+      <span class="src">3.1 · failure.note</span>
+      <table aria-label="reasonCode 값과 문구">
+        <tr><th>reasonCode</th><th>고객에게 보일 문구 예</th></tr>
+        <tr><td>ABSENT</td><td>받을 사람이 없었습니다</td></tr>
+        <tr><td>ACCESS_DENIED</td><td>출입이 되지 않았습니다</td></tr>
+        <tr><td>ADDRESS_MISMATCH</td><td>주소를 찾지 못했습니다</td></tr>
+        <tr><td>REFUSED</td><td>수령이 거절되었습니다</td></tr>
+        <tr><td>NO_STORAGE</td><td>보관할 곳이 없었습니다</td></tr>
+        <tr><td>OTHER</td><td>기타 사유 (<code>note</code> 참고)</td></tr>
+      </table>
+      <p class="note">부분 완료(<code>partially_delivered</code>)는 <code>items[]</code>의 <code>orderedQty</code>와 <code>deliveredQty</code>로 보여 준다.</p>
+    </div>
+  </section>
+
+  <footer>
+    이 파일은 외부 요청 없이 열리는 한 장짜리 예시다. 미트박스 화면의 디자인을 정하지 않으며, 제안하는 것은 값의 출처뿐이다.
+    메시지 본문은 <a href="integration-contract.md#31-배송-상태">연동 계약</a>을 따른다.
+  </footer>
+</main>
+</body>
+</html>
