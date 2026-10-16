@@ -42,6 +42,7 @@ class DriverStore(
     internal val directory: Path,
     internal val clock: () -> Instant = Instant::now,
     private val isSessionActive: (String, String) -> Boolean,
+    internal val publicOrigin: String = "",
 ) {
     private val fileLock = DriverFileLock(directory.resolve(".driver-state.lock"))
 

@@ -59,7 +59,11 @@ private fun operation(type: String, vehicleId: String): ObjectNode =
  * Translates one event into the existing operational commands. The route comes from the snapshot taken inside the
  * dispatch lock, so the commands' own consistency checks pass and `expectedRevision` is the only stale-view guard.
  */
-internal fun planEvent(event: DriverEvent, receivedAt: String): (ObjectNode) -> CommandBatch = { snapshot ->
+internal fun planEvent(
+    event: DriverEvent,
+    receivedAt: String,
+    photoBase: String,
+): (ObjectNode) -> CommandBatch = { snapshot ->
     // A date that turned read-only after the first send still answers from its stored result.
     // Only new events stop here.
     if (snapshot.path("dispatch").path("readOnly").asBoolean(true)) {
@@ -73,7 +77,10 @@ internal fun planEvent(event: DriverEvent, receivedAt: String): (ObjectNode) -> 
         "route_reordered" -> listOf(reorderedStep(route, event.payload))
         else -> stopSteps(route, event, handled!!)
     }
-    CommandBatch(steps) { after -> reply(Route(after, event.vehicleId), handled?.stopId, receivedAt) }
+    CommandBatch(
+        steps,
+        outbound = { after -> deliveryMessages(event, handled, Route(after, event.vehicleId), photoBase) },
+    ) { after -> reply(Route(after, event.vehicleId), handled?.stopId, receivedAt) }
 }
 
 private fun departedSteps(route: Route, payload: ObjectNode): List<ObjectNode> = listOfNotNull(

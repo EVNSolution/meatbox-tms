@@ -17,9 +17,10 @@ class DriverConfiguration {
         dispatch: DispatchStore,
         auth: ObjectProvider<AuthService>,
         @Value("\${meatbox.dispatch.state-dir:}") directory: String,
+        @Value("\${meatbox.dispatch.public-origin:}") origin: String,
     ): DriverStore = DriverStore(dispatch, Path.of(directory), isSessionActive = { digest, username ->
         auth.ifAvailable?.isSessionActive(digest, username) == true
-    })
+    }, publicOrigin = origin)
 
     @Bean
     fun fcmSender(

@@ -37,7 +37,8 @@ class DriverActivity internal constructor(private val store: DriverStore) {
         if (!event.photoIds.all { photos.exists(date, it) }) {
             driverFail(HttpStatus.BAD_REQUEST.value(), "PHOTO_NOT_FOUND")
         }
-        val result = store.dispatch.batch(date, event.eventId, body, planEvent(event, stamp(store.clock())))
+        val plan = planEvent(event, stamp(store.clock()), photoBase(store.publicOrigin, date))
+        val result = store.dispatch.batch(date, event.eventId, body, plan)
         record(date, event, result.response)
         Reply(result.response.put("duplicate", result.replayed), result.replayed)
     }

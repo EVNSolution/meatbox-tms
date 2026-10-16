@@ -32,6 +32,8 @@ class DispatchStore(
     @Volatile var locations: DriverLocationSource? = null
     private val parser = JsonMapper.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build()
     private val stateFiles = SafeSourceFiles(stateDirectory)
+    private val outboxDates = sortedSetOf<String>()
+    private var outboxScanned = false
     // ponytail: one service-wide lock; use per-date locks if measured throughput requires them.
     private val entries = object : LinkedHashMap<String, Entry>(4, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Entry>): Boolean = size > MAX_DATES
@@ -54,7 +56,9 @@ class DispatchStore(
         val candidate = DispatchPlan(current.day, current.sourceId, clock, current.plan.exportCheckpoint())
         val output = candidate.command(command)
         output.set("state", publicState(output.path("state") as ObjectNode))
-        commit(date, current, candidate, requestId, hash, output)
+        val published = command.path("type").asString() == "publish_dispatch"
+        val drafts = if (published) dispatched(current.plan, candidate) else emptyList()
+        commit(date, current, candidate, requestId, hash, output, drafts)
         return output
     }
 
@@ -73,8 +77,9 @@ class DispatchStore(
         val candidate = DispatchPlan(current.day, current.sourceId, clock, current.plan.exportCheckpoint())
         val planned = prepare(candidate.snapshot())
         planned.steps.forEach { candidate.command(copyObject(it).put("expectedRevision", candidate.revision)) }
-        val response = planned.respond(candidate.snapshot())
-        commit(date, current, candidate, requestId, hash, response)
+        val after = candidate.snapshot()
+        val response = planned.respond(after)
+        commit(date, current, candidate, requestId, hash, response, planned.outbound(after))
         return BatchResult(copyObject(response), false)
     }
 
@@ -95,15 +100,97 @@ class DispatchStore(
         requestId: String?,
         hash: String?,
         output: ObjectNode,
+        drafts: List<OutboundDraft> = emptyList(),
     ) {
         val results = if (requestId == null) current.results else CommandResults.retained(
             current.results + StoredResult(requestId, hash!!, clock(), copyObject(output)), clock(),
         )
-        // One file write carries the new state and its result, so neither can exist without the other.
-        save(date, candidate.exportCheckpoint().also { checkpoint ->
+        val outbox = if (drafts.isEmpty()) current.outbox else Outbox.retained(
+            current.outbox + drafts.map {
+                Outbox.entry(Outbox.messageId(date, candidate.revision, it.orderId), it, clock())
+            },
+            clock(),
+        )
+        // One file write carries the new state, its result and the messages it owes: none exists without the rest.
+        write(date, candidate, results, outbox)
+        entries[date] = current.copy(plan = candidate, results = results, outbox = outbox)
+        if (drafts.isNotEmpty()) outboxDates += date
+    }
+
+    private fun write(date: String, plan: DispatchPlan, results: List<StoredResult>, outbox: List<ObjectNode>) {
+        save(date, plan.exportCheckpoint().also { checkpoint ->
             if (results.isNotEmpty()) checkpoint.set("commandResults", CommandResults.toNode(results))
+            if (outbox.isNotEmpty()) checkpoint.set("outbox", Outbox.toNode(outbox))
         })
-        entries[date] = current.copy(plan = candidate, results = results)
+    }
+
+    /** Orders whose vehicle this publish set or changed. A first publish names every order. */
+    private fun dispatched(before: DispatchPlan, after: DispatchPlan): List<OutboundDraft> {
+        fun vehicles(plan: DispatchPlan) = plan.snapshot().path("fleetDeliveries").toList()
+            .associate { it.path("id").asString() to it.path("vehicleId").asString() }
+        val old = vehicles(before)
+        val stamp = seoulStamp(clock())
+        return vehicles(after).filter { (id, vehicle) -> old[id] != vehicle }.map { (id, vehicle) ->
+            OutboundDraft("delivery-status", id, deliveryStatusBody(id, "dispatched", stamp, vehicle))
+        }
+    }
+
+    /** Unsent messages that are due at [now], oldest first. A later message for an order waits for its earlier one. */
+    @Synchronized
+    fun dueOutbox(now: Long, limit: Int): List<OutboxItem> {
+        if (!outboxScanned) scanOutbox()
+        val items = mutableListOf<OutboxItem>()
+        for (date in outboxDates.toList()) {
+            val entry = runCatching { entry(date) }.getOrNull() ?: continue
+            if (entry.outbox.none(Outbox::pending)) outboxDates -= date
+            val waiting = mutableSetOf<String>()
+            for (message in entry.outbox.filter(Outbox::pending)) {
+                val order = message.path("orderId").asString()
+                val due = message.path("nextAttemptAt").asLong() <= now
+                if (due && order !in waiting && items.size < limit) {
+                    items += OutboxItem(
+                        date, message.path("messageId").asString(), message.path("kind").asString(),
+                        copyObject(message.path("body") as ObjectNode), message.path("attempts").asInt(),
+                    )
+                }
+                waiting += order
+            }
+        }
+        return items
+    }
+
+    /** Stores what became of one send and returns the message's attempt count. Unknown messages are ignored. */
+    @Synchronized
+    fun recordOutbox(item: OutboxItem, outcome: OutboxOutcome, status: String, at: Long, next: Long): Int {
+        val current = entry(item.date)
+        val old = current.outbox.firstOrNull { it.path("messageId").asString() == item.messageId }
+        // A slot switch can leave an old process with a stale cache. Reload instead of writing over a newer checkpoint.
+        val onDisk = checkpoint(item.date, current.sourceId)
+        val stale = onDisk != null && onDisk.path("revision").asLong() != current.plan.revision
+        if (stale) entries.remove(item.date)
+        if (old == null || stale) return 0
+        val updated = Outbox.withOutcome(old, outcome, status, at, next)
+        val outbox = Outbox.retained(current.outbox.map { if (it === old) updated else it }, at)
+        write(item.date, current.plan, current.results, outbox)
+        entries[item.date] = current.copy(outbox = outbox)
+        return updated.path("attempts").asInt()
+    }
+
+    @Synchronized
+    fun outboxSummary(date: String, recent: Int): ObjectNode = Outbox.summary(date, entry(date).outbox, recent)
+
+    // Once after a start: dates whose checkpoint still holds unsent messages. Later commits add dates themselves.
+    private fun scanOutbox() {
+        outboxScanned = true
+        val names = Files.newDirectoryStream(stateDirectory, "*.json").use { files ->
+            files.map { it.fileName.toString() }
+        }
+        for (name in names.filter { DATE_FILE.matches(it) }) {
+            val bytes = runCatching { Files.readAllBytes(stateDirectory.resolve(name)) }.getOrNull() ?: continue
+            val saved = runCatching { parse(bytes, "DISPATCH_STATE_INVALID") }.getOrNull()
+            val owed = runCatching { Outbox.fromCheckpoint(saved) }.getOrDefault(emptyList())
+            if (owed.any(Outbox::pending)) outboxDates += name.removeSuffix(".json")
+        }
     }
 
     @Synchronized
@@ -141,7 +228,8 @@ class DispatchStore(
             if (saved == null) throw error
             fail(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "DISPATCH_STATE_INVALID")
         }
-        return Entry(day, sourceId, plan, CommandResults.fromCheckpoint(saved)).also { entries[date] = it }
+        return Entry(day, sourceId, plan, CommandResults.fromCheckpoint(saved), Outbox.fromCheckpoint(saved))
+            .also { entries[date] = it }
     }
 
     private fun checkpoint(date: String, sourceId: String): ObjectNode? {
@@ -232,16 +320,25 @@ class DispatchStore(
         val sourceId: String,
         val plan: DispatchPlan,
         val results: List<StoredResult> = emptyList(),
+        val outbox: List<ObjectNode> = emptyList(),
     )
 
     companion object {
         private const val CHECKPOINT_SCHEMA = 2
         private const val MAX_DATES = 2
         private const val MAX_FILE_BYTES = 16 * 1024 * 1024
+        private val DATE_FILE = Regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$")
     }
 }
 
-/** One batch of operational commands plus the reply built from the state they produce. */
-class CommandBatch(val steps: List<ObjectNode>, val respond: (ObjectNode) -> ObjectNode)
+/**
+ * One batch of operational commands, the messages that the resulting state owes Meatbox ([outbound]) and the reply
+ * built from that state.
+ */
+class CommandBatch(
+    val steps: List<ObjectNode>,
+    val outbound: (ObjectNode) -> List<OutboundDraft> = { emptyList() },
+    val respond: (ObjectNode) -> ObjectNode,
+)
 
 class BatchResult(val response: ObjectNode, val replayed: Boolean)
