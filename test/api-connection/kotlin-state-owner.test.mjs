@@ -638,7 +638,7 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     futureCheckpoint = await fs.readFile(path.join(fixture.stateDirectory, `${fixture.tomorrow}.json`));
   });
 
-  await t.test('rejects corrupt checkpoints, shows a source conflict and recovers from the saved candidate', async () => {
+  await t.test('rejects corrupt checkpoints, shows a source conflict, resolves it and recovers from the saved candidate', async () => {
     const checkpointPath = path.join(fixture.stateDirectory, `${fixture.tomorrow}.json`);
     await fixture.restart();
     await fs.writeFile(checkpointPath, '{', { mode: 0o600 });
@@ -665,6 +665,15 @@ test('Kotlin owns native authentication and durable dispatch state', { timeout: 
     });
     assert.equal(result.response.status, 409);
     assert.equal(result.body.error, 'SOURCE_CHANGED');
+    result = await requestJson(fixture, `/api/ops/days/${fixture.tomorrow}/source-conflict/resolve`, {
+      method: 'POST', cookie, body: { action: 'keep-checkpoint' },
+    });
+    assert.equal(result.response.status, 200, JSON.stringify(result.body));
+    assert.equal(result.body.previousPhase, 'draft');
+    result = await requestJson(fixture, `/api/dispatch-data/days/${fixture.tomorrow}/state`, { cookie });
+    assert.equal(result.response.status, 200);
+    assert.equal(result.body.dispatch.phase, 'draft');
+    assert.equal(result.body.revision, 1);
 
     await fs.writeFile(checkpointPath, futureCheckpoint, { mode: 0o600 });
     await fixture.restart();

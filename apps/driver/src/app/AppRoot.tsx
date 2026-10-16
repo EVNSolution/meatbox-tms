@@ -45,6 +45,7 @@ function errorText(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === 'REVISION_CONFLICT') return '다른 곳에서 배송 순서가 바뀌어 최신 순서를 다시 불러왔습니다. 다시 편집해 주세요.';
     if (error.code === 'ROUTE_LOCKED') return '이미 시작했거나 끝난 배송지의 순서는 바꿀 수 없습니다.';
+    if (error.code === 'SOURCE_CHANGED') return '배차 원본이 바뀌어 확인 중입니다. 관제에서 확인한 뒤 다시 불러와 주세요.';
     if (error.status === 401) return '로그인이 만료되었습니다. 다시 로그인해 주세요.';
     if (error.status === 409) return '배송 상태가 바뀌었습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요.';
     if (error.status === 404) return '오늘 배차 정보를 찾을 수 없습니다.';

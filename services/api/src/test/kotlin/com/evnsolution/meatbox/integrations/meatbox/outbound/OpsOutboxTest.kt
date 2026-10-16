@@ -34,7 +34,9 @@ class OpsOutboxTest {
         val verifier = SessionVerifier { cookie ->
             if (cookie == "session=valid") "ops" else throw LoginRequiredException()
         }
-        val controller = OpsController(quietAlerts(), provider(DispatchStore::class.java, f.dispatch))
+        val controller = OpsController(
+            quietAlerts(), provider(DispatchStore::class.java, f.dispatch), "http://localhost",
+        )
         val mvc = MockMvcBuilders.standaloneSetup(controller)
             .addFilters<org.springframework.test.web.servlet.setup.StandaloneMockMvcBuilder>(
                 OpsSessionFilter(provider(SessionVerifier::class.java, verifier)),
