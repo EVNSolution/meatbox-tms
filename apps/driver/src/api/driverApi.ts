@@ -85,6 +85,15 @@ export async function uploadPhoto(date: string, fileUri: string): Promise<{ phot
   return readPhotoReceipt(await response.json());
 }
 
+/** One batch of location samples (at most 200). The server keeps the newest 120 per vehicle. */
+export async function sendLocations(
+  date: string,
+  vehicleId: string,
+  samples: { at: string; lat: number; lng: number; accuracyM?: number }[],
+): Promise<void> {
+  await requestJson(`${base(date)}/locations`, jsonInit('POST', { vehicleId, samples }));
+}
+
 export async function fetchHistory(date: string, vehicleId: string): Promise<HistoryItem[]> {
   return readHistory(await requestJson(`${base(date)}/history?${vehicleQuery(vehicleId)}`));
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, type TestContext } from 'node:test';
 
-import { fetchEvent, fetchHistory, fetchRoute, fetchStop, sendStopEvent, uploadPhoto, newEventId, newEventStamp, photoUrl, sendDeparted, sendRouteReordered, suggestRoute } from './driverApi';
+import { fetchEvent, fetchHistory, sendLocations, fetchRoute, fetchStop, sendStopEvent, uploadPhoto, newEventId, newEventStamp, photoUrl, sendDeparted, sendRouteReordered, suggestRoute } from './driverApi';
 import { ApiError } from './types';
 
 const DATE = '2026-11-02';
@@ -171,4 +171,15 @@ test('the day history lists results with their reasons and photos', async (t) =>
   t.mock.restoreAll();
   mockFetch(t, () => json({ items: [{ stopId: 'O1', result: 'lost' }] }));
   await assert.rejects(fetchHistory(DATE, 'G1'), (error: unknown) => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
+});
+
+test('a location batch goes to the locations endpoint with the vehicle and its samples', async (t) => {
+  const calls = mockFetch(t, () => json({ accepted: 2, retained: 2, receivedAt: 'now' }, 202));
+  const samples = [{ at: NOW, lat: 37.5, lng: 127, accuracyM: 8 }, { at: '2026-11-02T00:31:00.000Z', lat: 37.51, lng: 127.01 }];
+  await sendLocations(DATE, 'G1', samples);
+  assert.equal(calls[0].path, `/api/dispatch-data/days/${DATE}/driver/locations`);
+  assert.deepEqual(JSON.parse(String(calls[0].init.body)), { vehicleId: 'G1', samples });
+  t.mock.restoreAll();
+  mockFetch(t, () => problem(409, 'DRIVER_DATE_READ_ONLY'));
+  await assert.rejects(sendLocations(DATE, 'G1', samples), (error: unknown) => error instanceof ApiError && error.code === 'DRIVER_DATE_READ_ONLY');
 });

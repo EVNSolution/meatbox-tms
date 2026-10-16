@@ -16,6 +16,7 @@ import { groupStops, isDispatchOperable, seoulToday, stopProgress, vehicleDelive
 import { serverStopOrder, suggestedKeys, suggestionSummary } from '../domain/routeDraft';
 import { RetryAttempt } from '../domain/retryAttempt';
 import { departureLocation } from '../platform/location';
+import { ensureTracking, flushTracking, showTrackingGuides, stopTracking } from '../platform/tracking';
 import { registerPush, revokePush, subscribePush, subscribePushToken, type PushStatus } from '../platform/pushNotifications';
 import { applyOutbox } from '../domain/outboxView';
 import { dimmedStopKeys, etaLabel, serverStop } from '../domain/routeView';
@@ -149,6 +150,17 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   }, [refresh]);
 
   const { route, reload: reloadRoute } = useDriverRoute(date, vehicleId, state, onSignedOut);
+  // Location collection follows the vehicle's run: on while it is delivering, off once the route is done.
+  const runPhase = state && vehicleId ? vehiclePhase(state, vehicleId) : null;
+  useEffect(() => {
+    if (!vehicleId || !runPhase) return;
+    if (runPhase === 'delivering') void ensureTracking(date, vehicleId).catch(() => undefined);
+    else if (runPhase === 'done') void stopTracking();
+  }, [date, runPhase, vehicleId]);
+  useEffect(() => {
+    const foreground = AppState.addEventListener('change', (value) => { if (value === 'active') void flushTracking(); });
+    return () => foreground.remove();
+  }, []);
   const outbox = useOutbox({
     // Rereads the day after the server confirmed a report; true when the screen shows the server's state again.
     onConfirmed: async () => { etag.current = null; await refresh(true); return refreshOk.current; },
@@ -209,7 +221,7 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
     if (mutating.current) return;
     mutating.current = true; setBusy(true);
     try {
-      await pushWork.current; await revokePush(date, vehicleId); await saveVehicleChoice(date, next);
+      await pushWork.current; await stopTracking(); await revokePush(date, vehicleId); await saveVehicleChoice(date, next);
       setMessages([]); setMessageError(null); setPushStatus('registering');
       selectedVehicle.current = next;
       setVehicleId(next); setSelectedKey(null); setEditing(null); setBanner(null); setTab('delivery');
@@ -220,7 +232,7 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
     if (mutating.current) return;
     mutating.current = true; setBusy(true);
     try {
-      await pushWork.current; await revokePush(date, vehicleId); await logout(); await saveVehicleChoice(date, null); onSignedOut();
+      await pushWork.current; await stopTracking(); await revokePush(date, vehicleId); await logout(); await saveVehicleChoice(date, null); onSignedOut();
     } catch (cause) { fail(cause); }
     finally { mutating.current = false; if (active.current) setBusy(false); }
   }
@@ -288,6 +300,7 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
       await sendDeparted({ ...stamp, date, vehicleId });
       attempts.current.settle();
       const problem = stamp.problem;
+      void showTrackingGuides();
       if (problem && active.current) {
         setBanner({ title: '출발 위치 없음', body: problem === 'denied' ? '위치 권한이 없어 출발 위치를 보내지 않았습니다.' : '현재 위치를 읽지 못해 출발 위치를 보내지 않았습니다.' });
       }

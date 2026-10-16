@@ -69,8 +69,10 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "출발 위치를 운영팀에 알리고 배송 지도에 현재 위치를 표시하기 위해 위치 권한을 사용합니다.",
-          "isAndroidBackgroundLocationEnabled": false,
-          "isAndroidForegroundServiceEnabled": false
+          "locationAlwaysPermission": "앱이 화면에 없을 때도 운행 중 위치를 운영팀에 알리기 위해 위치 권한을 사용합니다.",
+          "locationAlwaysAndWhenInUsePermission": "앱이 화면에 없을 때도 운행 중 위치를 운영팀에 알리기 위해 위치 권한을 사용합니다.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       "@maplibre/maplibre-react-native"
