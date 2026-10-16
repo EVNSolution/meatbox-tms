@@ -17,8 +17,8 @@ private const val MAX_SAMPLES = 120
 private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
 
 /**
- * What the driver app sends: location batches and photos. It runs under the driver store's lock, file lock and date
- * checks.
+ * What the driver app sends: events (translated into operational commands under the event id), location batches and
+ * photos. It runs under the driver store's lock, file lock and date checks.
  */
 class DriverActivity internal constructor(private val store: DriverStore) {
     private val photos = DriverPhotos(store.directory)
@@ -27,6 +27,54 @@ class DriverActivity internal constructor(private val store: DriverStore) {
     init {
         // The date snapshot reads positions through this callback, so it must never wait for the store lock.
         store.dispatch.locations = DriverLocationSource(::latestLocations)
+    }
+
+    class Reply(val body: ObjectNode, val duplicate: Boolean)
+
+    fun acceptEvent(date: String, body: ObjectNode): Reply = synchronized(store) {
+        val event = parseEvent(body, date)
+        store.validate(date, event.vehicleId)
+        if (!event.photoIds.all { photos.exists(date, it) }) {
+            driverFail(HttpStatus.BAD_REQUEST.value(), "PHOTO_NOT_FOUND")
+        }
+        val result = store.dispatch.batch(date, event.eventId, body, planEvent(event, stamp(store.clock())))
+        record(date, event, result.response)
+        Reply(result.response.put("duplicate", result.replayed), result.replayed)
+    }
+
+    fun eventResult(date: String, eventId: String): ObjectNode {
+        if (!validEventId(eventId)) invalidInput()
+        val stored = store.dispatch.result(date, eventId)
+        if (!stored.has("accepted")) driverFail(HttpStatus.NOT_FOUND.value(), "REQUEST_NOT_FOUND")
+        return stored.put("duplicate", true)
+    }
+
+    /** Writes the event record once, after the commands succeeded. A resend after a failed write fills the gap. */
+    private fun record(date: String, event: DriverEvent, response: ObjectNode) {
+        val stop = response.path("stop").path("stopId").asString("").takeIf(String::isNotEmpty)
+            ?.let { id -> Route(store.dispatch.snapshot(date), event.vehicleId).stops.first { it.stopId == id } }
+        val record = driverJson.createObjectNode().put("eventId", event.eventId).put("type", event.type)
+            .put("vehicleId", event.vehicleId).put("occurredAt", event.body.path("occurredAt").asString())
+            .put("receivedAt", response.path("receivedAt").asString())
+        event.body.get("location")?.let { record.set("location", it.deepCopy()) }
+        event.payload.properties().filter { it.key !in setOf("stopId", "orderId", "orderIds") }
+            .forEach { (key, value) -> record.set(key, value.deepCopy()) }
+        if (stop != null) {
+            record.put("stopId", stop.stopId).put("assignmentUnitId", stop.unitId)
+            record.set("orderIds", driverJson.createArrayNode().apply { stop.orderIds.forEach(::add) })
+        }
+        store.mutate {
+            val state = store.load(date)
+            val events = state.path("events") as ArrayNode
+            if (events.none { it.path("eventId").asString() == event.eventId }) {
+                events.add(record)
+                // Oldest first, so a late write never fails an event that is already applied.
+                while (events.size() > DriverStore.MAX_EVENTS ||
+                    (events.size() > 1 && driverJson.writeValueAsBytes(state).size > DriverStore.MAX_FILE_BYTES)
+                ) events.remove(0)
+                store.save(date, state)
+            }
+        }
     }
 
     /** Merges a location batch. A resent sample (same instant) replaces itself, so retries do not grow the list. */

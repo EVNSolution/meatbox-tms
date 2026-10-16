@@ -156,6 +156,7 @@ class OperationalState(
             "start_route" -> startRoute(command)
             "arrive_stop" -> arriveStop(command)
             "complete_stop" -> completeStop(command)
+            "skip_stop" -> skipStop(command)
             else -> invalid("지원하지 않는 운행 명령입니다.")
         }
         mutableRevision += 1
@@ -341,12 +342,57 @@ class OperationalState(
             truck.put("fromId", primary["id"].asString()); truck.putNull("toId"); truck.put("atStopId", primary["id"].asString())
             truck.put("dwelling", false)
             truck.put("dwellRemaining", 0)
-            val allDone = routes.getValue(vehicleId).all { orders.getValue(it)["status"].asString() == "done" }
-            state.put("phase", if (allDone) "done" else "delivering")
+            state.put("phase", if (routeFinished(vehicleId)) "done" else "delivering")
             result.putNull("nextStopId")
         }
         return result
     }
+
+    // The driver app reports a failed delivery at the stop, so unlike the legacy hold toggle this closes the arrived
+    // current stop as `skipped` and moves on exactly as completion does.
+    private fun skipStop(command: ObjectNode): ObjectNode {
+        val vehicleId = requireVehicle(command.string("vehicleId"))
+        val requested = requireStop(command.string("orderId"))
+        if (requested["vehicleId"].asString() != vehicleId) invalid("이 차량의 배송지가 아닙니다.")
+        val bundle = bundleFor(requested)
+        val primary = bundle.first()
+        val state = states.getValue(vehicleId)
+        val truck = state["truck"] as ObjectNode
+        val arrivedHere = truck["atStopId"]?.takeIf(JsonNode::isString)?.asString() == primary["id"].asString() && truck["dwelling"].asBoolean()
+        if (state["phase"].asString() != "delivering" || bundle.any { it["status"].asString() != "current" } || !arrivedHere) {
+            conflict("도착한 현재 배송지만 미배송 처리할 수 있습니다.")
+        }
+        bundle.forEach { order ->
+            order.put("status", "skipped")
+            order.putNull("customerStage")
+        }
+        val stopId = primary["id"].asString()
+        val orderIds = bundle.map { it["id"].asString() }
+        record("toggle_skip", vehicleId, stopId, "${primary["name"].asString()} 배송 보류", orderIds)
+        events.last().put("status", "skipped")
+        val nextId = routes.getValue(vehicleId).firstOrNull { orders.getValue(it)["status"].asString() == "pending" }
+        val result = dispatchMapper.createObjectNode().apply {
+            put("type", "skip_stop")
+            put("vehicleId", vehicleId)
+            put("stopId", stopId)
+            set("orderIds", stringArray(orderIds))
+        }
+        if (nextId != null) {
+            val (next, _) = makeCurrent(vehicleId, orders.getValue(nextId), arrived = false)
+            truck.put("fromId", stopId)
+            result.put("nextStopId", next["id"].asString())
+        } else {
+            truck.put("fromId", stopId); truck.putNull("toId"); truck.put("atStopId", stopId)
+            truck.put("dwelling", false)
+            truck.put("dwellRemaining", 0)
+            state.put("phase", if (routeFinished(vehicleId)) "done" else "delivering")
+            result.putNull("nextStopId")
+        }
+        return result
+    }
+
+    private fun routeFinished(vehicleId: String): Boolean =
+        routes.getValue(vehicleId).none { orders.getValue(it)["status"].asString() in setOf("pending", "current") }
 
     private fun makeCurrent(vehicleId: String, order: ObjectNode, arrived: Boolean): Pair<ObjectNode, List<ObjectNode>> {
         val bundle = bundleFor(order)

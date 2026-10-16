@@ -91,17 +91,35 @@ published ── begin_dispatch_revision ──► amending
 
 `send_customer_notice`가 만드는 알림은 snapshot 안의 기록이며 `channel: "고객 팝업"`, `status: "기록"`이다. 외부 발송 성공을 뜻하지 않는다.
 
-## 기사 앱 기록의 소유
+## 기사 앱 이벤트의 번역
+
+기사 앱 이벤트는 새 상태 기계가 아니라 위 운행 명령으로 번역한다. `eventId`가 날짜 명령의 `requestId`다. 한 이벤트의 명령은 후보 plan 위에서 모두 적용한 뒤 한 번에 저장한다. 중간에 실패하면 아무것도 남지 않는다.
+
+| 이벤트 | 번역 |
+|---|---|
+| `departed` | (`stopOrder`가 있고 현재 순서와 다르면 `set_route_order`) → `start_route` |
+| `zone_entered` | 명령 없음 |
+| `stop_completed`, `stop_partially_completed` | (도착 전이면 `arrive_stop`) → `complete_stop` |
+| `stop_failed` | (도착 전이면 `arrive_stop`) → `skip_stop` |
+| `route_reordered` | `set_route_order`. 차량 phase가 `delivering`·`done`이면 번역 전에 `ROUTE_LOCKED` |
+
+- `skip_stop`은 이 번역을 위해 추가한 운행 명령이다. 도착한 현재 배송지 묶음을 `skipped`로 닫고 다음 대기 배송지를 `current`로 만든다. 사건 이력에는 `toggle_skip` 보류로 남는다. 날짜 명령 HTTP 경로는 받지 않는다.
+- `skipped`만 남은 차량 경로는 `current`·`pending`이 없으면 phase가 `done`이 된다. 완료 판정이 `done`만 세던 것을 같이 고쳤다.
+- 저장된 결과는 이벤트 응답(`accepted`, `receivedAt`, `stop`, `next`)이며 날짜 체크포인트의 `commandResults`에 같은 쓰기로 들어간다. 날짜 상태 전체가 아니다.
+
+### 기사 상태 파일의 소유
 
 기사 앱이 보낸 부가 기록은 날짜 체크포인트가 아니라 `DriverStore`의 날짜별 파일 `driver-{date}.json`이 소유한다. 운행 상태(배송지 `status`, 완료·미배송)는 체크포인트가 유일한 원본이다.
 
 | 필드 | 내용 | 한도 |
 |---|---|---|
+| `events` | 이벤트 기록. `eventId`로 한 번만 기록. 사유 코드·특이사항·사진 ID·스캔 코드·품목·출발 시각·위치·`zoneId` | 최근 3000건, 파일 8 MiB |
 | `locations` | 차량별 위치 샘플 | 차량당 최근 120건 |
 | `locationVersion` | 위치 배치를 받을 때마다 1 증가. 날짜 상태 ETag에 반영 | |
 
+- 이벤트 기록은 운행 명령이 성공한 뒤에 쓴다. 기록 쓰기가 실패하면 요청은 `503`이지만 상태는 이미 반영됐다. 같은 `eventId`를 다시 보내면 상태는 건드리지 않고 기록만 채운다.
 - 가장 최근 위치는 날짜 상태를 만들 때 합성 위치 위에 덮어 보여 준다(`location.source: "driver"`). 체크포인트에는 쓰지 않는다.
-- 사진 파일은 상태 디렉터리 `photos/{date}/`가 소유한다. 사진 ID는 서버가 만든 UUID이고, 다른 기록은 ID로만 참조한다.
+- 사진 파일은 상태 디렉터리 `photos/{date}/`가 소유한다. 사진 ID는 서버가 만든 UUID이고, 이벤트는 ID로만 참조한다.
 
 ## 날짜의 의미
 

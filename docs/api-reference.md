@@ -36,6 +36,7 @@
 | `GET` | `/api/dispatch-data/days/{date}/state` | 날짜별 배차·운행 snapshot |
 | `POST` | `/api/dispatch-data/days/{date}/commands` | 날짜별 배차·운행 명령 |
 | `GET` | `/api/dispatch-data/days/{date}/commands/{requestId}` | 저장된 명령 결과 조회 |
+| `POST` | `/api/dispatch-data/days/{date}/driver/events` | 기사 앱 이벤트 6종 수신 (Kotlin API 전용) |
 | `POST` | `/api/dispatch-data/days/{date}/driver/locations` | 기사 위치 배치 수신 (Kotlin API 전용) |
 | `POST` | `/api/dispatch-data/days/{date}/driver/photos` | 완료 사진 업로드 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/photos/{photoId}` | 올린 사진 다시 받기 (Kotlin API 전용) |
@@ -308,8 +309,68 @@
 경로 접두사는 `/api/dispatch-data/days/{date}/driver`다. 기존 `push-token`·`messages`와 같은 접두사를 쓴다.
 계약 초안의 `/api/driver/...` 짧은 경로는 기사 계정 권한 단위에서 옮긴다. 지금 기사 신원은 TMS 세션과 본문의 `vehicleId` 선택이며 소유 관계를 검사하지 않는다.
 세션 쿠키와 정확한 `Origin`이 필요하다. 쓰기는 사용자당 분당 30회, 읽기는 120회이며 넘으면 `429 DRIVER_RATE_LIMITED`다.
-본문은 `application/json`이다. 위치는 최대 `64 KiB`다. 넘으면 `413 DRIVER_BODY_TOO_LARGE`다.
+본문은 `application/json`이다. 이벤트는 최대 `16 KiB`, 위치는 `64 KiB`다. 넘으면 `413 DRIVER_BODY_TOO_LARGE`다.
 `{date}`는 변경 가능한 날짜여야 한다. 과거 날짜는 `409 DRIVER_DATE_READ_ONLY`다.
+
+### `POST .../driver/events`
+
+본문 하나에 이벤트 하나다. 응답은 `202`다.
+
+```json
+{
+  "eventId": "6f1c0e3a-1d2e-4f50-9a77-0a1b2c3d4e5f",
+  "type": "stop_completed",
+  "occurredAt": "2026-11-02T10:41:00+09:00",
+  "date": "2026-11-02",
+  "vehicleId": "G1",
+  "location": { "lat": 37.5012, "lng": 127.0396, "accuracyM": 8 },
+  "payload": { "stopId": "O4", "photoIds": ["9c3f0e8e-0f43-4d7a-8c1d-2b6f5a1e7d10"], "note": "문 앞" }
+}
+```
+
+- `eventId`: 영문·숫자·`-`·`_` 1~64자. 날짜 명령의 `requestId`로 그대로 쓴다. 같은 날짜의 명령 결과와 한 이름 공간을 쓴다.
+- `date`: 경로의 `{date}`와 같아야 한다. 다르면 `400 INVALID_INPUT`이다.
+- `occurredAt`: 오프셋이 있는 ISO 8601이다. 서버는 이 값으로 순서를 바꾸지 않고 받은 순서로 반영한다.
+- `location`: 선택. `lat`, `lng`, 선택 `accuracyM`. 이벤트 기록에만 남는다. 차량 위치는 `locations`로 받는다.
+- 정해진 필드 밖의 키는 `400 INVALID_INPUT`이다.
+
+| `type` | `payload` | 서버 동작 |
+|---|---|---|
+| `departed` | 선택 `stopOrder: string[]` | `stopOrder`가 있으면 `set_route_order`, 이어서 `start_route`. 출발 시각·위치를 이벤트 기록에 남긴다 |
+| `zone_entered` | `zoneId` | 상태 변경 없음. `zoneId`·시각·위치를 이벤트 기록에 남긴다 |
+| `stop_completed` | `stopId`, 선택 `orderIds`, `photoIds`, `note`, `scannedCodes` | 도착하지 않은 배송지면 `arrive_stop`, 이어서 `complete_stop`. `photoIds`는 올린 사진이어야 한다 |
+| `stop_failed` | `stopId`, `reasonCode`, 선택 `orderIds`, `photoIds`, `note` | 도착하지 않았으면 `arrive_stop`, 이어서 `skip_stop`. 배송지는 `skipped`가 된다 |
+| `stop_partially_completed` | `stopId`, `items[]`, 선택 `orderId`, `photoIds`, `note` | `stop_completed`와 같은 명령. `items`는 이벤트 기록에만 남고 품목 검증은 없다 |
+| `route_reordered` | `stopOrder`, 선택 `expectedRevision` | `set_route_order`. 차량 phase가 `delivering` 이후면 `409 ROUTE_LOCKED` |
+
+- `stopId`는 배송지 묶음의 첫 주문 ID다. 같은 묶음의 다른 주문 ID도 받으며, 응답은 항상 첫 주문 ID를 돌려준다.
+- `stopOrder`는 그 차량의 배송지를 빠짐없이 한 번씩 나열한다. 모자라거나 겹치면 `400 INVALID_INPUT`이다.
+- `expectedRevision`은 날짜 상태의 `revision`이다. 다르면 `409 REVISION_CONFLICT`다.
+- `reasonCode`는 `ABSENT`, `ACCESS_DENIED`, `ADDRESS_MISMATCH`, `REFUSED`, `NO_STORAGE`, `OTHER`다. 그 밖은 `400 INVALID_REASON_CODE`다.
+- `note`는 최대 500자, `scannedCodes`는 최대 200개, `photoIds`는 최대 10개다.
+- 한 이벤트의 명령은 한 번에 적용한다. 중간에 실패하면 아무것도 바뀌지 않고 결과도 저장하지 않는다.
+- 상태 역행(이미 완료한 배송지의 완료, 출발한 차량의 출발 등)은 운행 상태 기계의 `409 OPERATION_REVISION_CONFLICT`다. 새 코드를 만들지 않았다.
+- 명령마다 날짜 `revision`이 1씩 오른다. 도착하지 않은 배송지의 `stop_completed`는 `arrive_stop`과 `complete_stop` 두 단계라 2 오른다. 재전송은 오르지 않는다.
+
+응답 `202`:
+
+```json
+{
+  "accepted": true,
+  "duplicate": false,
+  "receivedAt": "2026-11-02T10:41:02+09:00",
+  "stop": { "stopId": "O4", "status": "done" },
+  "next": { "stopId": "O3", "eta": null }
+}
+```
+
+- `stop`은 `stop_*` 이벤트에만 있다. `status`는 `done` 또는 `skipped`다.
+- `next`는 다음 배송지다. 남은 배송지가 없으면 없다. `eta`는 ETA 산출 전까지 항상 `null`이다.
+- `receivedAt`은 처음 받은 서버 시각이다. 재전송에도 같은 값이다.
+- 같은 `eventId`를 다시 보내면 처음 응답을 돌려주고 `duplicate`만 `true`다. 상태는 바꾸지 않는다. 서버가 재시작되어도 같다.
+- 같은 `eventId`에 다른 본문이면 `409 REQUEST_ID_MISMATCH`다.
+- 성공한 이벤트만 저장한다. 실패한 `eventId`는 다시 보낼 수 있다.
+- 결과 보존은 날짜 명령과 같다(날짜당 500건, 24시간). 지난 `eventId`를 다시 보내면 새 이벤트로 처리하고, 이미 반영된 상태면 `409`다.
 
 ### `POST .../driver/locations`
 
@@ -335,10 +396,19 @@
 
 | 상태 | 코드 | 의미 |
 |---|---|---|
-| `400` | `INVALID_INPUT` | 샘플 형식이 잘못됨 |
+| `400` | `INVALID_INPUT` | 봉투·payload·샘플 형식이 잘못됨. `date` 불일치 포함 |
+| `400` | `INVALID_EVENT_TYPE` | 정해지지 않은 `type` |
+| `400` | `INVALID_REASON_CODE` | 정해지지 않은 `reasonCode` |
+| `400` | `PHOTO_NOT_FOUND` | `photoIds`에 올리지 않은 사진이 있음 |
 | `400` | `INVALID_PHOTO_ID` | `photoId`가 UUID 형식이 아님 |
 | `404` | `PHOTO_NOT_FOUND` | `GET`으로 없는 사진을 요청함 |
+| `404` | `STOP_NOT_FOUND` | 이 차량의 배송지가 아님 |
 | `404` | `DRIVER_VEHICLE_NOT_FOUND` | 없는 차량 |
+| `409` | `ROUTE_LOCKED` | 출발한 차량의 순서 변경 |
+| `409` | `REVISION_CONFLICT` | `expectedRevision`이 현재와 다름 |
+| `409` | `OPERATION_REVISION_CONFLICT` | 운행 상태 기계가 거부한 역행·순서 위반 |
+| `409` | `REQUEST_ID_MISMATCH` | 같은 `eventId`에 다른 본문 |
+| `409` | `DISPATCH_NOT_PUBLISHED` | 배차를 전송하기 전 |
 | `409` | `DRIVER_DATE_READ_ONLY` | 과거 날짜 |
 | `409` | `PHOTO_CAPACITY` | 날짜당 사진 5000장 초과 |
 | `413` | `DRIVER_BODY_TOO_LARGE`, `PHOTO_TOO_LARGE` | 본문 또는 사진이 한도를 넘음 |

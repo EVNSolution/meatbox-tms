@@ -76,6 +76,12 @@ class DriverController(
         }
     }
 
+    @PostMapping("/events")
+    fun event(@PathVariable date: String, request: HttpServletRequest): ResponseEntity<ObjectNode> {
+        val body = mutation(request, EVENT_FIELDS, setOf("location"), EVENT_BODY)
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(store.activity.acceptEvent(date, body).body)
+    }
+
     @PostMapping("/locations")
     fun locations(@PathVariable date: String, request: HttpServletRequest): ResponseEntity<ObjectNode> {
         val body = mutation(request, setOf("vehicleId", "samples"), maxBody = LOCATION_BODY)
@@ -110,6 +116,16 @@ class DriverController(
         limit(username(request), false)
         val photo = store.activity.readPhoto(date, photoId)
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(photo.contentType)).body(photo.bytes)
+    }
+
+    @GetMapping("/events/{eventId}")
+    fun eventResult(
+        @PathVariable date: String,
+        @PathVariable eventId: String,
+        request: HttpServletRequest,
+    ): ObjectNode {
+        limit(username(request), false)
+        return store.activity.eventResult(date, eventId)
     }
 
     private fun mutation(
@@ -163,10 +179,12 @@ class DriverController(
 
     companion object {
         private const val MAX_BODY = 8192
+        private const val EVENT_BODY = 16 * 1024
         private const val LOCATION_BODY = 64 * 1024
         private const val MAX_SAMPLES_PER_BATCH = 200
         private const val MAX_PHOTO = 5 * 1024 * 1024
         private val PHOTO_TYPES = setOf("image/jpeg", "image/png")
+        private val EVENT_FIELDS = setOf("eventId", "type", "occurredAt", "date", "vehicleId", "payload")
         private const val ID_LENGTH = 128
         private const val TOKEN_LENGTH = 4096
         private const val MESSAGE_LENGTH = 1000

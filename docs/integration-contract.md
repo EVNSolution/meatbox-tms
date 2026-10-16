@@ -32,6 +32,15 @@
 
 `POST /api/driver/events`. 본문 하나에 이벤트 하나. 응답 `202`에 반영 결과와 다음 배송지를 돌려준다.
 
+**구현됨(현행 경로).** 이벤트 6종, 위치 배치, 사진 업로드를 서버가 받는다. 현행 경로와 동작은 [API 참조](api-reference.md#기사-앱-끝점-kotlin-api-전용)를 따른다. 이 문서의 상태는 계속 초안이다. 계약과 다른 점:
+
+- 경로 접두사가 `/api/dispatch-data/days/{date}/driver/...`다.
+- `eventId`는 UUID가 아니어도 영문·숫자·`-`·`_` 1~64자면 받는다. 멱등 범위는 `(vehicleId, eventId)`가 아니라 날짜 안의 `eventId`다. 본문(차량 포함)이 다르면 `409 REQUEST_ID_MISMATCH`다.
+- `next.eta`는 ETA 산출 전까지 항상 `null`이다.
+- `stop_failed`의 `reasonCode`는 6개 코드 밖이면 `400 INVALID_REASON_CODE`다. 품목(`items`)은 검증하지 않고 기록만 한다.
+- `stopId`는 배송지 묶음의 첫 주문 ID다. 앱의 `S-104` 같은 값은 아직 없다.
+- 이벤트 하나가 운행 명령 여러 개로 번역되어 날짜 `revision`이 여러 번 오를 수 있다. 응답의 `revision`은 노출하지 않는다.
+
 공통 봉투:
 
 ```json
@@ -193,6 +202,8 @@
 `/api/driver/*`는 기사 세션, `/api/meatbox/*`는 미트박스 토큰, 미트박스 쪽 경로는 그쪽 발급 토큰을 쓴다. 기존 `push-token`·`messages`는 [API 참조](api-reference.md)에 있다.
 
 ### 7.1 앱 → 우리 서버
+
+현행 경로: `/api/dispatch-data/days/{date}/driver/{events|locations|photos|photos/{photoId}}`가 구현됨. 나머지 조회 `GET` 4개는 미구현이다. 아래 표의 `/api/driver/...` 경로는 기사 계정 권한 단위에서 옮길 목표 경로다.
 
 | 방법 | 경로 | 역할 | 본문·응답 |
 | --- | --- | --- | --- |

@@ -36,14 +36,41 @@ class DriverActivityHttpTest {
 
     @Test
     fun `protects the new routes with the session and origin`() {
-        val anonymous = mvc.perform(MockMvcRequestBuilders.get("$PATH/photos/$NO_PHOTO")).andReturn().response
+        val anonymous = mvc.perform(MockMvcRequestBuilders.get("$PATH/events/e1")).andReturn().response
         assertProblem(anonymous.contentAsString, 401, "LOGIN_REQUIRED")
-        val noOrigin = mvc.perform(MockMvcRequestBuilders.post("$PATH/locations").header("Cookie", COOKIE)
-            .contentType("application/json").content("{}")).andReturn().response
+        val noOrigin = mvc.perform(MockMvcRequestBuilders.post("$PATH/events").header("Cookie", COOKIE)
+            .contentType("application/json").content(EVENT)).andReturn().response
         assertProblem(noOrigin.contentAsString, 403, "ORIGIN_REQUIRED")
         val photo = mvc.perform(MockMvcRequestBuilders.multipart("$PATH/photos").file(file("image/jpeg", JPEG))
             .header("Cookie", COOKIE)).andReturn().response
         assertProblem(photo.contentAsString, 403, "ORIGIN_REQUIRED")
+    }
+
+    @Test
+    fun `accepts an event with 202 and answers a resend and a lookup with the same body`() {
+        val first = post("/events", EVENT)
+        assertThat(first.status).isEqualTo(202)
+        assertThat(first.contentAsString).contains("\"duplicate\":false")
+        val second = post("/events", EVENT)
+        assertThat(second.status).isEqualTo(202)
+        val resent = first.contentAsString.replace("\"duplicate\":false", "\"duplicate\":true")
+        assertThat(second.contentAsString).isEqualTo(resent)
+        val lookup = get("/events/e-zone")
+        assertThat(lookup.status).isEqualTo(200)
+        assertThat(lookup.contentAsString).isEqualTo(second.contentAsString)
+        assertProblem(get("/events/missing").contentAsString, 404, "REQUEST_NOT_FOUND")
+        assertProblem(get("/events/bad%20id").contentAsString, 400, "INVALID_INPUT")
+        assertProblem(post("/events", EVENT.replace("Z-07", "Z-08")).contentAsString, 409, "REQUEST_ID_MISMATCH")
+    }
+
+    @Test
+    fun `rejects malformed event bodies and bounds their size`() {
+        val extra = EVENT.replace("\"vehicleId\"", "\"extra\":1,\"vehicleId\"")
+        assertProblem(post("/events", extra).contentAsString, 400, "INVALID_INPUT")
+        assertProblem(post("/events", "{").contentAsString, 400, "INVALID_JSON")
+        assertThat(post("/events", EVENT.replace("Z-07", "z".repeat(17_000))).status).isEqualTo(413)
+        val unknown = EVENT.replace("zone_entered", "unknown")
+        assertProblem(post("/events", unknown).contentAsString, 400, "INVALID_EVENT_TYPE")
     }
 
     @Test
@@ -76,7 +103,7 @@ class DriverActivityHttpTest {
         assertProblem(upload("image/jpeg", "GIF89a".toByteArray()).contentAsString, 415, "UNSUPPORTED_PHOTO_TYPE")
         assertProblem(get("/photos/..%2F..%2Fdriver-$DRIVER_DATE").contentAsString, 400, "INVALID_PHOTO_ID")
         assertProblem(get("/photos/not-a-photo").contentAsString, 400, "INVALID_PHOTO_ID")
-        assertProblem(get("/photos/$NO_PHOTO").contentAsString, 404, "PHOTO_NOT_FOUND")
+        assertProblem(get("/photos/00000000-0000-4000-8000-000000000000").contentAsString, 404, "PHOTO_NOT_FOUND")
     }
 
     private fun jpeg(mebibytes: Int) = ByteArray(mebibytes * 1024 * 1024) { 1 }.also { JPEG.copyInto(it) }
@@ -102,6 +129,7 @@ class DriverActivityHttpTest {
         private const val PATH = "/api/dispatch-data/days/$DRIVER_DATE/driver"
         private val JPEG = DriverLocationPhotoTest.JPEG
         private val PNG = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0)
-        private const val NO_PHOTO = "00000000-0000-4000-8000-000000000000"
+        private const val EVENT = """{"eventId":"e-zone","type":"zone_entered","occurredAt":"2026-10-13T10:41:00+09:00",
+            "date":"$DRIVER_DATE","vehicleId":"G1","payload":{"zoneId":"Z-07"}}"""
     }
 }

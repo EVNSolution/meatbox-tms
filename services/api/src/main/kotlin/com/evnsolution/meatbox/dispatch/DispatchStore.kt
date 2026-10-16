@@ -19,6 +19,8 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.UUID
 
+// One lock and one file per date keep every command atomic; splitting the store would expose its internals.
+@Suppress("TooManyFunctions")
 class DispatchStore(
     private val reader: DispatchDataReader,
     private val stateDirectory: Path,
@@ -44,16 +46,7 @@ class DispatchStore(
         val requestId = requestId(command)
         // A stored result is answered before the CAS, so a resend after a lost response or restart is not a conflict.
         val hash = requestId?.let { CommandResults.digest(command) }
-        if (requestId != null) {
-            CommandResults.find(entry(date).results, requestId, clock())?.let {
-                if (it.hash != hash) fail(
-                    HttpServletResponse.SC_CONFLICT,
-                    "REQUEST_ID_MISMATCH",
-                    "같은 요청 ID에 다른 명령이 들어왔습니다.",
-                )
-                return copyObject(it.response)
-            }
-        }
+        if (requestId != null) replay(date, requestId, hash!!)?.let { return it }
         if (command.path("expectedBoot").asString() != boot) {
             fail(HttpServletResponse.SC_CONFLICT, "BOOT_MISMATCH", "서버가 다시 시작되었습니다. 최신 상태를 다시 불러와 주세요.")
         }
@@ -61,6 +54,48 @@ class DispatchStore(
         val candidate = DispatchPlan(current.day, current.sourceId, clock, current.plan.exportCheckpoint())
         val output = candidate.command(command)
         output.set("state", publicState(output.path("state") as ObjectNode))
+        commit(date, current, candidate, requestId, hash, output)
+        return output
+    }
+
+    /**
+     * Applies the steps [prepare] derives from the current snapshot as one unit: one stored result under [requestId],
+     * one checkpoint write, and nothing at all when any step fails. Callers translate their own events into the
+     * existing operational commands; this adds no command of its own. Like [command], a stored result wins over every
+     * check, but there is no boot check because the driver app never sees the boot.
+     */
+    @Synchronized
+    fun batch(date: String, requestId: String, body: ObjectNode, prepare: (ObjectNode) -> CommandBatch): BatchResult {
+        if (!CommandResults.validId(requestId)) fail(HttpServletResponse.SC_BAD_REQUEST, "INVALID_COMMAND")
+        val hash = CommandResults.digest(body)
+        replay(date, requestId, hash)?.let { return BatchResult(it, true) }
+        val current = entry(date)
+        val candidate = DispatchPlan(current.day, current.sourceId, clock, current.plan.exportCheckpoint())
+        val planned = prepare(candidate.snapshot())
+        planned.steps.forEach { candidate.command(copyObject(it).put("expectedRevision", candidate.revision)) }
+        val response = planned.respond(candidate.snapshot())
+        commit(date, current, candidate, requestId, hash, response)
+        return BatchResult(copyObject(response), false)
+    }
+
+    private fun replay(date: String, requestId: String, hash: String): ObjectNode? =
+        CommandResults.find(entry(date).results, requestId, clock())?.let {
+            if (it.hash != hash) fail(
+                HttpServletResponse.SC_CONFLICT,
+                "REQUEST_ID_MISMATCH",
+                "같은 요청 ID에 다른 명령이 들어왔습니다.",
+            )
+            copyObject(it.response)
+        }
+
+    private fun commit(
+        date: String,
+        current: Entry,
+        candidate: DispatchPlan,
+        requestId: String?,
+        hash: String?,
+        output: ObjectNode,
+    ) {
         val results = if (requestId == null) current.results else CommandResults.retained(
             current.results + StoredResult(requestId, hash!!, clock(), copyObject(output)), clock(),
         )
@@ -69,7 +104,6 @@ class DispatchStore(
             if (results.isNotEmpty()) checkpoint.set("commandResults", CommandResults.toNode(results))
         })
         entries[date] = current.copy(plan = candidate, results = results)
-        return output
     }
 
     @Synchronized
@@ -206,3 +240,8 @@ class DispatchStore(
         private const val MAX_FILE_BYTES = 16 * 1024 * 1024
     }
 }
+
+/** One batch of operational commands plus the reply built from the state they produce. */
+class CommandBatch(val steps: List<ObjectNode>, val respond: (ObjectNode) -> ObjectNode)
+
+class BatchResult(val response: ObjectNode, val replayed: Boolean)
