@@ -7,6 +7,11 @@ server:
 spring:
   lifecycle:
     timeout-per-shutdown-phase: 10s
+  servlet:
+    multipart:
+      # The photo endpoint enforces 5 MiB itself and answers PHOTO_TOO_LARGE; this only bounds what the container parses.
+      max-file-size: 8MB
+      max-request-size: 9MB
 
 management:
   endpoints:

@@ -1,0 +1,83 @@
+package com.evnsolution.meatbox.driver
+
+import com.evnsolution.meatbox.dispatch.DriverLocationSource
+import com.evnsolution.meatbox.dispatch.DriverLocations
+import org.springframework.http.HttpStatus
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.node.ArrayNode
+import tools.jackson.databind.node.ObjectNode
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
+
+private const val MAX_SAMPLES = 120
+private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
+
+/**
+ * What the driver app sends: location batches and photos. It runs under the driver store's lock, file lock and date
+ * checks.
+ */
+class DriverActivity internal constructor(private val store: DriverStore) {
+    private val photos = DriverPhotos(store.directory)
+    private val reported = ConcurrentHashMap<String, DriverLocations>()
+
+    init {
+        // The date snapshot reads positions through this callback, so it must never wait for the store lock.
+        store.dispatch.locations = DriverLocationSource(::latestLocations)
+    }
+
+    /** Merges a location batch. A resent sample (same instant) replaces itself, so retries do not grow the list. */
+    fun acceptLocations(date: String, vehicleId: String, samples: ArrayNode): ObjectNode = synchronized(store) {
+        store.validate(date, vehicleId, writable = true)
+        store.mutate {
+            val state = store.load(date)
+            val all = state.path("locations") as ObjectNode
+            val merged = linkedMapOf<Instant, JsonNode>()
+            (all.path(vehicleId) as? ArrayNode)?.forEach { merged[instant(it)] = it }
+            samples.forEach { merged[instant(it)] = it.deepCopy() }
+            val kept = merged.entries.sortedBy { it.key }.takeLast(MAX_SAMPLES)
+            all.set(vehicleId, driverJson.createArrayNode().apply { kept.forEach { add(it.value) } })
+            state.put("locationVersion", state.path("locationVersion").asLong() + 1)
+            store.save(date, state)
+            reported[date] = latest(state)
+            driverJson.createObjectNode().put("accepted", samples.size()).put("retained", kept.size)
+                .put("receivedAt", stamp(store.clock()))
+        }
+    }
+
+    private fun latestLocations(date: String): DriverLocations = reported[date]
+        ?: runCatching { latest(store.load(date)) }.getOrElse { DriverLocations(0, emptyMap()) }
+            .also { reported[date] = it }
+
+    private fun latest(state: ObjectNode): DriverLocations {
+        val byVehicle = state.path("locations").properties().mapNotNull { (id, samples) ->
+            samples.maxByOrNull(::instant)?.let { id to vehicleLocation(it) }
+        }.toMap()
+        return DriverLocations(state.path("locationVersion").asLong(), byVehicle)
+    }
+
+    private fun vehicleLocation(sample: JsonNode): ObjectNode = driverJson.createObjectNode().apply {
+        val lng = sample.path("lng").doubleValue()
+        set("coordinates", driverJson.createArrayNode().add(lng).add(sample.path("lat").doubleValue()))
+        put("label", "기사 앱 위치")
+        put("source", "driver")
+        put("at", sample.path("at").asString())
+        sample.get("accuracyM")?.let { set("accuracyM", it.deepCopy()) }
+    }
+
+    fun savePhoto(date: String, bytes: ByteArray): ObjectNode {
+        store.validate(date, writable = true)
+        val (id, size) = photos.save(date, bytes)
+        return driverJson.createObjectNode().put("photoId", id).put("bytes", size)
+    }
+
+    internal fun readPhoto(date: String, photoId: String): StoredPhoto = photos.read(date, photoId)
+
+    private fun instant(sample: JsonNode): Instant = OffsetDateTime.parse(sample.path("at").asString()).toInstant()
+
+    private fun stamp(at: Instant): String =
+        at.atZone(SEOUL).truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+}

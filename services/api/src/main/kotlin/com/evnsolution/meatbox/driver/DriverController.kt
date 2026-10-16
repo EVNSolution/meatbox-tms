@@ -8,7 +8,9 @@ import com.evnsolution.meatbox.dispatch.DispatchException
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -17,8 +19,11 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import tools.jackson.databind.node.ArrayNode
 import tools.jackson.databind.node.ObjectNode
 
+// One controller owns every /driver route so they share a single limiter, Origin check and body reader.
+@Suppress("TooManyFunctions")
 @RestController
 @RequestMapping("/api/dispatch-data/days/{date}/driver")
 @ConditionalOnProperty(prefix = "meatbox.dispatch", name = ["enabled"], havingValue = "true")
@@ -71,17 +76,59 @@ class DriverController(
         }
     }
 
-    private fun mutation(request: HttpServletRequest, fields: Set<String>): ObjectNode {
+    @PostMapping("/locations")
+    fun locations(@PathVariable date: String, request: HttpServletRequest): ResponseEntity<ObjectNode> {
+        val body = mutation(request, setOf("vehicleId", "samples"), maxBody = LOCATION_BODY)
+        val samples = body.path("samples") as? ArrayNode ?: invalidInput()
+        if (samples.isEmpty || samples.size() > MAX_SAMPLES_PER_BATCH) invalidInput()
+        samples.forEach { checkLocation(it, sample = true) }
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+            .body(store.activity.acceptLocations(date, string(body, "vehicleId", ID_LENGTH), samples))
+    }
+
+    @PostMapping("/photos", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun upload(
+        @PathVariable date: String,
+        @RequestParam("file") file: MultipartFile,
+        request: HttpServletRequest,
+    ): ResponseEntity<ObjectNode> {
+        if (request.getHeader("Origin") != origin) driverFail(HttpStatus.FORBIDDEN.value(), "ORIGIN_REQUIRED")
+        limit(username(request), true)
+        if (file.size > MAX_PHOTO) driverFail(HttpStatus.PAYLOAD_TOO_LARGE.value(), "PHOTO_TOO_LARGE")
+        if (file.contentType !in PHOTO_TYPES) {
+            driverFail(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), "UNSUPPORTED_PHOTO_TYPE")
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(store.activity.savePhoto(date, file.bytes))
+    }
+
+    @GetMapping("/photos/{photoId}")
+    fun photo(
+        @PathVariable date: String,
+        @PathVariable photoId: String,
+        request: HttpServletRequest,
+    ): ResponseEntity<ByteArray> {
+        limit(username(request), false)
+        val photo = store.activity.readPhoto(date, photoId)
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(photo.contentType)).body(photo.bytes)
+    }
+
+    private fun mutation(
+        request: HttpServletRequest,
+        fields: Set<String>,
+        optional: Set<String> = emptySet(),
+        maxBody: Int = MAX_BODY,
+    ): ObjectNode {
         if (request.getHeader("Origin") != origin) driverFail(HttpStatus.FORBIDDEN.value(), "ORIGIN_REQUIRED")
         limit(username(request), true)
         if (request.contentType?.substringBefore(';')?.trim()?.lowercase() != "application/json") {
             driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_JSON")
         }
-        val bytes = request.inputStream.readNBytes(MAX_BODY + 1)
-        if (bytes.size > MAX_BODY) driverFail(HttpStatus.PAYLOAD_TOO_LARGE.value(), "DRIVER_BODY_TOO_LARGE")
+        val bytes = request.inputStream.readNBytes(maxBody + 1)
+        if (bytes.size > maxBody) driverFail(HttpStatus.PAYLOAD_TOO_LARGE.value(), "DRIVER_BODY_TOO_LARGE")
         val body = runCatching { driverJson.readTree(bytes) as? ObjectNode }.getOrNull()
             ?: driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_JSON")
-        if (body.properties().map { it.key }.toSet() != fields) {
+        val names = body.properties().map { it.key }.toSet()
+        if (!names.containsAll(fields) || !(fields + optional).containsAll(names)) {
             driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_INPUT")
         }
         return body
@@ -96,15 +143,8 @@ class DriverController(
         return checked(body.path(key).asString(), max, allowSpace)
     }
 
-    private fun checked(value: String, max: Int, allowSpace: Boolean = true): String {
-        val invalidLength = value.isBlank() || value.length > max
-        val invalidSpace = value != value.trim() || (!allowSpace && value.any(Char::isWhitespace))
-        val invalidControl = value.any { it.isISOControl() && it != '\n' }
-        if (invalidLength || invalidSpace || invalidControl) {
-            driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_INPUT")
-        }
-        return value
-    }
+    private fun checked(value: String, max: Int, allowSpace: Boolean = true): String =
+        driverText(value, max, allowSpace)
 
     @Synchronized
     private fun limit(username: String, write: Boolean) {
@@ -123,6 +163,10 @@ class DriverController(
 
     companion object {
         private const val MAX_BODY = 8192
+        private const val LOCATION_BODY = 64 * 1024
+        private const val MAX_SAMPLES_PER_BATCH = 200
+        private const val MAX_PHOTO = 5 * 1024 * 1024
+        private val PHOTO_TYPES = setOf("image/jpeg", "image/png")
         private const val ID_LENGTH = 128
         private const val TOKEN_LENGTH = 4096
         private const val MESSAGE_LENGTH = 1000

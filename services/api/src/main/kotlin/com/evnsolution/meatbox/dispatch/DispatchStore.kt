@@ -25,6 +25,9 @@ class DispatchStore(
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     val boot: String = UUID.randomUUID().toString()
+
+    /** Set by the driver module. It must answer without taking any lock that waits for this store. */
+    @Volatile var locations: DriverLocationSource? = null
     private val parser = JsonMapper.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build()
     private val stateFiles = SafeSourceFiles(stateDirectory)
     // ponytail: one service-wide lock; use per-date locks if measured throughput requires them.
@@ -182,7 +185,8 @@ class DispatchStore(
         }
     }
 
-    private fun publicState(state: ObjectNode): ObjectNode = state.put("boot", boot)
+    private fun publicState(state: ObjectNode): ObjectNode =
+        state.put("boot", boot).also { overlayDriverLocations(it, locations) }
 
     private fun fail(
         status: Int,

@@ -36,6 +36,9 @@
 | `GET` | `/api/dispatch-data/days/{date}/state` | 날짜별 배차·운행 snapshot |
 | `POST` | `/api/dispatch-data/days/{date}/commands` | 날짜별 배차·운행 명령 |
 | `GET` | `/api/dispatch-data/days/{date}/commands/{requestId}` | 저장된 명령 결과 조회 |
+| `POST` | `/api/dispatch-data/days/{date}/driver/locations` | 기사 위치 배치 수신 (Kotlin API 전용) |
+| `POST` | `/api/dispatch-data/days/{date}/driver/photos` | 완료 사진 업로드 (Kotlin API 전용) |
+| `GET` | `/api/dispatch-data/days/{date}/driver/photos/{photoId}` | 올린 사진 다시 받기 (Kotlin API 전용) |
 | `GET` | `/api/ops/alerts` | 최근 서버 오류 알림 50건과 채널 종류 (Kotlin API 전용) |
 | `GET` | `/api/resources` | 차량·지역 코드 등록부 |
 | `POST` | `/api/resources/region-codes` | 지역 코드 생성 |
@@ -170,7 +173,7 @@
 }
 ```
 
-서버는 `ETag: "source-{boot}-{date}-{revision}-{today}"`를 보낸다. 클라이언트의 `If-None-Match`가 같으면 본문 없이 `304`다. 서울 날짜가 바뀌면 revision이 같아도 ETag와 `dispatch.readOnly`가 바뀔 수 있다.
+서버는 `ETag: "source-{boot}-{date}-{revision}-{today}"`를 보낸다. 기사 앱 위치를 받은 날짜는 `-l{위치 버전}`이 뒤에 붙는다. 클라이언트의 `If-None-Match`가 같으면 본문 없이 `304`다. 서울 날짜가 바뀌면 revision이 같아도 ETag와 `dispatch.readOnly`가 바뀔 수 있다.
 
 ## 날짜 명령
 
@@ -299,6 +302,48 @@
 | `503` | `SOURCE_OPERATIONS_CAPACITY` | 변경 중인 날짜가 모두 사용 중이다. 잠시 후 다시 조회한다 |
 
 업무 규칙 오류 중 코드가 따로 없는 것은 `400 INVALID_COMMAND`와 최대 300자의 사용자 메시지로 반환될 수 있다.
+
+## 기사 앱 끝점 (Kotlin API 전용)
+
+경로 접두사는 `/api/dispatch-data/days/{date}/driver`다. 기존 `push-token`·`messages`와 같은 접두사를 쓴다.
+계약 초안의 `/api/driver/...` 짧은 경로는 기사 계정 권한 단위에서 옮긴다. 지금 기사 신원은 TMS 세션과 본문의 `vehicleId` 선택이며 소유 관계를 검사하지 않는다.
+세션 쿠키와 정확한 `Origin`이 필요하다. 쓰기는 사용자당 분당 30회, 읽기는 120회이며 넘으면 `429 DRIVER_RATE_LIMITED`다.
+본문은 `application/json`이다. 위치는 최대 `64 KiB`다. 넘으면 `413 DRIVER_BODY_TOO_LARGE`다.
+`{date}`는 변경 가능한 날짜여야 한다. 과거 날짜는 `409 DRIVER_DATE_READ_ONLY`다.
+
+### `POST .../driver/locations`
+
+```json
+{ "vehicleId": "G1", "samples": [{ "at": "2026-11-02T10:40:00+09:00", "lat": 37.5, "lng": 127.03, "accuracyM": 12 }] }
+```
+
+- `samples`는 1~200건이다. `accuracyM`은 선택이다. 각 샘플은 `at`, `lat`, `lng`만 허용한다.
+- 차량당 최근 120건만 기사 상태 파일(`driver-{date}.json`)에 남긴다. 같은 `at`의 샘플은 덮어쓰므로 재전송해도 늘지 않는다.
+- 응답 `202 { "accepted": 샘플 수, "retained": 남은 수, "receivedAt" }`.
+- 가장 최근 `at`의 샘플이 날짜 상태의 `fleetVehicles[].location`을 덮어쓴다. `source`는 `"driver"`다. 합성 위치는 `"demo"`다. 같은 위치가 `vehicleStates[].truck`과 기본 차량에도 반영되고 `truck.locationSource`가 `"driver"`가 된다.
+- 위치를 받은 날짜의 상태에는 `sourceData.driverLocationVersion`이 있다. 위치가 바뀌면 ETag도 바뀐다.
+
+### `POST .../driver/photos`, `GET .../driver/photos/{photoId}`
+
+- `multipart/form-data`의 `file` 한 개다. `image/jpeg` 또는 `image/png`이고 실제 내용도 그 형식이어야 한다. 최대 5 MiB다.
+- 응답 `201 { "photoId": "서버가 만든 UUID", "bytes": 크기 }`.
+- 저장 위치는 상태 디렉터리의 `photos/{date}/{photoId}.{jpg|png}`다. 날짜당 5000장까지다.
+- `GET`은 원본 바이트와 원본 `Content-Type`을 돌려준다. `photoId`가 UUID 형식이 아니면 파일 접근 전에 `400 INVALID_PHOTO_ID`다.
+- 사진은 올린 날짜 경로로만 받을 수 있다. 사진과 차량·기사의 소유 관계는 아직 검사하지 않는다.
+
+### 기사 앱 끝점 오류
+
+| 상태 | 코드 | 의미 |
+|---|---|---|
+| `400` | `INVALID_INPUT` | 샘플 형식이 잘못됨 |
+| `400` | `INVALID_PHOTO_ID` | `photoId`가 UUID 형식이 아님 |
+| `404` | `PHOTO_NOT_FOUND` | `GET`으로 없는 사진을 요청함 |
+| `404` | `DRIVER_VEHICLE_NOT_FOUND` | 없는 차량 |
+| `409` | `DRIVER_DATE_READ_ONLY` | 과거 날짜 |
+| `409` | `PHOTO_CAPACITY` | 날짜당 사진 5000장 초과 |
+| `413` | `DRIVER_BODY_TOO_LARGE`, `PHOTO_TOO_LARGE` | 본문 또는 사진이 한도를 넘음 |
+| `415` | `UNSUPPORTED_PHOTO_TYPE` | jpeg·png가 아님 |
+| `503` | `DRIVER_STATE_WRITE_FAILED`, `DRIVER_PHOTO_WRITE_FAILED` | 저장 실패. 같은 요청을 다시 보낸다 |
 
 ## 자원 등록부
 

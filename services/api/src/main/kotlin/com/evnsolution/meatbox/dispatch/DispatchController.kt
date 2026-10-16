@@ -42,7 +42,9 @@ class DispatchController(
         val state = store.snapshot(date)
         val revision = state.path("revision").asLong()
         val today = state.path("dispatch").path("today").asString()
-        val etag = "\"source-${store.boot}-$date-$revision-$today\""
+        val locationVersion = state.path("sourceData").path("driverLocationVersion").asLong(0)
+        val reported = if (locationVersion > 0) "-l$locationVersion" else ""
+        val etag = "\"source-${store.boot}-$date-$revision-$today$reported\""
         if (request.getHeader("If-None-Match") == etag) {
             return ResponseEntity.status(HttpServletResponse.SC_NOT_MODIFIED)
                 .eTag(etag).header("Vary", "Accept-Encoding").build()

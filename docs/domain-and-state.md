@@ -91,6 +91,18 @@ published ── begin_dispatch_revision ──► amending
 
 `send_customer_notice`가 만드는 알림은 snapshot 안의 기록이며 `channel: "고객 팝업"`, `status: "기록"`이다. 외부 발송 성공을 뜻하지 않는다.
 
+## 기사 앱 기록의 소유
+
+기사 앱이 보낸 부가 기록은 날짜 체크포인트가 아니라 `DriverStore`의 날짜별 파일 `driver-{date}.json`이 소유한다. 운행 상태(배송지 `status`, 완료·미배송)는 체크포인트가 유일한 원본이다.
+
+| 필드 | 내용 | 한도 |
+|---|---|---|
+| `locations` | 차량별 위치 샘플 | 차량당 최근 120건 |
+| `locationVersion` | 위치 배치를 받을 때마다 1 증가. 날짜 상태 ETag에 반영 | |
+
+- 가장 최근 위치는 날짜 상태를 만들 때 합성 위치 위에 덮어 보여 준다(`location.source: "driver"`). 체크포인트에는 쓰지 않는다.
+- 사진 파일은 상태 디렉터리 `photos/{date}/`가 소유한다. 사진 ID는 서버가 만든 UUID이고, 다른 기록은 ID로만 참조한다.
+
 ## 날짜의 의미
 
 현재 기준일은 저장된 매니페스트 기본일이 아니라 서버 시각을 `Asia/Seoul`로 변환해 매 요청 시 계산한다. 다음 규칙을 적용한다.

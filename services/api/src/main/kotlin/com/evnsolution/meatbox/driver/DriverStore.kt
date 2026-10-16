@@ -7,6 +7,7 @@ import com.evnsolution.meatbox.compat.DispatchDataException
 import com.evnsolution.meatbox.dispatch.DispatchStore
 import tools.jackson.core.StreamReadFeature
 import tools.jackson.databind.DeserializationFeature
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.node.ArrayNode
 import tools.jackson.databind.node.ObjectNode
@@ -26,14 +27,26 @@ internal val driverJson: JsonMapper = JsonMapper.builder().enable(StreamReadFeat
     .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build()
 internal fun driverFail(status: Int, code: String): Nothing = throw DispatchException(status, code, code)
 
+/** Text rules shared by every driver input: no blank, no edge or control characters, bounded length. */
+internal fun driverText(value: String, max: Int, allowSpace: Boolean = true): String {
+    val invalidLength = value.isBlank() || value.length > max
+    val invalidSpace = value != value.trim() || (!allowSpace && value.any(Char::isWhitespace))
+    val invalidControl = value.any { it.isISOControl() && it != '\n' }
+    if (invalidLength || invalidSpace || invalidControl) invalidInput()
+    return value
+}
+
 /** Demo access follows the existing TMS session; vehicle selection is not a driver identity. */
 class DriverStore(
-    private val dispatch: DispatchStore,
-    private val directory: Path,
-    private val clock: () -> Instant = Instant::now,
+    internal val dispatch: DispatchStore,
+    internal val directory: Path,
+    internal val clock: () -> Instant = Instant::now,
     private val isSessionActive: (String, String) -> Boolean,
 ) {
     private val fileLock = DriverFileLock(directory.resolve(".driver-state.lock"))
+
+    /** Events, locations and photos that the driver app sends; they share this store's file, lock and checks. */
+    val activity: DriverActivity = DriverActivity(this)
 
     @Synchronized
     fun register(
@@ -115,7 +128,7 @@ class DriverStore(
         state.set("devices", driverJson.createArrayNode().apply { devices.forEach(::add) })
     }
 
-    private fun <T> mutate(action: () -> T): T = try {
+    internal fun <T> mutate(action: () -> T): T = try {
         verifyDirectory()
         fileLock.withLock(action)
     } catch (error: DispatchException) {
@@ -126,7 +139,7 @@ class DriverStore(
         driverFail(HttpStatus.SERVICE_UNAVAILABLE.value(), "DRIVER_STATE_WRITE_FAILED")
     }
 
-    private fun validate(date: String, vehicleId: String? = null, writable: Boolean = false) {
+    internal fun validate(date: String, vehicleId: String? = null, writable: Boolean = false) {
         val parsedDate = runCatching { LocalDate.parse(date).toString() == date }.getOrDefault(false)
         val validDate = DATE.matches(date) && parsedDate
         if (!validDate) driverFail(HttpStatus.BAD_REQUEST.value(), "INVALID_DATE")
@@ -139,18 +152,22 @@ class DriverStore(
         }
     }
 
-    private fun load(date: String): ObjectNode = fileOperation("DRIVER_STATE_INVALID") {
+    internal fun load(date: String): ObjectNode = fileOperation("DRIVER_STATE_INVALID") {
         verifyDirectory()
         val file = directory.resolve("driver-$date.json")
         if (!Files.exists(file, NOFOLLOW_LINKS)) return@fileOperation driverJson.createObjectNode().apply {
             put("schemaVersion", SCHEMA_VERSION).put("date", date)
             set("devices", driverJson.createArrayNode())
             set("messages", driverJson.createArrayNode())
+            set("events", driverJson.createArrayNode())
+            set("locations", driverJson.createObjectNode())
+            put("locationVersion", 0)
         }
         check(Files.isRegularFile(file, NOFOLLOW_LINKS) && !Files.isSymbolicLink(file))
         check(Files.size(file) <= MAX_FILE_BYTES)
         val node = driverJson.readTree(Files.readAllBytes(file)) as? ObjectNode ?: error("Invalid state")
         check(node.path("schemaVersion").asInt() == SCHEMA_VERSION && node.path("date").asString() == date)
+        checkActivity(node)
         check(node.path("devices").isArray && node.path("messages").isArray)
         check(node.path("devices").size() <= MAX_DEVICES && node.path("messages").size() <= MAX_MESSAGES)
         check(node.path("devices").all { device ->
@@ -165,7 +182,7 @@ class DriverStore(
         node
     }
 
-    private fun save(date: String, state: ObjectNode) = fileOperation("DRIVER_STATE_WRITE_FAILED") {
+    internal fun save(date: String, state: ObjectNode) = fileOperation("DRIVER_STATE_WRITE_FAILED") {
         verifyDirectory()
         val file = directory.resolve("driver-$date.json")
         check(!Files.exists(file, NOFOLLOW_LINKS) || Files.isRegularFile(file, NOFOLLOW_LINKS))
@@ -213,10 +230,22 @@ class DriverStore(
         private const val MAX_DEVICES = 1000
         private const val PER_VEHICLE = 3
         private const val MAX_MESSAGES = 2000
-        private const val MAX_FILE_BYTES = 8 * 1024 * 1024
+        internal const val MAX_EVENTS = 3000
+        internal const val MAX_FILE_BYTES = 8 * 1024 * 1024
     }
 }
 
 private fun publicMessage(message: ObjectNode): ObjectNode = driverJson.createObjectNode().apply {
     listOf("id", "from", "body", "createdAt").forEach { put(it, message.path(it).asString()) }
+}
+
+// Files written before events and locations existed stay valid; the new parts start empty.
+private fun checkActivity(node: ObjectNode) {
+    if (!node.has("events")) node.set("events", driverJson.createArrayNode())
+    if (!node.has("locations")) node.set("locations", driverJson.createObjectNode())
+    if (!node.has("locationVersion")) node.put("locationVersion", 0)
+    val events = node.path("events")
+    check(events.isArray && node.path("locations").isObject && node.path("locationVersion").isIntegralNumber)
+    check(events.size() <= DriverStore.MAX_EVENTS && node.path("locations").properties().all { it.value.isArray })
+    check(events.all { event -> listOf("eventId", "type", "vehicleId").all { event.path(it).isString } })
 }
