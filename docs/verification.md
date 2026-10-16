@@ -61,6 +61,18 @@ lint, typecheck, build, 브라우저 E2E, 배포 스모크용 npm 스크립트�
 - 나머지 동작(재시도 간격, 4xx 거절, 연결 거부 11회 알림, 재시작 뒤 이어 보내기, 저장 실패 시 송신함 미생성)은 `OutboxMessagesTest`, `OutboxSenderTest`, `MockMeatboxReceiverTest`, `OpsOutboxTest`가 시계를 주입해 확인한다.
 - 포함하지 않음: 실제 미트박스 인증·끝점, 사진 서명 URL, TEST 서버 배포, ETA·온도 송신.
 
+## TEST 서버 PoC 실행 방법
+
+위 로컬 시나리오를 TEST 서버에서 같은 순서로 관찰하는 절차다. 2026-10-16 실행 결과는 [기록](history/test-poc-meatbox-flow-2026-10-16.md)에 있다. 합성 주문만 쓴다.
+
+1. `gh run list --branch main`으로 최신 `main` 검증·배포 실행이 성공했는지 보고, 활성 릴리스 ID·SHA가 `main` HEAD와 같은지 대조한다.
+2. TEST 호스트 `/etc/meatbox-tms/api.env`(0600)에 `MEATBOX_INBOUND_TOKEN`(16자 이상, TEST 전용), `MEATBOX_MOCK_RECEIVER_ENABLED=true`, `MEATBOX_API_BASE_URL=http://127.0.0.1:${SERVER_PORT}/mock/meatbox`를 넣고 활성 슬롯 API를 한 번 다시 시작한다. `configure-mode.mjs`는 모르는 키를 보존한다. 값은 저장소·문서·로그에 쓰지 않는다. 운영·QA에는 켜지 않는다.
+3. 임시 검토 계정을 만든다(`docs/new-stack-development.md`의 초대 CLI를 `meatbox-demo`로 실행 → `/dev/register` → 공개 HTTPS 로그인). 웹 게이트웨이가 `/api/meatbox/*`·`/mock/*`를 API로 넘기지 않으므로 SSH로 활성 슬롯 API 포트(8081/8082)를 터널링해 호출한다. 세션 요청에는 `Cookie`와 `Origin: <MEATBOX_PUBLIC_ORIGIN>`이 필요하고, 쿠키가 `Secure`라 터널(http)로 보낼 때는 헤더로 직접 붙인다.
+4. 날짜는 CSV 매니페스트에 없는 서울 오늘 이후 날짜를 고른다. 오늘이 매니페스트에 있으면 `SOURCE_CONFLICT`이므로 가장 가까운 빈 날짜를 쓴다.
+5. 순서: 주문 3건 `POST /api/meatbox/orders`(202, 재전송 200) → `calculate_dispatch` → `publish_dispatch` → 사진 업로드 → `departed` 이벤트(차량마다) → `stop_completed` → 같은 `eventId` 재전송(`duplicate:true`) → `stop_failed` → `GET /mock/meatbox/received?kind=delivery-status`(폴링 30초 상한) → `GET /api/ops/outbox?date=`(pending 0) → `GET /api/ops/alerts`(오류 없음) → 확정 뒤 취소 POST(202, `held:ORDER_CANCELLED_AFTER_DISPATCH`, 알림 1건).
+6. 끝나면 임시 계정을 `disable-user`로 비활성화하고 초대 파일·로컬 임시 비밀을 지운다. 합성 날짜의 체크포인트·`inbound/`·`photos/` 파일은 지우지 않는다. 남은 경로를 기록에 적는다.
+7. 이 시나리오는 모의 수신기까지만 증명한다. 미트박스 실 송수신과 웹 배차 화면은 따로 확인한다.
+
 ## 로컬 검증 순서
 
 1. 검증 대상을 전체 SHA로 고정하고, 다른 변경이 섞이지 않았는지 확인한다.
