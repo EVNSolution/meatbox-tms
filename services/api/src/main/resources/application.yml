@@ -64,6 +64,12 @@ meatbox:
     token: ${MEATBOX_INBOUND_TOKEN:}
     group-count: ${MEATBOX_INBOUND_GROUP_COUNT:8}
 
+  telemetry:
+    # An empty token leaves POST /api/telemetry/temperature unmapped (404). Stored values stay readable either way.
+    token: ${MEATBOX_TELEMETRY_TOKEN:}
+    # A sensor that sent nothing new for this long is marked stale.
+    stale-minutes: ${MEATBOX_TELEMETRY_STALE_MINUTES:10}
+
   outbound:
     # Empty base URL keeps messages in the outbox without sending. The token is sent as a Bearer header when set.
     base-url: ${MEATBOX_API_BASE_URL:}

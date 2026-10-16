@@ -11,7 +11,7 @@ import java.nio.file.attribute.PosixFilePermissions
 import java.time.Duration
 
 /** Atomic rename protects readers; this OS lock also protects writers in overlapping service processes. */
-internal class DriverFileLock(private val path: Path) {
+internal class DriverFileLock(private val path: Path, private val busyCode: String = "DRIVER_STATE_BUSY") {
     fun <T> withLock(action: () -> T): T {
         val permissions = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))
         val options = setOf(StandardOpenOption.CREATE, StandardOpenOption.WRITE, NOFOLLOW_LINKS)
@@ -26,7 +26,7 @@ internal class DriverFileLock(private val path: Path) {
         while (acquired == null) {
             acquired = try { channel.tryLock() } catch (_: OverlappingFileLockException) { null }
             if (acquired == null && System.nanoTime() >= deadline) {
-                driverFail(HttpStatus.SERVICE_UNAVAILABLE.value(), "DRIVER_STATE_BUSY")
+                driverFail(HttpStatus.SERVICE_UNAVAILABLE.value(), busyCode)
             }
             if (acquired == null) Thread.sleep(RETRY_MILLIS)
         }

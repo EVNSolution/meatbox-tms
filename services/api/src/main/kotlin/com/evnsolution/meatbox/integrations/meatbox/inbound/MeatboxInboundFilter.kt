@@ -11,16 +11,20 @@ import java.security.MessageDigest
  * Meatbox calls the `/api/meatbox` paths with a shared Bearer token instead of a login session. The bean exists
  * only when `MEATBOX_INBOUND_TOKEN` is set, so an unset token leaves the paths unmapped (404).
  */
-class MeatboxInboundFilter(token: String) : OncePerRequestFilter() {
+class MeatboxInboundFilter(
+    token: String,
+    private val path: Regex = PATH,
+    private val code: String = "INBOUND_UNAUTHORIZED",
+) : OncePerRequestFilter() {
     private val expected = digest(token)
 
     init {
         require(token.length >= MIN_TOKEN_LENGTH) {
-            "meatbox.inbound.token must have at least $MIN_TOKEN_LENGTH characters"
+            "the Bearer token must have at least $MIN_TOKEN_LENGTH characters"
         }
     }
 
-    override fun shouldNotFilter(request: HttpServletRequest): Boolean = !PATH.matches(request.requestURI)
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean = !path.matches(request.requestURI)
 
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         response.setHeader("Cache-Control", "no-store")
@@ -30,7 +34,7 @@ class MeatboxInboundFilter(token: String) : OncePerRequestFilter() {
         // Compare digests so the check takes the same time for any input.
         if (given == null || !MessageDigest.isEqual(expected, digest(given))) {
             response.setHeader("WWW-Authenticate", "Bearer")
-            writeProblem(response, HttpServletResponse.SC_UNAUTHORIZED, "INBOUND_UNAUTHORIZED")
+            writeProblem(response, HttpServletResponse.SC_UNAUTHORIZED, code)
             return
         }
         chain.doFilter(request, response)

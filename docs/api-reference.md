@@ -1,6 +1,6 @@
 # HTTP API 참조
 
-서버가 제공하는 HTTP 경로와 요청·응답 계약을 정리한다. `/api/meatbox/*`(미트박스 주문 수신)를 뺀 모든 `/api/*` 경로는 `meatbox_session` 쿠키가 필요하다. 현재 인증은 세션 존재만 확인하며 역할·테넌트·기사·고객별 자원 권한은 검사하지 않는다.
+서버가 제공하는 HTTP 경로와 요청·응답 계약을 정리한다. `/api/meatbox/*`(미트박스 주문 수신)와 `POST /api/telemetry/temperature`(온도 단말 수신)를 뺀 모든 `/api/*` 경로는 `meatbox_session` 쿠키가 필요하다. 현재 인증은 세션 존재만 확인하며 역할·테넌트·기사·고객별 자원 권한은 검사하지 않는다.
 
 ## 공통 규칙
 
@@ -45,6 +45,9 @@
 | `POST` | `/api/dispatch-data/days/{date}/driver/photos` | 완료 사진 업로드 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/photos/{photoId}` | 올린 사진 다시 받기 (Kotlin API 전용) |
 | `POST` | `/api/meatbox/orders` | 미트박스가 밀어 넣는 주문 등록·변경·취소. 세션이 아니라 Bearer 토큰, 토큰 미설정이면 경로 없음 (Kotlin API 전용) |
+| `POST` | `/api/telemetry/temperature` | 온도 단말(또는 게이트웨이)이 밀어 넣는 측정값. 세션이 아니라 Bearer 토큰, 토큰 미설정이면 경로 없음 (Kotlin API 전용) |
+| `GET` | `/api/telemetry/temperature/latest` | 차량·센서별 최신 온도와 마지막 수신 경과 (Kotlin API 전용) |
+| `GET` | `/api/telemetry/temperature/{vehicleId}?from=&to=&resolution=` | 한 차량의 온도 이력, 최대 24시간 (Kotlin API 전용) |
 | `GET` | `/api/ops/alerts` | 최근 서버 오류 알림 50건과 채널 종류 (Kotlin API 전용) |
 | `GET` | `/api/ops/outbox?date=` | 미트박스 송신 대기·거절·완료 건수와 최근 20건 (Kotlin API 전용) |
 | `POST` `GET` | `/mock/meatbox/*` | 미트박스 모의 수신기. **테스트 전용**, 기본 꺼짐 (Kotlin API 전용) |
@@ -552,6 +555,70 @@
 | `500` | `INBOUND_WRITE_FAILED`, `DISPATCH_STATE_WRITE_FAILED` | 저장 실패. 같은 요청을 다시 보내면 된다 |
 
 날짜 조회·상태(`manifest`, `days/{date}`, `state`)는 미트박스 날짜를 같은 모양으로 돌려준다. `manifest.dates[]`에는 `source: "api"`, `orders`, `boxes`가 붙고, 상태의 `sourceData.inbound`(`kind`, `stamp`, `received`, `applied`, `warnings[]`)가 추가된다. 상태 ETag에는 `stamp`가 들어가 주문이 바뀌면 `304`가 나지 않는다.
+
+## 온도 단말 수신과 조회 (Kotlin API 전용)
+
+STEGO 단말의 통신 방식·수신 규격은 정해지지 않았다. 이 끝점은 단말 규격과 무관한 **일반 본문**이다. 단말 전용 변환은 이 본문을 만들어 보내는 어댑터(`integrations/stego/`, 아직 없음)가 맡는다.
+
+### `POST /api/telemetry/temperature`
+
+세션 쿠키가 아니라 `Authorization: Bearer <MEATBOX_TELEMETRY_TOKEN>`을 쓰고 `Origin` 검사는 없다. 토큰은 미트박스 주문 토큰·기사 세션과 별개다. `MEATBOX_TELEMETRY_TOKEN`이 비어 있으면 경로가 없다(`404 NOT_FOUND`). 본문은 `application/json` 최대 128 KiB다.
+
+```json
+{
+  "vehicleId": "V-021", "sensorId": "STEGO-7731",
+  "measurements": [
+    { "measuredAt": "2026-11-02T09:12:00+09:00", "celsius": -18.4, "compartment": "frozen" },
+    { "measuredAt": "2026-11-02T09:12:30+09:00", "celsius": -18.1 }
+  ]
+}
+```
+
+- `vehicleId`·`sensorId`는 `A-Za-z0-9._-` 1~64자다(`vehicleId`는 `latest`가 아니어야 한다). `measurements`는 1~500건이다. 알 수 없는 키는 거절한다.
+- `measuredAt`은 오프셋이 있는 ISO 시각이고 초 단위로 내려 저장한다. `celsius`는 -60~60 숫자다. `compartment`는 선택이고 `frozen`·`chilled`만 받는다.
+- 한 건이라도 틀리면 본문 전체를 거절하고 아무것도 저장하지 않는다.
+- 같은 `sensorId`·같은 초의 측정은 이미 있는 것으로 보고 무시한다. 그래서 같은 배치를 다시 보내도 처음과 같은 `202`이고 `accepted`만 0이다. `Idempotency-Key`는 받아서 형식만 검사하고(`A-Za-z0-9._:-` 1~128자) 저장하지 않는다.
+- 응답은 `202`다.
+
+```json
+{ "accepted": 2, "duplicate": 0, "receivedAt": "2026-11-02T09:12:31+09:00", "unknownVehicle": false }
+```
+
+- `unknownVehicle`은 자원 등록부가 켜져 있고 그 `vehicleId`가 등록부에 없을 때 `true`다. 이때도 저장하며, 알림 `telemetry` / `UNKNOWN_VEHICLE`을 보낸다(10분에 한 번). 등록부가 꺼져 있으면 `false`다.
+
+| 상태 | `code` | 원인 |
+|---|---|---|
+| `400` | `INVALID_TELEMETRY` | 본문 형식·키·시각·`compartment` 오류 |
+| `400` | `TEMPERATURE_OUT_OF_BOUNDS` | `celsius`가 -60~60 밖 |
+| `400` | `MEASURED_AT_FUTURE` / `MEASURED_AT_TOO_OLD` | 서버 시각보다 5분 넘게 미래 / 7일보다 오래됨 |
+| `400` | `INVALID_IDEMPOTENCY_KEY` | 헤더 형식 오류 |
+| `401` | `TELEMETRY_UNAUTHORIZED` | 토큰 없음·틀림 (`WWW-Authenticate: Bearer`) |
+| `409` | `TELEMETRY_CAPACITY` | 그 차량의 그날 파일이 100,000줄을 넘음 |
+| `413` | `TELEMETRY_TOO_LARGE` | 본문 128 KiB 초과 |
+| `415` | `INVALID_TELEMETRY` | `Content-Type`이 JSON이 아님 |
+| `503` | `TELEMETRY_WRITE_FAILED` / `TELEMETRY_BUSY` | 파일 쓰기 실패 / 쓰기 잠금을 1초 안에 못 얻음. 단말이 같은 본문을 다시 보낸다 |
+
+### `GET /api/telemetry/temperature/latest`
+
+세션이 필요하다. 지금까지 값을 보낸 모든 차량·센서의 최신 값이다. `stale`은 마지막 수신이 `MEATBOX_TELEMETRY_STALE_MINUTES`(기본 10분)보다 오래됐을 때 `true`다. 단말 시계가 아니라 서버가 받은 시각 기준이다.
+
+```json
+{
+  "generatedAt": "2026-11-02T09:13:00+09:00",
+  "vehicles": [{
+    "vehicleId": "V-021", "sensorId": "STEGO-7731", "celsius": -18.1,
+    "measuredAt": "2026-11-02T09:12:30+09:00", "receivedAt": "2026-11-02T09:12:31+09:00",
+    "ageSeconds": 29, "stale": false, "compartment": "frozen"
+  }]
+}
+```
+
+### `GET /api/telemetry/temperature/{vehicleId}?from=&to=&resolution=`
+
+세션이 필요하다. `from`·`to`는 오프셋이 있는 ISO 시각이다. `to`를 빼면 지금이다. 범위는 24시간을 넘을 수 없고 `to`가 `from`보다 뒤여야 한다(`400 INVALID_RANGE`). `resolution`은 `raw`(기본)나 `1m`이고 다른 값은 `400 INVALID_RESOLUTION`, 형식이 틀린 `vehicleId`는 `400 INVALID_VEHICLE`이다. 저장된 값이 없으면 빈 목록이다.
+
+- `raw`: 측정 시각 순으로 최대 5,000건이고 넘으면 `truncated: true`다. 항목은 `sensorId`, `measuredAt`, `celsius`, `compartment`(있을 때).
+- `1m`: 센서별로 분 단위로 묶어 `measuredAt`(그 분의 시작), `celsius`(평균, 소수 첫째 자리), `min`, `max`, `count`를 준다.
 
 ## 미트박스 송신 현황과 모의 수신기 (Kotlin API 전용)
 

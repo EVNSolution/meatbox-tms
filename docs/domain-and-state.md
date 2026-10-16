@@ -123,6 +123,16 @@ published ── begin_dispatch_revision ──► amending
 - 가장 최근 위치는 날짜 상태를 만들 때 합성 위치 위에 덮어 보여 준다(`location.source: "driver"`). 체크포인트에는 쓰지 않는다.
 - 사진 파일은 상태 디렉터리 `photos/{date}/`가 소유한다. 사진 ID는 서버가 만든 UUID이고, 이벤트는 ID로만 참조한다.
 
+### 온도 시계열 파일의 소유
+
+온도 측정값은 날짜 체크포인트도 `driver-{date}.json`도 아닌 `{state-dir}/telemetry/{vehicleId}/{yyyy-MM-dd}.jsonl`이 소유한다. 시계열이고 날짜 aggregate와 수명이 다르며 보관 기한이 없기 때문이다.
+
+- 한 줄이 측정 1건이다: `t`(측정 시각 `+09:00`), `c`(섭씨), `s`(센서 ID), `k`(칸 `frozen`·`chilled`, 선택), `r`(수신 epoch ms). 파일은 덧붙이기만 한다.
+- 날짜는 측정 시각의 서울 날짜다. 늦게 도착한 측정(단말 재전송)은 자기 날짜 파일에 들어간다.
+- 같은 센서·같은 초는 한 번만 남는다. 프로세스는 파일별 키 집합을 메모리에 두고, 파일 크기가 자기가 쓴 값과 다르면(다른 프로세스가 썼으면) 다시 읽는다.
+- 차량별 최신 값은 메모리에 있고 시작할 때 각 차량의 마지막 파일에서 복원한다. 날짜 snapshot과 기사 조회는 아직 이 값을 읽지 않는다.
+- `telemetry/.telemetry.lock`이 쓰기를 직렬화한다. `DriverFileLock`을 같은 방식으로 쓴다.
+
 ## 미트박스가 보낸 주문(API 원본)
 
 날짜 원본은 준비된 CSV 묶음이거나 미트박스가 `POST /api/meatbox/orders`로 보낸 주문이다. 한 날짜의 원본은 하나다. 매니페스트에 있는 날짜로 주문이 오면 `409 SOURCE_CONFLICT`이고, 두 원본이 함께 있는 날짜는 `DISPATCH_SOURCE_CONFLICT`로 닫는다. 어느 쪽도 조용히 고르지 않는다.
