@@ -195,6 +195,17 @@
 | `address.lat/lng` | 없으면 우리가 정제·좌표화 (7) |
 | `status` `active` / `cancelled` | 배차 전이면 제외, 배차 후면 운영 알림 |
 
+**구현됨.** `POST /api/meatbox/orders`가 이 본문을 받아 그 날짜의 배차 원본으로 쓴다. 필드·응답·오류는 [API 참조](api-reference.md#미트박스-주문-수신-kotlin-api-전용), 변경·취소 반영은 [도메인](domain-and-state.md#미트박스가-보낸-주문api-원본)에 있다. 이 문서의 상태는 계속 초안이다. 계약과 다른 점:
+
+- 인증은 `MEATBOX_INBOUND_TOKEN`과 비교하는 `Authorization: Bearer`다. 토큰이 없으면 경로가 없다. 고정 IP 허용과 게이트웨이 경로 열기는 배포 쪽 과제다.
+- 응답은 첫 수신 `202`, 중복·낮은 version(`ignored`) `200`, 같은 version에 다른 본문 `409`다.
+- 취소는 `orderId`·`version`·`status`·`deliveryDate`만 있으면 된다.
+- 배차 전(`unplanned`)이면 바로 반영한다. 계산안(`draft`)이면 반영하고 계산안을 버린다. 확정 이후(`published`·`amending`)와 완료 주문은 변경·취소·신규 모두 **반영하지 않고** 경고와 운영 알림만 남긴다. 반영 경로는 후속이다.
+- `deliveryDate`가 이미 받은 주문과 다르면 `422`로 거절한다. 지난 날짜도 `422`다.
+- 좌표(`address.lat/lng`)가 없으면 좌표 없이 배차한다. 주소 정제·좌표화(7)는 하지 않았다.
+- 후보 차량은 합성 그룹이다(`MEATBOX_INBOUND_GROUP_COUNT`). 실제 차량 연결은 미트박스 자료가 아니라 자원 등록부 작업(F08)이다.
+- `customer.phone`은 저장만 하고 `access`는 기존 기사 앱 규칙(제한 없음)대로 나간다.
+
 ## 5. 모의 수신기
 
 미트박스 명세 전까지 PoC는 우리 서버의 `/mock/meatbox/*`가 3장의 본문을 받아 `202`를 돌려주는 것으로 통과시킨다. 첫 송신 구현과 같은 작업 단위에서 만들었다.
@@ -209,6 +220,8 @@
 - 사진은 URL 참조로 충분한지, 파일을 넘겨야 하는지.
 - 상차 완료 상태를 누가 만드는지. WMS에서 오는지, 기사 앱에서 찍는지.
 - 테스트 환경과 고정 IP 허용.
+- 주문의 `deliveryDate`가 바뀔 수 있는가. 지금은 `422`로 막는다. 바뀐다면 이전 날짜 취소와 새 날짜 등록을 어떤 식으로 보낼지.
+- 배차 확정 뒤의 변경·취소·신규 주문을 어떻게 다룰지. 지금은 반영하지 않고 경고만 남긴다. 확정 뒤 반영을 기대하는지, 그때 기사에게 알릴지.
 
 ## 7. 끝점 요약 (GET / POST)
 
@@ -246,7 +259,7 @@
 | 방법 | 경로 | 역할 | 본문 |
 | --- | --- | --- | --- |
 | `POST` | `/api/meatbox/orders` | 주문 등록·변경·취소 (4절) | `Idempotency-Key: orderId:version` |
-| `GET` | `/api/meatbox/orders/{orderId}` | 우리가 가진 최신 상태 확인 | 상태·마지막 송신 `messageId` |
+| `GET` | `/api/meatbox/orders/{orderId}` | 우리가 가진 최신 상태 확인 | 상태·마지막 송신 `messageId`. **이번에 만들지 않았다.** 날짜 상태 조회(`sourceData.inbound`)로 확인한다 |
 
 당기기 방식이면 `GET {meatbox}/orders?date=YYYY-MM-DD`를 우리가 주기 호출하고 4절 본문을 배열로 받는다.
 

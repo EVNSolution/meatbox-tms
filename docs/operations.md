@@ -254,6 +254,21 @@ Kotlin API는 5xx를 내면 담당자 알림을 한 번 보낸다. 채널 설정
 
 알림을 받으면 위 장애 분류 표의 코드 행으로 이어간다. 메일 채널은 아직 없다. 운영 시간 외 대응 기준은 정하지 않았다. 미트박스 송신 실패는 아래 절의 알림으로 같은 채널에 연결된다.
 
+### 미트박스 주문 수신 (Kotlin API)
+
+미트박스가 `POST /api/meatbox/orders`([API 참조](api-reference.md#미트박스-주문-수신-kotlin-api-전용))로 보낸 주문은 상태 디렉터리의 `inbound/{date}.json`에 날짜별로 쌓인다. 준비된 CSV 묶음(`DISPATCH_DATA_DIR`)에는 쓰지 않는다.
+
+| 변수 | 필수 여부 | 기본값 | 의미 |
+| --- | --- | --- | --- |
+| `MEATBOX_INBOUND_TOKEN` | 수신 시 필수 | 없음 | 미트박스가 `Authorization: Bearer`로 보내는 토큰이다. **비우면 `/api/meatbox/*` 경로가 없다(404).** 16자 미만이면 시작에 실패한다. 비밀값이므로 `api.env`(0600)에만 두고 로그·알림에 넣지 않는다. 이미 받은 주문은 토큰이 없어도 날짜 조회에 보인다. |
+| `MEATBOX_INBOUND_GROUP_COUNT` | 선택 | `8` | 미트박스 주문 날짜에 만드는 합성 후보 차량 수(1~50). 실제 차량이 아니다. 바꾸면 이미 받은 날짜의 후보 목록도 바뀐다. |
+
+- 백업·복원: `inbound/`는 `DISPATCH_STATE_DIR`의 일부다. 체크포인트와 같이 백업하고 같이 복원한다. 체크포인트만 과거로 되돌려 주문 집합이 맞지 않으면 `DISPATCH_STATE_SOURCE_MISMATCH`로 닫힌다(조용히 새로 시작하지 않는다).
+- 게이트웨이: 웹 게이트웨이(`apps/web`)는 `/api/meatbox/*`를 Kotlin API로 보내지 않는다. 미트박스가 호출하려면 배포 쪽에서 이 경로만 API(`127.0.0.1`)로 연결하고, 미트박스 고정 IP만 허용한다. 이 저장소는 웹을 바꾸지 않았다.
+- 알림: 확정 이후 도착한 변경·취소·신규 주문은 `meatbox-inbound` / `ORDER_CHANGED_AFTER_DISPATCH`·`ORDER_CANCELLED_AFTER_DISPATCH`·`ORDER_ADDED_AFTER_DISPATCH`·`ORDER_CHANGED_AFTER_COMPLETION`으로 알린다. 같은 코드는 10분 창에서 한 번만 알리고 나머지는 요약으로 센다. 건별 경고는 날짜 상태 `sourceData.inbound.warnings`에 남는다. 이 경고를 해소하는 화면은 아직 없다.
+- 장애: 저장 실패는 `500 INBOUND_WRITE_FAILED`이고 미트박스가 같은 요청을 다시 보낸다. 계산안 중 변경이 계산안을 버릴 때 저장이 실패하면 계산안만 사라진 상태이므로 운영자가 다시 계산한다.
+- 롤백: 이전 버전은 `inbound/`를 읽지 못한다. 롤백하면 미트박스 날짜가 매니페스트에 없어 조회되지 않고 체크포인트는 그대로 남는다. 파일을 지우거나 옮기지 않는다.
+
 ### 미트박스 송신 (Kotlin API)
 
 기사 앱 이벤트나 배차 확정이 주문 상태를 바꾸면 서버가 미트박스에 배송 상태 메시지([연동 계약](integration-contract.md) 3.1)를 보낸다. 메시지는 상태 변경과 같은 체크포인트 쓰기로 날짜 상태의 송신함에 쌓이고, 단일 스레드 발송기가 주기적으로 집어 보낸다.

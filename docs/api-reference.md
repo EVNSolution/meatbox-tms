@@ -1,6 +1,6 @@
 # HTTP API 참조
 
-서버가 제공하는 HTTP 경로와 요청·응답 계약을 정리한다. 모든 `/api/*` 경로는 `meatbox_session` 쿠키가 필요하다. 현재 인증은 세션 존재만 확인하며 역할·테넌트·기사·고객별 자원 권한은 검사하지 않는다.
+서버가 제공하는 HTTP 경로와 요청·응답 계약을 정리한다. `/api/meatbox/*`(미트박스 주문 수신)를 뺀 모든 `/api/*` 경로는 `meatbox_session` 쿠키가 필요하다. 현재 인증은 세션 존재만 확인하며 역할·테넌트·기사·고객별 자원 권한은 검사하지 않는다.
 
 ## 공통 규칙
 
@@ -44,6 +44,7 @@
 | `POST` | `/api/dispatch-data/days/{date}/driver/locations` | 기사 위치 배치 수신 (Kotlin API 전용) |
 | `POST` | `/api/dispatch-data/days/{date}/driver/photos` | 완료 사진 업로드 (Kotlin API 전용) |
 | `GET` | `/api/dispatch-data/days/{date}/driver/photos/{photoId}` | 올린 사진 다시 받기 (Kotlin API 전용) |
+| `POST` | `/api/meatbox/orders` | 미트박스가 밀어 넣는 주문 등록·변경·취소. 세션이 아니라 Bearer 토큰, 토큰 미설정이면 경로 없음 (Kotlin API 전용) |
 | `GET` | `/api/ops/alerts` | 최근 서버 오류 알림 50건과 채널 종류 (Kotlin API 전용) |
 | `GET` | `/api/ops/outbox?date=` | 미트박스 송신 대기·거절·완료 건수와 최근 20건 (Kotlin API 전용) |
 | `POST` `GET` | `/mock/meatbox/*` | 미트박스 모의 수신기. **테스트 전용**, 기본 꺼짐 (Kotlin API 전용) |
@@ -460,6 +461,59 @@
 | `413` | `DRIVER_BODY_TOO_LARGE`, `PHOTO_TOO_LARGE` | 본문 또는 사진이 한도를 넘음 |
 | `415` | `UNSUPPORTED_PHOTO_TYPE` | jpeg·png가 아님 |
 | `503` | `DRIVER_STATE_WRITE_FAILED`, `DRIVER_PHOTO_WRITE_FAILED` | 저장 실패. 같은 요청을 다시 보낸다 |
+
+## 미트박스 주문 수신 (Kotlin API 전용)
+
+### `POST /api/meatbox/orders`
+
+미트박스가 주문을 밀어 넣는다([연동 계약](integration-contract.md) 4절). 세션 쿠키가 아니라 `Authorization: Bearer <MEATBOX_INBOUND_TOKEN>`을 쓰고 `Origin` 검사는 없다. `MEATBOX_INBOUND_TOKEN`이 비어 있으면 경로가 없다(`404 NOT_FOUND`). 본문은 `application/json` 최대 1 MiB, 헤더 `Idempotency-Key`는 `{orderId}:{version}`과 같아야 한다.
+
+```json
+{
+  "orderId": "MB-20261102-48213", "version": 1, "status": "active", "deliveryDate": "2026-11-02",
+  "deliveryType": "fresh",
+  "customer": { "name": "○○정육", "phone": "010-0000-0000" },
+  "address": { "road": "서울 강남구 테헤란로 1", "detail": "지하 1층 주방", "lat": null, "lng": null },
+  "access": { "entranceCode": "1234*", "placeNote": "뒷문" },
+  "items": [{ "sku": "PK-001", "name": "삼겹살 1kg", "qty": 3, "boxes": 1, "weightKg": 3.2, "barcode": "8801234567890" }],
+  "csNote": "오전 중 배송 요청"
+}
+```
+
+- 필수: `orderId`(`A-Za-z0-9._-` 1~64자), `version`(1 이상 정수), `status`(`active`·`cancelled`), `deliveryDate`(`YYYY-MM-DD`, 서울 오늘 이후). `cancelled`는 이 네 개면 된다.
+- `active`는 추가로 `deliveryType`(`fresh`·`parcel`), `customer.name`, `address.road`, `items`(1~200개, 각 `sku`·`qty`≥0·`boxes`≥0)가 필요하다. `address.lat`·`lng`는 둘 다 있거나 둘 다 없어야 하고, 없으면 `coordinates: null`로 들어간다(좌표화는 하지 않는다). `boxes`는 `items[].boxes`의 합이다. `customer.phone`은 저장만 하고 날짜 JSON에는 넣지 않는다.
+- 같은 날짜의 주문은 날짜 상태와 배차에서 그 날짜의 원본이 된다. 변경·취소가 배차 상태별로 어떻게 반영되는지는 [도메인과 상태](domain-and-state.md#미트박스가-보낸-주문api-원본)에 있다.
+
+응답은 첫 수신·새 version이면 `202`, 중복·무시면 `200`이다.
+
+```json
+{
+  "accepted": true, "duplicate": false, "ignored": false, "applied": true, "draftReset": false,
+  "held": null, "orderId": "MB-20261102-48213", "version": 1, "date": "2026-11-02", "sourceId": "api-3f…"
+}
+```
+
+- `applied`: 배차가 보는 주문에 반영했는가. 확정 이후에는 `false`다.
+- `held`: 반영하지 않고 경고로 남긴 이유(`ORDER_CHANGED_AFTER_DISPATCH`, `ORDER_CANCELLED_AFTER_DISPATCH`, `ORDER_ADDED_AFTER_DISPATCH`, `ORDER_CHANGED_AFTER_COMPLETION`). 운영 알림 `meatbox-inbound`이 같이 나간다.
+- `draftReset`: 계산안을 버렸는가. 경고 `DRAFT_RESET_BY_INBOUND`가 날짜 상태 `sourceData.inbound.warnings`에 남는다.
+- 마지막으로 받은 version보다 낮으면 `ignored: true`, 같은 version·같은 본문이면 `duplicate: true`다.
+
+| 상태 | `code` | 의미 |
+|---|---|---|
+| `400` | `INVALID_ORDER` | 본문 형식·필드 오류. `detail`에 필드 이름 |
+| `400` | `IDEMPOTENCY_KEY_MISMATCH` | 헤더가 없거나 `orderId:version`과 다름 |
+| `401` | `INBOUND_UNAUTHORIZED` | Bearer 토큰이 없거나 다름. `WWW-Authenticate: Bearer` |
+| `404` | `NOT_FOUND` | `MEATBOX_INBOUND_TOKEN`이 설정되지 않음 |
+| `409` | `ORDER_VERSION_CONFLICT` | 같은 version에 다른 본문 |
+| `409` | `SOURCE_CONFLICT` | 그 날짜의 원본이 준비된 CSV 묶음 |
+| `413` | `ORDER_TOO_LARGE` | 본문이 1 MiB를 넘음 |
+| `415` | `INVALID_ORDER` | `Content-Type`이 `application/json`이 아님 |
+| `422` | `DELIVERY_DATE_PAST` | 지난 날짜 |
+| `422` | `DELIVERY_DATE_CHANGE_UNSUPPORTED` | 이미 받은 주문의 `deliveryDate`가 바뀜 |
+| `422` | `INBOUND_DAY_FULL` | 한 날짜 5000건 또는 16 MiB 초과 |
+| `500` | `INBOUND_WRITE_FAILED`, `DISPATCH_STATE_WRITE_FAILED` | 저장 실패. 같은 요청을 다시 보내면 된다 |
+
+날짜 조회·상태(`manifest`, `days/{date}`, `state`)는 미트박스 날짜를 같은 모양으로 돌려준다. `manifest.dates[]`에는 `source: "api"`, `orders`, `boxes`가 붙고, 상태의 `sourceData.inbound`(`kind`, `stamp`, `received`, `applied`, `warnings[]`)가 추가된다. 상태 ETag에는 `stamp`가 들어가 주문이 바뀌면 `304`가 나지 않는다.
 
 ## 미트박스 송신 현황과 모의 수신기 (Kotlin API 전용)
 

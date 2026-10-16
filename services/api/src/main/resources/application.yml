@@ -51,6 +51,11 @@ meatbox:
     alert-webhook-url: ${MEATBOX_ALERT_WEBHOOK_URL:}
     server-name: ${MEATBOX_ALERT_SERVER_NAME:}
 
+  inbound:
+    # An empty token leaves /api/meatbox/* unmapped (404). Orders already received stay visible either way.
+    token: ${MEATBOX_INBOUND_TOKEN:}
+    group-count: ${MEATBOX_INBOUND_GROUP_COUNT:8}
+
   outbound:
     # Empty base URL keeps messages in the outbox without sending. The token is sent as a Bearer header when set.
     base-url: ${MEATBOX_API_BASE_URL:}
