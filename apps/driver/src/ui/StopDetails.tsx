@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { currentStopAction, type Stop } from '../domain/dispatch';
+import type { EtaLabel } from '../domain/routeView';
 import { Button, SequenceBadge, T } from './common';
 import { colors } from './theme';
 
@@ -15,10 +17,14 @@ export function StopDetails({
   stop,
   busy,
   onAction,
+  eta = null,
+  info = null,
 }: {
   stop: Stop;
   busy: boolean;
   onAction(action: 'arrive' | 'complete', stop: Stop): void;
+  eta?: EtaLabel | null;
+  info?: ReactNode;
 }) {
   const action = currentStopAction(stop);
   return (
@@ -34,6 +40,7 @@ export function StopDetails({
           {stop.status === 'current' && stop.arrived ? '도착' : STATUS_LABEL[stop.status]}
         </T>
       </View>
+      {eta ? <T style={[styles.eta, eta.dimmed && styles.etaDimmed]}>{eta.text}</T> : null}
       <View style={styles.orders}>
         <T style={styles.ordersTitle}>주문 {stop.orders.length}건 · {stop.boxes}박스</T>
         {stop.orders.map((order) => (
@@ -43,6 +50,7 @@ export function StopDetails({
           </View>
         ))}
       </View>
+      {info}
       {action ? (
         <Button
           busy={busy}
@@ -64,6 +72,8 @@ const styles = StyleSheet.create({
   detail: { color: colors.muted, fontSize: 14 },
   status: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   statusCurrent: { color: colors.blue },
+  eta: { color: colors.blue, fontSize: 14, fontWeight: '700' },
+  etaDimmed: { color: colors.muted, fontWeight: '400', opacity: 0.7 },
   orders: { borderTopColor: colors.border, borderTopWidth: 1, gap: 4, paddingTop: 10 },
   ordersTitle: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   orderRow: { flexDirection: 'row', justifyContent: 'space-between' },

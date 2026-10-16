@@ -7,9 +7,11 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchDayState, fetchMessages, getSession, logout, sendCommand, sendMessage, type DriverCommand } from '../api/client';
 import { ApiError, type DriverMessage, type SessionUser } from '../api/types';
+import { useDriverRoute } from './useDriverRoute';
 import { POLL_INTERVAL_MS } from '../config';
 import { buildRouteOrderCommand, groupStops, isDispatchOperable, seoulToday, stopProgress, vehicleDeliveries, vehiclePhase, type DayState, type Stop } from '../domain/dispatch';
 import { registerPush, revokePush, subscribePush, subscribePushToken, type PushStatus } from '../platform/pushNotifications';
+import { dimmedStopKeys, etaLabel, serverStop } from '../domain/routeView';
 import { RequestGate } from '../platform/requestQueue';
 import { readVehicleChoice, saveVehicleChoice } from '../storage';
 import { BottomSheet } from '../ui/BottomSheet';
@@ -20,6 +22,7 @@ import { LoginScreen } from '../ui/LoginScreen';
 import { PickupScreen } from '../ui/PickupScreen';
 import { RouteOrderEditor } from '../ui/RouteOrderEditor';
 import { StopDetails } from '../ui/StopDetails';
+import { StopInfo } from '../ui/StopInfo';
 import { VehicleSelectScreen } from '../ui/VehicleSelectScreen';
 import { colors, fontFamily, radius, TOUCH_MIN } from '../ui/theme';
 
@@ -128,6 +131,8 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
     return () => { clearInterval(timer); subscription.remove(); };
   }, [refresh]);
 
+  const { route } = useDriverRoute(date, vehicleId, state, onSignedOut);
+
   const loadMessages = useCallback(async (force = false) => {
     if (!vehicleId || vehicleId !== selectedVehicle.current) return;
     return requests.current.run(`messages:${date}:${vehicleId}`, async () => {
@@ -228,6 +233,11 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   const pickup = phase === 'idle' || phase === 'preparing';
   const selectedStop = stops.find((stop) => stop.key === selectedKey) ?? null;
   const progress = stopProgress(stops);
+  const etaFor = (stop: Stop) => etaLabel(stop, route);
+  const infoFor = (stop: Stop) => {
+    const entry = serverStop(stop, route);
+    return entry ? <StopInfo date={date} key={entry.stopId} stopId={entry.stopId} vehicleId={vehicleId} /> : null;
+  };
   const pushLabel = { registering: '알림 연결 중', ready: '알림 연결됨', denied: '알림 권한이 꺼져 있습니다', unavailable: '푸시 알림 연결 안 됨 · 앱에서 메시지를 확인하세요' }[pushStatus];
 
   return <SafeAreaView style={styles.screen}>
@@ -243,9 +253,9 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
       : !operable ? <View style={styles.center}><T>오늘 배차가 확정되면 배송을 시작할 수 있습니다.</T><Button label="새로고침" onPress={() => void refresh(true)} /></View>
       : editing ? <RouteOrderEditor isSaving={busy} onCancel={() => setEditing(null)} onSave={reorder} stops={groupStops(vehicleDeliveries(editing, vehicleId)).filter((stop) => stop.status === 'pending')} />
       : tab === 'delivery' && pickup ? <PickupScreen allOrderIds={new Set(state.fleetDeliveries.map((order) => order.id))} date={date} deliveries={deliveries} key={`${date}:${vehicleId}`} onEditOrder={() => setEditing(state)} onStart={() => void command({ type: 'start_route', vehicleId })} starting={busy || !!error} vehicleId={vehicleId} />
-      : tab === 'delivery' ? <DeliveryScreen busy={busy || !!error} onAction={act} onEditOrder={() => setEditing(state)} onRefresh={() => { setRefreshing(true); void refresh(true); }} refreshing={refreshing} stops={stops} />
-      : <View style={styles.fill}><DeliveryRouteMap onMapPress={() => setSelectedKey(null)} onSelect={setSelectedKey} selectedKey={selectedKey} stops={stops} />
-        <BottomSheet onDismiss={() => setSelectedKey(null)} open={!!selectedStop}>{selectedStop ? <ScrollView style={styles.stopSheet}><StopDetails busy={busy || !!error} onAction={act} stop={selectedStop} /><Button label="닫기" onPress={() => setSelectedKey(null)} tone="secondary" /></ScrollView> : null}</BottomSheet>
+      : tab === 'delivery' ? <DeliveryScreen busy={busy || !!error} canEditOrder={false} etaFor={etaFor} infoFor={infoFor} onAction={act} onEditOrder={() => setEditing(state)} onRefresh={() => { setRefreshing(true); void refresh(true); }} refreshing={refreshing} stops={stops} />
+      : <View style={styles.fill}><DeliveryRouteMap dimmedKeys={dimmedStopKeys(stops, route)} onMapPress={() => setSelectedKey(null)} onSelect={setSelectedKey} selectedKey={selectedKey} stops={stops} />
+        <BottomSheet onDismiss={() => setSelectedKey(null)} open={!!selectedStop}>{selectedStop ? <ScrollView style={styles.stopSheet}><StopDetails busy={busy || !!error} eta={etaFor(selectedStop)} info={infoFor(selectedStop)} onAction={act} stop={selectedStop} /><Button label="닫기" onPress={() => setSelectedKey(null)} tone="secondary" /></ScrollView> : null}</BottomSheet>
       </View>}
     {!editing ? <View style={styles.tabs}>{(['delivery', 'map'] as const).map((value) => <Pressable accessibilityRole="tab" accessibilityState={{ selected: tab === value }} key={value} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabSelected]}><T style={[styles.tabLabel, tab === value && styles.tabLabelSelected]}>{value === 'delivery' ? '배송' : '지도'}</T></Pressable>)}</View> : null}
     {messagesOpen ? <MessagesModal error={messageError} messages={messages} onClose={() => { setMessagesOpen(false); setBanner(null); }} onRefresh={() => loadMessages(true)} onSend={async (body) => { await sendMessage(date, vehicleId, body); await loadMessages(true); }} /> : null}

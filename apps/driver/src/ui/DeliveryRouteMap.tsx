@@ -45,7 +45,9 @@ const MARKER_PAINT = {
   ],
   'icon-halo-color': colors.surface,
   'icon-halo-width': 1,
+  'icon-opacity': ['case', ['get', 'dimmed'], 0.5, 1],
   'text-color': colors.surface,
+  'text-opacity': ['case', ['get', 'dimmed'], 0.5, 1],
 } satisfies SymbolLayerSpecification['paint'];
 
 type LocationPermission = 'requesting' | 'granted' | 'denied';
@@ -55,8 +57,10 @@ export function DeliveryRouteMap({
   selectedKey,
   onSelect,
   onMapPress,
+  dimmedKeys,
 }: {
   stops: Stop[];
+  dimmedKeys: ReadonlySet<string>;
   selectedKey: string | null;
   onSelect(stopKey: string): void;
   onMapPress(): void;
@@ -77,11 +81,12 @@ export function DeliveryRouteMap({
         label: String(stop.sequence),
         tone: stop.status === 'current' ? 'current' : stop.status === 'pending' ? 'pending' : 'done',
         selected: stop.key === selectedKey,
+        dimmed: dimmedKeys.has(stop.key),
         // Current stop on top, then pending, then done.
         sortKey: stop.status === 'current' ? 10_000 : stop.status === 'pending' ? 5_000 - stop.sequence : -stop.sequence,
       },
     })),
-  }), [located, selectedKey]);
+  }), [dimmedKeys, located, selectedKey]);
 
   useEffect(() => {
     if (permission !== 'requesting') return undefined;

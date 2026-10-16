@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import type { ReactNode } from 'react';
 import type { Stop } from '../domain/dispatch';
+import type { EtaLabel } from '../domain/routeView';
 import { Button, Card, SequenceBadge, T } from './common';
 import { StopDetails, stopTone } from './StopDetails';
 import { colors, radius, TOUCH_MIN } from './theme';
@@ -13,6 +15,9 @@ export function DeliveryScreen({
   onRefresh,
   onAction,
   onEditOrder,
+  canEditOrder,
+  etaFor,
+  infoFor,
 }: {
   stops: Stop[];
   busy: boolean;
@@ -20,6 +25,9 @@ export function DeliveryScreen({
   onRefresh(): void;
   onAction(action: 'arrive' | 'complete', stop: Stop): void;
   onEditOrder(): void;
+  canEditOrder: boolean;
+  etaFor(stop: Stop): EtaLabel | null;
+  infoFor(stop: Stop): ReactNode;
 }) {
   const [showDone, setShowDone] = useState(false);
   const current = stops.find((stop) => stop.status === 'current') ?? null;
@@ -34,7 +42,7 @@ export function DeliveryScreen({
       {current ? (
         <Card style={styles.currentCard}>
           <T style={styles.sectionLabel}>현재 배송지</T>
-          <StopDetails busy={busy} onAction={onAction} stop={current} />
+          <StopDetails busy={busy} eta={etaFor(current)} info={infoFor(current)} onAction={onAction} stop={current} />
         </Card>
       ) : (
         <Card>
@@ -44,11 +52,11 @@ export function DeliveryScreen({
 
       <View style={styles.sectionHead}>
         <T style={styles.sectionTitle}>남은 배송지 {pending.length}곳</T>
-        {pending.length > 1 ? (
+        {canEditOrder && pending.length > 1 ? (
           <Button label="순서 편집" onPress={onEditOrder} style={styles.editButton} tone="secondary" />
         ) : null}
       </View>
-      {pending.map((stop) => <StopRow key={stop.key} stop={stop} />)}
+      {pending.map((stop) => <StopRow eta={etaFor(stop)} key={stop.key} stop={stop} />)}
 
       {finished.length > 0 ? (
         <Pressable
@@ -65,7 +73,7 @@ export function DeliveryScreen({
   );
 }
 
-function StopRow({ stop }: { stop: Stop }) {
+function StopRow({ stop, eta = null }: { stop: Stop; eta?: EtaLabel | null }) {
   const done = stop.status === 'done' || stop.status === 'skipped';
   return (
     <View style={[styles.row, done && styles.rowDone]}>
@@ -73,6 +81,7 @@ function StopRow({ stop }: { stop: Stop }) {
       <View style={styles.rowCopy}>
         <T numberOfLines={1} style={[styles.rowName, done && styles.mutedText]}>{stop.name}</T>
         <T numberOfLines={1} style={styles.rowAddress}>{stop.address}</T>
+        {eta ? <T style={[styles.rowEta, eta.dimmed && styles.rowEtaDimmed]}>{eta.text}</T> : null}
       </View>
       <T style={styles.rowMeta}>
         {stop.status === 'skipped' ? '보류' : `${stop.orders.length}건 · ${stop.boxes}박스`}
@@ -106,6 +115,8 @@ const styles = StyleSheet.create({
   rowName: { fontSize: 15, fontWeight: '700' },
   mutedText: { color: colors.muted },
   rowAddress: { color: colors.muted, fontSize: 13 },
+  rowEta: { color: colors.blue, fontSize: 13, fontWeight: '700' },
+  rowEtaDimmed: { color: colors.muted, fontWeight: '400', opacity: 0.7 },
   rowMeta: { color: colors.muted, fontSize: 13 },
   doneToggle: { alignItems: 'center', justifyContent: 'center', marginTop: 8, minHeight: TOUCH_MIN },
   doneToggleText: { color: colors.muted, fontSize: 14, fontWeight: '700' },
