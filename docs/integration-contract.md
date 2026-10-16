@@ -37,6 +37,7 @@
 - 경로 접두사가 `/api/dispatch-data/days/{date}/driver/...`다.
 - `eventId`는 UUID가 아니어도 영문·숫자·`-`·`_` 1~64자면 받는다. 멱등 범위는 `(vehicleId, eventId)`가 아니라 날짜 안의 `eventId`다. 본문(차량 포함)이 다르면 `409 REQUEST_ID_MISMATCH`다.
 - `next.eta`는 차량이 출발해 ETA를 계산한 뒤에는 그 배송지의 도착 예정 시각이고 출발 전에는 `null`이다. 계산은 3.2의 구현됨 절을 따른다.
+- 자동 배송 순서(요구서 62번)는 이벤트가 아니라 상태를 바꾸지 않는 `POST .../driver/route/suggest`가 제안하고, 앱이 받아 `route_reordered`로 적용한다. 시작점·알고리즘·한계(좌회전 제한·간선도로 위주는 도로 데이터가 없어 계산하지 않음)는 [API 참조](api-reference.md#자동-배송-순서-제안)를 따른다.
 - `stop_failed`의 `reasonCode`는 6개 코드 밖이면 `400 INVALID_REASON_CODE`다. 품목(`items`)은 검증하지 않고 기록만 한다.
 - `stopId`는 배송지 묶음의 첫 주문 ID다. 앱의 `S-104` 같은 값은 아직 없다.
 - `GET events/{eventId}`는 `200`으로 같은 본문을 돌려주고 `duplicate`가 `true`다. 없으면 `404 REQUEST_NOT_FOUND`다.
@@ -261,6 +262,7 @@
 | `GET` | `/api/driver/days/{date}/stops/{stopId}` | 배송지 상세. 고객·품목·출입정보·배송팁·CS 요청·직전 완료 사진 | 출입정보는 권한 있을 때만 |
 | `GET` | `/api/driver/days/{date}/history` | 당일 완료·미배송 이력 (57) | 완료 시각·배송지 기준 |
 | `GET` | `/api/driver/events/{eventId}` | 응답을 잃었을 때 처리 결과 재확인 | `202`와 같은 본문. 없으면 `404` → 재전송 |
+| `POST` | `/api/driver/days/{date}/route/suggest` | 자동 배송 순서 제안. 상태를 바꾸지 않음 | 본문 없음 또는 `{ "lockFirst" }`. 응답 `{ stopOrder, totalMinutes, totalKm, placed, changed, revision }`. 앱이 `route_reordered`로 적용 |
 | `POST` | `/api/driver/photos` | 사진 업로드 | `multipart`, 압축본. 응답 `{ "photoId" }` |
 | `POST` | `/api/driver/events` | 이벤트 6종 (2절) | 봉투 + `payload`. 응답 `202` |
 | `POST` | `/api/driver/locations` | 위치 1분 배치 | `samples[]`. 응답 `202` |

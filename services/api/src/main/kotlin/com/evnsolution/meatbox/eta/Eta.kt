@@ -64,7 +64,7 @@ class HaversineEstimator(private val config: EtaConfig) : TravelTimeEstimator {
 /** Arrival times along one route. Pure: the caller owns where the stops, departure and origin come from. */
 class EtaModel(
     val config: EtaConfig = EtaConfig(),
-    private val estimator: TravelTimeEstimator = HaversineEstimator(config),
+    val estimator: TravelTimeEstimator = HaversineEstimator(config),
 ) {
     /**
      * Arrival at stop 1 is the departure plus the leg from [origin]; each later arrival adds the previous stop's work

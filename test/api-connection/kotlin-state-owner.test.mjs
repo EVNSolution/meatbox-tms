@@ -120,6 +120,7 @@ async function startKotlin(settings) {
     `--meatbox.auth.public-origin=${settings.publicOrigin}`,
     '--meatbox.dispatch.enabled=true', `--meatbox.dispatch.state-dir=${settings.stateDirectory}`,
     `--meatbox.dispatch.public-origin=${settings.publicOrigin}`,
+    ...(settings.depot ? [`--meatbox.route.depot-lat=${settings.depot[0]}`, `--meatbox.route.depot-lng=${settings.depot[1]}`] : []),
     ...(settings.outbound ? [
       '--meatbox.mock-receiver.enabled=true', '--meatbox.outbound.interval-seconds=1',
       `--meatbox.outbound.base-url=http://${host}:${settings.port}/mock/meatbox`,
@@ -159,7 +160,7 @@ async function startKotlin(settings) {
   }
 }
 
-async function createFixture({ outbound = false } = {}) {
+async function createFixture({ outbound = false, depot = null } = {}) {
   const temporary = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'meatbox-kotlin-state-owner-')));
   await fs.chmod(temporary, 0o700);
   const dataDirectory = path.join(temporary, 'dispatch-data');
@@ -179,7 +180,7 @@ async function createFixture({ outbound = false } = {}) {
   const [port, legacyPort, publicPort] = await Promise.all([freePort(), freePort(), freePort()]);
   const settings = {
     jar: await bootJarPath(), port, legacyPort, publicOrigin: `http://${host}:${publicPort}`,
-    dataDirectory, stateDirectory, accessFile, resourceDatabase, outbound,
+    dataDirectory, stateDirectory, accessFile, resourceDatabase, outbound, depot,
   };
   let kotlin = await startKotlin(settings);
   let closed = false;
@@ -1047,4 +1048,53 @@ test('Kotlin sends a delayed eta message to the mock Meatbox receiver after an e
   } while (outbox.body.pending > 0 && Date.now() < deadline);
   assert.equal(outbox.body.pending, 0);
   assert.equal(outbox.body.failed, 0);
+});
+
+// An automatic order is a proposal: asking changes nothing, and the app applies it as route_reordered.
+test('Kotlin proposes a stop order from the depot and the route follows it once the app applies it', { timeout: 90_000 }, async t => {
+  // The depot sits at the last stop of the stored order, so the nearest-first order runs the stops backwards.
+  const fixture = await createFixture({ depot: [37.49, 127.03] });
+  t.after(() => fixture.close());
+  const cookie = await login(fixture);
+  const days = `/api/dispatch-data/days/${fixture.today}`;
+  const driver = `${days}/driver`;
+  let state = (await requestJson(fixture, `${days}/state`, { cookie })).body;
+  for (const [type, extra] of [['calculate_dispatch', { vehicleIds: ['TRUCK-1'] }], ['publish_dispatch', null]]) {
+    const body = commandFor(state, type, extra ?? { draftVersion: state.dispatch.draftVersion });
+    const result = await requestJson(fixture, `${days}/commands`, { method: 'POST', cookie, body });
+    assert.equal(result.response.status, 200, JSON.stringify(result.body));
+    state = result.body.state;
+  }
+  const route = async () => (await requestJson(fixture, `${driver}/route?vehicleId=TRUCK-1`, { cookie })).body;
+  const before = await route();
+  assert.deepEqual(before.stops.map(stop => stop.stopId), ['BUNDLE-1', 'NEXT-1', 'NEXT-2']);
+
+  const suggestion = await requestJson(fixture, `${driver}/route/suggest?vehicleId=TRUCK-1`, { method: 'POST', cookie });
+  assert.equal(suggestion.response.status, 200, JSON.stringify(suggestion.body));
+  assert.deepEqual(suggestion.body.stopOrder, ['NEXT-2', 'NEXT-1', 'BUNDLE-1']);
+  assert.equal(suggestion.body.changed, true);
+  assert.equal(suggestion.body.revision, before.revision);
+  assert.ok(suggestion.body.totalKm > 0 && suggestion.body.totalMinutes > 0);
+  assert.deepEqual(suggestion.body.placed, []);
+  assert.deepEqual(await route(), before);
+  assert.equal((await requestJson(fixture, `${days}/state`, { cookie })).body.revision, before.revision);
+
+  const locked = await requestJson(fixture, `${driver}/route/suggest?vehicleId=TRUCK-1`, {
+    method: 'POST', cookie, body: { lockFirst: 'NEXT-1' },
+  });
+  assert.equal(locked.body.stopOrder[0], 'NEXT-1');
+
+  const applied = await requestJson(fixture, `${driver}/events`, {
+    method: 'POST', cookie, body: {
+      eventId: 'suggest-apply-1', type: 'route_reordered', date: fixture.today, vehicleId: 'TRUCK-1',
+      occurredAt: new Date().toISOString(),
+      payload: { stopOrder: suggestion.body.stopOrder, expectedRevision: suggestion.body.revision },
+    },
+  });
+  assert.equal(applied.response.status, 202, JSON.stringify(applied.body));
+  const after = await route();
+  assert.deepEqual(after.stops.map(stop => stop.stopId), suggestion.body.stopOrder);
+  const again = await requestJson(fixture, `${driver}/route/suggest?vehicleId=TRUCK-1`, { method: 'POST', cookie });
+  assert.equal(again.body.changed, false);
+  assert.equal(again.body.revision, after.revision);
 });

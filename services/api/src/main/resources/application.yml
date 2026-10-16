@@ -54,6 +54,12 @@ meatbox:
     # A recomputed ETA is sent to Meatbox again only when it moved this much from the last one sent.
     delay-threshold-minutes: ${MEATBOX_ETA_DELAY_THRESHOLD_MINUTES:10}
 
+  route:
+    # Where a vehicle starts before it departs, for the automatic stop order. Both empty: the order starts at the
+    # vehicle's reported position, else at the first stop.
+    depot-lat: ${MEATBOX_ROUTE_DEPOT_LAT:}
+    depot-lng: ${MEATBOX_ROUTE_DEPOT_LNG:}
+
   ops:
     # Empty webhook URL keeps the default WARN-log channel.
     alert-webhook-url: ${MEATBOX_ALERT_WEBHOOK_URL:}

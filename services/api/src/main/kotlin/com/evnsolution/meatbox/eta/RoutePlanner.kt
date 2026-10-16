@@ -63,7 +63,9 @@ class RoutePlanner(private val estimator: TravelTimeEstimator) {
         private val between = Array(n) { from ->
             IntArray(n) { to -> if (from == to) 0 else estimator.seconds(stops[from].point!!, stops[to].point!!) }
         }
-        private val fromOrigin = IntArray(n) { origin?.let { start -> estimator.seconds(start, stops[it].point!!) } ?: 0 }
+        private val fromOrigin = IntArray(n) { next ->
+            origin?.let { estimator.seconds(it, stops[next].point!!) } ?: 0
+        }
 
         private fun leg(previous: Int, next: Int) = if (previous < 0) fromOrigin[next] else between[previous][next]
 

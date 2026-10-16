@@ -92,9 +92,11 @@ class RoutePlannerTest {
     fun `lockFirst puts that stop first among the free ones`() {
         val stops = listOf(stop("near", 37.50, 127.01), stop("mid", 37.50, 127.10), stop("far", 37.50, 127.20))
         assertThat(planner.plan(stops, depot, lockFirst = "far").order.first()).isEqualTo("far")
-        assertThatThrownBy { planner.plan(stops, depot, lockFirst = "nope") }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { planner.plan(stops, depot, lockFirst = "nope") }
+            .isInstanceOf(IllegalArgumentException::class.java)
         val withGap = stops + stop("x", null, null)
-        assertThatThrownBy { planner.plan(withGap, depot, lockFirst = "x") }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { planner.plan(withGap, depot, lockFirst = "x") }
+            .isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test
