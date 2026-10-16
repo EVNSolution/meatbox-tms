@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { currentStopAction, type Stop } from '../domain/dispatch';
+import type { Stop } from '../domain/dispatch';
 import type { EtaLabel } from '../domain/routeView';
 import { Button, SequenceBadge, T } from './common';
 import { colors } from './theme';
@@ -26,7 +26,7 @@ export function StopDetails({
   eta?: EtaLabel | null;
   info?: ReactNode;
 }) {
-  const action = currentStopAction(stop);
+  const action = stop.status === 'current' ? 'complete' : null;
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
@@ -37,7 +37,7 @@ export function StopDetails({
           {stop.detailAddress ? <T style={styles.detail}>{stop.detailAddress}</T> : null}
         </View>
         <T style={[styles.status, stop.status === 'current' && styles.statusCurrent]}>
-          {stop.status === 'current' && stop.arrived ? '도착' : STATUS_LABEL[stop.status]}
+          {STATUS_LABEL[stop.status]}
         </T>
       </View>
       {eta ? <T style={[styles.eta, eta.dimmed && styles.etaDimmed]}>{eta.text}</T> : null}
@@ -54,7 +54,7 @@ export function StopDetails({
       {action ? (
         <Button
           busy={busy}
-          label={action === 'arrive' ? '도착' : '완료 · 다음'}
+          label="완료 · 미배송 처리"
           onPress={() => onAction(action, stop)}
           style={styles.action}
         />

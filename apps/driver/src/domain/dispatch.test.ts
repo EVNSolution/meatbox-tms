@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildRouteOrderCommand, currentStopAction, groupStops, isCoordinate, isDispatchOperable, seoulToday, stopKey, type FleetDelivery, type DayState } from './dispatch';
+import { groupStops, isCoordinate, isDispatchOperable, seoulToday, stopKey, type FleetDelivery, type DayState } from './dispatch';
 import { matchPickupQr } from './pickupQr';
 import { parsePushData } from './push';
 
@@ -18,29 +18,6 @@ test('Kotlin destination bundle key uses NFC+trim, ignores assignmentUnitId and 
   assert.equal(stops.length, 2);
   assert.equal(stops[0].boxes, 4);
   assert.deepEqual(stops.map((stop) => stop.sequence), [1, 2]);
-});
-
-test('only current arrived stop can complete; skipped is never actionable', () => {
-  const stop = groupStops([order('a', 1, '상점', 'current')])[0];
-  assert.equal(currentStopAction(stop), 'arrive');
-  const arrived = groupStops([{ ...order('a', 1, '상점', 'current'), arrivedAt: '10:35' }])[0];
-  assert.equal(currentStopAction(arrived), 'complete');
-  assert.equal(currentStopAction(groupStops([order('a', 1, '상점', 'skipped')])[0]), null);
-});
-
-test('route editing preserves current/done positions and all orders within each bundle', () => {
-  const deliveries = [order('done', 1, '완료', 'done'), order('current', 2, '현재', 'current'), order('a1', 3, 'A'), order('a2', 4, 'A'), order('b', 5, 'B')];
-  const keys = groupStops(deliveries).filter((stop) => stop.status === 'pending').map((stop) => stop.key).reverse();
-  const command = buildRouteOrderCommand({ vehicleId: 'v1', deliveries, pendingStopKeys: keys, phase: 'delivering' });
-  assert.deepEqual(command.order, ['done', 'current', 'b', 'a1', 'a2']);
-  assert.deepEqual(command.expectedOrder, deliveries.map((value) => value.id));
-  assert.throws(() => buildRouteOrderCommand({ vehicleId: 'v1', deliveries, pendingStopKeys: [keys[0], keys[0]], phase: 'delivering' }));
-});
-
-test('pending bundles cannot shift a protected order by changing bundle sizes', () => {
-  const deliveries = [order('a1', 1, 'A'), order('a2', 2, 'A'), order('locked', 3, '보류', 'skipped'), order('b', 4, 'B')];
-  const keys = groupStops(deliveries).filter((stop) => stop.status === 'pending').map((stop) => stop.key).reverse();
-  assert.throws(() => buildRouteOrderCommand({ vehicleId: 'v1', deliveries, pendingStopKeys: keys, phase: 'delivering' }));
 });
 
 test('QR rejects wrong day, vehicle, unknown and repeat while keeping individual order identity', () => {

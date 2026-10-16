@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import type { OutboxItem } from '../outbox/Outbox';
 import { groupStops, type FleetDelivery } from './dispatch';
-import { applyOutbox } from './outboxView';
+import { applyOutbox, outboxKindLabel, outboxStatusText } from './outboxView';
 
 const delivery = (id: string, name: string, status: FleetDelivery['status']): FleetDelivery => ({
   id, vehicleId: 'G1', name, address: `${name} 주소`, boxes: 1, sequence: Number(id.slice(1)), status,
@@ -43,4 +43,17 @@ test('other events and unknown stops change nothing, and the input is not modifi
 test('an order of a bundle names its stop; the last stop leaves nothing current', () => {
   const last = applyOutbox(stops, [queued('O2', 'stop_completed'), queued('O3', 'stop_completed'), queued('O4', 'stop_completed')]);
   assert.deepEqual(statuses(last), ['done', 'done', 'done']);
+});
+
+test('each state and rejection reason has a sentence that says what to do', () => {
+  const text = (state: OutboxItem['state'], extra: Partial<OutboxItem> = {}) => outboxStatusText({ ...queued('O1', 'stop_completed', state), ...extra });
+  assert.equal(text('pending'), '전송 대기');
+  assert.match(text('pending', { attempts: 2 }), /2회/u);
+  assert.equal(text('uploading'), '전송 중');
+  assert.match(text('rejected', { reasonStatus: 401, reason: 'LOGIN_REQUIRED' }), /로그인/u);
+  assert.match(text('rejected', { reasonStatus: 409, reason: 'X' }), /상태/u);
+  assert.match(text('rejected', { reasonStatus: 413, reason: 'PHOTO_TOO_LARGE' }), /사진/u);
+  assert.match(text('rejected', { reasonStatus: 400, reason: 'PHOTO_FILE_MISSING' }), /파일/u);
+  assert.match(text('rejected', { reasonStatus: 400, reason: 'INVALID_INPUT' }), /INVALID_INPUT/u);
+  assert.equal(outboxKindLabel('stop_failed'), '미배송');
 });

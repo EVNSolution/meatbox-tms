@@ -1,9 +1,15 @@
-// Runs the app's own API code (src/api, src/domain) against a running server: login -> route -> suggest ->
-// route_reordered -> departed. It proves the contract between the app code and the server; it does not run the
+// Runs the app's own API code (src/api, src/domain, src/outbox) against a running server: login -> route ->
+// suggest -> route_reordered -> departed -> stop reports through the real device queue (photo upload, completion,
+// failure, partial delivery, a lost answer) -> history. It proves the contract between the app code and the server; it does not run the
 // Android UI. Usage (fixture: node scripts/web-fork-fixture.mjs --native):
 //   EXPO_PUBLIC_MEATBOX_API_BASE_URL=http://127.0.0.1:4173 LIVE_CHECK_USERNAME=... LIVE_CHECK_PASSWORD=... \
-//     npx tsx scripts/live-check.mts
+//     LIVE_CHECK_PLAN=completed,failed npx tsx scripts/live-check.mts   (plan: result per stop, in route order;
+//     completed | failed | partial; needs a fresh fixture each run)
 import assert from 'node:assert/strict';
+import { mkdtempSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const username = process.env.LIVE_CHECK_USERNAME ?? '';
 const password = process.env.LIVE_CHECK_PASSWORD ?? '';
@@ -34,12 +40,28 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
   throw new Error('too many redirects');
 }) as typeof fetch;
 
-const { fetchDayState, login, sendCommand } = await import('../src/api/client');
+// React Native appends `{ uri, name, type }` to a FormData; Node needs the bytes, so read the file for it.
+const NativeFormData = globalThis.FormData;
+globalThis.FormData = class extends NativeFormData {
+  append(name: string, value: unknown, fileName?: string) {
+    const file = value as { uri?: string; name?: string; type?: string };
+    if (file && typeof file === 'object' && !(value instanceof Blob) && typeof file.uri === 'string') {
+      const bytes = readFileSync(fileURLToPath(file.uri));
+      super.append(name, new Blob([bytes], { type: file.type }), file.name);
+    } else {
+      super.append(name, value as Blob, fileName);
+    }
+  }
+} as typeof FormData;
+
+const { fetchDayState, login } = await import('../src/api/client');
 const driverApi = await import('../src/api/driverApi');
 const { ApiError } = await import('../src/api/types');
 const { seoulToday, groupStops, vehicleDeliveries } = await import('../src/domain/dispatch');
 const { detailSections, etaLabel } = await import('../src/domain/routeView');
 const { suggestedKeys, serverStopOrder, suggestionSummary } = await import('../src/domain/routeDraft');
+const { buildStopEvent } = await import('../src/domain/stopEvents');
+const { Outbox } = await import('../src/outbox/Outbox');
 
 const date = seoulToday();
 const vehicleId = process.env.LIVE_CHECK_VEHICLE ?? 'TRUCK-1';
@@ -48,14 +70,25 @@ const say = (label: string, value: unknown) => console.log(`${label}: ${JSON.str
 const user = await login(username, password);
 say('login', { username: user.username });
 
-// The operator confirms the day (web screen in production); the app never does this.
+// The operator confirms the day (web screen in production); the app never does this. Plain requests, not app code.
+async function operatorCommand(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const current = await fetchDayState(date, null);
+  assert.ok(!current.notModified);
+  const snapshot = current.state as unknown as { boot: string; revision: number; dispatch?: { draftVersion?: number } };
+  const response = await fetch(`${process.env.EXPO_PUBLIC_MEATBOX_API_BASE_URL}/api/dispatch-data/days/${date}/commands`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: new URL(process.env.EXPO_PUBLIC_MEATBOX_API_BASE_URL as string).origin },
+    body: JSON.stringify({ ...body, expectedBoot: snapshot.boot, expectedRevision: snapshot.revision, draftVersion: body.type === 'publish_dispatch' ? snapshot.dispatch?.draftVersion : undefined }),
+  });
+  const text = await response.text();
+  assert.equal(response.status, 200, text);
+  return JSON.parse(text) as Record<string, unknown>;
+}
 const open = await fetchDayState(date, null);
 assert.ok(!open.notModified);
-const phase = (open.state as unknown as { dispatch?: { phase?: string; draftVersion?: number } }).dispatch;
-if (phase?.phase !== 'published') {
-  const calculated = await sendCommand(date, open.state, { type: 'calculate_dispatch', vehicleIds: [vehicleId] } as never);
-  assert.ok(calculated);
-  await sendCommand(date, calculated, { type: 'publish_dispatch', draftVersion: (calculated as never as { dispatch: { draftVersion: number } }).dispatch.draftVersion } as never);
+if ((open.state as unknown as { dispatch?: { phase?: string } }).dispatch?.phase !== 'published') {
+  await operatorCommand({ type: 'calculate_dispatch', vehicleIds: [vehicleId] });
+  await operatorCommand({ type: 'publish_dispatch' });
 }
 
 const before = await driverApi.fetchRoute(date, vehicleId);
@@ -117,4 +150,87 @@ await assert.rejects(
   (error: unknown) => error instanceof ApiError && error.status === 409,
 );
 say('reorder after departure', 'refused 409');
+
+// Stop reports through the app's own device queue. Its storage and clock are in memory; its network is the app's code.
+const plan = (process.env.LIVE_CHECK_PLAN ?? 'completed,failed').split(',');
+assert.ok(plan.length <= running.stops.length, 'the plan has more results than the route has stops');
+const folder = mkdtempSync(join(tmpdir(), 'live-check-'));
+const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0xff, 0xd9]);
+const photoOf = (name: string) => { const path = join(folder, name); writeFileSync(path, jpeg); return pathToFileURL(path).toString(); };
+let saved = '[]';
+let clock = Date.now();
+let lostOnce = plan.includes('completed');
+const log: string[] = [];
+const outbox = new Outbox({
+  load: async () => JSON.parse(saved),
+  save: async (items) => { saved = JSON.stringify(items); },
+  now: () => clock,
+  photoReady: (uri) => existsSync(fileURLToPath(uri)),
+  uploadPhoto: async (day, uri) => { log.push('upload'); return driverApi.uploadPhoto(day, uri); },
+  sendEvent: async (item, payload) => {
+    log.push(`send ${item.type}`);
+    const answer = await driverApi.sendStopEvent(item.type, item, payload);
+    if (lostOnce && item.type === 'stop_completed') {
+      // The server took the event but the answer never arrived.
+      lostOnce = false;
+      throw new TypeError('Network request failed');
+    }
+    return answer;
+  },
+  lookupEvent: async (day, eventId) => { log.push('lookup'); return driverApi.fetchEvent(day, eventId); },
+  removePhotos: (item) => { for (const photo of item.photos) rmSync(fileURLToPath(photo.localPath), { force: true }); },
+});
+await outbox.init();
+for (const [index, kind] of plan.entries()) {
+  const stopId = running.stops[index].stopId;
+  const draft = kind === 'completed' ? { kind: 'completed' as const, note: '문 앞 보관' }
+    : kind === 'failed' ? { kind: 'failed' as const, reasonCode: 'ABSENT' as const, note: '부재' }
+      : { kind: 'partial' as const, note: '일부 품절', items: [{ sku: 'LIVE-1', name: '시험 품목', orderedQty: 3, deliveredQty: 1 }] };
+  const { type, payload } = buildStopEvent(stopId, draft, running.stops[index].orderIds[0]);
+  const eventId = driverApi.newEventId();
+  await outbox.enqueue({
+    eventId, occurredAt: new Date().toISOString(), date, vehicleId, type, stopId, payload,
+    photoPaths: kind === 'partial' ? [] : [photoOf(`${eventId}.jpg`)],
+  });
+}
+const first = await outbox.drain();
+say('queue after first drain', { result: first.kind, states: outbox.list().map((item) => item.state), log });
+if (plan.includes('completed')) {
+  assert.equal(first.kind, 'waiting', 'the lost answer makes the queue wait');
+  clock += 5_000;
+  log.length = 0;
+  assert.equal((await outbox.drain()).kind, 'idle');
+  say('queue after the retry', { log });
+  assert.equal(log[0], 'lookup', 'a lost answer is looked up before anything is sent again');
+} else {
+  assert.equal(first.kind, 'idle');
+}
+assert.deepEqual(outbox.list().map((item) => item.state), plan.map(() => 'sent'));
+assert.equal(outbox.list().every((item) => item.reply?.accepted === true), true);
+
+const history = await driverApi.fetchHistory(date, vehicleId);
+say('history', history.map((entry) => ({ stopId: entry.stopId, result: entry.result, reasonCode: entry.reasonCode, note: entry.note, photos: entry.photoIds.length })));
+assert.deepEqual(history.map((entry) => entry.stopId), plan.map((_kind: string, index: number) => running.stops[index].stopId));
+const expectedResult = { completed: 'completed', failed: 'failed', partial: 'partially_completed' } as const;
+assert.deepEqual(history.map((entry) => entry.result), plan.map((kind: string) => expectedResult[kind as keyof typeof expectedResult]));
+
+// The photo the server stored is the photo that was uploaded.
+const withPhoto = history.find((entry) => entry.photoIds.length > 0);
+if (withPhoto) {
+  const photo = await fetch(driverApi.photoUrl(date, withPhoto.photoIds[0]));
+  assert.equal(photo.status, 200);
+  assert.deepEqual(Buffer.from(await photo.arrayBuffer()), jpeg);
+  say('photo download', { bytes: jpeg.length, same: true });
+}
+
+// A resend of a finished event is answered as a duplicate and changes nothing.
+const sentItem = outbox.list().find((item) => item.photos.length > 0) ?? outbox.list()[0];
+const photoIds = sentItem.photos.map((photo) => photo.photoId);
+const again = await driverApi.sendStopEvent(sentItem.type, sentItem, photoIds.length > 0 ? { ...sentItem.payload, photoIds } : sentItem.payload);
+assert.equal(again.duplicate, true);
+say('resend of a sent event', { duplicate: again.duplicate });
+assert.equal((await driverApi.fetchEvent(date, 'never-sent'))?.accepted ?? null, null);
+await outbox.pruneSent();
+assert.equal(outbox.list().length, 0);
+rmSync(folder, { recursive: true, force: true });
 console.log('LIVE CHECK OK');

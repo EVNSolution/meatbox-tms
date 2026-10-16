@@ -5,21 +5,25 @@ import { ActivityIndicator, AppState, Modal, Pressable, ScrollView, StyleSheet, 
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchDayState, fetchMessages, getSession, logout, sendCommand, sendMessage, type DriverCommand } from '../api/client';
+import { fetchDayState, fetchMessages, getSession, logout, sendMessage } from '../api/client';
 import { newEventStamp, sendDeparted, sendRouteReordered, suggestRoute } from '../api/driverApi';
 import type { DriverRoute } from '../api/driverContracts';
 import { ApiError, type DriverMessage, type SessionUser } from '../api/types';
 import { useDriverRoute } from './useDriverRoute';
+import { useOutbox } from './useOutbox';
 import { POLL_INTERVAL_MS } from '../config';
 import { groupStops, isDispatchOperable, seoulToday, stopProgress, vehicleDeliveries, vehiclePhase, type DayState, type Stop } from '../domain/dispatch';
 import { serverStopOrder, suggestedKeys, suggestionSummary } from '../domain/routeDraft';
 import { RetryAttempt } from '../domain/retryAttempt';
 import { departureLocation } from '../platform/location';
 import { registerPush, revokePush, subscribePush, subscribePushToken, type PushStatus } from '../platform/pushNotifications';
+import { applyOutbox } from '../domain/outboxView';
 import { dimmedStopKeys, etaLabel, serverStop } from '../domain/routeView';
 import { RequestGate } from '../platform/requestQueue';
 import { readVehicleChoice, saveVehicleChoice } from '../storage';
 import { BottomSheet } from '../ui/BottomSheet';
+import { CompletionScreen } from '../ui/CompletionScreen';
+import { OutboxSheet } from '../ui/OutboxSheet';
 import { Button, Logo, T } from '../ui/common';
 import { DeliveryRouteMap } from '../ui/DeliveryRouteMap';
 import { DeliveryScreen } from '../ui/DeliveryScreen';
@@ -88,6 +92,8 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   const [tab, setTab] = useState<'delivery' | 'map'>('delivery');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<DayState | null>(null);
+  const [reporting, setReporting] = useState<string | null>(null);
+  const [outboxOpen, setOutboxOpen] = useState(false);
   const [messages, setMessages] = useState<DriverMessage[]>([]);
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -97,6 +103,7 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   const selectedVehicle = useRef<string | null>(null);
   const etag = useRef<string | null>(null);
   const mutating = useRef(false);
+  const refreshOk = useRef(true);
   const generation = useRef(0);
   const requests = useRef(new RequestGate());
   const messageGeneration = useRef(0);
@@ -128,8 +135,9 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
         const result = await fetchDayState(date, force ? null : etag.current);
         if (!active.current || requestGeneration !== generation.current) return;
         if (!result.notModified) { etag.current = result.etag; applyState(result.state); }
+        refreshOk.current = true;
         setError(null);
-      } catch (cause) { if (requestGeneration === generation.current) fail(cause); }
+      } catch (cause) { refreshOk.current = false; if (requestGeneration === generation.current) fail(cause); }
       finally { if (active.current && requestGeneration === generation.current) setRefreshing(false); }
     }, force);
   }, [applyState, date, fail]);
@@ -141,6 +149,12 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   }, [refresh]);
 
   const { route, reload: reloadRoute } = useDriverRoute(date, vehicleId, state, onSignedOut);
+  const outbox = useOutbox({
+    // Rereads the day after the server confirmed a report; true when the screen shows the server's state again.
+    onConfirmed: async () => { etag.current = null; await refresh(true); return refreshOk.current; },
+    onConflict: () => { etag.current = null; void refresh(true); },
+    onSessionLost: onSignedOut,
+  });
 
   const loadMessages = useCallback(async (force = false) => {
     if (!vehicleId || vehicleId !== selectedVehicle.current) return;
@@ -210,24 +224,8 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
     } catch (cause) { fail(cause); }
     finally { mutating.current = false; if (active.current) setBusy(false); }
   }
-  async function command(value: DriverCommand, basis = stateRef.current) {
-    if (!basis || mutating.current) return;
-    mutating.current = true; generation.current += 1; setBusy(true); setRefreshing(false); setError(null);
-    try {
-      const result = await sendCommand(date, basis, value);
-      if (active.current && result) applyState(result);
-      etag.current = null; setEditing(null);
-    } catch (cause) { fail(cause); setEditing(null); }
-    finally {
-      mutating.current = false;
-      if (active.current) { setBusy(false); void refresh(true); }
-    }
-  }
-  function act(action: 'arrive' | 'complete', stop: Stop) {
-    if (vehicleId) void command({ type: action === 'arrive' ? 'arrive_stop' : 'complete_stop', vehicleId, orderId: stop.orders[0].id });
-  }
-  // Order edits and the departure are driver events; the other stop commands stay on `commands` until the
-  // completion events replace them.
+  function act(_action: 'arrive' | 'complete', stop: Stop) { setReporting(stop.key); }
+  // Order edits, the departure and the stop reports are driver events; the reports go through the device queue.
   async function openEditor() {
     if (!state || !vehicleId || mutating.current) return;
     setError(null);
@@ -306,7 +304,9 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
   if (!choiceReady) return <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>;
   if (!vehicleId || (state && !chosenVehicle)) return <VehicleSelectScreen date={date} error={error} onLogout={() => void signOut()} onRetry={() => void refresh(true)} onSelect={(id) => void chooseVehicle(id)} state={state} />;
   const deliveries = state ? vehicleDeliveries(state, vehicleId) : [];
-  const stops = groupStops(deliveries);
+  const { stops, queued } = applyOutbox(groupStops(deliveries), outbox.items);
+  const reportingStop = stops.find((stop) => stop.key === reporting && stop.status === 'current') ?? null;
+  const labelFor = (item: { stopId: string }) => stops.find((stop) => stop.orders.some((order) => order.id === item.stopId))?.name ?? item.stopId;
   const phase = state ? vehiclePhase(state, vehicleId) : 'idle';
   const operable = !!state && isDispatchOperable(state);
   const pickup = phase === 'idle' || phase === 'preparing';
@@ -325,6 +325,9 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
       <Button disabled={busy} label="차량 변경" onPress={() => void chooseVehicle(null)} style={styles.headerButton} tone="secondary" />
     </View></View>
     <View style={styles.summary}><T style={styles.driver}>{chosenVehicle?.driver ?? vehicleId}</T><T style={styles.caption}>{date} · 완료 {progress.done}/{progress.total}곳</T></View>
+    {outbox.waiting > 0 ? <Pressable accessibilityRole="button" onPress={() => setOutboxOpen(true)} style={[styles.outboxBadge, outbox.rejected > 0 && styles.outboxBadgeRejected]}>
+      <T style={styles.outboxBadgeText}>{outbox.rejected > 0 ? `전송 실패 ${outbox.rejected}건 · 확인이 필요합니다` : `전송 대기 ${outbox.waiting}건`}</T>
+    </Pressable> : null}
     <T style={[styles.pushStatus, pushStatus !== 'ready' && styles.warning]}>{pushLabel}</T>
     {error ? <View style={styles.errorBox}><T accessibilityRole="alert" style={styles.error}>{error}</T><Button label="새로고침" onPress={() => void refresh(true)} tone="secondary" /></View> : null}
     {banner ? <Pressable accessibilityRole="button" onPress={() => { setMessagesOpen(true); setBanner(null); }} style={styles.banner}><T style={styles.bannerTitle}>{banner.title}</T><T numberOfLines={2} style={styles.bannerBody}>{banner.body}</T></Pressable> : null}
@@ -332,11 +335,13 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
       : !operable ? <View style={styles.center}><T>오늘 배차가 확정되면 배송을 시작할 수 있습니다.</T><Button label="새로고침" onPress={() => void refresh(true)} /></View>
       : editing ? <RouteOrderEditor isSaving={busy} onCancel={() => setEditing(null)} onSave={(keys) => void saveOrder(keys)} onSuggest={suggestOrder} stops={groupStops(vehicleDeliveries(editing, vehicleId)).filter((stop) => stop.status === 'pending')} />
       : tab === 'delivery' && pickup ? <PickupScreen allOrderIds={new Set(state.fleetDeliveries.map((order) => order.id))} date={date} deliveries={deliveries} key={`${date}:${vehicleId}`} onEditOrder={() => void openEditor()} onStart={() => void depart()} starting={busy || !!error} vehicleId={vehicleId} />
-      : tab === 'delivery' ? <DeliveryScreen busy={busy || !!error} canEditOrder={false} etaFor={etaFor} infoFor={infoFor} onAction={act} onEditOrder={() => void openEditor()} onRefresh={() => { setRefreshing(true); void refresh(true); }} refreshing={refreshing} stops={stops} />
+      : tab === 'delivery' ? <DeliveryScreen busy={busy || !!error} canEditOrder={false} etaFor={etaFor} queued={queued} infoFor={infoFor} onAction={act} onEditOrder={() => void openEditor()} onRefresh={() => { setRefreshing(true); void refresh(true); }} refreshing={refreshing} stops={stops} />
       : <View style={styles.fill}><DeliveryRouteMap dimmedKeys={dimmedStopKeys(stops, route)} onMapPress={() => setSelectedKey(null)} onSelect={setSelectedKey} selectedKey={selectedKey} stops={stops} />
         <BottomSheet onDismiss={() => setSelectedKey(null)} open={!!selectedStop}>{selectedStop ? <ScrollView style={styles.stopSheet}><StopDetails busy={busy || !!error} eta={etaFor(selectedStop)} info={infoFor(selectedStop)} onAction={act} stop={selectedStop} /><Button label="닫기" onPress={() => setSelectedKey(null)} tone="secondary" /></ScrollView> : null}</BottomSheet>
       </View>}
     {!editing ? <View style={styles.tabs}>{(['delivery', 'map'] as const).map((value) => <Pressable accessibilityRole="tab" accessibilityState={{ selected: tab === value }} key={value} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabSelected]}><T style={[styles.tabLabel, tab === value && styles.tabLabelSelected]}>{value === 'delivery' ? '배송' : '지도'}</T></Pressable>)}</View> : null}
+    {reportingStop ? <CompletionScreen date={date} onClose={() => setReporting(null)} onSubmit={outbox.enqueue} queuedPhotos={outbox.photos} stop={reportingStop} stopId={serverStop(reportingStop, route)?.stopId ?? reportingStop.orders[0].id} vehicleId={vehicleId} /> : null}
+    {outboxOpen ? <OutboxSheet items={outbox.items} labelFor={labelFor} onClose={() => setOutboxOpen(false)} onDiscard={(id) => { void outbox.discard(id).then(() => { etag.current = null; void refresh(true); }); }} onRetry={(id) => void outbox.retryNow(id)} /> : null}
     {messagesOpen ? <MessagesModal error={messageError} messages={messages} onClose={() => { setMessagesOpen(false); setBanner(null); }} onRefresh={() => loadMessages(true)} onSend={async (body) => { await sendMessage(date, vehicleId, body); await loadMessages(true); }} /> : null}
   </SafeAreaView>;
 }
@@ -377,7 +382,10 @@ const styles = StyleSheet.create({
   tabs: { backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row' },
   tab: { alignItems: 'center', borderTopWidth: 3, borderTopColor: 'transparent', flex: 1, justifyContent: 'center', minHeight: 58 },
   tabSelected: { borderTopColor: colors.brand }, tabLabel: { color: colors.muted, fontSize: 17, fontWeight: '700' }, tabLabelSelected: { color: colors.brand },
-  stopSheet: { maxHeight: 420 }, messageList: { gap: 10, padding: 12 }, message: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderRadius: radius.card, gap: 4, maxWidth: '90%', padding: 12 },
+  stopSheet: { maxHeight: 420 },
+  outboxBadge: { backgroundColor: colors.action, paddingHorizontal: 12, paddingVertical: 8 },
+  outboxBadgeRejected: { backgroundColor: colors.error },
+  outboxBadgeText: { color: colors.surface, fontSize: 14, fontWeight: '700' }, messageList: { gap: 10, padding: 12 }, message: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderRadius: radius.card, gap: 4, maxWidth: '90%', padding: 12 },
   ownMessage: { alignSelf: 'flex-end', borderColor: colors.border, borderWidth: 1 }, messageMeta: { color: colors.muted, fontSize: 12 }, messageBody: { fontSize: 16 },
   composer: { backgroundColor: colors.surface, gap: 8, padding: 12 }, messageInput: { borderColor: colors.border, borderRadius: radius.control, borderWidth: 1, color: colors.text, fontFamily, fontSize: 16, maxHeight: 120, minHeight: 60, padding: 12 },
 });

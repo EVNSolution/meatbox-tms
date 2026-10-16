@@ -12,7 +12,7 @@ export function readSession(value: unknown): SessionUser {
 }
 
 export function readDayState(value: unknown): DayState {
-  if (!record(value) || typeof value.boot !== 'string' || !Number.isSafeInteger(value.revision)
+  if (!record(value) || (value.boot != null && typeof value.boot !== 'string') || !Number.isSafeInteger(value.revision)
     || (value.revision as number) < 0 || !Array.isArray(value.fleetVehicles) || !Array.isArray(value.fleetDeliveries)
     || !record(value.vehicleStates)) return fail();
   for (const vehicle of value.fleetVehicles) {

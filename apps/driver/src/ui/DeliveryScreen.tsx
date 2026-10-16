@@ -18,6 +18,7 @@ export function DeliveryScreen({
   canEditOrder,
   etaFor,
   infoFor,
+  queued,
 }: {
   stops: Stop[];
   busy: boolean;
@@ -27,6 +28,7 @@ export function DeliveryScreen({
   onEditOrder(): void;
   canEditOrder: boolean;
   etaFor(stop: Stop): EtaLabel | null;
+  queued: ReadonlySet<string>;
   infoFor(stop: Stop): ReactNode;
 }) {
   const [showDone, setShowDone] = useState(false);
@@ -68,12 +70,12 @@ export function DeliveryScreen({
           <T style={styles.doneToggleText}>완료 {finished.length}곳 {showDone ? '접기' : '보기'}</T>
         </Pressable>
       ) : null}
-      {showDone ? finished.map((stop) => <StopRow key={stop.key} stop={stop} />) : null}
+      {showDone ? finished.map((stop) => <StopRow key={stop.key} queued={queued.has(stop.key)} stop={stop} />) : null}
     </ScrollView>
   );
 }
 
-function StopRow({ stop, eta = null }: { stop: Stop; eta?: EtaLabel | null }) {
+function StopRow({ stop, eta = null, queued = false }: { stop: Stop; eta?: EtaLabel | null; queued?: boolean }) {
   const done = stop.status === 'done' || stop.status === 'skipped';
   return (
     <View style={[styles.row, done && styles.rowDone]}>
@@ -84,7 +86,7 @@ function StopRow({ stop, eta = null }: { stop: Stop; eta?: EtaLabel | null }) {
         {eta ? <T style={[styles.rowEta, eta.dimmed && styles.rowEtaDimmed]}>{eta.text}</T> : null}
       </View>
       <T style={styles.rowMeta}>
-        {stop.status === 'skipped' ? '보류' : `${stop.orders.length}건 · ${stop.boxes}박스`}
+        {queued ? '전송 대기' : stop.status === 'skipped' ? '미배송' : `${stop.orders.length}건 · ${stop.boxes}박스`}
       </T>
     </View>
   );

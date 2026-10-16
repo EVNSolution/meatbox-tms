@@ -26,7 +26,7 @@ export type FleetVehicle = {
 };
 
 export type DayState = {
-  boot: string;
+  boot?: string;
   revision: number;
   sourceData?: { date?: string; operatingDate?: string };
   dispatch?: { phase?: string } | null;
@@ -47,8 +47,6 @@ export type Stop = {
   arrived: boolean;
   coordinates: [number, number] | null;
 };
-
-export type StopAction = 'arrive' | 'complete';
 
 // Today's operating date in Asia/Seoul (UTC+9, no DST).
 export function seoulToday(now = Date.now()): string {
@@ -115,61 +113,9 @@ export function isCoordinate(value: unknown): value is [number, number] {
     && Math.abs(value[0]) <= 180 && Math.abs(value[1]) <= 90;
 }
 
-export function currentStopAction(stop: Stop | null | undefined): StopAction | null {
-  if (!stop || stop.status !== 'current') return null;
-  return stop.arrived ? 'complete' : 'arrive';
-}
-
 export function stopProgress(stops: readonly Stop[]): { done: number; total: number } {
   return {
     done: stops.filter((stop) => stop.status === 'done').length,
     total: stops.length,
-  };
-}
-
-export type SetRouteOrderCommand = {
-  type: 'set_route_order';
-  vehicleId: string;
-  order: string[];
-  expectedOrder: string[];
-  expectedStatuses: DeliveryStatus[];
-  expectedPhase: VehiclePhase;
-};
-
-// Builds the reorder command. Only pending stops move; every other stop keeps its slot.
-// Orders of one destination stay contiguous because whole stops are moved.
-export function buildRouteOrderCommand(input: {
-  vehicleId: string;
-  deliveries: readonly FleetDelivery[];
-  pendingStopKeys: readonly string[];
-  phase: VehiclePhase;
-}): SetRouteOrderCommand {
-  const current = [...input.deliveries].sort((a, b) => a.sequence - b.sequence);
-  const stops = groupStops(current);
-  const pending = new Map(stops.filter((stop) => stop.status === 'pending').map((stop) => [stop.key, stop]));
-  if (
-    input.pendingStopKeys.length !== pending.size
-    || new Set(input.pendingStopKeys).size !== pending.size
-    || input.pendingStopKeys.some((key) => !pending.has(key))
-  ) {
-    throw new Error('배송지 순서를 다시 확인해 주세요.');
-  }
-  const queue = input.pendingStopKeys.map((key) => pending.get(key) as Stop);
-  const reordered = stops.map((stop) => (stop.status === 'pending' ? queue.shift() as Stop : stop));
-  const order = reordered.flatMap((stop) => stop.orders.map((delivery) => delivery.id));
-  const expectedOrder = current.map((delivery) => delivery.id);
-  const movedProtected = current.some(
-    (delivery, index) => delivery.status !== 'pending' && order[index] !== delivery.id,
-  );
-  if (movedProtected) {
-    throw new Error('완료·진행·보류 배송지의 위치는 바꿀 수 없습니다.');
-  }
-  return {
-    type: 'set_route_order',
-    vehicleId: input.vehicleId,
-    order,
-    expectedOrder,
-    expectedStatuses: current.map((delivery) => delivery.status),
-    expectedPhase: input.phase,
   };
 }

@@ -28,3 +28,29 @@ export function applyOutbox(stops: readonly Stop[], items: readonly OutboxItem[]
   }
   return { stops: shown, queued };
 }
+
+const KIND_LABEL: Record<string, string> = {
+  stop_completed: '배송 완료',
+  stop_failed: '미배송',
+  stop_partially_completed: '부분 완료',
+};
+
+export function outboxKindLabel(type: string): string {
+  return KIND_LABEL[type] ?? type;
+}
+
+/** What to tell the driver about an item: waiting, or why it stopped and what can be done. */
+export function outboxStatusText(item: OutboxItem): string {
+  if (item.state === 'sent') return '전송됨';
+  if (item.state === 'uploading') return '전송 중';
+  if (item.state === 'pending') return item.attempts > 0 ? `연결을 기다리는 중 (${item.attempts}회 실패)` : '전송 대기';
+  switch (item.reasonStatus) {
+    case 401: return '로그인이 필요합니다. 다시 로그인한 뒤 "다시 시도"를 눌러 주세요.';
+    case 403: return '이 작업을 처리할 권한이 없습니다. 운영팀에 알려 주세요.';
+    case 409: return '서버의 배송 상태와 맞지 않습니다. 최신 상태를 확인한 뒤 삭제하거나 다시 시도해 주세요.';
+    case 413: return '사진이 너무 큽니다. 삭제하고 사진을 다시 첨부해 주세요.';
+    default: break;
+  }
+  if (item.reason === 'PHOTO_FILE_MISSING') return '사진 파일이 없어 보낼 수 없습니다. 삭제하고 다시 처리해 주세요.';
+  return `서버가 거절했습니다 (${item.reason ?? '알 수 없음'}). 삭제하고 다시 처리해 주세요.`;
+}

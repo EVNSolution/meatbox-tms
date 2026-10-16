@@ -91,25 +91,6 @@ export async function fetchDayState(date: string, etag: string | null): Promise<
   };
 }
 
-export type DriverCommand =
-  | { type: 'set_route_order'; vehicleId: string; order: string[]; expectedOrder: string[]; expectedStatuses: string[]; expectedPhase: string }
-  | { type: 'start_route'; vehicleId: string }
-  | { type: 'arrive_stop'; vehicleId: string; orderId: string }
-  | { type: 'complete_stop'; vehicleId: string; orderId: string };
-
-export async function sendCommand(
-  date: string,
-  base: Pick<DayState, 'boot' | 'revision'>,
-  command: DriverCommand,
-): Promise<DayState | null> {
-  const body = { ...command, expectedBoot: base.boot, expectedRevision: base.revision };
-  const result = await requestJson<{ state?: DayState }>(
-    `/api/dispatch-data/days/${date}/commands`,
-    jsonInit('POST', body),
-  );
-  return result?.state ? readDayState(result.state) : null;
-}
-
 export async function registerPushToken(body: {
   date: string;
   vehicleId: string;
