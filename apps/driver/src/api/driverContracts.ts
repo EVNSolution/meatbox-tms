@@ -156,6 +156,35 @@ export function readSuggestion(value: unknown): RouteSuggestion {
   };
 }
 
+export type HistoryItem = {
+  stopId: string;
+  result: 'completed' | 'partially_completed' | 'failed';
+  completedAt: string | null;
+  reasonCode: string | null;
+  note: string | null;
+  photoIds: string[];
+};
+
+export function readHistory(value: unknown): HistoryItem[] {
+  if (!record(value) || !Array.isArray(value.items)) return fail();
+  return value.items.map((item) => {
+    if (!record(item) || !['completed', 'partially_completed', 'failed'].includes(String(item.result))) return fail();
+    return {
+      stopId: text(item.stopId),
+      result: item.result as HistoryItem['result'],
+      completedAt: nullableText(item.completedAt),
+      reasonCode: nullableText(item.reasonCode),
+      note: nullableText(item.note),
+      photoIds: item.photoIds == null ? [] : strings(item.photoIds),
+    };
+  });
+}
+
+export function readPhotoReceipt(value: unknown): { photoId: string; bytes: number } {
+  if (!record(value)) return fail();
+  return { photoId: text(value.photoId), bytes: count(value.bytes) };
+}
+
 export function readEventReply(value: unknown): EventReply {
   if (!record(value) || value.accepted !== true || typeof value.duplicate !== 'boolean') return fail();
   return { accepted: true, duplicate: value.duplicate, receivedAt: text(value.receivedAt), next: readNext(value.next) };

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, type TestContext } from 'node:test';
 
-import { fetchRoute, fetchStop, newEventId, newEventStamp, photoUrl, sendDeparted, sendRouteReordered, suggestRoute } from './driverApi';
+import { fetchEvent, fetchHistory, fetchRoute, fetchStop, sendStopEvent, uploadPhoto, newEventId, newEventStamp, photoUrl, sendDeparted, sendRouteReordered, suggestRoute } from './driverApi';
 import { ApiError } from './types';
 
 const DATE = '2026-11-02';
@@ -123,4 +123,52 @@ test('event ids are unique, server-valid, and photo URLs stay on the dated drive
   assert.equal(ids.size, 50);
   assert.equal([...ids].every((id) => /^[A-Za-z0-9_-]{1,64}$/u.test(id)), true);
   assert.match(photoUrl(DATE, 'p 1'), new RegExp(`/api/dispatch-data/days/${DATE}/driver/photos/p%201$`, 'u'));
+});
+
+test('uploads a photo as multipart without a hand-set content type and reads the receipt', async (t) => {
+  const calls = mockFetch(t, () => json({ photoId: 'p-1', bytes: 321 }, 201));
+  const receipt = await uploadPhoto(DATE, 'file:///data/outbox/e-1/0.jpg');
+  assert.deepEqual(receipt, { photoId: 'p-1', bytes: 321 });
+  assert.equal(calls[0].path, `/api/dispatch-data/days/${DATE}/driver/photos`);
+  assert.equal(calls[0].init.method, 'POST');
+  assert.equal(calls[0].init.body instanceof FormData, true);
+  assert.equal(new Headers(calls[0].init.headers).has('Content-Type'), false);
+  assert.equal(new Headers(calls[0].init.headers).has('Origin'), true);
+  t.mock.restoreAll();
+  mockFetch(t, () => problem(413, 'PHOTO_TOO_LARGE'));
+  await assert.rejects(uploadPhoto(DATE, 'file:///x.jpg'), (error: unknown) => error instanceof ApiError && error.status === 413 && error.code === 'PHOTO_TOO_LARGE');
+});
+
+test('stop events go to the events endpoint with their payload and the stamped body', async (t) => {
+  const calls = mockFetch(t, () => json({ accepted: true, duplicate: false, receivedAt: 'now', next: null }, 202));
+  const input = { eventId: 'e-9', occurredAt: NOW, date: DATE, vehicleId: 'G1' };
+  await sendStopEvent('stop_failed', input, { stopId: 'O1', reasonCode: 'ABSENT', photoIds: ['p-1'] });
+  assert.deepEqual(JSON.parse(String(calls[0].init.body)), {
+    eventId: 'e-9', type: 'stop_failed', occurredAt: NOW, date: DATE, vehicleId: 'G1',
+    payload: { stopId: 'O1', reasonCode: 'ABSENT', photoIds: ['p-1'] },
+  });
+});
+
+test('a lost answer is looked up: the stored reply when the server saw the event, null when it did not', async (t) => {
+  mockFetch(t, () => json({ accepted: true, duplicate: true, receivedAt: 'now', next: null }));
+  assert.equal((await fetchEvent(DATE, 'e-1'))?.duplicate, true);
+  t.mock.restoreAll();
+  const calls = mockFetch(t, () => problem(404, 'REQUEST_NOT_FOUND'));
+  assert.equal(await fetchEvent(DATE, 'e-2'), null);
+  assert.equal(calls[0].path, `/api/dispatch-data/days/${DATE}/driver/events/e-2`);
+  t.mock.restoreAll();
+  mockFetch(t, () => problem(429, 'DRIVER_RATE_LIMITED'));
+  await assert.rejects(fetchEvent(DATE, 'e-3'), (error: unknown) => error instanceof ApiError && error.status === 429);
+});
+
+test('the day history lists results with their reasons and photos', async (t) => {
+  mockFetch(t, () => json({ date: DATE, vehicleId: 'G1', items: [
+    { stopId: 'O1', result: 'failed', completedAt: '2026-11-02T10:00:00+09:00', reasonCode: 'ABSENT', note: '부재', photoIds: ['p-1'] },
+    { stopId: 'O3', result: 'completed', completedAt: null },
+  ] }));
+  const items = await fetchHistory(DATE, 'G1');
+  assert.deepEqual(items.map((item) => [item.stopId, item.result, item.reasonCode, item.photoIds]), [['O1', 'failed', 'ABSENT', ['p-1']], ['O3', 'completed', null, []]]);
+  t.mock.restoreAll();
+  mockFetch(t, () => json({ items: [{ stopId: 'O1', result: 'lost' }] }));
+  await assert.rejects(fetchHistory(DATE, 'G1'), (error: unknown) => error instanceof ApiError && error.code === 'INVALID_RESPONSE');
 });

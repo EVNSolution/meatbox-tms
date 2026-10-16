@@ -57,6 +57,15 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "cameraPermission": "배송 완료 사진을 촬영하기 위해 카메라를 사용합니다.",
+          "photosPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-file-system",
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "출발 위치를 운영팀에 알리고 배송 지도에 현재 위치를 표시하기 위해 위치 권한을 사용합니다.",

@@ -1,18 +1,22 @@
 import { API_BASE_URL } from '../config';
-import { jsonInit, requestJson } from './client';
+import { jsonInit, request, requestJson, toError } from './client';
 import {
   readEventReply,
+  readHistory,
+  readPhotoReceipt,
   readRoute,
   readStopDetail,
   readSuggestion,
   type DriverRoute,
   type EventReply,
+  type HistoryItem,
   type RouteSuggestion,
   type StopDetail,
 } from './driverContracts';
 
 // The driver endpoints of docs/api-reference.md. Errors are ApiError(status, problem+json code); callers branch on
 // the code (REVISION_CONFLICT, ROUTE_LOCKED, STOP_NOT_FOUND, ...) and treat 401 as a lost session.
+const UPLOAD_TIMEOUT_MS = 60_000;
 const base = (date: string) => `/api/dispatch-data/days/${date}/driver`;
 const vehicleQuery = (vehicleId: string) => `vehicleId=${encodeURIComponent(vehicleId)}`;
 
@@ -46,7 +50,7 @@ export function newEventStamp(location: AppLocation | null = null): { eventId: s
   return { eventId: newEventId(), occurredAt: new Date().toISOString(), location };
 }
 
-async function sendEvent(type: string, input: EventInput, payload: object): Promise<EventReply> {
+export async function sendEvent(type: string, input: EventInput, payload: object): Promise<EventReply> {
   const body = {
     eventId: input.eventId,
     type,
@@ -57,6 +61,32 @@ async function sendEvent(type: string, input: EventInput, payload: object): Prom
     ...(input.location ? { location: input.location } : {}),
   };
   return readEventReply(await requestJson(`${base(input.date)}/events`, jsonInit('POST', body)));
+}
+
+/** A stop event of the outbox (`stop_completed`, `stop_failed`, `stop_partially_completed`) with its payload as stored. */
+export function sendStopEvent(type: string, input: EventInput, payload: object): Promise<EventReply> {
+  return sendEvent(type, input, payload);
+}
+
+/** The stored result of an event, for when the answer to a send was lost. Null when the server never saw it. */
+export async function fetchEvent(date: string, eventId: string): Promise<EventReply | null> {
+  const response = await request(`${base(date)}/events/${encodeURIComponent(eventId)}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw await toError(response);
+  return readEventReply(await response.json());
+}
+
+/** Uploads one compressed photo from a file URI. The multipart boundary is set by the runtime. */
+export async function uploadPhoto(date: string, fileUri: string): Promise<{ photoId: string; bytes: number }> {
+  const form = new FormData();
+  form.append('file', { uri: fileUri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob);
+  const response = await request(`${base(date)}/photos`, { method: 'POST', body: form }, UPLOAD_TIMEOUT_MS);
+  if (!response.ok) throw await toError(response);
+  return readPhotoReceipt(await response.json());
+}
+
+export async function fetchHistory(date: string, vehicleId: string): Promise<HistoryItem[]> {
+  return readHistory(await requestJson(`${base(date)}/history?${vehicleQuery(vehicleId)}`));
 }
 
 /** Departure. The same input can be sent again after a lost response; the reply then has `duplicate: true`. */
