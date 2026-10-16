@@ -7,13 +7,22 @@
 아래 JSON은 구조를 설명하는 가상·축약 예시이며 그대로 재전송할 fixture가 아니다. 실제 명령의 ID·boot·revision·날짜는 최신 조회 응답에서 가져온다.
 
 - 응답은 별도 표기가 없으면 JSON이다.
-- 인증이 없거나 세션이 만료된 API 요청은 `401 {"error":"LOGIN_REQUIRED"}`다.
-- 경로에 `;`(경로 매개변수) 또는 `%3B`가 있으면 로그인 여부와 무관하게 Kotlin API는 `400 {"error":"INVALID_PATH"}`를 반환하고, 웹 게이트웨이는 `;`와 `#`가 있는 경로를 `404`로 거절한다. 어떤 경로도 매개변수를 쓰지 않는다.
+- 모든 `4xx`·`5xx` 응답은 RFC 9457 `Content-Type: application/problem+json`이다. 필터·컨트롤러·Spring 기본 오류가 같은 본문을 쓴다. 예외: `/login`·`/register` 폼 화면의 HTML 오류.
+- 오류 본문 필드는 `type`(항상 `about:blank`), `title`(코드를 풀어 쓴 짧은 영문), `status`, `detail`(사용자 메시지, 최대 300자), `code`다. 클라이언트는 `code`로 분기한다.
+- 호환 필드 `error`(값은 `code`와 같음)와 `message`(`detail`과 같음, 메시지가 있을 때만)를 당분간 함께 내보낸다. 웹 프런트가 `code`·`detail`로 옮기면 두 필드를 뺀다.
+- Spring이 직접 만드는 오류(없는 경로 `404 NOT_FOUND`, `405 METHOD_NOT_ALLOWED`, `415 UNSUPPORTED_MEDIA_TYPE`, 읽을 수 없는 본문 `400 BAD_REQUEST`)도 같은 형식이며 `code`는 HTTP 상태 이름이다. `detail`은 상태 문구이고 요청 경로를 담지 않는다.
+- 처리되지 않은 예외는 `500 INTERNAL_ERROR`와 고정 `detail`이다. 예외 전문은 서버 로그에만 남는다.
+- 인증이 없거나 세션이 만료된 API 요청은 `401 LOGIN_REQUIRED`다.
+```json
+{"type":"about:blank","title":"Login required","status":401,"detail":"Login required","code":"LOGIN_REQUIRED","error":"LOGIN_REQUIRED"}
+```
+- 경로에 `;`(경로 매개변수) 또는 `%3B`가 있으면 로그인 여부와 무관하게 Kotlin API는 `400 INVALID_PATH`를 반환하고, 웹 게이트웨이는 `;`와 `#`가 있는 경로를 `404`로 거절한다. 어떤 경로도 매개변수를 쓰지 않는다.
 - 상태 변경은 브라우저가 보내는 `Origin`이 설정된 `PUBLIC_ORIGIN`과 정확히 같아야 한다.
 - 날짜 명령은 `Content-Type: application/json`, 최대 `128 KiB`다. 자원 변경은 최대 `256 KiB`다.
-- 날짜 명령은 인증 사용자별 분당 120회를 넘으면 `429 COMMAND_RATE_LIMITED`와 `Retry-After`를 반환한다.
+- 날짜 명령은 인증 사용자별 분당 120회를 넘으면 `429 COMMAND_RATE_LIMITED`와 `Retry-After: 60`을 반환한다. 모든 `429` 응답이 같은 헤더를 가진다.
 - 날짜 상태와 명령 응답은 `Accept-Encoding: gzip`을 협상한다. 정적 원본은 준비된 `.gz` 동반 파일이 있을 때 사용한다.
 - 오류 응답은 내부 경로나 예외 전문을 노출하지 않는다.
+- 아래 오류 표의 상태·코드는 그대로이며 본문 형식만 위 규칙을 따른다.
 
 ## 경로 요약
 

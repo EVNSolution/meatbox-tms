@@ -11,7 +11,7 @@
 | 시각 | `occurredAt`은 단말 시각, `receivedAt`은 서버 시각. ISO 8601, 오프셋 포함 (`2026-11-02T09:12:03+09:00`) |
 | 재시도 | 네트워크 오류·`5xx`·`429`는 5초 → 15초 → 45초 → 2분 → 5분 간격으로 무기한 재시도. 미전송 기록은 지우지 않는다 |
 | 중단 | `400`·`401`·`403`·`413`은 재시도하지 않고 앱에 표시. `409`는 서버 상태를 다시 읽고 사용자 판단 |
-| 오류 형식 | RFC 9457 `application/problem+json`. `type`, `title`, `status`, `detail`, `code`. 내부 경로·예외 전문은 넣지 않는다 |
+| 오류 형식 | RFC 9457 `application/problem+json`. `type`(`about:blank`), `title`, `status`, `detail`, `code`. 앱은 `code`로 분기한다. 웹 호환용 `error`·`message` 필드가 더 올 수 있으며 앱은 무시한다. 내부 경로·예외 전문은 넣지 않는다 |
 | 사진 | 이벤트와 분리해 먼저 올린다. `POST /api/driver/photos`가 `photoId`를 돌려주고 이벤트는 `photoIds`로 참조. 사진별 전송 상태를 앱이 따로 관리한다 |
 | 전송 순서 | 앱은 저장 순서대로 보낸다. 서버는 `occurredAt`으로 정렬하지 않고 받은 순서로 반영하되, 같은 배송지의 완료 뒤 도착 같은 역행은 `409`로 거절한다 |
 | 식별자 | `orderId` 미트박스 주문번호. `stopId` 배송지 묶음. `vehicleId` 차량. `driverId` 기사 계정. 표시 이름으로 연결하지 않는다 |
@@ -20,7 +20,7 @@
 
 ```json
 {
-  "type": "https://tms.example/problems/stop-state",
+  "type": "about:blank",
   "title": "Stop already completed",
   "status": 409,
   "detail": "stop S-104 was completed at 2026-11-02T10:41:00+09:00",
