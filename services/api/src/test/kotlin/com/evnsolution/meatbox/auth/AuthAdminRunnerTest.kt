@@ -22,6 +22,7 @@ class AuthAdminRunnerTest {
         val properties = AuthProperties(
             accessFile = access.toString(),
             adminCommand = "issue-invite",
+            adminRole = "driver",
             adminOutput = secretFile.toString(),
             adminExpiresInMillis = 60_000,
         )

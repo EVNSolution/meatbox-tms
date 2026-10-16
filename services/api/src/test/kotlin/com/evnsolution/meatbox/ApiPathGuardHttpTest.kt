@@ -1,5 +1,7 @@
 package com.evnsolution.meatbox
 
+import com.evnsolution.meatbox.auth.Role
+import com.evnsolution.meatbox.auth.RoleAccess
 import com.evnsolution.meatbox.resources.createV2Database
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
@@ -49,6 +51,22 @@ class ApiPathGuardHttpTest(
             if (method != "HEAD") {
                 assertProblem(response.body(), 401, "LOGIN_REQUIRED")
             }
+        }
+    }
+
+    @Test
+    fun `keeps drivers out of every registered api route except the driver app and the session`() {
+        val routes = registeredApiRoutes().map { it.second }.distinct()
+        assertThat(routes).contains("/api/dispatch-data/days/$DATE/driver/route", "/api/ops/alerts")
+        for (path in routes) {
+            val driverApp = path.contains("/driver/")
+            val tokenRoute = RoleAccess.usesToken("POST", path)
+            val expected = driverApp || path == "/api/session" || tokenRoute
+            assertThat(RoleAccess.allows(Role.DRIVER, path) || tokenRoute).describedAs("driver $path")
+                .isEqualTo(expected)
+            assertThat(RoleAccess.allows(Role.OPS, path)).describedAs("ops $path").isTrue()
+            assertThat(RoleAccess.allows(null, path) || tokenRoute).describedAs("no role $path")
+                .isEqualTo(path == "/api/session" || tokenRoute)
         }
     }
 

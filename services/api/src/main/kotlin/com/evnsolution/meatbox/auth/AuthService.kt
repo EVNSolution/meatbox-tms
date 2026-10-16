@@ -7,6 +7,8 @@ import java.util.Base64
 import java.util.HexFormat
 import java.util.LinkedHashMap
 
+// Accounts, sessions and roles share one verifier and one account file; splitting would copy its locking.
+@Suppress("TooManyFunctions")
 class AuthService internal constructor(
     settings: AuthSettings,
     private val now: () -> Long = System::currentTimeMillis,
@@ -18,6 +20,7 @@ class AuthService internal constructor(
     private val sessions = LinkedHashMap<String, ActiveSession>(sessionFile.load(now()))
     private var lastPrune = now()
 
+    /** The invitation's role becomes the account's role. The person who registers cannot choose it. */
     fun register(input: RegisterInput): AuthUser {
         val username = validateUsername(input.username)
         val password = validatePassword(input.password)
@@ -101,6 +104,20 @@ class AuthService internal constructor(
 
     override fun verify(cookie: String?): String =
         session(tokenFrom(cookie))?.username ?: throw LoginRequiredException()
+
+    override val knowsRoles: Boolean get() = true
+
+    override fun identify(cookie: String?): SessionIdentity {
+        val user = session(tokenFrom(cookie)) ?: throw LoginRequiredException()
+        return SessionIdentity(user.username, Role.parse(user.role))
+    }
+
+    /** The role of an account, or null when it has none of ours or does not exist. */
+    fun roleOf(username: String): Role? = loadUser(username)?.role
+
+    /** Enabled and disabled driver accounts, for the operator who assigns them to vehicles. */
+    fun driverAccounts(): List<DriverAccount> = runCatching { store.users() }.getOrElse { throw sessionUnavailable(it) }
+        .filter { it.role == Role.DRIVER }.map { DriverAccount(it.username, it.displayName, it.disabled) }
 
     private fun pruneSessions() {
         val current = now()
@@ -194,7 +211,7 @@ class AuthService internal constructor(
     }
 }
 
-private fun StoredUser.toAuthUser(): AuthUser = AuthUser(username, displayName, createdAt)
+private fun StoredUser.toAuthUser(): AuthUser = AuthUser(username, displayName, createdAt, roleName)
 
 data class LoginInput(val username: String, val password: String)
 
@@ -205,7 +222,9 @@ data class RegisterInput(
     val password: String,
 )
 
-data class AuthUser(val username: String, val displayName: String, val createdAt: Long)
+data class AuthUser(val username: String, val displayName: String, val createdAt: Long, val role: String? = null)
+
+data class DriverAccount(val username: String, val displayName: String, val disabled: Boolean)
 
 data class LoginResult(val token: String, val user: AuthUser, val expiresAt: Long)
 

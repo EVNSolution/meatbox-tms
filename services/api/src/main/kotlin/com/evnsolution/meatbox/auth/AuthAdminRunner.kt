@@ -32,9 +32,16 @@ class AuthAdminRunner(
         when (properties.adminCommand) {
             "issue-invite" -> {
                 val outputPath = exactAbsolutePath(properties.adminOutput, "meatbox.auth.admin-output")
-                val invite = store.issueInvite(properties.adminExpiresInMillis, System.currentTimeMillis())
+                val role = requiredRole()
+                val invite = store.issueInvite(properties.adminExpiresInMillis, System.currentTimeMillis(), role)
                 writeSecret(outputPath, invite)
                 output.println(outputPath)
+            }
+            "set-role" -> {
+                val username = AuthService.validateUsername(properties.adminUsername)
+                val role = requiredRole()
+                store.setRole(username, role)
+                output.println("Set $username to ${role.wire}")
             }
             "disable-user" -> {
                 val username = AuthService.validateUsername(properties.adminUsername)
@@ -44,6 +51,10 @@ class AuthAdminRunner(
             else -> throw IllegalArgumentException("Unknown meatbox.auth.admin-command")
         }
     }
+
+    /** No default: an invitation that omits the role must not quietly make an operator. */
+    private fun requiredRole(): Role = Role.parse(properties.adminRole)
+        ?: throw IllegalArgumentException("meatbox.auth.admin-role must be ops or driver")
 
     private fun exactAbsolutePath(value: String, property: String): Path {
         require(value.isNotBlank()) { "$property is required" }

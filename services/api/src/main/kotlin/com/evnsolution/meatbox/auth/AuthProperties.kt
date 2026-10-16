@@ -13,6 +13,7 @@ data class AuthProperties(
     val adminCommand: String = "",
     val adminOutput: String = "",
     val adminUsername: String = "",
+    val adminRole: String = "",
     val adminExpiresInMillis: Long = DEFAULT_INVITE_TTL_MILLIS,
 ) {
     fun settings(): AuthSettings {

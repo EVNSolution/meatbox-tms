@@ -23,7 +23,7 @@ class AuthStoreTest {
 
         val user = AuthStore(file).register("tester", "검토자", "encoded", AuthService.digest(invite), 100)
 
-        assertThat(user).isEqualTo(AuthUser("tester", "검토자", 100))
+        assertThat(user).isEqualTo(AuthUser("tester", "검토자", 100, "ops"))
         val saved = Files.readString(file)
         assertThat(saved).contains("\"version\" : 1", "\"usedBy\" : \"tester\"")
         assertThat(saved).doesNotContain(invite)

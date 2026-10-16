@@ -37,6 +37,10 @@ internal class AuthStore(
             throw AccessException("USERNAME_TAKEN", "Username is unavailable.", "username")
         }
         if (users.size() >= MAX_USERS) throw AuthUnavailableException("Access user capacity is exhausted")
+        // An invitation from before roles existed carries none and stays an operator's, as every account was.
+        val role = invitation.get("role")?.takeIf { it.isString }?.asString()?.let(Role::parse)
+            ?: Role.OPS.takeIf { invitation.get("role") == null }
+            ?: throw AccessException("INVALID_INVITE", "Invitation is invalid or expired.", "invite")
 
         val user = mapper.createObjectNode()
         user.put("username", username)
@@ -44,10 +48,11 @@ internal class AuthStore(
         user.put("passwordHash", passwordHash)
         user.put("createdAt", now)
         user.put("disabled", false)
+        user.put("role", role.wire)
         users.replace(username, user)
         invitation.put("usedAt", now)
         invitation.put("usedBy", username)
-        AuthUser(username, displayName ?: username, now)
+        AuthUser(username, displayName ?: username, now, role.wire)
     }
 
     private fun jsonTruthy(node: tools.jackson.databind.JsonNode?): Boolean = when {
@@ -68,7 +73,7 @@ internal class AuthStore(
         return invitation.takeIf { usable }
     }
 
-    fun issueInvite(expiresInMillis: Long, now: Long): String {
+    fun issueInvite(expiresInMillis: Long, now: Long, role: Role): String {
         if (expiresInMillis !in 1..MAX_INVITE_TTL_MILLIS) {
             throw AccessException("VALIDATION", "Invitation lifetime must be between 1 millisecond and 30 days.")
         }
@@ -80,6 +85,7 @@ internal class AuthStore(
             val invitation = mapper.createObjectNode()
             invitation.put("createdAt", now)
             invitation.put("expiresAt", Math.addExact(now, expiresInMillis))
+            invitation.put("role", role.wire)
             invites.replace(AuthService.digest(invite), invitation)
             invite
         }
@@ -93,7 +99,21 @@ internal class AuthStore(
         val mutable = node as ObjectNode
         mutable.put("disabled", true)
         mutable.put("disabledAt", now)
-        AuthUser(user.username, user.displayName, user.createdAt)
+        AuthUser(user.username, user.displayName, user.createdAt, user.roleName)
+    }
+
+    /** Takes effect on the user's next request: sessions hold no role. */
+    fun setRole(username: String, role: Role): AuthUser = accessFile.mutate { root ->
+        val users = root.get("users") as ObjectNode
+        val node = users.get(username) ?: throw AccessException("USER_NOT_FOUND", "User does not exist.")
+        val user = storedUser(node, username)
+        (node as ObjectNode).put("role", role.wire)
+        AuthUser(user.username, user.displayName, user.createdAt, role.wire)
+    }
+
+    fun users(): List<StoredUser> {
+        val users = accessFile.read().get("users") as ObjectNode
+        return users.properties().map { (name, node) -> storedUser(node, name) }
     }
 
     private fun storedUser(node: tools.jackson.databind.JsonNode, expectedUsername: String): StoredUser {
@@ -107,8 +127,13 @@ internal class AuthStore(
         val createdAt = node.get("createdAt")?.takeIf { it.isIntegralNumber }?.asLong() ?: unavailable()
         val displayName = node.get("displayName")?.takeIf { it.isString }?.asString() ?: username
         val disabled = node.get("disabled")?.takeIf { it.isBoolean }?.asBoolean() ?: false
-        return StoredUser(username, displayName, passwordHash, createdAt, disabled)
+        return StoredUser(username, displayName, passwordHash, createdAt, disabled, roleOf(node.get("role")))
     }
+
+    // ponytail: a missing role means ops. It is how accounts that predate roles keep working; once none is left,
+    // answer "no role" here instead (docs/security-and-access.md).
+    private fun roleOf(node: tools.jackson.databind.JsonNode?): Role? =
+        if (node == null || node.isNull) Role.OPS else Role.parse(node.takeIf { it.isString }?.asString())
 
     private fun unavailable(cause: Throwable? = null): Nothing =
         throw AuthUnavailableException("Access data is unavailable", cause)
@@ -128,4 +153,7 @@ internal data class StoredUser(
     val passwordHash: String,
     val createdAt: Long,
     val disabled: Boolean,
-)
+    val role: Role?,
+) {
+    val roleName: String? get() = role?.wire
+}
