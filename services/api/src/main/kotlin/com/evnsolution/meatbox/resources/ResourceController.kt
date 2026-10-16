@@ -5,7 +5,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -62,19 +61,6 @@ class ResourceController(
         sessionFilter.requireSameOrigin(request)
         val body = parser.body(request, setOf("revision", "regionCode"))
         return store.assignVehicle(parser.revision(body["revision"]), id, parser.nullableRegionCode(body["regionCode"]))
-    }
-
-    @ExceptionHandler(ResourceException::class)
-    fun knownError(error: ResourceException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(error.status).body(errorBody(error.code, error.message))
-
-    @ExceptionHandler(Exception::class)
-    fun unavailable(): ResponseEntity<Map<String, String>> = ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-        .body(errorBody("RESOURCE_DATABASE_UNAVAILABLE", "자원 등록부를 사용할 수 없습니다."))
-
-    private fun errorBody(code: String, message: String): Map<String, String> = buildMap {
-        put("error", code)
-        if (message.isNotEmpty()) put("message", message)
     }
 }
 

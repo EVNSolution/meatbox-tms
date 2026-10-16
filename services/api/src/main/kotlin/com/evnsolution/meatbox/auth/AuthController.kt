@@ -1,5 +1,6 @@
 package com.evnsolution.meatbox.auth
 
+import com.evnsolution.meatbox.problemResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpHeaders
@@ -82,10 +83,10 @@ class AuthController(
     @RequestMapping(path = ["/api/session"], method = [RequestMethod.GET, RequestMethod.HEAD])
     fun session(request: HttpServletRequest): ResponseEntity<Any> = try {
         val user = auth.session(AuthService.tokenFrom(request.getHeader(HttpHeaders.COOKIE)))
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("error" to "LOGIN_REQUIRED"))
+            ?: return problemResponse(HttpStatus.UNAUTHORIZED.value(), "LOGIN_REQUIRED")
         ResponseEntity.ok(mapOf("user" to user))
     } catch (_: SessionUnavailableException) {
-        ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(mapOf("error" to "AUTH_UNAVAILABLE"))
+        problemResponse(HttpStatus.SERVICE_UNAVAILABLE.value(), "AUTH_UNAVAILABLE")
     }
 
 }

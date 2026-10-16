@@ -1,6 +1,7 @@
 package com.evnsolution.meatbox.dispatch
 
 import com.evnsolution.meatbox.auth.SessionVerifier
+import com.evnsolution.meatbox.writeProblem
 import com.evnsolution.meatbox.compat.LoginRequiredException
 import com.evnsolution.meatbox.compat.SessionUnavailableException
 import jakarta.servlet.FilterChain
@@ -19,16 +20,10 @@ class DispatchSessionFilter(private val verifier: SessionVerifier) : OncePerRequ
             request.setAttribute("meatbox.username", verifier.verify(request.getHeader("Cookie")))
             chain.doFilter(request, response)
         } catch (_: LoginRequiredException) {
-            fail(response, HttpServletResponse.SC_UNAUTHORIZED, "LOGIN_REQUIRED")
+            writeProblem(response, HttpServletResponse.SC_UNAUTHORIZED, "LOGIN_REQUIRED")
         } catch (_: SessionUnavailableException) {
-            fail(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "SESSION_UNAVAILABLE")
+            writeProblem(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "SESSION_UNAVAILABLE")
         }
-    }
-
-    private fun fail(response: HttpServletResponse, status: Int, code: String) {
-        response.status = status
-        response.contentType = "application/json"
-        response.writer.write("{\"error\":\"$code\"}")
     }
 
     companion object { private val PATH = Regex("^/api/dispatch-data/days/[^/]+/(?:state|commands|driver)(?:/.*)?$") }

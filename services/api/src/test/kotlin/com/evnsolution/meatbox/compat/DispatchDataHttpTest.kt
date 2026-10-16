@@ -1,5 +1,6 @@
 package com.evnsolution.meatbox.compat
 
+import com.evnsolution.meatbox.assertProblem
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import org.assertj.core.api.Assertions.assertThat
@@ -37,7 +38,7 @@ class DispatchDataHttpTest(
     fun `authenticates before returning raw source bytes`() {
         val unauthorized = request("/api/dispatch-data/manifest")
         assertThat(unauthorized.statusCode()).isEqualTo(401)
-        assertThat(unauthorized.body().decodeToString()).isEqualTo("{\"error\":\"LOGIN_REQUIRED\"}")
+        assertProblem(unauthorized.body().decodeToString(), 401, "LOGIN_REQUIRED")
         assertThat(unauthorized.headers().firstValue(LegacySessionFilter.SOURCE_READER_HEADER).orElse(""))
             .isEqualTo("kotlin")
         assertThat(unauthorized.headers().firstValue("Cache-Control").orElse("")).isEqualTo("no-store")
@@ -143,7 +144,7 @@ class DispatchDataHttpTest(
         val response = request("/api/dispatch-data/manifest", cookie = "session=valid")
 
         assertThat(response.statusCode()).isEqualTo(503)
-        assertThat(response.body().decodeToString()).isEqualTo("{\"error\":\"LEGACY_SESSION_UNAVAILABLE\"}")
+        assertProblem(response.body().decodeToString(), 503, "LEGACY_SESSION_UNAVAILABLE")
         assertThat(response.headers().firstValue(LegacySessionFilter.SOURCE_READER_HEADER).orElse(""))
             .isEqualTo("kotlin")
         assertThat(response.headers().firstValue("Cache-Control").orElse("")).isEqualTo("no-store")

@@ -3,10 +3,10 @@ package com.evnsolution.meatbox.resources
 import com.evnsolution.meatbox.auth.LoginRequiredException
 import com.evnsolution.meatbox.auth.SessionUnavailableException
 import com.evnsolution.meatbox.auth.SessionVerifier
+import com.evnsolution.meatbox.writeProblem
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.springframework.http.MediaType
 import org.springframework.web.filter.OncePerRequestFilter
 
 class ResourceSessionFilter(
@@ -26,9 +26,9 @@ class ResourceSessionFilter(
             verifier.verify(request.getHeader("Cookie"))
             filterChain.doFilter(request, response)
         } catch (_: LoginRequiredException) {
-            writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "LOGIN_REQUIRED")
+            writeProblem(response, HttpServletResponse.SC_UNAUTHORIZED, "LOGIN_REQUIRED")
         } catch (error: SessionUnavailableException) {
-            writeError(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, error.errorCode)
+            writeProblem(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, error.errorCode)
         }
     }
 
@@ -46,13 +46,6 @@ class ResourceSessionFilter(
         response.setHeader(OWNER_HEADER, "kotlin")
         response.setHeader("Cache-Control", "no-store")
         response.setHeader("X-Content-Type-Options", "nosniff")
-    }
-
-    private fun writeError(response: HttpServletResponse, status: Int, code: String) {
-        response.status = status
-        response.contentType = MediaType.APPLICATION_JSON_VALUE
-        response.characterEncoding = Charsets.UTF_8.name()
-        response.writer.write("{\"error\":\"$code\"}")
     }
 
     companion object {

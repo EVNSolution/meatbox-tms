@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -71,17 +70,6 @@ class DriverController(
             set("push", driverJson.valueToTree(delivery))
         }
     }
-
-    @ExceptionHandler(DispatchException::class)
-    fun known(error: DispatchException): ResponseEntity<Map<String, String>> {
-        val response = ResponseEntity.status(error.status)
-        if (error.status == HttpStatus.TOO_MANY_REQUESTS.value()) response.header("Retry-After", "60")
-        return response.body(mapOf("error" to error.code))
-    }
-
-    @ExceptionHandler(DispatchDataException::class)
-    fun source(error: DispatchDataException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(error.status).body(mapOf("error" to error.code))
 
     private fun mutation(request: HttpServletRequest, fields: Set<String>): ObjectNode {
         if (request.getHeader("Origin") != origin) driverFail(HttpStatus.FORBIDDEN.value(), "ORIGIN_REQUIRED")

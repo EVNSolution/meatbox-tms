@@ -3,11 +3,11 @@ package com.evnsolution.meatbox.compat
 import com.evnsolution.meatbox.auth.LoginRequiredException
 import com.evnsolution.meatbox.auth.SessionUnavailableException
 import com.evnsolution.meatbox.auth.SessionVerifier
+import com.evnsolution.meatbox.writeProblem
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
@@ -31,17 +31,10 @@ class LegacySessionFilter(
             verifier.verify(request.getHeader("Cookie"))
             filterChain.doFilter(request, response)
         } catch (_: LoginRequiredException) {
-            writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "LOGIN_REQUIRED")
+            writeProblem(response, HttpServletResponse.SC_UNAUTHORIZED, "LOGIN_REQUIRED")
         } catch (error: SessionUnavailableException) {
-            writeError(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, error.errorCode)
+            writeProblem(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, error.errorCode)
         }
-    }
-
-    private fun writeError(response: HttpServletResponse, status: Int, code: String) {
-        response.status = status
-        response.contentType = MediaType.APPLICATION_JSON_VALUE
-        response.characterEncoding = Charsets.UTF_8.name()
-        response.writer.write("{\"error\":\"$code\"}")
     }
 
     private fun matchesReadEndpoint(path: String): Boolean =

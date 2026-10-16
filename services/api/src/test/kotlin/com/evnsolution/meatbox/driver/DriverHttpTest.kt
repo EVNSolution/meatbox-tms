@@ -1,5 +1,7 @@
 package com.evnsolution.meatbox.driver
 
+import com.evnsolution.meatbox.ProblemExceptionHandler
+import com.evnsolution.meatbox.assertProblem
 import com.evnsolution.meatbox.auth.LoginRequiredException
 import com.evnsolution.meatbox.auth.SessionVerifier
 import com.evnsolution.meatbox.dispatch.DispatchSessionFilter
@@ -24,6 +26,7 @@ class DriverHttpTest {
             "demo"
         })
         mvc = MockMvcBuilders.standaloneSetup(DriverController(store, FcmSender("", ""), ORIGIN))
+            .setControllerAdvice(ProblemExceptionHandler())
             .addFilters<org.springframework.test.web.servlet.setup.StandaloneMockMvcBuilder>(filter).build()
     }
 
@@ -31,12 +34,15 @@ class DriverHttpTest {
     fun `protects all driver routes and mutations with existing session and origin`() {
         val anonymous = mvc.perform(MockMvcRequestBuilders.get(PATH + "/messages?vehicleId=G1")).andReturn().response
         assertThat(anonymous.status).isEqualTo(401)
+        assertProblem(anonymous.contentAsString, 401, "LOGIN_REQUIRED")
+        assertThat(anonymous.contentType).startsWith("application/problem+json")
         assertThat(anonymous.getHeader("Cache-Control")).isEqualTo("no-store")
         assertThat(anonymous.getHeader("X-Meatbox-Dispatch-Owner")).isEqualTo("kotlin")
         val missingOrigin = mvc.perform(MockMvcRequestBuilders.post(PATH + "/messages")
             .header("Cookie", "meatbox_session=fixture").contentType("application/json").content(MESSAGE))
             .andReturn().response
         assertThat(missingOrigin.status).isEqualTo(403)
+        assertProblem(missingOrigin.contentAsString, 403, "ORIGIN_REQUIRED")
         val response = post(MESSAGE)
         assertThat(response.status).isEqualTo(200)
         assertThat(driverJson.readTree(response.contentAsString).path("push").path("status").asString())
@@ -65,7 +71,10 @@ class DriverHttpTest {
         assertThat(response.status).isEqualTo(200)
         assertThat(response.contentAsString).doesNotContain("secret")
         repeat(29) { assertThat(post(MESSAGE).status).isEqualTo(200) }
-        assertThat(post(MESSAGE).status).isEqualTo(429)
+        val limited = post(MESSAGE)
+        assertThat(limited.status).isEqualTo(429)
+        assertThat(limited.getHeader("Retry-After")).isEqualTo("60")
+        assertProblem(limited.contentAsString, 429, "DRIVER_RATE_LIMITED")
     }
 
     private fun post(body: String) = mvc.perform(MockMvcRequestBuilders.post(PATH + "/messages")

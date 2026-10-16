@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
-import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
@@ -27,12 +26,9 @@ class PathParameterGuardFilter : OncePerRequestFilter() {
             filterChain.doFilter(request, response)
             return
         }
-        response.status = HttpServletResponse.SC_BAD_REQUEST
         response.setHeader("Cache-Control", "no-store")
         response.setHeader("X-Content-Type-Options", "nosniff")
-        response.contentType = MediaType.APPLICATION_JSON_VALUE
-        response.characterEncoding = Charsets.UTF_8.name()
-        response.writer.write("{\"error\":\"INVALID_PATH\"}")
+        writeProblem(response, HttpServletResponse.SC_BAD_REQUEST, "INVALID_PATH")
     }
 
     private companion object {

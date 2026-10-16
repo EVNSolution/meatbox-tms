@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.ResponseEntity
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -59,22 +58,6 @@ class DispatchController(
         if (body.path("type").asString("") !in COMMANDS) fail(HttpServletResponse.SC_BAD_REQUEST, "INVALID_COMMAND")
         return json(request, store.command(date, body))
     }
-
-    @ExceptionHandler(DispatchException::class)
-    fun knownError(error: DispatchException): ResponseEntity<Map<String, String>> {
-        val builder = ResponseEntity.status(error.status)
-        if (error.code == "COMMAND_RATE_LIMITED") builder.header("Retry-After", "60")
-        return builder.body(mapOf("error" to error.code, "message" to error.message))
-    }
-
-    @ExceptionHandler(DispatchDataException::class)
-    fun sourceError(error: DispatchDataException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(error.status).body(mapOf("error" to error.code))
-
-    @ExceptionHandler(Exception::class)
-    fun invalid(): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
-        .body(mapOf("error" to "SOURCE_OPERATIONS_INVALID"))
 
     private fun body(request: HttpServletRequest): ObjectNode {
         val isJson = request.contentType?.substringBefore(';')?.trim()?.equals("application/json", true) == true

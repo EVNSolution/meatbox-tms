@@ -1,5 +1,6 @@
 package com.evnsolution.meatbox.resources
 
+import com.evnsolution.meatbox.assertProblem
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import org.assertj.core.api.Assertions.assertThat
@@ -36,7 +37,7 @@ class ResourceHttpTest(
     fun `authenticates every resource path and marks GET and HEAD responses`() {
         val unauthorized = request("/api/resources")
         assertThat(unauthorized.statusCode()).isEqualTo(401)
-        assertThat(unauthorized.body()).isEqualTo("{\"error\":\"LOGIN_REQUIRED\"}")
+        assertProblem(unauthorized.body(), 401, "LOGIN_REQUIRED")
         assertHeaders(unauthorized)
 
         val response = request("/api/resources", cookie = VALID_COOKIE)

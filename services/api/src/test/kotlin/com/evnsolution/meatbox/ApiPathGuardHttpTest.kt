@@ -45,10 +45,19 @@ class ApiPathGuardHttpTest(
         for ((method, path) in routes) {
             val response = send(method, path)
             assertThat(response.statusCode()).describedAs("$method $path").isEqualTo(401)
+            assertThat(response.headers().firstValue("Content-Type").orElse("")).startsWith("application/problem+json")
             if (method != "HEAD") {
-                assertThat(response.body()).describedAs("$method $path").isEqualTo("{\"error\":\"LOGIN_REQUIRED\"}")
+                assertProblem(response.body(), 401, "LOGIN_REQUIRED")
             }
         }
+    }
+
+    @Test
+    fun `answers unknown paths in problem format through the real server`() {
+        val response = send("GET", "/api/does-not-exist")
+        assertThat(response.statusCode()).isEqualTo(404)
+        assertThat(response.headers().firstValue("Content-Type").orElse("")).startsWith("application/problem+json")
+        assertProblem(response.body(), 404, "NOT_FOUND")
     }
 
     @Test
@@ -78,7 +87,7 @@ class ApiPathGuardHttpTest(
                     val label = "$method $path cookie=$cookie"
                     assertThat(response.statusCode()).describedAs(label).isEqualTo(400)
                     if (method != "HEAD") {
-                        assertThat(response.body()).describedAs(label).isEqualTo("{\"error\":\"INVALID_PATH\"}")
+                        assertProblem(response.body(), 400, "INVALID_PATH")
                     }
                 }
             }

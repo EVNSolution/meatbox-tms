@@ -40,7 +40,7 @@
 
 | 항목 | 상태 | 근거·메모 |
 | --- | --- | --- |
-| [ ] RFC 9457 공통 오류 응답 (19) | 미착수 | |
+| [x] RFC 9457 공통 오류 응답 (19) | 로컬 검증 | `ProblemResponseTest`(DispatchException·429·500·404·405), `ApiPathGuardHttpTest`(필터 401·400, 실서버 404), `DriverHttpTest`(429 Retry-After). `error`·`message` 호환 필드는 프런트가 `code`로 옮긴 뒤 제거 |
 | [ ] 오류 자동 감지·담당자 알림 (19) | 미착수 | 지원시간 내 대응, 운영 시간 외 범위는 별도 기준 |
 | [ ] 명령 결과를 요청 ID로 영속 조회, 응답 유실 후 중복 적용 방지 | 미착수 | [다음 기능 계획](next-feature-delivery-plan.md) F04 |
 | [ ] 테넌트·소속·역할 권한 (3) | 미착수 | F05·F06 |

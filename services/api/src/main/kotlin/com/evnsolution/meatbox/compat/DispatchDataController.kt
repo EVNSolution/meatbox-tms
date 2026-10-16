@@ -6,7 +6,6 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
@@ -46,10 +45,6 @@ class DispatchDataController(
         )
         return response(request, destinations.destinations(query, request.getHeader(HttpHeaders.ACCEPT_ENCODING)))
     }
-
-    @ExceptionHandler(DispatchDataException::class)
-    fun dispatchError(error: DispatchDataException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(error.status).contentType(MediaType.APPLICATION_JSON).body(mapOf("error" to error.code))
 
     private fun response(request: HttpServletRequest, file: DispatchFile): ResponseEntity<ByteArray> {
         val headers = HttpHeaders()
