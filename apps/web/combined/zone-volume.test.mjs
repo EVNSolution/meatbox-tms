@@ -79,3 +79,26 @@ test('경계 상자는 다각형과 다중 다각형의 모든 점에서 계산�
   assert.equal(geometryBounds(regions.features[1]), null);
   assert.equal(geometryBounds(null), null);
 });
+
+test('주문 중량은 주문 자신의 값이거나 품목 중량의 합이고 하나라도 빠지면 알 수 없다', async () => {
+  const { orderWeightKg, weightNote, zoneVolumes } = await import('./zone-volume.mjs');
+  assert.equal(orderWeightKg({ weightKg: 5 }), 5);
+  assert.equal(orderWeightKg({ items: [{ weightKg: 3.2 }, { weightKg: 1.1 }, { weightKg: 0.7 }] }), 5);
+  assert.equal(orderWeightKg({ items: [{ weightKg: 3.2 }, { qty: 1 }] }), null);
+  assert.equal(orderWeightKg({ items: [] }), null);
+  assert.equal(orderWeightKg({}), null);
+  assert.equal(orderWeightKg({ weightKg: -1 }), null);
+  const regions = { type: 'FeatureCollection', features: [{ properties: { zoneId: 'Z1', label: '권역 1' } }] };
+  const rows = zoneVolumes(regions, [
+    { id: 'a', boxes: 1, zoneIds: ['Z1'], items: [{ weightKg: 3.2 }] }, { id: 'b', boxes: 2, zoneIds: ['Z1'], items: [{ weightKg: 1.8 }] },
+  ]);
+  assert.equal(rows.rows[0].weightKg, 5);
+  assert.equal(rows.totals.weightKg, 5);
+  const partial = zoneVolumes(regions, [{ id: 'a', boxes: 1, zoneIds: ['Z1'], items: [{ weightKg: 3.2 }] }, { id: 'b', boxes: 2, zoneIds: ['Z1'], items: [{ qty: 1 }] }]);
+  assert.equal(partial.rows[0].weightKg, null);
+  assert.equal(weightNote([{ id: 'a', items: [{ weightKg: 1 }] }]), '');
+  assert.match(weightNote([{ id: 'a' }]), /CSV 원본에는 중량이 없어 중량은 미수신/);
+  assert.match(weightNote([{ id: 'a', deliveryType: 'fresh', items: [{ sku: 'x' }] }]), /미트박스 주문의 품목 중량\(items\[\]\.weightKg\)에서 계산합니다/);
+  assert.match(weightNote([{ id: 'a', items: [{ weightKg: 1 }] }, { id: 'b' }]), /품목 중량이 없는 주문 1건/);
+  assert.equal(weightNote([]), '');
+});

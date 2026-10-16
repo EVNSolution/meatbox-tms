@@ -5,7 +5,8 @@ import { vehicleOperations } from './vehicle-operations-model.mjs';
 import { mountDispatchMapLayers } from './dispatch-map-layer.mjs';
 import { PAGE_SIZE, paginate } from './pagination-model.mjs';
 import { bundleDeliveries } from './delivery-bundles.mjs';
-import { geometryBounds, volumeLines, weightText, withZoneVolumes, zoneVolumes } from './zone-volume.mjs';
+import { geometryBounds, volumeLines, weightText, withZoneVolumes, zoneVolumes, orderWeightKg, weightNote } from './zone-volume.mjs';
+import { zoneNotes } from './zone-assignment.ts';
 import { isUnverifiedVehicle, locationLabel, plateLabel } from './vehicle-identity.mjs';
 import { driverNamesText, transferZoneOptions, zoneDrivers } from './zone-transfer.mjs';
 import { addUnits, pointsInRectangle, pruneSelection, summarizeSelection, toggleUnits, transferPreview } from './bulk-selection.mjs';
@@ -98,7 +99,7 @@ export function mountOrderPlanning({
       <details class="order-zone-volume" data-order-zone-panel open hidden><summary>권역별 물량 <span data-order-zone-total></span></summary>
         <div class="order-zone-body">
         <div class="order-zone-table-wrap"><table class="order-zone-table"><thead><tr><th scope="col">권역</th><th scope="col">착지</th><th scope="col">박스</th><th scope="col">주문</th><th scope="col">중량</th><th scope="col">배송원</th></tr></thead><tbody data-order-zone-rows></tbody></table></div>
-        <div class="order-list-pages"><button type="button" class="button subtle" data-order-zone-previous>이전</button><span data-order-zone-page></span><button type="button" class="button subtle" data-order-zone-next>다음</button></div></div>
+        <div class="order-list-pages"><button type="button" class="button subtle" data-order-zone-previous>이전</button><span data-order-zone-page></span><button type="button" class="button subtle" data-order-zone-next>다음</button></div><p class="order-zone-note muted" data-order-zone-note></p></div>
       </details>
     </section>
     </div>
@@ -305,7 +306,8 @@ export function mountOrderPlanning({
     const delivery = imported() && mapMode === 'regions' && selectedZoneId ? visibleDeliveries.find(item => item.id === selectedDeliveryId) : null;
     if (!delivery?.coordinates || !(delivery.zoneIds || []).includes(selectedZoneId)) { node.hidden = true; popupHtml = ''; return; }
     const unit = delivery.assignmentUnitId ? visibleDeliveries.filter(item => item.assignmentUnitId === delivery.assignmentUnitId) : [delivery];
-    const weight = unit.every(item => Number.isFinite(item.weightKg) && item.weightKg >= 0) ? unit.reduce((sum, item) => sum + item.weightKg, 0) : null;
+    const unitWeights = unit.map(orderWeightKg);
+    const weight = unitWeights.every(Number.isFinite) ? unitWeights.reduce((sum, item) => sum + item, 0) : null;
     const vehicle = vehiclesFor(data).find(item => item.id === delivery.vehicleId);
     const zone = zoneRows.rows.find(row => row.zoneId === selectedZoneId);
     const detail = [delivery.address, delivery.detailAddress].flatMap(part => part ? [escapeHtml(part)] : []).join(' ');
@@ -607,6 +609,7 @@ export function mountOrderPlanning({
         zoneRows = zoneVolumes(data.dispatchRegions, deliveriesFor(data));
         zoneDriverMap = zoneDrivers(deliveriesFor(data));
         sourceRegions = withZoneVolumes(regionOrderCounts(data.dispatchRegions, deliveriesFor(data)), zoneRows.rows);
+        setText('[data-order-zone-note]', [...zoneNotes(deliveriesFor(data)), weightNote(deliveriesFor(data))].filter(Boolean).join(' '));
         if (selectedZoneId && !zoneRows.rows.some(row => row.zoneId === selectedZoneId)) selectedZoneId = null;
       }
       routeState = 'ready';

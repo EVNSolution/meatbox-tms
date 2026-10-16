@@ -88,7 +88,7 @@ function listen(server, port) {
   });
 }
 
-async function startKotlin({ apiOrigin, dataDirectory, port, resources, resourceDatabasePath, publicOrigin, native, accessFile, stateDirectory, telemetryToken = '', telemetryStaleMinutes = '' }) {
+async function startKotlin({ apiOrigin, dataDirectory, port, resources, resourceDatabasePath, publicOrigin, native, accessFile, stateDirectory, telemetryToken = '', telemetryStaleMinutes = '', inboundToken = '' }) {
   const libraries = path.join(root, 'services/api/build/libs');
   const jars = (await fs.readdir(libraries)).filter(name => name.endsWith('.jar') && !name.endsWith('-plain.jar'));
   if (jars.length !== 1) throw new Error('Build exactly one Kotlin bootJar before starting the connected fixture');
@@ -112,6 +112,7 @@ async function startKotlin({ apiOrigin, dataDirectory, port, resources, resource
     `--meatbox.auth.public-origin=${publicOrigin}`, `--meatbox.dispatch.enabled=${native}`,
     `--meatbox.dispatch.state-dir=${stateDirectory}`, `--meatbox.dispatch.public-origin=${publicOrigin}`,
     // Optional: lets a seeding script push synthetic temperatures (scripts/seed-control-fixture.mjs).
+    ...(inboundToken ? [`--meatbox.inbound.token=${inboundToken}`] : []),
     ...(telemetryToken ? [`--meatbox.telemetry.token=${telemetryToken}`, `--meatbox.telemetry.stale-minutes=${telemetryStaleMinutes || 10}`] : []),
   ], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
   let logs = '';
@@ -148,7 +149,7 @@ async function startKotlin({ apiOrigin, dataDirectory, port, resources, resource
   }
 }
 
-export async function startForkFixture({ connected = false, resources = false, native = false, apiPort = 3001, webPort = 4173, kotlinPort = 8081, telemetryToken = '', telemetryStaleMinutes = '' } = {}) {
+export async function startForkFixture({ connected = false, resources = false, native = false, apiPort = 3001, webPort = 4173, kotlinPort = 8081, telemetryToken = '', telemetryStaleMinutes = '', inboundToken = '' } = {}) {
   if (native) { connected = true; resources = true; }
   if (resources && !connected) throw new Error('Kotlin resource ownership requires a connected fixture');
   for (const port of [apiPort, webPort, ...(connected ? [kotlinPort] : [])]) {
@@ -204,7 +205,7 @@ export async function startForkFixture({ connected = false, resources = false, n
       demo = createDemo({ accessFile, dispatchDataDir, dispatchStateDir, resourceDatabasePath, resourceOwner:resources ? 'kotlin' : 'node', origin: publicOrigin });
       await listen(demo.server, apiPort);
     }
-    const kotlinSettings = { apiOrigin, dataDirectory: dispatchDataDir, port: kotlinPort, resources, resourceDatabasePath, publicOrigin, native, accessFile, stateDirectory:dispatchStateDir, telemetryToken, telemetryStaleMinutes };
+    const kotlinSettings = { apiOrigin, dataDirectory: dispatchDataDir, port: kotlinPort, resources, resourceDatabasePath, publicOrigin, native, accessFile, stateDirectory:dispatchStateDir, telemetryToken, telemetryStaleMinutes, inboundToken };
     if (connected) kotlin = await startKotlin(kotlinSettings);
     gateway = createLegacyGateway({ apiOrigin, kotlinApiOrigin: kotlin?.origin, kotlinResources:resources, kotlinAuth:native, kotlinDispatch:native, publicOrigin, distDirectory });
     await listen(gateway.server, webPort);
@@ -232,6 +233,7 @@ async function main() {
     kotlinPort: fixturePort('MEATBOX_FORK_FIXTURE_KOTLIN_PORT', 8081),
     telemetryToken: process.env.MEATBOX_FORK_FIXTURE_TELEMETRY_TOKEN ?? '',
     telemetryStaleMinutes: process.env.MEATBOX_FORK_FIXTURE_TELEMETRY_STALE_MINUTES ?? '',
+    inboundToken: process.env.MEATBOX_FORK_FIXTURE_INBOUND_TOKEN ?? '',
   });
   async function stop() {
     if (stopping) return;

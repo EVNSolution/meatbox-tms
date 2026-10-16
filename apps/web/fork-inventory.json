@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 57,
+  "authoredFileCount": 61,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -427,7 +427,7 @@
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "496812b30611186ca946a871602b0774c4223b45efcbd7a7ec0703593e3688cf",
+      "targetSha256": "62a9ffc3bd07951943e9d69ebd920bdb78c2405d1db5615c485f8d58f681ca30",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Remove unused escaping helper, selection value and catch binding; retain update argument position",
@@ -436,7 +436,8 @@
         "Name the connected state for operational data without changing source or command contracts.",
         "Use the shared date navigation with a today shortcut and drop the candidate-vehicle count from the date summary.",
         "Report loading and failure notices through a notify callback instead of an in-flow message and retry button.",
-        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header."
+        "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
+        "Place orders that came without zones into zones from their coordinates and add the delivery-kind view filter, leaving the day and every command untouched."
       ],
       "status": "active"
     },
@@ -444,13 +445,14 @@
       "source": "apps/combined/dated-dispatch.test.mjs",
       "sourceSha256": "28750337ea31c3570b64443213fe3f519dd55c4a99ea42cf1ab13f3ae8fdac4c",
       "target": "apps/web/combined/dated-dispatch.test.mjs",
-      "targetSha256": "fd1108cf1f05b9383113484149d5c2ba3d87008e7d25394c5b29575462444b1a",
+      "targetSha256": "4d41d2cdac75db6a3dc2145fc072a198546e7f91117b3a702cec4ecc73ea91fc",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Resolve shared date navigation selectors and expect the two-count date summary.",
-        "Route notices through the notify callback in the DOM fixture."
+        "Route notices through the notify callback in the DOM fixture.",
+        "Verify derived zones, the delivery-kind filter and the CSV day without kinds."
       ],
       "status": "active"
     },
@@ -954,7 +956,7 @@
       "source": "apps/combined/order-planning.css",
       "sourceSha256": "f555a7d0e1cb0bdca569b34815d5b716bb1c07c03149d5520938e5cf11ff29f2",
       "target": "apps/web/combined/order-planning.css",
-      "targetSha256": "177e45ed585699ed733f0e18a9ec6cb10e04fa3de6e5bbc0c7d0f21211cf4dd0",
+      "targetSha256": "518c796724f8be2b174d9ad346623fd9c6c21f5f834a3215e992c98593bb47b2",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -978,7 +980,8 @@
         "Dispatch tabs polish: aligned zone-table columns and card padding, order list without disclosure marker, outlined disabled primary action.",
         "Zone volume list: fixed column widths, tabular numerals, 48px rows and row hover.",
         "Narrow widths: the date card may shrink and take its own row; resource table header stays on one line and values align with it.",
-        "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only."
+        "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only.",
+        "Style the delivery-kind filter and the zone note."
       ],
       "status": "active"
     },
@@ -986,7 +989,7 @@
       "source": "apps/combined/order-planning.mjs",
       "sourceSha256": "b1e60aa3708f0bd6b3e09e6a721b1b6d72870a98290ae1087d77bf87e8ac0996",
       "target": "apps/web/combined/order-planning.mjs",
-      "targetSha256": "bb5400282f5e28c8fcb4adb0ca0db55071b82d159c58c17dd693c9393fa40e6f",
+      "targetSha256": "ae4f8bd45a4593da01d12bc2033fd1d587b70e47c403f0876360c4fc2407f7f7",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -1005,7 +1008,8 @@
         "Remove map, region and vehicle explanations; move pin/multi-select actions, the map mode switch and the location count onto the map as floating tools.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
-        "Overview map fits the middle 80% of stops so far-away outliers do not zoom out to the whole country."
+        "Overview map fits the middle 80% of stops so far-away outliers do not zoom out to the whole country.",
+        "Sum item weights per order for popups and zone volumes and show the notes about weight and derived zones under the zone table."
       ],
       "status": "active"
     },
@@ -2258,14 +2262,14 @@
     {
       "path": "apps/web/combined/zone-volume.mjs",
       "origin": "authored",
-      "sha256": "e62b00c2479cd2da09bfdc5243d9acad81f3bc6237d771550e82409a69dcdbaa",
+      "sha256": "5ed81378e944ded2615bef39d2789594484072cb91ea9da611c5164179fcd554",
       "reason": "Count destinations, boxes, orders and weight per delivery zone without inventing weight, format the zone hover popover lines and compute zone bounds.",
       "status": "active"
     },
     {
       "path": "apps/web/combined/zone-volume.test.mjs",
       "origin": "authored",
-      "sha256": "4597e3a980be3d137d985014d4338d9c9630f02c56cf7fb5830549665b4c5e38",
+      "sha256": "83bd51db0dea93219b8bf6439b2708d15ced93589e41b02c93e94ef44a12af45",
       "reason": "Verify per-zone totals, unlocated orders, unknown boxes and weight, labels, zone properties and geometry bounds.",
       "status": "active"
     },
@@ -2643,6 +2647,34 @@
       "reason": "Verify queued, unconfigured, unknown and malformed driver notices.",
       "status": "active",
       "sha256": "49bc8dd5a88f13774cdb99ef580b2c724d7fdfd021fd34f0d7dc50a8779fb2b9"
+    },
+    {
+      "path": "apps/web/combined/zone-assignment.ts",
+      "origin": "authored",
+      "reason": "Place orders without zones into the zone polygons by their coordinates and word what the zone figures rest on.",
+      "status": "active",
+      "sha256": "08f73e358568531c9e8cafe4ede48c5c601baf55aedd2c1f35e2bbb244821dfc"
+    },
+    {
+      "path": "apps/web/combined/zone-assignment.test.mjs",
+      "origin": "authored",
+      "reason": "Verify point-in-polygon with holes and multi-polygons, derived zones and the notes.",
+      "status": "active",
+      "sha256": "6244efdc83a1084ba45a36a165f5f8f0e1164f19d642369e00a035c37db3eeaf"
+    },
+    {
+      "path": "apps/web/combined/delivery-type.ts",
+      "origin": "authored",
+      "reason": "Count and filter orders by the Meatbox delivery kind and say when a day has none.",
+      "status": "active",
+      "sha256": "f6887f076d927d3dcffb88505f4df616bbd78c8d4a41f55e12fc135e5c2efec5"
+    },
+    {
+      "path": "apps/web/combined/delivery-type.test.mjs",
+      "origin": "authored",
+      "reason": "Verify delivery-kind counts, filtering and notes.",
+      "status": "active",
+      "sha256": "70e87a434cc34afd2738eb2ff5db322f756fd376ca2954cad97428ce184bf7d9"
     }
   ],
   "historicalTargetFileCount": 163,

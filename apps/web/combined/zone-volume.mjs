@@ -12,11 +12,21 @@ function accumulator() {
   return { orders: 0, destinations: new Set(), boxes: 0, boxesKnown: true, weight: 0, weightKnown: true };
 }
 
+// An order's weight is its own `weightKg` or the sum of its items' `weightKg` (each item's figure is the line's total, per
+// Meatbox's contract). One item without a weight makes the order's weight unknown.
+export function orderWeightKg(order) {
+  if (known(order?.weightKg)) return order.weightKg;
+  const items = Array.isArray(order?.items) ? order.items : [];
+  if (!items.length || !items.every(item => known(item?.weightKg))) return null;
+  return Math.round(items.reduce((sum, item) => sum + item.weightKg, 0) * 1000) / 1000;
+}
+
 function add(target, delivery) {
   target.orders += 1;
   target.destinations.add(destinationOf(delivery));
   if (known(delivery.boxes)) target.boxes += delivery.boxes; else target.boxesKnown = false;
-  if (known(delivery.weightKg)) target.weight += delivery.weightKg; else target.weightKnown = false;
+  const weight = orderWeightKg(delivery);
+  if (known(weight)) target.weight += weight; else target.weightKnown = false;
 }
 
 const finish = target => ({
@@ -43,6 +53,17 @@ export function zoneVolumes(regions, deliveries) {
   const rows = [...zones].map(([zoneId, value]) => ({ zoneId, label: labels.get(zoneId), ...finish(value) }))
     .sort((left, right) => (right.boxes ?? -1) - (left.boxes ?? -1) || right.orders - left.orders || String(left.label).localeCompare(String(right.label), 'ko-KR'));
   return { rows, totals: finish(all), unlocated: finish(unlocated) };
+}
+
+/** Why a weight is missing, for the places that show one. */
+export function weightNote(deliveries) {
+  const list = Array.isArray(deliveries) ? deliveries : [];
+  if (!list.length) return '';
+  const withWeight = list.filter(order => known(orderWeightKg(order))).length;
+  if (withWeight === list.length) return '';
+  const meatbox = list.some(order => typeof order.deliveryType === 'string');
+  if (!withWeight) return meatbox ? '중량은 미트박스 주문의 품목 중량(items[].weightKg)에서 계산합니다. 이 날짜 주문에는 품목 중량이 없습니다.' : '이 날짜의 CSV 원본에는 중량이 없어 중량은 미수신입니다. 중량은 미트박스 주문에서만 들어옵니다.';
+  return `품목 중량이 없는 주문 ${(list.length - withWeight).toLocaleString('ko-KR')}건이 있어 그 주문이 속한 권역의 중량 합계는 미수신입니다.`;
 }
 
 export const weightText = weightKg => known(weightKg) ? `${weightKg.toLocaleString('ko-KR')}kg` : '미수신';

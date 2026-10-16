@@ -625,3 +625,54 @@ test('운영자 지도는 미확정 전체 주문을 유지하며 뷰어용 확�
   assert.deepEqual(commands, [['calculate_dispatch', { vehicleIds: ['G1'] }]]);
   dated.destroy();
 });
+
+function typeBoxFixture() {
+  const radios = ['all', 'fresh', 'parcel'].map(value => ({ value, disabled: false, checked: value === 'all', dataset: { dispatchType: '' } }));
+  const counts = {}, note = { textContent: '' };
+  const box = new FakeNode();
+  box.hidden = true;
+  box.querySelectorAll = () => radios;
+  box.querySelector = selector => selector.includes('type-count') ? (counts[selector] ??= { textContent: '' }) : selector.includes('type-note') ? note : null;
+  return { box, radios, counts, note };
+}
+
+test('미트박스 주문은 좌표로 권역을 채우고 배송 구분 필터는 화면에 보이는 주문만 좁힌다', async t => {
+  installBrowserGlobals(t);
+  const { element, nodes } = domFixture();
+  const type = typeBoxFixture();
+  nodes['type-filter'] = type.box;
+  const zones = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { zoneId: 'Z9' }, geometry: { type: 'Polygon', coordinates: [[[127, 37], [128, 37], [128, 38], [127, 38], [127, 37]]] } }] };
+  const meatbox = (id, deliveryType, coordinates) => ({ ...order(id, 'G1', coordinates), zoneIds: [], deliveryType });
+  const source = day(manifest.defaultDate, [meatbox('M1', 'fresh', [127.5, 37.5]), meatbox('M2', 'parcel', [127.6, 37.6]), meatbox('M3', 'fresh', null)]);
+  const planning = planningSpy();
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? zones : source, planningFactory: planning.factory });
+  dated.update({ fleetDeliveries: [] }, null);
+  await waitFor(() => planning.mounts[0]?.updates.length === 1);
+  const first = planning.mounts[0].updates[0][0].fleetDeliveries;
+  assert.deepEqual(first.map(item => [item.id, item.zoneIds]), [['M1', ['Z9']], ['M2', ['Z9']], ['M3', []]]);
+  assert.deepEqual(source.orders.map(item => item.zoneIds), [[], [], []], '원본 날짜 자료는 바꾸지 않는다');
+  assert.equal(type.box.hidden, false);
+  assert.deepEqual(type.radios.map(radio => radio.disabled), [false, false, false]);
+  assert.match(type.note.textContent, /배차 계산과 전송은 구분과 관계없이 전체 주문 기준입니다/);
+
+  type.box.listeners.change({ target: { dataset: { dispatchType: '' }, value: 'parcel' } });
+  assert.deepEqual(planning.mounts[0].updates.at(-1)[0].fleetDeliveries.map(item => item.id), ['M2']);
+  assert.match(type.note.textContent, /^택배만 표시 중입니다\./);
+  type.box.listeners.change({ target: { dataset: { dispatchType: '' }, value: 'all' } });
+  assert.equal(planning.mounts[0].updates.at(-1)[0].fleetDeliveries.length, 3);
+  dated.destroy();
+});
+
+test('배송 구분이 없는 CSV 날짜는 필터를 끄고 구분이 없음을 말한다', async t => {
+  installBrowserGlobals(t);
+  const { element, nodes } = domFixture();
+  const type = typeBoxFixture();
+  nodes['type-filter'] = type.box;
+  const planning = planningSpy();
+  const dated = mountDatedDispatch({ element, notify: element.notify, fetchJSON: async url => url.endsWith('/manifest') ? manifest : url.endsWith('/regions') ? regions : day(manifest.defaultDate), planningFactory: planning.factory });
+  dated.update({ fleetDeliveries: [] }, null);
+  await waitFor(() => planning.mounts[0]?.updates.length === 1);
+  assert.deepEqual(type.radios.map(radio => radio.disabled), [true, true, true]);
+  assert.match(type.note.textContent, /CSV\)에는 배송 구분이 없어/);
+  dated.destroy();
+});

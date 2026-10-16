@@ -50,6 +50,8 @@ MEATBOX_FORK_FIXTURE_TELEMETRY_TOKEN=fixture-telemetry-token-0001 MEATBOX_FORK_F
 node scripts/seed-control-fixture.mjs --access-file <accessFile> --token fixture-telemetry-token-0001 --keep-alive
 ```
 
+미트박스 주문(신선/택배, 품목 중량, 좌표)으로 배송 구분·권역별 물량을 보려면 fixture를 `MEATBOX_FORK_FIXTURE_INBOUND_TOKEN`(16자 이상)과 함께 띄우고 `node scripts/seed-meatbox-orders.mjs --token <그 토큰>`을 실행한다. 내일 날짜에 합성 주문 5건이 들어간다.
+
 `seed-control-fixture.mjs`는 두 차량의 배차를 확정하고 오늘의 온도(정상 차량, 범위 밖 차량, 곧 조용해지는 차량)를 넣고, 기사 계정(`fork-driver` / `local-driver-1234`)을 만들어 한 차량에 배정한 뒤 출발 이벤트를 보내 서버 ETA를 만든다. 합성 자료만 쓰며 fixture 밖에는 아무것도 쓰지 않는다.
 
 합성 fixture의 로그인은 `fork-reviewer` / `local-fork-1234`이며 3주문·2차량의 로컬 합성 자료만 사용한다. `Ctrl-C` 또는 SIGTERM으로 종료한다. 합성 fixture는 임시 access JSON, 날짜 원본, checkpoint, SQLite를 만들고 종료 때 제거한다. 실자료 경로를 사용하지 않는다. Connected fixture는 이전 혼합 소유 계약의 비교·롤백용이고, native fixture는 Node API 없이 Kotlin이 인증·세션·네 원본 읽기·자원·날짜별 state/commands를 모두 소유한다.

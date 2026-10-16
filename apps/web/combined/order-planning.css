@@ -283,3 +283,14 @@
 [data-page="orders"][data-subtab="plan"] .dispatch-workflow-overview { flex: 0 0 auto; }
 [data-page="orders"][data-subtab="plan"] .dispatch-workflow-toolbar { flex-wrap: wrap; gap: 6px 16px; }
 [data-page="orders"][data-subtab="plan"] .dispatch-workflow-actions { margin-left: auto; }
+
+/* 배송 구분 filter and the note under the zone volume table. */
+.order-type-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0 0 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; font-size: 13px; }
+.order-type-filter legend { padding: 0 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.order-type-filter label { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; cursor: pointer; }
+.order-type-filter label:has(input:disabled) { color: var(--muted); cursor: default; }
+.order-type-filter small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.order-type-filter p { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.5; }
+.order-type-filter[hidden] { display: none; }
+.order-zone-note { margin: 8px 0 0; font-size: 12px; line-height: 1.6; }
+.order-zone-note:empty { display: none; }

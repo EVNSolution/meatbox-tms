@@ -4,6 +4,8 @@ import { createDispatchFleet } from './dispatch-assignment.mjs';
 import { mountDispatchWorkflow } from './dispatch-workflow.mjs';
 import { seoulToday, validOperatingDate } from './operating-date.mjs';
 import { dateNavActions, dateSummaryToolbar, mountDateSummaryToolbar } from './date-summary-toolbar.mjs';
+import { withDerivedZones } from './zone-assignment.ts';
+import { filterByType, hasTypes, typeCounts, typeNote, TYPE_FILTERS } from './delivery-type.ts';
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -34,12 +36,15 @@ export function resolveDispatchDate(manifest, requested, today = seoulToday) {
   return requested == null ? today() : validOperatingDate(requested) ? requested : null;
 }
 
+// 신선/택배: a view filter of the dispatch screen. Hidden until a day is shown; disabled for a day without kinds.
+const typeFilterMarkup = () => `<fieldset class="order-type-filter" data-dispatch-type-filter hidden><legend>배송 구분 (화면 표시 기준)</legend>${TYPE_FILTERS.map(({ value, label }) => `<label><input type="radio" name="dispatch-type" value="${value}" data-dispatch-type${value === 'all' ? ' checked' : ''}><span>${label}</span><small data-dispatch-type-count="${value}"></small></label>`).join('')}<p class="muted" data-dispatch-type-note></p></fieldset>`;
+
 export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onDateChange, onContextChange = () => {}, now = seoulToday, fetchJSON = async (url, signal) => {
   const response = await fetch(url, { signal });
   if (!response.ok) { const error = new Error('자료를 불러오지 못했습니다.'); error.status = response.status; throw error; }
   return response.json();
 }, planningFactory = mountOrderPlanning, datePickerFactory = mountDatePicker, workflowFactory = mountDispatchWorkflow, notify = () => {} }) {
-  element.innerHTML = `${dateSummaryToolbar({ label: '배차 날짜', actionsClass: 'date-nav', attributes: 'data-dispatch-toolbar hidden', summaryLabel: '선택 배차일 요약', actions: dateNavActions('배차일', 'data-dispatch-date'), context: '<span class="dispatch-readonly" data-dispatch-readonly hidden>이력 조회 (읽기 전용)</span>' })}<div data-dispatch-workflow hidden></div><div data-dispatch-planning hidden></div>`;
+  element.innerHTML = `${dateSummaryToolbar({ label: '배차 날짜', actionsClass: 'date-nav', attributes: 'data-dispatch-toolbar hidden', summaryLabel: '선택 배차일 요약', actions: dateNavActions('배차일', 'data-dispatch-date'), context: '<span class="dispatch-readonly" data-dispatch-readonly hidden>이력 조회 (읽기 전용)</span>' })}<div data-dispatch-workflow hidden></div>${typeFilterMarkup()}<div data-dispatch-planning hidden></div>`;
   const query = selector => element.querySelector(selector);
   const toolbar = query('[data-dispatch-toolbar]');
   const toolbarSummary = mountDateSummaryToolbar(toolbar);
@@ -52,13 +57,15 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   const previous = query('[data-date-prev]');
   const next = query('[data-date-next]');
   const todayButton = query('[data-date-today]');
-  let manifest = null, regions = null, planning = null, operationalData = null;
+  let manifest = null, regions = null, planning = null, operationalData = null, typeFilter = 'all';
+  const typeBox = query('[data-dispatch-type-filter]');
   let started = false, available = null, loading = true, current = null, epoch = 0, controller = null, destroyed = false, confirmedEmpty = false;
   const cache = new Map();
   const listeners = [];
   const listen = (node, type, fn) => { node.addEventListener(type, fn); listeners.push(() => node.removeEventListener(type, fn)); };
   function showUnavailable(text, empty = false) {
     confirmedEmpty = empty;
+    if (typeBox) typeBox.hidden = true;
     if (!planning) planning = planningFactory({ element: host, ...(onAssign ? { onSelect, onAssign: extra => {
       if (!current || operationalData?.sourceData?.date !== current.date) throw new Error('운영 상태를 먼저 확인해 주세요.');
       return onAssign(extra);
@@ -69,12 +76,34 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
     if (empty) toolbarSummary.update([['주문', 0], ['박스', 0]]);
     else toolbarSummary.clear();
   }
+  // What the planning view gets: orders placed in zones from their coordinates when the day gave none (Meatbox orders),
+  // then narrowed to the chosen delivery kind. The day itself and every command keep all orders.
+  function shaped(base) {
+    const placed = withDerivedZones(regions, base.fleetDeliveries);
+    const sourceOrders = Array.isArray(base.sourceOrders) ? withDerivedZones(regions, base.sourceOrders) : base.sourceOrders;
+    const counts = typeCounts(placed);
+    if (!hasTypes(counts)) typeFilter = 'all';
+    showTypeFilter(counts);
+    return { ...base, fleetDeliveries: filterByType(placed, typeFilter), ...(Array.isArray(sourceOrders) ? { sourceOrders: filterByType(sourceOrders, typeFilter) } : {}) };
+  }
+  function showTypeFilter(counts) {
+    if (!typeBox) return;
+    typeBox.hidden = !counts.total;
+    typeBox.querySelectorAll?.('[data-dispatch-type]').forEach(input => { input.disabled = !hasTypes(counts); input.checked = input.value === typeFilter; });
+    for (const [value, count] of [['all', counts.total], ['fresh', counts.fresh], ['parcel', counts.parcel]]) {
+      const node = typeBox.querySelector?.(`[data-dispatch-type-count="${value}"]`);
+      if (node) node.textContent = hasTypes(counts) || value === 'all' ? ` ${count.toLocaleString('ko-KR')}` : '';
+    }
+    const note = typeBox.querySelector?.('[data-dispatch-type-note]');
+    if (note) note.textContent = typeNote(counts, typeFilter);
+  }
   function display() {
-    if (operationalData?.sourceData?.date === current?.date) return { ...operationalData, fleetDeliveries: operationalData.dispatchOrders || operationalData.fleetDeliveries, dispatchSource: current, dispatchRegions: regions };
-    return { ...adaptDispatchDay(current, regions), dispatch: { phase: 'unplanned', readOnly: true } };
+    if (operationalData?.sourceData?.date === current?.date) return shaped({ ...operationalData, fleetDeliveries: operationalData.dispatchOrders || operationalData.fleetDeliveries, dispatchSource: current, dispatchRegions: regions });
+    return shaped({ ...adaptDispatchDay(current, regions), dispatch: { phase: 'unplanned', readOnly: true } });
   }
   function updateViews() {
     const operational = operationalData?.sourceData?.date === current?.date ? operationalData : null;
+    if (!current.orders.length && typeBox) typeBox.hidden = true;
     if (!current.orders.length) planning?.clear({ empty: true, message: `${current.date}에 등록된 주문이 없습니다.` });
     else planning?.update(display(), null);
     workflowHost.hidden = !operational?.dispatch;
@@ -169,6 +198,10 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
   listen(previous, 'click', () => { const index = manifest.dates.findIndex(item => item.date === selectedDate); if (index > 0) selectDate(manifest.dates[index - 1].date); });
   listen(next, 'click', () => { const index = manifest.dates.findIndex(item => item.date === selectedDate); if (index >= 0 && index < manifest.dates.length - 1) selectDate(manifest.dates[index + 1].date); });
   listen(todayButton, 'click', () => selectDate(now()));
+  if (typeBox) listen(typeBox, 'change', event => {
+    if (event.target?.dataset?.dispatchType === undefined || !current) return;
+    typeFilter = event.target.value; updateViews();
+  });
   return {
     update(data, _selectedId, contextDate) {
       operationalData = data;
