@@ -235,6 +235,25 @@ curl --silent --show-error --output /dev/null \
 | 자원 revision 409 | 최신 자원 revision | 최신 목록과 변경 의도를 다시 비교한다. |
 | 사진 완료 분쟁 | checkpoint 사건과 브라우저 동작 | 서버에는 사진이 없다. `hasPhoto`를 증빙으로 판단하지 않는다. |
 
+### 서버 오류 자동 알림 (Kotlin API)
+
+Kotlin API는 5xx를 내면 담당자 알림을 한 번 보낸다. 채널 설정이 없어도 동작한다.
+
+- 감지 지점: 처리되지 않은 예외(500 `INTERNAL_ERROR`, kind `server`)와 5xx로 나가는 `DispatchException`(저장 실패 `DISPATCH_STATE_WRITE_FAILED` 포함, kind `dispatch`).
+- 억제: 같은 `(kind, code)`는 10분 창에서 첫 1건만 보낸다. 나머지는 세기만 한다. 창이 닫히면 억제 건수를 담은 요약 1건을 보낸다. 요약은 30초 간격 점검에서 나가므로 창 종료 후 최대 약 30초 늦다.
+- 본문: kind, code, 발생 시각(UTC), 서버 이름, 억제 건수, 예외 클래스 이름(또는 고정 메시지). 요청 본문·쿠키·스택·내부 경로는 넣지 않는다.
+- 발송: 전용 단일 스레드가 보낸다. 요청은 막히지 않는다. 대기 100건을 넘기면 버리고 `dropped`만 올린다. 채널 실패는 WARN 로그 한 줄이고 요청 응답은 그대로다.
+- 알림은 프로세스 메모리에만 있다. 재시작하면 창과 최근 목록이 비워지고, 재시작 직후 같은 오류는 다시 한 번 알린다. 슬롯이 둘이면 슬롯마다 따로 센다.
+
+| 변수 | 필수 여부 | 기본값 | 의미 |
+| --- | --- | --- | --- |
+| `MEATBOX_ALERT_WEBHOOK_URL` | 선택 | 없음 | 설정하면 JSON `{subject, body, at, text}`를 POST한다. `text`는 `subject`와 `body`를 합친 값이며 Slack incoming webhook용이다. 시간 초과 5초, 리다이렉트 없음, 2xx가 아니면 실패다. 비우면 WARN 로그만 남긴다. URL은 비밀값이므로 `api.env`(0600)에만 둔다. http·https가 아니면 시작에 실패한다. |
+| `MEATBOX_ALERT_SERVER_NAME` | 선택 | 호스트 이름 | 알림 본문의 서버 식별이다. 슬롯을 구분하려면 슬롯별로 설정한다. |
+
+확인 경로: 세션이 있는 상태로 `GET /api/ops/alerts`를 호출한다. 최근 알림 50건(`subject`, `at`, `suppressedCount`), 채널 종류, 버린 건수를 돌려준다. 세션이 없으면 `401 LOGIN_REQUIRED`다. 로그 채널일 때는 `journalctl -u meatbox-api@<slot>`에서 `ALERT`로 찾는다.
+
+알림을 받으면 위 장애 분류 표의 코드 행으로 이어간다. 메일 채널과 미트박스 송신 실패 연결은 아직 없다. 운영 시간 외 대응 기준은 정하지 않았다.
+
 최근 로그는 요청 본문을 출력하지 않는 범위로 제한한다. 현재 Node 오류 처리는 오류 이름만 출력하지만 프록시·플랫폼 로그 정책은 별도 확인이 필요하다.
 
 ```sh

@@ -2,6 +2,7 @@ package com.evnsolution.meatbox
 
 import com.evnsolution.meatbox.compat.DispatchDataException
 import com.evnsolution.meatbox.dispatch.DispatchException
+import com.evnsolution.meatbox.ops.ErrorAlerts
 import com.evnsolution.meatbox.resources.ResourceException
 import jakarta.servlet.RequestDispatcher
 import jakarta.servlet.http.HttpServletRequest
@@ -65,9 +66,14 @@ private fun codeOf(status: HttpStatusCode): String =
     else HttpStatus.resolve(status.value())?.name ?: "HTTP_${status.value()}"
 
 @RestControllerAdvice
-class ProblemExceptionHandler : ResponseEntityExceptionHandler() {
+class ProblemExceptionHandler(private val alerts: ErrorAlerts) : ResponseEntityExceptionHandler() {
     @ExceptionHandler(DispatchException::class)
-    fun dispatch(error: DispatchException) = problemResponse(error.status, error.code, error.message)
+    fun dispatch(error: DispatchException): ResponseEntity<Any> {
+        if (error.status >= HttpStatus.INTERNAL_SERVER_ERROR.value()) {
+            alerts.report("dispatch", error.code, error.message)
+        }
+        return problemResponse(error.status, error.code, error.message)
+    }
 
     @ExceptionHandler(DispatchDataException::class)
     fun source(error: DispatchDataException) = problemResponse(error.status.value(), error.code)
@@ -78,6 +84,8 @@ class ProblemExceptionHandler : ResponseEntityExceptionHandler() {
     @ExceptionHandler(Exception::class)
     fun unexpected(error: Exception): ResponseEntity<Any> {
         log.error("Unhandled exception", error)
+        // Class name only: messages and stacks can carry paths or request data.
+        alerts.report("server", INTERNAL_ERROR, error.javaClass.simpleName)
         return problemResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), INTERNAL_ERROR, INTERNAL_DETAIL)
     }
 

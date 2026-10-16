@@ -1,6 +1,7 @@
 package com.evnsolution.meatbox.driver
 
 import com.evnsolution.meatbox.ProblemExceptionHandler
+import com.evnsolution.meatbox.ops.quietAlerts
 import com.evnsolution.meatbox.assertProblem
 import com.evnsolution.meatbox.auth.LoginRequiredException
 import com.evnsolution.meatbox.auth.SessionVerifier
@@ -26,7 +27,7 @@ class DriverHttpTest {
             "demo"
         })
         mvc = MockMvcBuilders.standaloneSetup(DriverController(store, FcmSender("", ""), ORIGIN))
-            .setControllerAdvice(ProblemExceptionHandler())
+            .setControllerAdvice(ProblemExceptionHandler(quietAlerts()))
             .addFilters<org.springframework.test.web.servlet.setup.StandaloneMockMvcBuilder>(filter).build()
     }
 

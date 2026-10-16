@@ -41,7 +41,7 @@
 | 항목 | 상태 | 근거·메모 |
 | --- | --- | --- |
 | [x] RFC 9457 공통 오류 응답 (19) | 로컬 검증 | `ProblemResponseTest`(DispatchException·429·500·404·405), `ApiPathGuardHttpTest`(필터 401·400, 실서버 404), `DriverHttpTest`(429 Retry-After), 계약 테스트 58건 통과. `error`·`message` 호환 필드는 프런트가 `code`로 옮긴 뒤 제거 |
-| [ ] 오류 자동 감지·담당자 알림 (19) | 미착수 | 지원시간 내 대응, 운영 시간 외 범위는 별도 기준 |
+| [x] 오류 자동 감지·담당자 알림 (19) | 로컬 검증 | `ops/ErrorAlertsTest`(500·저장 실패 감지, 10분 창 억제·요약 99건, 다른 code 별도, 채널 예외 시 500 유지, 큐 상한), `ops/WebhookAlertChannelTest`(로컬 HTTP 수신), `ops/OpsAlertsHttpTest`(`GET /api/ops/alerts` 401·목록). 채널은 로그 기본·웹훅 선택. 메일·미트박스 송신 실패 연결·운영 시간 외 대응 기준은 남음 |
 | [x] 명령 결과를 요청 ID로 영속 조회, 응답 유실 후 중복 적용 방지 | 로컬 검증 | `DispatchStoreTest`(재전송·본문 불일치·재시작·저장 실패·보존 한도), `test/api-connection/kotlin-state-owner.test.mjs`(HTTP 재전송·GET·재시작). 날짜당 500건·24시간·8MiB. [다음 기능 계획](next-feature-delivery-plan.md) F04 |
 | [ ] 테넌트·소속·역할 권한 (3) | 미착수 | F05·F06 |
 | [ ] 원본 변경 시 기존 배차 재사용 차단 | 미착수 | F02 |

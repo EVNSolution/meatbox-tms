@@ -40,3 +40,8 @@ meatbox:
     enabled: ${MEATBOX_DISPATCH_ENABLED:false}
     state-dir: ${MEATBOX_DISPATCH_STATE_DIR:}
     public-origin: ${MEATBOX_PUBLIC_ORIGIN:}
+
+  ops:
+    # Empty webhook URL keeps the default WARN-log channel.
+    alert-webhook-url: ${MEATBOX_ALERT_WEBHOOK_URL:}
+    server-name: ${MEATBOX_ALERT_SERVER_NAME:}

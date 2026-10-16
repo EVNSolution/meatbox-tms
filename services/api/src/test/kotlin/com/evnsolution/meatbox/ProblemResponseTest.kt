@@ -1,6 +1,7 @@
 package com.evnsolution.meatbox
 
 import com.evnsolution.meatbox.dispatch.DispatchException
+import com.evnsolution.meatbox.ops.quietAlerts
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.test.web.servlet.MockMvc
@@ -13,7 +14,7 @@ import tools.jackson.databind.json.JsonMapper
 
 class ProblemResponseTest {
     private val mvc: MockMvc = MockMvcBuilders.standaloneSetup(Boom())
-        .setControllerAdvice(ProblemExceptionHandler()).build()
+        .setControllerAdvice(ProblemExceptionHandler(quietAlerts())).build()
 
     @Test
     fun `maps a dispatch exception to a problem body whose error equals code`() {

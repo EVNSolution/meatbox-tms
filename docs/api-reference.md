@@ -36,6 +36,7 @@
 | `GET` | `/api/dispatch-data/days/{date}/state` | 날짜별 배차·운행 snapshot |
 | `POST` | `/api/dispatch-data/days/{date}/commands` | 날짜별 배차·운행 명령 |
 | `GET` | `/api/dispatch-data/days/{date}/commands/{requestId}` | 저장된 명령 결과 조회 |
+| `GET` | `/api/ops/alerts` | 최근 서버 오류 알림 50건과 채널 종류 (Kotlin API 전용) |
 | `GET` | `/api/resources` | 차량·지역 코드 등록부 |
 | `POST` | `/api/resources/region-codes` | 지역 코드 생성 |
 | `PATCH` | `/api/resources/region-codes/{code}` | 지역 코드 이름 변경 |
