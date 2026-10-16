@@ -186,3 +186,53 @@
 - 사진은 URL 참조로 충분한지, 파일을 넘겨야 하는지.
 - 상차 완료 상태를 누가 만드는지. WMS에서 오는지, 기사 앱에서 찍는지.
 - 테스트 환경과 고정 IP 허용.
+
+## 7. 끝점 요약 (GET / POST)
+
+조회는 `GET`, 상태를 바꾸거나 기록을 남기는 요청은 `POST`다. `GET`은 몇 번 불러도 같고 부작용이 없다. `POST`는 작업 식별자로 중복을 막는다.
+`/api/driver/*`는 기사 세션, `/api/meatbox/*`는 미트박스 토큰, 미트박스 쪽 경로는 그쪽 발급 토큰을 쓴다. 기존 `push-token`·`messages`는 [API 참조](api-reference.md)에 있다.
+
+### 7.1 앱 → 우리 서버
+
+| 방법 | 경로 | 역할 | 본문·응답 |
+| --- | --- | --- | --- |
+| `GET` | `/api/driver/days/{date}/route` | 배정 배송지·순서·상태·ETA. 앱 시작과 재동기화 | 응답에 `revision`. 순서 변경 때 `expectedRevision`으로 보냄 |
+| `GET` | `/api/driver/days/{date}/stops/{stopId}` | 배송지 상세. 고객·품목·출입정보·배송팁·CS 요청·직전 완료 사진 | 출입정보는 권한 있을 때만 |
+| `GET` | `/api/driver/days/{date}/history` | 당일 완료·미배송 이력 (57) | 완료 시각·배송지 기준 |
+| `GET` | `/api/driver/events/{eventId}` | 응답을 잃었을 때 처리 결과 재확인 | `202`와 같은 본문. 없으면 `404` → 재전송 |
+| `POST` | `/api/driver/photos` | 사진 업로드 | `multipart`, 압축본. 응답 `{ "photoId" }` |
+| `POST` | `/api/driver/events` | 이벤트 6종 (2절) | 봉투 + `payload`. 응답 `202` |
+| `POST` | `/api/driver/locations` | 위치 1분 배치 | `samples[]`. 응답 `202` |
+
+### 7.2 우리 서버 → 미트박스
+
+경로는 미트박스가 정한다. 아래는 자리 표시다.
+
+| 방법 | 경로 | 역할 | 본문 |
+| --- | --- | --- | --- |
+| `POST` | `{meatbox}/tms/delivery-status` | 주문 상태 (3.1) | `Idempotency-Key: messageId` |
+| `POST` | `{meatbox}/tms/eta` | 차량 ETA 전체 (3.2) | 같음 |
+| `POST` | `{meatbox}/tms/temperature` | 온도 1분 묶음 (3.3) | 같음 |
+
+미트박스 응답은 `202 { "accepted": true }`를 기대한다. `4xx`는 본문을 고쳐야 하므로 재시도하지 않고 운영 알림.
+
+### 7.3 미트박스 → 우리 서버
+
+| 방법 | 경로 | 역할 | 본문 |
+| --- | --- | --- | --- |
+| `POST` | `/api/meatbox/orders` | 주문 등록·변경·취소 (4절) | `Idempotency-Key: orderId:version` |
+| `GET` | `/api/meatbox/orders/{orderId}` | 우리가 가진 최신 상태 확인 | 상태·마지막 송신 `messageId` |
+
+당기기 방식이면 `GET {meatbox}/orders?date=YYYY-MM-DD`를 우리가 주기 호출하고 4절 본문을 배열로 받는다.
+
+### 7.4 모의 수신기 (우리 서버, PoC 전용)
+
+| 방법 | 경로 | 역할 |
+| --- | --- | --- |
+| `POST` | `/mock/meatbox/delivery-status` | 3.1 본문 검증 후 `202` |
+| `POST` | `/mock/meatbox/eta` | 3.2 본문 검증 후 `202` |
+| `POST` | `/mock/meatbox/temperature` | 3.3 본문 검증 후 `202` |
+| `GET` | `/mock/meatbox/received` | 받은 메시지 목록. PoC 확인용 |
+
+운영 빌드에는 넣지 않는다.
+
