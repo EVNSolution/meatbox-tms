@@ -66,6 +66,12 @@ const vehicleControl = mountVehicleControl({ element: byId('vehicle-control'),
   }, onSelectDelivery: selectDelivery,
   onOpenManagement: id => { selectDelivery(id); activateControlTab('management'); byId('tab-management').focus({ preventScroll: true }); },
   onOpenRoute: () => routeEditor.beginEdit(),
+  onOpenTemperature: id => {
+    const row = vehicleOperations(state.data).find(item => item.vehicle.id === id);
+    state.controlVehicleId = id;
+    state.selectedId = row?.current?.id || row?.deliveries[0]?.id || null;
+    activateControlTab('temperature');
+  },
 });
 const routeEditor = mountRouteEditor({ element: byId('route-editor'), onSend: (type, extra) => operations.send(type, extra), onSelect: selectDelivery,
   onCancel: () => { vehicleControl.showRecords(); document.querySelector('[data-control-route]').focus(); },
@@ -298,7 +304,7 @@ function normalizeRoute() {
 
 function activateControlTab(tab) {
   state.controlTab = tab;
-  state.subtab = tab === 'management' ? 'records' : 'stops';
+  state.subtab = tab === 'management' ? 'records' : tab === 'temperature' ? 'temperature' : 'stops';
   const hash = routeHash('control', state.subtab);
   if (location.hash !== hash) history.pushState(null, '', hash);
   render();

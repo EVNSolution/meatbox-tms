@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 44,
+  "authoredFileCount": 48,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "529bbab206b7e28c21d1e0c66439217535a4a6ff94930bc2baba1d011778df71",
+      "targetSha256": "730436b9e33261738124c17e3686e16dafea65e8e854c44afa7b1e5b999da5c4",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -41,7 +41,8 @@
         "Drop the page description writer and the empty dispatch-context sync.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
-        "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only."
+        "Account actions (설정, 내 계정, 로그아웃) as icon buttons at the bottom of the sidebar, with official Lucide icons; header keeps the brand only.",
+        "Route the temperature tab of the control screen and open it for the vehicle chosen in the temperature dialog."
       ],
       "status": "active"
     },
@@ -904,13 +905,14 @@
       "source": "apps/combined/operations-model.mjs",
       "sourceSha256": "faa9705f2c9f52906dd371b5febbadc58a8c3d9c188e7c2272c25beb076fbd6c",
       "target": "apps/web/combined/operations-model.mjs",
-      "targetSha256": "76d5d1fe299bbfcb8d1fbb1c2fe5e64ad222a5aeada9a9c239831a3aa5b37cf7",
+      "targetSha256": "a1a91cdccf030b0e3d5717cf7cc06cf72105a0434934b24a27ecc345846c0333",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Distinguish confirmed empty delivery dates from loading, failed reads and invalid dates without creating operational state.",
         "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
-        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work."
+        "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
+        "Add the temperature sub-tab to the control routes."
       ],
       "status": "active"
     },
@@ -918,12 +920,13 @@
       "source": "apps/combined/operations-model.test.mjs",
       "sourceSha256": "5c2f2a2a77236df5f6d5d204719eed1cb1045f48388943c0d7f7bf60357f5732",
       "target": "apps/web/combined/operations-model.test.mjs",
-      "targetSha256": "904bfb44f71ba1a200e9c98061c931571bbc1dbf664dcbc80e11f6a3c954bfdb",
+      "targetSha256": "b3a1f1ac537f311d370d6803e6fdad8bd05eaf994a0c49f194846f88e8d3cc26",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Keep the dispatch workspace visible without source data and default entry to dispatch management.",
         "Verify control empty-date presentation does not turn loading, failures or invalid dates into confirmed absence.",
-        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes."
+        "Add per-page sub-tabs (orders: 배차/권역 물량/주문 목록, control: 관제/배송지/이력·알림) that split the existing blocks by a data-subtab attribute and tab routes.",
+        "Verify the temperature sub-tab route and its details-column behavior."
       ],
       "status": "active"
     },
@@ -1588,7 +1591,7 @@
       "source": "apps/combined/vehicle-control.mjs",
       "sourceSha256": "4e04aba15343ac5bb69ea0dbf661c9e931b3acdb7a592c5d03ad35151b9cbf97",
       "target": "apps/web/combined/vehicle-control.mjs",
-      "targetSha256": "9b84beffeac61fa022f9df8c7b18f81e07c0bcebe8d3b2e7c9a8b9aa1fd0453e",
+      "targetSha256": "eef2382c277fd6c12afedc4545be5fbb255325f4a20e592f6dfed53aa4c90482",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Import the shared map model/factory functions directly without depending on the order-planning view",
@@ -1605,7 +1608,8 @@
         "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
         "Add a Zoom to fit button that also frames the vehicle; the default view frames the stops only.",
-        "Show each vehicle's temperature state (range-out, silent, normal) in the fleet row, the running summary and the vehicle marker, sort by it, and open the all-vehicle temperature dialog."
+        "Show each vehicle's temperature state (range-out, silent, normal) in the fleet row, the running summary and the vehicle marker, sort by it, and open the all-vehicle temperature dialog.",
+        "Add the vehicle temperature tab (current value and day graph) to the selected vehicle details and open it from the temperature dialog."
       ],
       "status": "active"
     },
@@ -1613,7 +1617,7 @@
       "source": "apps/combined/vehicle-control.test.mjs",
       "sourceSha256": "45b45f3b4a80bcbe793bb2b56708cbf7c2d171b6f9f4c30da7094052132a98aa",
       "target": "apps/web/combined/vehicle-control.test.mjs",
-      "targetSha256": "745b2ee2f02689a246b8e5c61b6d8a8d6b377a19ef9b7ab700eb1219c5b21aa8",
+      "targetSha256": "50f19e49e4c3a952f190a4db49d92de60794ff7ab0783c209ca47a8429f016ca",
       "reason": "Preserve pure browser/model regression tests byte-for-byte beside the forked frontend modules; no existing server import is required.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -1621,7 +1625,8 @@
         "Use one transient empty-data notification while retaining work areas and persistent errors.",
         "Match current operational capabilities and source-only boundaries while preserving supported commands and historical records.",
         "Rename the control sub-tab to 기록 (no dot separator) and keep the map visible with a reason chip when there is no work.",
-        "Verify the temperature state in the fleet rows, summary badge and sorting, and the temperature dialog button's enabled state."
+        "Verify the temperature state in the fleet rows, summary badge and sorting, and the temperature dialog button's enabled state.",
+        "Verify the temperature tab, the temperature dialog selection route and the dated vehicle details wiring."
       ],
       "status": "active"
     },
@@ -2530,7 +2535,35 @@
       "origin": "authored",
       "reason": "Style temperature rows, summary badge, vehicle marker state and the temperature dialog with the shared operational tokens.",
       "status": "active",
-      "sha256": "9d5b87fd309aaa01a7eee1ea9a3d5e93e831d0a6f89707ef09fb6d8106a1a04d"
+      "sha256": "2aeefe671550602bbafe6ab991e8920b1b0e047090e577e40a4bde82b2141516"
+    },
+    {
+      "path": "apps/web/combined/temperature-graph.ts",
+      "origin": "authored",
+      "reason": "Turn one vehicle's day of readings into an accessible SVG line graph with min-max bands, allowed-range lines and gaps left empty, bounded in point count.",
+      "status": "active",
+      "sha256": "abc5cb53ed44ef6936c798aa897e7e5801f5b7767ab4f9493a84768c72919fcd"
+    },
+    {
+      "path": "apps/web/combined/temperature-graph.test.mjs",
+      "origin": "authored",
+      "reason": "Verify graph coordinates, gaps, sensors, axes, statistics, point limit, nearest reading and escaped accessible SVG.",
+      "status": "active",
+      "sha256": "881a85bcf8307d926e047cb8328e1e069254862916878439e06475b75e73584e"
+    },
+    {
+      "path": "apps/web/combined/temperature-panel.ts",
+      "origin": "authored",
+      "reason": "Show the selected vehicle's current temperature and the selected day's graph with the allowed range, refreshed only while the tab is open for today and never mixing answers of another vehicle.",
+      "status": "active",
+      "sha256": "70221c27d1d8dd52b18ae5984415601c46921a882dddf1706f3e285d6ddcab23"
+    },
+    {
+      "path": "apps/web/combined/temperature-panel.test.mjs",
+      "origin": "authored",
+      "reason": "Verify the temperature tab for today and past dates, reload rules, stale answers, failures, unavailable module and pointer and key reading.",
+      "status": "active",
+      "sha256": "364ab18834bb625eb6a4ddf34932494ca04ab981cd2d402d790485996c3f7d1d"
     }
   ],
   "historicalTargetFileCount": 163,

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { operatorRoute, routeHash, controlDataPresentation, filterFleetDeliveries, normalizeVehicleFilter, resolveDeliverySelection } from './operations-model.mjs';
+import { operatorRoute, routeHash, subtabs, controlDataPresentation, filterFleetDeliveries, normalizeVehicleFilter, resolveDeliverySelection } from './operations-model.mjs';
 
 test('관제의 로딩과 조회 실패는 확인된 자료 없음과 구분한다', () => {
   assert.deepEqual(controlDataPresentation(null), { empty: false, message: '배송 자료를 확인하고 있습니다.' });
@@ -79,4 +79,12 @@ test('route hashes omit the default sub-tab and round-trip the others', () => {
     const route = operatorRoute(hash);
     assert.equal(routeHash(route.page, route.subtab), hash);
   }
+});
+
+test('the temperature tab of the control screen has its own route and keeps the vehicle details column', () => {
+  assert.deepEqual(operatorRoute('#/control/temperature'), { page: 'control', subtab: 'temperature', controlTab: 'temperature' });
+  assert.equal(routeHash('control', 'temperature'), '#/control/temperature');
+  assert.deepEqual(subtabs.control.map(([id]) => id), ['map', 'stops', 'records', 'temperature']);
+  assert.equal(operatorRoute('#/control/records').controlTab, 'management');
+  assert.equal(operatorRoute('#/control/stops').controlTab, 'monitor');
 });

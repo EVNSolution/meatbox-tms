@@ -50,6 +50,8 @@ const authoredPaths = [
   'apps/web/combined/temperature-model.test.mjs', 'apps/web/combined/temperature-client.ts',
   'apps/web/combined/temperature-client.test.mjs', 'apps/web/combined/temperature-overview.ts',
   'apps/web/combined/temperature-overview.test.mjs', 'apps/web/combined/temperature.css',
+  'apps/web/combined/temperature-graph.ts', 'apps/web/combined/temperature-graph.test.mjs',
+  'apps/web/combined/temperature-panel.ts', 'apps/web/combined/temperature-panel.test.mjs',
 ].sort();
 const inventory = JSON.parse(readFileSync(path.join(root, 'apps/web/fork-inventory.json'), 'utf8'));
 const git = args => execFileSync('git', args, { cwd: root, maxBuffer: 16 * 1024 * 1024 });

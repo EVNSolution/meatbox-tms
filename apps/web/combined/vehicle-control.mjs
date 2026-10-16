@@ -9,6 +9,8 @@ import { driverToolsMarkup, mountDriverTools } from './driver-tools.ts';
 import { createTemperatureClient } from './temperature-client.ts';
 import { readTemperature, sortByTemperature, stateOf, temperatureView } from './temperature-model.ts';
 import { mountTemperatureOverview, temperatureOverviewMarkup } from './temperature-overview.ts';
+import { mountTemperaturePanel, temperaturePanelMarkup } from './temperature-panel.ts';
+import { seoulToday } from './operating-date.mjs';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const count = (value, unit = '') => value === null || value === undefined ? '미확인' : `${value.toLocaleString('ko-KR')}${unit}`;
@@ -33,7 +35,7 @@ const factRows = facts => facts.length ? facts.map(fact => `<li><time>${esc(fact
 const temperatureOf = (data, vehicleId) => temperatureView(readTemperature(stateOf(data?.vehicleStates, vehicleId)));
 const temperatureLine = view => view.kind === 'none' ? '' : `<small class="control-temp" data-temp-kind="${view.kind}"><span class="badge ${view.tone}">${esc(view.label)}</span> ${esc(view.valueText)}</small>`;
 
-export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery, onOpenManagement, onOpenRoute = () => {},
+export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery, onOpenManagement, onOpenRoute = () => {}, onOpenTemperature = id => onSelectVehicle(id),
   mapFactory = createOrderMap, markerFactory = createOrderMarker,
   loadRouteData = null, temperatureClient = createTemperatureClient(),
 }) {
@@ -51,7 +53,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
     <aside class="panel control-details" aria-label="선택 차량 상세">
       <div class="panel-heading"><h2 data-control-detail-title>차량 상세</h2></div>
       ${driverToolsMarkup()}
-      <div class="detail-tabs control-tabs" role="tablist" aria-label="관제 관리"><button type="button" role="tab" id="tab-monitor" aria-selected="true" aria-controls="monitor-list-panel" data-control-tab="monitor">배송지 상세</button><button type="button" role="tab" id="tab-management" aria-selected="false" aria-controls="control-management-panel" tabindex="-1" data-control-tab="management">배송 관리</button></div>
+      <div class="detail-tabs control-tabs" role="tablist" aria-label="관제 관리"><button type="button" role="tab" id="tab-monitor" aria-selected="true" aria-controls="monitor-list-panel" data-control-tab="monitor">배송지 상세</button><button type="button" role="tab" id="tab-management" aria-selected="false" aria-controls="control-management-panel" tabindex="-1" data-control-tab="management">배송 관리</button><button type="button" role="tab" id="tab-temperature" aria-selected="false" aria-controls="control-temperature-panel" tabindex="-1" data-control-tab="temperature">온도</button></div>
       <section id="monitor-list-panel" role="tabpanel" aria-labelledby="tab-monitor"><div data-control-stops class="control-stop-list"></div></section>
       <section id="control-management-panel" role="tabpanel" aria-labelledby="tab-management" hidden>
         <div data-control-records-view>
@@ -62,6 +64,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
         </div>
         <div data-control-route-view hidden><div id="route-editor"></div></div>
       </section>
+      <section id="control-temperature-panel" role="tabpanel" aria-labelledby="tab-temperature" hidden>${temperaturePanelMarkup()}</section>
     </aside>
   </div>
   <dialog class="support-dispatch-dialog" data-support-dialog aria-labelledby="support-title"><div class="support-heading"><h2 id="support-title">지원배차</h2><button type="button" class="button icon-button" data-support-close aria-label="지원배차 닫기">${referenceIcon('close')}</button></div><p>예상 완료시간과 실제 완수 속도를 바탕으로 지원할 차량을 판단합니다.</p><p class="support-waiting">실제 위치가 연결되지 않아 주변 차량을 확인할 수 없습니다. 안정 레벨의 상, 중, 하 기준과 호출, 수락, 재배정 연결을 기다리고 있습니다.</p><div class="support-data" data-support-data></div><div class="support-actions"><button type="button" class="button" disabled>호출 대기</button><button type="button" class="button primary" disabled>지원 지시 대기</button></div></dialog>${temperatureOverviewMarkup()}`;
@@ -76,7 +79,8 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
   const support = find('[data-support-dialog]');
   const recordList = find('[data-control-records]');
   const driverTools = mountDriverTools({ element });
-  const temperatureOverview = mountTemperatureOverview({ element, client: temperatureClient, onSelectVehicle: id => onSelectVehicle(id) });
+  const temperatureOverview = mountTemperatureOverview({ element, client: temperatureClient, onSelectVehicle: id => onOpenTemperature(id) });
+  const temperaturePanel = mountTemperaturePanel({ element, client: temperatureClient, isActive: () => find('#control-temperature-panel')?.hidden === false });
 
   function replacePreservingFocus(target, markup, selector) {
     if (target.innerHTML === markup) return;
@@ -290,6 +294,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
 
   function clear({ empty = false, message = '배송 자료를 확인하고 있습니다.' } = {}) {
     driverTools.update(null, null);
+    temperaturePanel.clear();
     data = null; rows = []; row = null; selectedId = null;
     previousVehicleId = null; previousSelectedId = null;
     search = ''; sort = 'received'; opened = new Set(); recordFilter = 'all';
@@ -372,6 +377,7 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       row = resolveDefaultControlVehicle(data, rows, vehicleId, preferredDeliveryId); selectedId = preferredDeliveryId;
       driverTools.update(data, row);
       temperatureOverview.update(rows.map(item => item.vehicle));
+      temperaturePanel.update({ date: data?.sourceData?.date ?? '', today: seoulToday(), vehicle: row?.vehicle ?? null, reading: readTemperature(stateOf(data?.vehicleStates, row?.vehicle?.id)) });
       if (!map) mapElement.innerHTML = '';
       setControlsDisabled(false);
       if (previousVehicleId !== row?.vehicle.id) { opened = new Set(); recordFilter = 'all'; showRecords(); }
@@ -383,6 +389,6 @@ export function mountVehicleControl({ element, onSelectVehicle, onSelectDelivery
       if (support.open) renderSupport();
       return row;
     },
-    destroy() { destroyed = true; driverTools.destroy(); temperatureOverview.destroy(); if (support.open) support.close(); removeMap(); },
+    destroy() { destroyed = true; driverTools.destroy(); temperatureOverview.destroy(); temperaturePanel.destroy(); if (support.open) support.close(); removeMap(); },
   };
 }

@@ -1,6 +1,6 @@
 export const subtabs = {
   orders: [['plan', '배차'], ['zones', '권역 물량'], ['list', '주문 목록']],
-  control: [['map', '관제'], ['stops', '배송지'], ['records', '기록']],
+  control: [['map', '관제'], ['stops', '배송지'], ['records', '기록'], ['temperature', '온도']],
 };
 
 export function operatorRoute(hash = '') {
@@ -9,7 +9,7 @@ export function operatorRoute(hash = '') {
   const manage = path === 'manage' || (page === 'control' && section === 'manage');
   const known = (subtabs[page] || []).map(([id]) => id);
   const subtab = manage ? 'records' : known.includes(section) ? section : known[0] || '';
-  return { page, subtab, controlTab: subtab === 'records' ? 'management' : 'monitor' };
+  return { page, subtab, controlTab: subtab === 'records' ? 'management' : subtab === 'temperature' ? 'temperature' : 'monitor' };
 }
 
 export function routeHash(page, subtab) {

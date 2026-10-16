@@ -446,3 +446,15 @@ test('온도 현황 버튼은 자료가 없으면 꺼지고 차량이 있으면 
   assert.equal(node('[data-control-temperature]').disabled, false);
   control.destroy();
 });
+
+test('온도 현황에서 고른 차량은 온도 탭으로 열린다', () => {
+  const { element } = fixture();
+  const opened = [];
+  const selected = [];
+  mountVehicleControl({ element, onSelectVehicle: id => selected.push(id), onOpenTemperature: id => opened.push(id), onSelectDelivery() {}, mapFactory })
+    .destroy();
+  const source = readFileSync(new URL('./vehicle-control.mjs', import.meta.url), 'utf8');
+  assert.match(source, /data-control-tab="temperature"/);
+  assert.match(source, /onSelectVehicle: id => onOpenTemperature\(id\)/);
+  assert.deepEqual([opened, selected], [[], []]);
+});
