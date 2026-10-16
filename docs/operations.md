@@ -269,6 +269,19 @@ Kotlin API는 5xx를 내면 담당자 알림을 한 번 보낸다. 채널 설정
 - 장애: 저장 실패는 `500 INBOUND_WRITE_FAILED`이고 미트박스가 같은 요청을 다시 보낸다. 계산안 중 변경이 계산안을 버릴 때 저장이 실패하면 계산안만 사라진 상태이므로 운영자가 다시 계산한다.
 - 롤백: 이전 버전은 `inbound/`를 읽지 못한다. 롤백하면 미트박스 날짜가 매니페스트에 없어 조회되지 않고 체크포인트는 그대로 남는다. 파일을 지우거나 옮기지 않는다.
 
+### 도착 예정 시각 (ETA) 설정 (Kotlin API)
+
+`departed` 이벤트가 배송지별 도착 예정 시각을 계산할 때 쓰는 값이다. 외부 경로 API는 쓰지 않는다(직선거리 모델). 바꾸면 슬롯을 다시 시작해야 하고, 이미 계산한 ETA는 그대로 둔다.
+
+| 변수 | 필수 여부 | 기본값 | 의미 |
+| --- | --- | --- | --- |
+| `MEATBOX_ETA_DETOUR_FACTOR` | 선택 | `1.4` | 직선거리에 곱하는 우회계수. 0 이하이면 시작에 실패한다. |
+| `MEATBOX_ETA_SPEED_KMH` | 선택 | `25` | 평균 속도(km/h), 도심 기준. 0 이하이면 시작에 실패한다. |
+| `MEATBOX_ETA_SERVICE_MINUTES` | 선택 | `5` | 배송지 하나에서 쓰는 작업 시간(분). 음수이면 시작에 실패한다. |
+
+- 이 값들은 `application.yml`의 `meatbox.eta.detour-factor`·`speed-kmh`·`service-minutes`에 매핑된다.
+- 값은 실측으로 맞춘 것이 아니다. TEST·운영에서 실제 도착과 ETA를 비교해 조정한다.
+
 ### 미트박스 송신 (Kotlin API)
 
 기사 앱 이벤트나 배차 확정이 주문 상태를 바꾸면 서버가 미트박스에 배송 상태 메시지([연동 계약](integration-contract.md) 3.1)를 보낸다. 메시지는 상태 변경과 같은 체크포인트 쓰기로 날짜 상태의 송신함에 쌓이고, 단일 스레드 발송기가 주기적으로 집어 보낸다.
@@ -279,6 +292,8 @@ Kotlin API는 5xx를 내면 담당자 알림을 한 번 보낸다. 채널 설정
 | `MEATBOX_API_TOKEN` | 선택 | 없음 | 있으면 `Authorization: Bearer`로 보낸다. 비우면 헤더를 생략한다. 비밀값이므로 `api.env`(0600)에만 둔다. 로그·알림·`/api/ops/outbox`에 넣지 않는다. |
 | `MEATBOX_OUTBOX_INTERVAL_SECONDS` | 선택 | `5` | 발송기 주기. 1 미만은 1로 본다. |
 | `MEATBOX_MOCK_RECEIVER_ENABLED` | 선택 | `false` | **테스트 전용.** 켜면 `/mock/meatbox/*` 모의 수신기가 뜬다. 아래 참고. |
+
+ETA(`kind: "eta"`)는 같은 송신함·발송기로 `POST {주소}/tms/eta`에 간다. 거절 알림 코드는 `ETA_REJECTED`, 불통은 `ETA_UNREACHABLE`이다.
 
 - 전송: `Content-Type: application/json`, `Idempotency-Key: <messageId>`, 시간 초과 10초, 리다이렉트 없음. 2xx면 `sentAt`을 기록한다.
 - 재시도: `5xx`·`429`·시간 초과·연결 실패는 5초 → 15초 → 45초 → 2분 → 5분(상한) 간격으로 무기한 반복한다. 같은 `messageId`로 다시 보내므로 미트박스가 키로 중복을 막아야 한다. 응답을 받기 전에 프로세스가 죽거나 `sentAt` 저장이 실패하면 같은 메시지가 한 번 더 간다.

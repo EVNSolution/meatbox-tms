@@ -36,7 +36,7 @@
 
 - 경로 접두사가 `/api/dispatch-data/days/{date}/driver/...`다.
 - `eventId`는 UUID가 아니어도 영문·숫자·`-`·`_` 1~64자면 받는다. 멱등 범위는 `(vehicleId, eventId)`가 아니라 날짜 안의 `eventId`다. 본문(차량 포함)이 다르면 `409 REQUEST_ID_MISMATCH`다.
-- `next.eta`는 ETA 산출 전까지 항상 `null`이다.
+- `next.eta`는 차량이 출발해 ETA를 계산한 뒤에는 그 배송지의 도착 예정 시각이고 출발 전에는 `null`이다. 계산은 3.2의 구현됨 절을 따른다.
 - `stop_failed`의 `reasonCode`는 6개 코드 밖이면 `400 INVALID_REASON_CODE`다. 품목(`items`)은 검증하지 않고 기록만 한다.
 - `stopId`는 배송지 묶음의 첫 주문 ID다. 앱의 `S-104` 같은 값은 아직 없다.
 - `GET events/{eventId}`는 `200`으로 같은 본문을 돌려주고 `duplicate`가 `true`다. 없으면 `404 REQUEST_NOT_FOUND`다.
@@ -129,7 +129,7 @@
 - 한 주문의 메시지는 순서대로 나간다. 앞 메시지가 재시도 중이면 뒤 메시지는 기다린다.
 - `429`는 `5xx`처럼 재시도하고, 그 밖의 `4xx`·`3xx`는 재시도 없이 `failedAt`을 남기고 알림(`meatbox-outbound`/`DELIVERY_STATUS_REJECTED`)을 보낸다. 한 메시지가 11번 실패하면 `DELIVERY_STATUS_UNREACHABLE` 알림을 보낸다.
 - 인증은 `MEATBOX_API_TOKEN`이 있을 때만 `Authorization: Bearer`를 붙인다. 고정 IP 허용은 배포 쪽 과제다.
-- ETA(3.2)·온도(3.3)는 보내지 않는다. 송신함의 `kind`로 나중에 얹는다.
+- 온도(3.3)는 보내지 않는다. ETA(3.2)는 `departed`에서만 보낸다. 송신함의 `kind`로 나중에 얹는다.
 
 ### 3.2 ETA
 
@@ -149,6 +149,14 @@
 ```
 
 `reason`은 `departed`, `zone_entered`, `reordered`, `delayed`, `completed` 중 하나.
+
+**구현됨(`departed`만).** 기사 앱 `departed` 이벤트가 성공하면 같은 체크포인트 쓰기로 송신함에 `kind: "eta"` 메시지를 남기고, 발송기가 `POST {MEATBOX_API_BASE_URL}/tms/eta`로 보낸다. 계산은 [API 참조](api-reference.md#도착-예정-시각-eta)를 따른다. 계약과 다른 점:
+
+- `reason`은 `departed`만 보낸다. 순서 변경(`reordered`)·지연(`delayed`)·권역 진입(`zone_entered`)·완료(`completed`) 재산출은 후속이다.
+- `messageId`는 `{date}-{revision}-eta-{vehicleId}`이고 `Idempotency-Key`와 같다. 차량 하나의 ETA 메시지는 앞 메시지가 끝나야 나간다.
+- `stops[].orderIds`는 그 배송지 묶음의 주문들이고, `eta`는 분 단위 `+09:00` 시각이다. 우리 쪽에 있는 `estimated`(좌표 없음 표시)는 이 본문에 넣지 않는다. 미트박스에 보여 줄지는 미정이다.
+- 이동 시간은 직선거리 모델이라 실제 도로와 다를 수 있다. 설정(우회계수·속도·작업시간)은 [운영](operations.md#도착-예정-시각-eta-설정-kotlin-api)에 있다.
+- 이 메시지가 거절(`4xx`)되면 알림 `meatbox-outbound` / `ETA_REJECTED`를 보내고 재시도하지 않는다. 한 메시지가 11번 실패하면 `ETA_UNREACHABLE`을 보낸다.
 
 ### 3.3 온도
 
@@ -210,7 +218,7 @@
 
 미트박스 명세 전까지 PoC는 우리 서버의 `/mock/meatbox/*`가 3장의 본문을 받아 `202`를 돌려주는 것으로 통과시킨다. 첫 송신 구현과 같은 작업 단위에서 만들었다.
 
-**구현됨.** `meatbox.mock-receiver.enabled=true`일 때만 뜨는 테스트 전용 수신기다. 필수 키·`Idempotency-Key`를 검사하고 최근 200건을 `GET /mock/meatbox/received`로 보여 준다. 세션이 없으므로 운영에 켜지 않는다. 경로와 오류는 [API 참조](api-reference.md#모의-수신기-mockmeatbox-테스트-전용)에 있다. 송신기가 `{base}/tms/<종류>`로 보내므로 수신기는 `/mock/meatbox/tms/<종류>`도 받는다(기본 주소 `.../mock/meatbox`). 3.2·3.3 본문은 검사만 하고, 송신기는 아직 보내지 않는다.
+**구현됨.** `meatbox.mock-receiver.enabled=true`일 때만 뜨는 테스트 전용 수신기다. 필수 키·`Idempotency-Key`를 검사하고 최근 200건을 `GET /mock/meatbox/received`로 보여 준다. 세션이 없으므로 운영에 켜지 않는다. 경로와 오류는 [API 참조](api-reference.md#모의-수신기-mockmeatbox-테스트-전용)에 있다. 송신기가 `{base}/tms/<종류>`로 보내므로 수신기는 `/mock/meatbox/tms/<종류>`도 받는다(기본 주소 `.../mock/meatbox`). 3.2 본문은 `departed`가 보낸다. 3.3 본문은 검사만 하고 송신기는 아직 보내지 않는다.
 
 ## 6. 미트박스에 확인할 것
 
@@ -230,7 +238,7 @@
 
 ### 7.1 앱 → 우리 서버
 
-구현됨(현행 경로): 아래 7개 끝점이 모두 `/api/dispatch-data/days/{date}/driver/{route|stops/{stopId}|history|events|events/{eventId}|photos|photos/{photoId}|locations}`에 있다. 표의 `/api/driver/...` 경로는 기사 계정 권한 단위에서 옮길 목표 경로다. 조회는 `vehicleId` 쿼리를 받고, `route`의 `eta`는 `null`이며, 배송지 상세의 출입정보는 아직 제한 없이 나간다.
+구현됨(현행 경로): 아래 7개 끝점이 모두 `/api/dispatch-data/days/{date}/driver/{route|stops/{stopId}|history|events|events/{eventId}|photos|photos/{photoId}|locations}`에 있다. 표의 `/api/driver/...` 경로는 기사 계정 권한 단위에서 옮길 목표 경로다. 조회는 `vehicleId` 쿼리를 받고, `route`의 `eta`는 출발 전 `null`이고 출발 뒤 값이 채워지며, 배송지 상세의 출입정보는 아직 제한 없이 나간다.
 
 | 방법 | 경로 | 역할 | 본문·응답 |
 | --- | --- | --- | --- |

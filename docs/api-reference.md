@@ -181,6 +181,8 @@
 }
 ```
 
+차량이 출발했으면 `vehicleStates[vehicleId].eta`에 그 차량의 도착 예정 시각(아래 "도착 예정 시각")이 들어간다. 출발 전 차량에는 이 필드가 없다. 웹은 모르는 필드를 읽지 않고 그대로 넘긴다. ETA는 `departed` 명령과 같은 쓰기로 바뀌므로 `revision`과 ETag도 함께 바뀐다.
+
 서버는 `ETag: "source-{boot}-{date}-{revision}-{today}"`를 보낸다. 기사 앱 위치를 받은 날짜는 `-l{위치 버전}`이 뒤에 붙는다. 클라이언트의 `If-None-Match`가 같으면 본문 없이 `304`다. 서울 날짜가 바뀌면 revision이 같아도 ETag와 `dispatch.readOnly`가 바뀔 수 있다.
 
 ## 날짜 명령
@@ -367,12 +369,13 @@
   "duplicate": false,
   "receivedAt": "2026-11-02T10:41:02+09:00",
   "stop": { "stopId": "O4", "status": "done" },
-  "next": { "stopId": "O3", "eta": null }
+  "next": { "stopId": "O3", "eta": "2026-11-02T10:58:00+09:00" }
 }
 ```
 
 - `stop`은 `stop_*` 이벤트에만 있다. `status`는 `done` 또는 `skipped`다.
-- `next`는 다음 배송지다. 남은 배송지가 없으면 없다. `eta`는 ETA 산출 전까지 항상 `null`이다.
+- `next`는 다음 배송지다. 남은 배송지가 없으면 없다. `eta`는 차량이 출발해 ETA를 계산한 뒤에는 그 배송지의 도착 예정 시각이고, 출발 전에는 `null`이다.
+- `departed` 이벤트가 성공하면 같은 쓰기로 그 차량의 ETA를 계산해 저장하고, 미트박스 ETA 메시지(`kind: "eta"`)를 송신함에 남긴다. 계산과 설정은 아래 "도착 예정 시각(ETA)"를 따른다.
 - `receivedAt`은 처음 받은 서버 시각이다. 재전송에도 같은 값이다.
 - 같은 `eventId`를 다시 보내면 처음 응답을 돌려주고 `duplicate`만 `true`다. 상태는 바꾸지 않는다. 서버가 재시작되어도 같다.
 - 같은 `eventId`에 다른 본문이면 `409 REQUEST_ID_MISMATCH`다.
@@ -410,19 +413,19 @@
   "date": "2026-11-02", "vehicleId": "G1", "revision": 8, "phase": "delivering",
   "stops": [{
     "stopId": "O1", "sequence": 1, "orderIds": ["O1", "O2"], "name": "가게A", "address": "서울 …",
-    "boxes": 2, "status": "current", "eta": null
+    "boxes": 2, "status": "current", "eta": "2026-11-02T09:40:00+09:00", "estimated": true
   }],
-  "next": { "stopId": "O1", "eta": null }
+  "next": { "stopId": "O1", "eta": "2026-11-02T09:40:00+09:00" }
 }
 ```
 
 - `revision`은 날짜 상태의 `revision`이며 `route_reordered`의 `expectedRevision`으로 보낸다.
 - `phase`는 차량 phase(`idle`, `preparing`, `delivering`, `done`)다. `status`는 `pending`, `current`, `done`, `skipped`다.
-- `eta`는 ETA 산출 전까지 항상 `null`이다. `next`는 아직 끝나지 않은 첫 배송지이고 없으면 생략한다.
+- `eta`·`estimated`는 차량이 출발해 ETA를 계산한 뒤에 채워지고, 출발 전에는 둘 다 `null`이다. 출발 뒤에는 완료한 배송지도 출발 때 계산한 값을 그대로 보인다(재산출은 아직 없다). `estimated: false`는 좌표가 없어 이동 시간을 못 더한 값이다. `next`는 아직 끝나지 않은 첫 배송지이고 없으면 생략한다.
 
 `GET .../driver/stops/{stopId}?vehicleId=G1`
 
-- 위 요약 필드에 `assignmentUnitId`, `orders[]`, `previousPhoto`를 더한다. 같은 묶음의 아무 주문 ID로 조회해도 된다.
+- 위 요약 필드에 `eta`, `estimated`, `assignmentUnitId`, `orders[]`, `previousPhoto`를 더한다. 같은 묶음의 아무 주문 ID로 조회해도 된다.
 - `orders[]`: `orderId`, `status`, `orderNumber`, `name`, `address`, `detailAddress`, `boxes`, `items`, `customerRequests`, `tip`, `transportConditions`, `access`. 원본에 없는 값은 `null`이다.
 - 출입정보(`access`)는 지금은 그대로 노출한다. 권한 단위에서 제한한다.
 - `previousPhoto`는 같은 `assignmentUnitId`로 가장 최근에 완료한 날의 첫 사진 `{ "photoId", "date", "completedAt" }`이고 없으면 `null`이다. 사진은 그 `date` 경로로 받는다. 최근 14일치 기사 상태 파일만 찾는다.
@@ -438,6 +441,25 @@
 
 - `POST events`가 돌려준 `202` 본문과 같은 본문을 `200`으로 돌려주며 `duplicate`는 항상 `true`다. 없거나 보존 한도로 제거됐으면 `404 REQUEST_NOT_FOUND`다. `eventId` 형식이 틀리면 `400 INVALID_INPUT`이다.
 - 날짜 명령의 `requestId`로 저장된 결과 중 이벤트가 아닌 것은 돌려주지 않는다.
+
+### 도착 예정 시각 (ETA)
+
+`departed` 이벤트가 성공하면 서버가 그 차량의 남은 배송지마다 도착 예정 시각을 계산해 날짜 체크포인트의 `etas`에 저장한다. 외부 경로 API는 쓰지 않는다. 저장 형태(날짜 상태의 `vehicleStates[v].eta`와 같다):
+
+```json
+{
+  "computedAt": "2026-11-02T09:12:10+09:00", "reason": "departed",
+  "departedAt": "2026-11-02T09:12:03+09:00", "departureTimeSource": "device",
+  "stops": [{ "stopId": "O1", "sequence": 1, "eta": "2026-11-02T09:40:00+09:00", "estimated": true }]
+}
+```
+
+- 모델: 도착 = 출발 시각 + 첫 구간 이동. 이후 도착 = 직전 도착 + 배송지당 작업시간 + 이동. 이동 시간 = 직선거리(하버사인) × 우회계수 ÷ 평균속도. ETA는 분 단위로 반올림한다. 순서는 출발 때 확정된 경로 순서다.
+- 출발 위치: 이벤트 `location`, 없으면 그 차량의 가장 최근 위치 샘플. 둘 다 없으면 첫 배송지 이동 시간을 0으로 두고 그 배송지는 `estimated: false`다. 합성 차량 좌표(`truck`)는 쓰지 않는다.
+- 좌표 없는 배송지는 직전 도착에 작업시간만 더하고 `estimated: false`다. 다음 배송지의 이동은 마지막으로 좌표를 아는 배송지에서 이어 계산한다.
+- 출발 시각: 이벤트 `occurredAt`. 서버 수신 시각과 5분(`MAX_CLOCK_SKEW_MILLIS`)보다 더 다르면 수신 시각을 쓴다. `departureTimeSource`는 `"device"` 또는 `"server"`다.
+- 같은 `eventId` 재전송은 저장된 값을 바꾸지 않고 송신함에도 더하지 않는다. 한 차량에는 최신 ETA 하나만 남는다.
+- 설정은 [운영](operations.md#도착-예정-시각-eta-설정-kotlin-api)에 있다.
 
 ### 기사 앱 끝점 오류
 
