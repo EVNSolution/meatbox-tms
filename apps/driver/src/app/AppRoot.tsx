@@ -19,6 +19,7 @@ import { departureLocation } from '../platform/location';
 import { ensureTracking, flushTracking, showTrackingGuides, stopTracking } from '../platform/tracking';
 import { registerPush, revokePush, subscribePush, subscribePushToken, type PushStatus } from '../platform/pushNotifications';
 import { applyOutbox } from '../domain/outboxView';
+import { pushEffect } from '../domain/pushEffect';
 import { dimmedStopKeys, etaLabel, serverStop } from '../domain/routeView';
 import { RequestGate } from '../platform/requestQueue';
 import { readVehicleChoice, saveVehicleChoice } from '../storage';
@@ -207,12 +208,13 @@ function DriverWorkspace({ date, onSignedOut }: { date: string; onSignedOut(): v
       if (value === 'active') reconnectPush({ requestPermission: false });
     });
     const unsubscribe = subscribePush((push) => {
-      if (!live || push.date !== date || push.vehicleId !== vehicleId) return;
-      if (push.kind === 'ops_message') {
-        seenMessages.current.add(push.messageId); setBanner({ title: push.title, body: push.body });
-        if (push.tapped) setMessagesOpen(true);
-        void loadMessages();
-      } else void refresh(true);
+      const effect = live ? pushEffect(push, { date, vehicleId }) : null;
+      if (!effect) return;
+      if (effect.seenMessageId) seenMessages.current.add(effect.seenMessageId);
+      if (effect.banner) setBanner(effect.banner);
+      if (effect.openMessages) setMessagesOpen(true);
+      if (effect.reloadMessages) void loadMessages();
+      if (effect.refreshDay) { etag.current = null; void refresh(true); }
     });
     return () => { live = false; messageGeneration.current += 1; clearInterval(timer); unsubscribe(); unsubscribeToken(); foreground.remove(); };
   }, [date, loadMessages, refresh, vehicleId]);

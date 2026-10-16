@@ -512,6 +512,14 @@
 - 상태의 `sourceData.etaVersion`(재산출 횟수 합)이 ETag에 `-e{n}`으로 들어간다. `zone_entered`는 엔진 명령이 없어 `revision`이 안 바뀌기 때문이다.
 - 설정은 [운영](operations.md#도착-예정-시각-eta-설정-kotlin-api)에 있다.
 
+### 배차 변경 푸시 (`route_changed`)
+
+운영자의 날짜 명령 `publish_dispatch`(확정·수정안 적용), `reassign`, `set_route_order`가 성공하면 서버가 명령 전후의 차량별 주문 ID 순서를 비교하고, 주문이 추가·제외되었거나 상대 순서가 바뀐 차량의 등록된 기기에 FCM data 메시지를 한 건씩 보낸다. 기사 본인의 `route_reordered`와 `arrive_stop`·`complete_stop` 같은 진행 명령은 보내지 않는다.
+
+- data: `type: "route_changed"`, `date`, `vehicleId`, `messageId: "route-{revision}"`, `title: "미트박스 배송"`, `body`(예: `배차가 변경되었습니다. 주문 추가 2건 · 제외 1건 · 순서 변경`). 본문에는 건수만 들어가고 고객 정보는 없다.
+- 발송은 디스패치 락 밖의 별도 스레드에서 한다. 명령 응답은 푸시를 기다리지 않고, 푸시 실패·FCM 미설정은 로그만 남기며 명령을 되돌리지 않는다. 앱은 전경으로 돌아올 때마다 상태를 다시 읽으므로 푸시를 놓쳐도 최신 경로를 본다.
+- 앱은 받으면 날짜 상태와 `GET route`를 다시 읽고 `body`를 배너로 보여 준다.
+
 ### 기사 앱 끝점 오류
 
 | 상태 | 코드 | 의미 |

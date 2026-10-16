@@ -32,6 +32,14 @@ class DriverConfiguration {
     }, publicOrigin = origin, etaConfig = EtaConfig(detourFactor, speedKmh, serviceMinutes, delayThresholdMinutes),
         depot = depot(depotLat, depotLng))
 
+    /** Wires operator route changes to the drivers' phones. */
+    @Bean
+    fun routeChangeNotifier(dispatch: DispatchStore, store: DriverStore, sender: FcmSender): RouteChangeNotifier =
+        RouteChangeNotifier(store, send = { tokens, date, vehicleId, content ->
+            sender.send(tokens, date, vehicleId, content)
+        })
+            .also { dispatch.routeChanges = it }
+
     @Bean
     fun fcmSender(
         @Value("\${MEATBOX_FCM_SERVICE_ACCOUNT_FILE:}") accountFile: String,

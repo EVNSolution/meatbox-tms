@@ -67,6 +67,8 @@ internal fun routeFixture(
     coordinates: Map<String, String> = emptyMap(),
     addresses: Map<String, String> = emptyMap(),
     depot: EtaPoint? = null,
+    /** Runs after the stores exist and before the day is calculated and published, to hook listeners. */
+    beforePublish: (RouteFixture) -> Unit = {},
 ): RouteFixture {
     val root = directory.toRealPath()
     Files.createDirectories(root.resolve("data/days"))
@@ -87,6 +89,7 @@ internal fun routeFixture(
          "orders":[${order("O1", "가게A", 1)},${order("O2", "가게A", 2)},${order("O3", "가게B", 3)},${order("O4", "가게C", 4)}]}
     """.trimIndent())
     val fixture = RouteFixture.open(root, AtomicLong(Instant.parse("${DRIVER_DATE}T01:00:00Z").toEpochMilli()), depot)
+    beforePublish(fixture)
     fun run(command: ObjectNode) =
         fixture.dispatch.command(DRIVER_DATE, command.put("expectedBoot", fixture.dispatch.boot))
     run(driverJson.createObjectNode().put("type", "calculate_dispatch").put("expectedRevision", 0)

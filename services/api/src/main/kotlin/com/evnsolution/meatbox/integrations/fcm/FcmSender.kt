@@ -26,21 +26,27 @@ class FcmSender(
 ) {
     @Volatile private var cached: AccessToken? = null
 
-    fun send(tokens: List<String>, date: String, vehicleId: String, messageId: String): PushSummary {
+    /** The operator's message arrived; the app then reads the messages. */
+    fun send(tokens: List<String>, date: String, vehicleId: String, messageId: String): PushSummary =
+        send(tokens, date, vehicleId, PushContent("ops_message", "미트박스 배송", "운영팀의 새 메시지가 있습니다.", messageId))
+
+    fun send(tokens: List<String>, date: String, vehicleId: String, content: PushContent): PushSummary {
         return when {
             accountFile.isBlank() || projectId.isBlank() -> PushSummary("unconfigured")
             tokens.isEmpty() -> PushSummary("no-device")
-            else -> sendConfigured(tokens, date, vehicleId, messageId)
+            else -> sendConfigured(tokens, date, vehicleId, content)
         }
     }
 
-    private fun sendConfigured(tokens: List<String>, date: String, vehicleId: String, messageId: String): PushSummary {
+    private fun sendConfigured(
+        tokens: List<String>, date: String, vehicleId: String, content: PushContent,
+    ): PushSummary {
         val deadline = System.nanoTime() + SEND_BUDGET.toNanos()
         val access = runCatching { accessToken(deadline) }.getOrNull()
             ?: return PushSummary("failed", tokens.size, 0, tokens.size)
         var sent = 0
         for (token in tokens) {
-            if (runCatching { deliver(access, token, date, vehicleId, messageId, deadline) }.getOrDefault(false)) sent++
+            if (runCatching { deliver(access, token, date, vehicleId, content, deadline) }.getOrDefault(false)) sent++
         }
         val status = when (sent) {
             tokens.size -> "sent"
@@ -78,18 +84,18 @@ class FcmSender(
     }
 
     private fun deliver(
-        access: String, token: String, date: String, vehicleId: String, messageId: String, deadline: Long,
+        access: String, token: String, date: String, vehicleId: String, content: PushContent, deadline: Long,
     ): Boolean {
         val body = driverJson.createObjectNode().apply {
             putObject("message").apply {
                 put("token", token)
-                putObject("notification").put("title", "미트박스 배송").put("body", "운영팀의 새 메시지가 있습니다.")
+                putObject("notification").put("title", content.title).put("body", content.body)
                 putObject("android").apply {
                     put("priority", "HIGH")
                     putObject("notification").put("channel_id", "meatbox-driver")
                 }
-                putObject("data").put("type", "ops_message").put("date", date).put("vehicleId", vehicleId)
-                    .put("messageId", messageId).put("title", "미트박스 배송").put("body", "운영팀의 새 메시지가 있습니다.")
+                putObject("data").put("type", content.type).put("date", date).put("vehicleId", vehicleId)
+                    .put("messageId", content.messageId).put("title", content.title).put("body", content.body)
             }
         }
         val response = transport.post(URI("https://fcm.googleapis.com/v1/projects/$projectId/messages:send"),
@@ -146,6 +152,9 @@ class FcmSender(
         private const val UNAUTHORIZED = 401
     }
 }
+
+/** What a push says. `type` is what the app dispatches on: `ops_message` or `route_changed`. */
+data class PushContent(val type: String, val title: String, val body: String, val messageId: String)
 
 data class PushSummary(val status: String, val attempted: Int = 0, val sent: Int = 0, val failed: Int = 0)
 data class FcmResponse(val status: Int, val body: String)

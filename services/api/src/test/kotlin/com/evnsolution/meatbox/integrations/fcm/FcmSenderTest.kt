@@ -82,6 +82,29 @@ class FcmSenderTest {
     }
 
     @Test
+    fun `a route change goes out with its own type and text while the operator message stays as it was`() {
+        val keys = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
+        val seen = mutableListOf<String>()
+        val sender = FcmSender(account(keys), "test-project", FcmTransport { uri, _, body, _ ->
+            if (uri.host == "oauth2.googleapis.com") {
+                FcmResponse(200, """{"access_token":"access","expires_in":3600,"token_type":"Bearer"}""")
+            } else {
+                seen += body
+                FcmResponse(200, """{"name":"projects/test-project/messages/ok"}""")
+            }
+        }, { NOW })
+        val content = PushContent("route_changed", "미트박스 배송", "배차가 변경되었습니다. 순서 변경", "route-7")
+        assertThat(sender.send(listOf("device"), DRIVER_DATE, "G1", content)).isEqualTo(PushSummary("sent", 1, 1, 0))
+        val message = driverJson.readTree(seen.single()).path("message")
+        assertThat(message.path("data").path("type").asString()).isEqualTo("route_changed")
+        assertThat(message.path("data").path("messageId").asString()).isEqualTo("route-7")
+        assertThat(message.path("data").path("body").asString()).isEqualTo("배차가 변경되었습니다. 순서 변경")
+        assertThat(message.path("notification").path("body").asString()).isEqualTo("배차가 변경되었습니다. 순서 변경")
+        assertThat(message.path("android").path("notification").path("channel_id").asString())
+            .isEqualTo("meatbox-driver")
+    }
+
+    @Test
     fun `refreshes expired access tokens and refuses invalid successful provider responses`() {
         val keys = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
         var clock = NOW

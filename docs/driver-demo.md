@@ -90,6 +90,8 @@ TEST Firebase 프로젝트는 `meatbox-push-pilot-20260923`다. `Meatbox Driver 
 
 사용자에게 표시되는 Android 운영 알림은 `priority: "HIGH"`, `notification.channel_id: "meatbox-driver"`를 사용한다. 앱은 같은 채널을 생성한다. 실행 중 토큰이 바뀌면 새 토큰을 등록하며, 앱이 foreground로 돌아오면 알림 권한과 토큰을 다시 확인한다. 토큰 이벤트는 전달받은 토큰을 직접 사용해 토큰 조회가 반복되는 것을 막는다.
 
+`type:"route_changed"`(운영자가 배차를 바꿈)도 같은 채널과 같은 정책으로 보낸다. 본문은 변경 건수만 담은 서버 문장이고 규칙은 [API 참조](api-reference.md#배차-변경-푸시-route_changed)에 있다.
+
 FCM이 미설정이거나 등록이 실패해도 메시지 저장과 조회는 사용할 수 있다. 앱은 활성 상태에서 10초마다 조회한다. 웹 메시지 창은 열려 있는 동안 5초마다 조회한다. 이 조회 기능은 백그라운드 기기 알림을 보장하지 않는다.
 
 ## 웹 QR과 확인 범위

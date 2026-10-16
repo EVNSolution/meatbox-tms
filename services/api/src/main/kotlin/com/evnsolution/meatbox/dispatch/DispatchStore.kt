@@ -42,6 +42,9 @@ class DispatchStore(
     /** Set by the driver module. It must answer without taking any lock that waits for this store. */
     @Volatile var locations: DriverLocationSource? = null
 
+    /** Set by the driver module. Told which vehicles an operator command changed; it must only queue work. */
+    @Volatile var routeChanges: RouteChangeListener? = null
+
     /** Set by the telemetry module. Same rule: it must not wait for this store. */
     @Volatile var temperatures: TemperatureSource? = null
     private val parser = JsonMapper.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build()
@@ -74,9 +77,16 @@ class DispatchStore(
         val candidate = DispatchPlan(current.day, current.sourceId, clock, current.plan.exportCheckpoint())
         val output = candidate.command(command)
         output.set("state", publicState(output.path("state") as ObjectNode, current))
-        val published = command.path("type").asString() == "publish_dispatch"
+        val type = command.path("type").asString()
+        val published = type == "publish_dispatch"
         val drafts = if (published) dispatched(current.plan, candidate) else emptyList()
+        val listener = routeChanges?.takeIf { type in ROUTE_CHANGING_COMMANDS }
+        val changes = listener?.let { routeChanges(current.plan.snapshot(), candidate.snapshot()) }.orEmpty()
         commit(date, current, candidate, requestId, hash, output, drafts)
+        if (changes.isNotEmpty()) {
+            // A failing notification must never undo or fail the operator's command.
+            runCatching { listener?.changed(date, candidate.revision, changes) }
+        }
         return output
     }
 

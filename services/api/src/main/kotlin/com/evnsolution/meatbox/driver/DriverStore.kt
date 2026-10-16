@@ -41,6 +41,7 @@ internal fun driverText(value: String, max: Int, allowSpace: Boolean = true): St
 }
 
 /** Demo access follows the existing TMS session; vehicle selection is not a driver identity. */
+@Suppress("TooManyFunctions")
 class DriverStore(
     internal val dispatch: DispatchStore,
     internal val directory: Path,
@@ -134,6 +135,15 @@ class DriverStore(
             PendingMessage(publicMessage(message), tokens)
         }
     }
+
+    /** The push tokens of the devices signed in for this vehicle and date. Read only; an unreadable day has none. */
+    @Synchronized
+    fun tokens(date: String, vehicleId: String): List<String> = runCatching {
+        load(date).path("devices").filter {
+            it.path("vehicleId").asString() == vehicleId &&
+                isSessionActive(it.path("sessionDigest").asString(), it.path("username").asString())
+        }.map { it.path("token").asString() }
+    }.getOrDefault(emptyList())
 
     private fun pruneDevices(state: ObjectNode) {
         val devices = state.path("devices").filter {
