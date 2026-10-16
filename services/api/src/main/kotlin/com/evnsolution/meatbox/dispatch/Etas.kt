@@ -29,6 +29,9 @@ internal object Etas {
     fun overlay(snapshot: ObjectNode, etas: Map<String, ObjectNode>): ObjectNode {
         val states = snapshot.path("vehicleStates") as? ObjectNode ?: return snapshot
         etas.forEach { (vehicleId, eta) -> (states.path(vehicleId) as? ObjectNode)?.set("eta", copyObject(eta)) }
+        // A zone entry recomputes without any engine command, so the state's revision alone would not show the change.
+        val version = etas.values.sumOf { it.path("recomputes").asInt(0) }
+        if (version > 0) (snapshot.path("sourceData") as? ObjectNode)?.put("etaVersion", version)
         return snapshot
     }
 

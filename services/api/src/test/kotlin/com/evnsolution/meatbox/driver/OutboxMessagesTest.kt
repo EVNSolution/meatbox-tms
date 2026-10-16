@@ -64,7 +64,9 @@ class OutboxMessagesTest {
 
         // The bundle O1+O2 closed as a whole, but the partial event names one order, so only O2 is told.
         assertThat(f.since("delivered")).hasSize(1)
-        f.send("e-zone", "zone_entered", """{"zoneId":"Z-1"}""")
+        val zone = envelope("e-zone", "zone_entered", """{"zoneId":"Z-1"}""")
+        zone.set("location", driverJson.readTree("""{"lat":37.5,"lng":127.0}"""))
+        f.driver.activity.acceptEvent(DRIVER_DATE, zone)
         assertThat(f.outbox().map { it.path("messageId").asString() }.toSet()).hasSameSizeAs(f.outbox())
     }
 

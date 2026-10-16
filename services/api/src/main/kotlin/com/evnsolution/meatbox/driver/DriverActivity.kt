@@ -14,6 +14,9 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 
 private const val MAX_SAMPLES = 120
+
+/** Events whose ETA may start from the newest reported position when the event itself has none. */
+private val SAMPLED = setOf("departed", "route_reordered")
 private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
 
 /**
@@ -37,9 +40,11 @@ class DriverActivity internal constructor(private val store: DriverStore) {
         if (!event.photoIds.all { photos.exists(date, it) }) {
             driverFail(HttpStatus.BAD_REQUEST.value(), "PHOTO_NOT_FOUND")
         }
-        val sampled = if (event.type == "departed") sampledPoint(latestLocations(date), event.vehicleId) else null
+        val sampled = if (event.type in SAMPLED) sampledPoint(latestLocations(date), event.vehicleId) else null
+        val regions = if (event.type == "zone_entered") store.dispatch.regions() else null
         val plan = planEvent(
-            event, stamp(store.clock()), photoBase(store.publicOrigin, date), EtaContext(store.eta, sampled),
+            event, stamp(store.clock()), photoBase(store.publicOrigin, date),
+            EtaContext(store.eta, sampled, regions),
         )
         val result = store.dispatch.batch(date, event.eventId, body, plan)
         record(date, event, result.response)

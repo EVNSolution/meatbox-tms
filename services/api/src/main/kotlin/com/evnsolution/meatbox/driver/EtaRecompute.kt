@@ -3,7 +3,9 @@ package com.evnsolution.meatbox.driver
 import com.evnsolution.meatbox.eta.EtaConfig
 import com.evnsolution.meatbox.eta.EtaPoint
 import com.evnsolution.meatbox.eta.EtaStopInput
+import com.evnsolution.meatbox.eta.insideGeometry
 import com.evnsolution.meatbox.integrations.meatbox.outbound.OutboundDraft
+import org.springframework.http.HttpStatus
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.node.ObjectNode
 import java.time.Duration
@@ -86,8 +88,8 @@ private val CLOSING = setOf("stop_completed", "stop_failed", "stop_partially_com
 
 /**
  * What one event does to its vehicle's ETA, across the two steps of a batch ([etas] first, then [messages]). The
- * departure sets it. A stop closing recomputes it when the vehicle has a stored ETA, which is when the departure came
- * from the driver app; other vehicles have nothing to follow.
+ * departure sets it. A stop closing, a zone entry and a reorder after the departure recompute it when the vehicle has
+ * a stored ETA, which is when the departure came from the driver app; other vehicles have nothing to follow.
  */
 internal class EtaEffect(
     private val event: DriverEvent,
@@ -103,6 +105,9 @@ internal class EtaEffect(
         result = when {
             event.type == "departed" -> Recomputed(etaOf(event, receivedAt, context, after), true)
             stored && event.type in CLOSING -> afterClosing(after, handled!!)
+            stored && event.type == "zone_entered" -> from("zone_entered", eventPoint(event), always = false, after)
+            stored && event.type == "route_reordered" ->
+                from("reordered", eventPoint(event) ?: context.sampledOrigin, always = true, after)
             else -> null
         }
         return result?.let { mapOf(event.vehicleId to it.node) } ?: emptyMap()
@@ -111,6 +116,12 @@ internal class EtaEffect(
     /** The ETA message owed for the stored ETA, or none when the stops left need no new message. */
     fun messages(after: Route): List<OutboundDraft> =
         if (result?.notify == true) etaMessages(event, after) else emptyList()
+
+    private fun from(reason: String, origin: EtaPoint?, always: Boolean, after: Route): Recomputed =
+        recomputeRemaining(
+            previous, after, eventTime(event, receivedAt).instant, origin, reason, receivedAt, context,
+            closed = null, always = always,
+        )
 
     /**
      * The stops left are timed from the moment the stop closed, starting at the position the event reports, else
@@ -123,5 +134,24 @@ internal class EtaEffect(
             previous, after, anchor, eventPoint(event) ?: stopPoint(closed), reason, receivedAt, context,
             closed = closed.stopId, always = false,
         )
+    }
+}
+
+/**
+ * A zone entry needs a position once the vehicle has a stored ETA to follow (`400 LOCATION_REQUIRED`), and a position
+ * outside the zone's polygon is `422 ZONE_MISMATCH`. A zone the installation has no polygon for is only recorded.
+ */
+internal fun checkZone(event: DriverEvent, stored: JsonNode, regions: JsonNode?) {
+    val where = eventPoint(event)
+    if (where == null) {
+        if (stored.path("stops").isArray) driverFail(HttpStatus.BAD_REQUEST.value(), "LOCATION_REQUIRED")
+        return
+    }
+    val zoneId = event.payload.path("zoneId").asString()
+    val geometry = regions?.path("features")?.firstOrNull { it.path("properties").path("zoneId").asString() == zoneId }
+        ?.path("geometry")
+    val known = geometry?.path("type")?.asString("") in setOf("Polygon", "MultiPolygon")
+    if (known && !insideGeometry(geometry!!, where)) {
+        driverFail(HttpStatus.UNPROCESSABLE_ENTITY.value(), "ZONE_MISMATCH")
     }
 }

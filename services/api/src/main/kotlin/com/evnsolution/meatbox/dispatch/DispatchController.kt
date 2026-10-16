@@ -47,7 +47,10 @@ class DispatchController(
         // Orders pushed by Meatbox change the day without a revision, so their change stamp belongs in the tag.
         val received = state.path("sourceData").path("inbound").path("stamp").asLong(0)
         val pushed = if (received > 0) "-n$received" else ""
-        val etag = "\"source-${store.boot}-$date-$revision-$today$reported$pushed\""
+        // Recomputed ETAs change the day without a revision when no command came with them.
+        val recomputed = state.path("sourceData").path("etaVersion").asLong(0)
+        val estimated = if (recomputed > 0) "-e$recomputed" else ""
+        val etag = "\"source-${store.boot}-$date-$revision-$today$reported$pushed$estimated\""
         if (request.getHeader("If-None-Match") == etag) {
             return ResponseEntity.status(HttpServletResponse.SC_NOT_MODIFIED)
                 .eTag(etag).header("Vary", "Accept-Encoding").build()

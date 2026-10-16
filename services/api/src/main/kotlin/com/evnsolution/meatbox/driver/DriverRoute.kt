@@ -80,7 +80,7 @@ internal fun planEvent(
     val handled = if (event.type.startsWith("stop_")) route.stop(event.payload.path("stopId").asString()) else null
     val steps = when (event.type) {
         "departed" -> departedSteps(route, event.payload)
-        "zone_entered" -> emptyList()
+        "zone_entered" -> emptyList<ObjectNode>().also { checkZone(event, route.eta, eta.regions) }
         "route_reordered" -> listOf(reorderedStep(route, event.payload))
         else -> stopSteps(route, event, handled!!)
     }
@@ -100,13 +100,27 @@ private fun departedSteps(route: Route, payload: ObjectNode): List<ObjectNode> =
     operation("start_route", route.vehicleId),
 )
 
+/**
+ * Before the departure any order is allowed. After it, only the stops still pending may change places: a stop that
+ * is current, done or skipped holds its position, and a finished route holds all of them (`ROUTE_LOCKED`).
+ */
 private fun reorderedStep(route: Route, payload: ObjectNode): ObjectNode {
-    if (route.phase in setOf("delivering", "done")) driverFail(HttpStatus.CONFLICT.value(), "ROUTE_LOCKED")
+    if (route.phase == "done") driverFail(HttpStatus.CONFLICT.value(), "ROUTE_LOCKED")
     val expected = payload.get("expectedRevision")
     if (expected != null && expected.longValue() != route.revision) {
         driverFail(HttpStatus.CONFLICT.value(), "REVISION_CONFLICT")
     }
-    return route.reorder(payload.path("stopOrder").toList().map(JsonNode::asString), always = true)!!
+    val requested = payload.path("stopOrder").toList().map(JsonNode::asString)
+    if (route.phase == "delivering" && movesClosedStop(route, requested)) {
+        driverFail(HttpStatus.CONFLICT.value(), "ROUTE_LOCKED")
+    }
+    return route.reorder(requested, always = true)!!
+}
+
+private fun movesClosedStop(route: Route, requested: List<String>): Boolean {
+    val ordered = requested.map { route.stop(it).stopId }
+    return ordered.size == route.stops.size &&
+        route.stops.withIndex().any { (index, stop) -> stop.status != "pending" && ordered[index] != stop.stopId }
 }
 
 /** Arrive if the truck has not, then close the stop: `complete_stop`, or `skip_stop` for a failed delivery. */

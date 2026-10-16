@@ -45,6 +45,10 @@ class DispatchStore(
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Entry>): Boolean = size > MAX_DATES
     }
 
+    /** The shared region polygons (GeoJSON), or null when the installation has none or they cannot be read. */
+    @Synchronized
+    fun regions(): JsonNode? = runCatching { parser.readTree(reader.regions(null).bytes) }.getOrNull()
+
     @Synchronized
     fun snapshot(date: String): ObjectNode = entry(date).let { publicState(it.plan.snapshot(), it) }
 

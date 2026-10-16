@@ -15,8 +15,11 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import kotlin.math.abs
 
-/** What an ETA needs besides the route: the model and the newest reported position, used when the event has none. */
-internal class EtaContext(val model: EtaModel, val sampledOrigin: EtaPoint?)
+/**
+ * What an ETA needs besides the route: the model, the newest reported position (used when the event has none) and
+ * the region polygons that a `zone_entered` position is checked against, when the installation has them.
+ */
+internal class EtaContext(val model: EtaModel, val sampledOrigin: EtaPoint?, val regions: JsonNode? = null)
 
 /** A device clock further than this from the server's is not trusted for the departure time. */
 internal const val MAX_CLOCK_SKEW_MILLIS = 5 * 60 * 1000L

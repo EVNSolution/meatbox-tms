@@ -988,3 +988,63 @@ test('Kotlin computes ETAs at departure and sends one eta message to the mock Me
   assert.equal(outbox.body.pending, 0);
   assert.equal(outbox.body.failed, 0);
 });
+
+// A stop that closes far from its due time recomputes the stops left and sends a second eta message with reason delayed.
+test('Kotlin sends a delayed eta message to the mock Meatbox receiver after an early completion', { timeout: 90_000 }, async t => {
+  const fixture = await createFixture({ outbound: true });
+  t.after(() => fixture.close());
+  const cookie = await login(fixture);
+  const days = `/api/dispatch-data/days/${fixture.today}`;
+  const driver = `${days}/driver`;
+  let state = (await requestJson(fixture, `${days}/state`, { cookie })).body;
+  for (const [type, extra] of [['calculate_dispatch', { vehicleIds: ['TRUCK-1'] }], ['publish_dispatch', null]]) {
+    const body = commandFor(state, type, extra ?? { draftVersion: state.dispatch.draftVersion });
+    const result = await requestJson(fixture, `${days}/commands`, { method: 'POST', cookie, body });
+    assert.equal(result.response.status, 200, JSON.stringify(result.body));
+    state = result.body.state;
+  }
+  const event = (eventId, type, payload) => requestJson(fixture, `${driver}/events`, {
+    method: 'POST', cookie, body: {
+      eventId, type, payload, date: fixture.today, vehicleId: 'TRUCK-1',
+      occurredAt: new Date().toISOString(), location: { lat: 37.5, lng: 127.0, accuracyM: 8 },
+    },
+  });
+  const received = async count => {
+    const deadline = Date.now() + 15_000;
+    let messages = [];
+    while (Date.now() < deadline) {
+      messages = (await (await fetch(`${fixture.origin}/mock/meatbox/received?kind=eta`)).json()).messages;
+      if (messages.length >= count) break;
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    return messages;
+  };
+
+  assert.equal((await event('late-depart-1', 'departed', {})).response.status, 202);
+  assert.equal((await received(1)).length, 1);
+  // The truck is about 16 km from the first stop, so closing it at once is far ahead of its due time.
+  const closed = await event('late-done-1', 'stop_completed', { stopId: 'BUNDLE-1' });
+  assert.equal(closed.response.status, 202, JSON.stringify(closed.body));
+  const messages = await received(2);
+  assert.equal(messages.length, 2, JSON.stringify(messages));
+  const [first, second] = messages;
+  assert.equal(first.body.reason, 'departed');
+  assert.equal(second.body.reason, 'delayed');
+  assert.equal(second.idempotencyKey, second.body.messageId);
+  assert.match(second.body.messageId, /^\d{4}-\d{2}-\d{2}-\d+-eta-TRUCK-1-r1$/);
+  assert.notEqual(second.body.messageId, first.body.messageId);
+  assert.deepEqual(second.body.stops.map(stop => stop.sequence), [2, 3]);
+  assert.ok(Date.parse(second.body.stops[0].eta) < Date.parse(first.body.stops[1].eta));
+  const snapshot = (await requestJson(fixture, `${days}/state`, { cookie })).body;
+  assert.equal(snapshot.vehicleStates['TRUCK-1'].eta.reason, 'delayed');
+  assert.ok(snapshot.vehicleStates['TRUCK-1'].eta.stops[0].actualAt);
+
+  let outbox;
+  const deadline = Date.now() + 15_000;
+  do {
+    outbox = await requestJson(fixture, `/api/ops/outbox?date=${fixture.today}`, { cookie });
+    if (outbox.body.pending > 0) await new Promise(resolve => setTimeout(resolve, 250));
+  } while (outbox.body.pending > 0 && Date.now() < deadline);
+  assert.equal(outbox.body.pending, 0);
+  assert.equal(outbox.body.failed, 0);
+});
