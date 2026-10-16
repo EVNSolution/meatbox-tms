@@ -18,7 +18,7 @@ class DriverEventsTest {
         assertThat(departed.body.path("accepted").asBoolean()).isTrue()
         assertThat(departed.body.path("duplicate").asBoolean()).isFalse()
         assertThat(departed.body.path("next").path("stopId").asString()).isEqualTo("O4")
-        assertThat(departed.body.path("next").path("eta").isNull).isTrue()
+        assertThat(departed.body.path("next").path("eta").asString()).isNotBlank()
         assertThat(f.order()).containsExactly("O4", "O3", "O1", "O2")
         assertThat(f.phase()).isEqualTo("delivering")
 

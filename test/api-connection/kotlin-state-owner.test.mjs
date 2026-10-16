@@ -931,3 +931,60 @@ test('Kotlin sends delivery-status messages to the mock Meatbox receiver after d
   assert.equal(outbox.body.failed, 0);
   assert.equal(outbox.body.sent, messages.length);
 });
+
+// Departure computes the per-stop ETA, shows it on the route and sends one contract-3.2 message to the receiver.
+test('Kotlin computes ETAs at departure and sends one eta message to the mock Meatbox receiver', { timeout: 90_000 }, async t => {
+  const fixture = await createFixture({ outbound: true });
+  t.after(() => fixture.close());
+  const cookie = await login(fixture);
+  const days = `/api/dispatch-data/days/${fixture.today}`;
+  const driver = `${days}/driver`;
+  let state = (await requestJson(fixture, `${days}/state`, { cookie })).body;
+  for (const [type, extra] of [['calculate_dispatch', { vehicleIds: ['TRUCK-1'] }], ['publish_dispatch', null]]) {
+    const body = commandFor(state, type, extra ?? { draftVersion: state.dispatch.draftVersion });
+    const result = await requestJson(fixture, `${days}/commands`, { method: 'POST', cookie, body });
+    assert.equal(result.response.status, 200, JSON.stringify(result.body));
+    state = result.body.state;
+  }
+  const before = (await requestJson(fixture, `${driver}/route?vehicleId=TRUCK-1`, { cookie })).body;
+  assert.ok(before.stops.every(stop => stop.eta === null));
+
+  const departed = await requestJson(fixture, `${driver}/events`, {
+    method: 'POST', cookie, body: {
+      eventId: 'eta-depart-1', type: 'departed', payload: {}, date: fixture.today, vehicleId: 'TRUCK-1',
+      occurredAt: new Date().toISOString(), location: { lat: 37.5, lng: 127.0, accuracyM: 8 },
+    },
+  });
+  assert.equal(departed.response.status, 202, JSON.stringify(departed.body));
+  const route = (await requestJson(fixture, `${driver}/route?vehicleId=TRUCK-1`, { cookie })).body;
+  const times = route.stops.map(stop => Date.parse(stop.eta));
+  assert.ok(times.every(Number.isFinite), JSON.stringify(route.stops));
+  assert.deepEqual(times, [...times].sort((a, b) => a - b));
+  assert.equal(route.next.eta, route.stops[0].eta);
+  const snapshot = (await requestJson(fixture, `${days}/state`, { cookie })).body;
+  assert.equal(snapshot.vehicleStates['TRUCK-1'].eta.reason, 'departed');
+
+  const deadline = Date.now() + 15_000;
+  let messages = [];
+  while (Date.now() < deadline) {
+    messages = (await (await fetch(`${fixture.origin}/mock/meatbox/received?kind=eta`)).json()).messages;
+    if (messages.length > 0) break;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  assert.equal(messages.length, 1, JSON.stringify(messages));
+  const [message] = messages;
+  assert.equal(message.idempotencyKey, message.body.messageId);
+  assert.match(message.body.messageId, /^\d{4}-\d{2}-\d{2}-\d+-eta-TRUCK-1$/);
+  assert.equal(message.body.vehicleId, 'TRUCK-1');
+  assert.equal(message.body.reason, 'departed');
+  assert.deepEqual(message.body.stops.map(stop => stop.eta), route.stops.map(stop => stop.eta));
+  assert.deepEqual(message.body.stops.map(stop => stop.orderIds), route.stops.map(stop => stop.orderIds));
+
+  let outbox;
+  do {
+    outbox = await requestJson(fixture, `/api/ops/outbox?date=${fixture.today}`, { cookie });
+    if (outbox.body.pending > 0) await new Promise(resolve => setTimeout(resolve, 250));
+  } while (outbox.body.pending > 0 && Date.now() < deadline);
+  assert.equal(outbox.body.pending, 0);
+  assert.equal(outbox.body.failed, 0);
+});

@@ -46,6 +46,15 @@ fun deliveryStatusBody(
     failure?.let { set("failure", it) } ?: putNull("failure")
 }
 
+/** The body of contract 3.2: a vehicle's whole ETA list. `messageId` is added by the store. */
+fun etaBody(vehicleId: String, computedAt: String, reason: String, stops: JsonNode): ObjectNode =
+    dispatchMapper.createObjectNode().apply {
+        put("vehicleId", vehicleId)
+        put("computedAt", computedAt)
+        put("reason", reason)
+        set("stops", stops)
+    }
+
 /**
  * The outbox of one date: messages that a committed state change owes Meatbox. The list lives in the date's
  * checkpoint, so a message and the change that caused it are written by the same file write.

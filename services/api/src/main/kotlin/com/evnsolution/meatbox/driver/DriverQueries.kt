@@ -25,22 +25,26 @@ private val ORDER_FIELDS = listOf(
 
 /** The driver app's reads. Everything is derived from the date snapshot plus the records the app itself sent. */
 class DriverQueries internal constructor(private val store: DriverStore) {
-    /** Stops in order with status and the date `revision` that `route_reordered` expects. ETA stays `null`. */
+    /** Stops in order with status, ETA (null before departure) and the `revision` that `route_reordered` expects. */
     fun route(date: String, vehicleId: String): ObjectNode = synchronized(store) {
         store.validate(date, vehicleId)
         val route = Route(store.dispatch.snapshot(date), vehicleId)
         driverJson.createObjectNode().apply {
             put("date", date).put("vehicleId", vehicleId).put("revision", route.revision).put("phase", route.phase)
-            set("stops", array(route.stops.mapIndexed { index, stop -> summary(stop, index + 1) }))
-            route.next(null)?.let { set("next", driverJson.createObjectNode().put("stopId", it.stopId).putNull("eta")) }
+            set("stops", array(route.stops.mapIndexed { index, stop ->
+                summary(stop, index + 1).also { putEta(it, route, stop) }
+            }))
+            route.next(null)?.let { set("next", nextStop(it.stopId, route)) }
         }
     }
 
     /** One stop's orders, customer, address, items, access, tip and requests, and the last completion photo there. */
     fun stop(date: String, vehicleId: String, stopId: String): ObjectNode = synchronized(store) {
         store.validate(date, vehicleId)
-        val stop = Route(store.dispatch.snapshot(date), vehicleId).stop(stopId)
+        val route = Route(store.dispatch.snapshot(date), vehicleId)
+        val stop = route.stop(stopId)
         summary(stop, null).apply {
+            putEta(this, route, stop)
             put("assignmentUnitId", stop.unitId)
             set("orders", array(stop.deliveries.map(::order)))
             set("previousPhoto", previousPhoto(date, stop.unitId) ?: driverJson.nullNode())
@@ -74,7 +78,13 @@ class DriverQueries internal constructor(private val store: DriverStore) {
         put("address", stop.deliveries.first().path("address").asString())
         put("boxes", stop.deliveries.sumOf { it.path("boxes").doubleValue() })
         put("status", stop.status)
-        if (sequence != null) putNull("eta")
+    }
+
+    /** `eta` and `estimated` of a stop; both are null before the vehicle's departure computed them. */
+    private fun putEta(target: ObjectNode, route: Route, stop: RouteStop) {
+        val entry = route.etaOf(stop.stopId)
+        target.set("eta", entry?.path("eta") ?: driverJson.nullNode())
+        target.set("estimated", entry?.path("estimated") ?: driverJson.nullNode())
     }
 
     private fun order(delivery: JsonNode): ObjectNode = driverJson.createObjectNode().apply {

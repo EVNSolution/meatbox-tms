@@ -42,6 +42,12 @@ class OutboxSenderTest {
             exchange.sendResponseHeaders(status, -1)
             exchange.close()
         }
+        // A departure also owes an ETA message; these tests watch the delivery-status path only.
+        createContext("/tms/eta") { exchange ->
+            exchange.requestBody.readAllBytes()
+            exchange.sendResponseHeaders(202, -1)
+            exchange.close()
+        }
         start()
     }
 
@@ -177,7 +183,8 @@ class OutboxSenderTest {
         f.now.addAndGet(600_000)
         dispatcher(again).tick()
         assertThat(hits).hasSize(2)
-        assertThat(again.dispatch.outboxSummary(DRIVER_DATE, 20).path("sent").asInt()).isEqualTo(9)
+        // 4 dispatched + 4 departed + 1 ETA + 1 delivered.
+        assertThat(again.dispatch.outboxSummary(DRIVER_DATE, 20).path("sent").asInt()).isEqualTo(10)
     }
 
     @Test

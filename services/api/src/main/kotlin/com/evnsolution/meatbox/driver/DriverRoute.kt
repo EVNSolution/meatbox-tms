@@ -16,6 +16,9 @@ internal class Route(val snapshot: ObjectNode, val vehicleId: String) {
     private val state = snapshot.path("vehicleStates").path(vehicleId)
     val phase: String = state.path("phase").asString("idle")
     val revision: Long = snapshot.path("revision").asLong()
+
+    /** The vehicle's stored ETA (`vehicleStates[v].eta`), or a missing node before it has departed. */
+    val eta: JsonNode = state.path("eta")
     val stops: List<RouteStop> = snapshot.path("fleetDeliveries")
         .filter { it.path("vehicleId").asString() == vehicleId }
         .groupBy { it.path("assignmentUnitId").asString() }
@@ -26,6 +29,9 @@ internal class Route(val snapshot: ObjectNode, val vehicleId: String) {
     /** The stop that holds this order ID, or 404 when it is not on this vehicle's route. */
     fun stop(id: String): RouteStop =
         stops.firstOrNull { id in it.orderIds } ?: driverFail(HttpStatus.NOT_FOUND.value(), "STOP_NOT_FOUND")
+
+    /** The stored ETA entry of one stop, or null when the vehicle has none for it. */
+    fun etaOf(stopId: String): JsonNode? = eta.path("stops").firstOrNull { it.path("stopId").asString() == stopId }
 
     fun next(except: String?): RouteStop? =
         stops.firstOrNull { it.stopId != except && it.status in setOf("current", "pending") }
@@ -63,6 +69,7 @@ internal fun planEvent(
     event: DriverEvent,
     receivedAt: String,
     photoBase: String,
+    eta: EtaContext,
 ): (ObjectNode) -> CommandBatch = { snapshot ->
     // A date that turned read-only after the first send still answers from its stored result.
     // Only new events stop here.
@@ -77,9 +84,19 @@ internal fun planEvent(
         "route_reordered" -> listOf(reorderedStep(route, event.payload))
         else -> stopSteps(route, event, handled!!)
     }
+    val departed = event.type == "departed"
     CommandBatch(
         steps,
-        outbound = { after -> deliveryMessages(event, handled, Route(after, event.vehicleId), photoBase) },
+        outbound = { after ->
+            val shown = Route(after, event.vehicleId)
+            val etaDrafts = if (departed) etaMessages(event, shown) else emptyList()
+            deliveryMessages(event, handled, shown, photoBase) + etaDrafts
+        },
+        etas = { after ->
+            if (!departed) return@CommandBatch emptyMap()
+            val set = etaOf(event, receivedAt, eta, Route(after, event.vehicleId), "departed")
+            mapOf(event.vehicleId to set)
+        },
     ) { after -> reply(Route(after, event.vehicleId), handled?.stopId, receivedAt) }
 }
 
@@ -123,5 +140,9 @@ private fun reply(after: Route, handled: String?, receivedAt: String): ObjectNod
         val status = after.stops.first { it.stopId == id }.status
         set("stop", driverJson.createObjectNode().put("stopId", id).put("status", status))
     }
-    after.next(handled)?.let { set("next", driverJson.createObjectNode().put("stopId", it.stopId).putNull("eta")) }
+    after.next(handled)?.let { set("next", nextStop(it.stopId, after)) }
 }
+
+/** `{stopId, eta}` of the next stop; `eta` is null until the vehicle has departed. */
+internal fun nextStop(stopId: String, route: Route): ObjectNode = driverJson.createObjectNode().put("stopId", stopId)
+    .set("eta", route.etaOf(stopId)?.path("eta") ?: driverJson.nullNode())
