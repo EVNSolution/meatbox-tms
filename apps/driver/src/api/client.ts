@@ -6,7 +6,7 @@ import { ApiError, type DriverMessage, type SessionUser } from './types';
 // Native networking owns the HttpOnly cookie. Confirm login through /api/session
 // after following the redirect. Restore checks the server; passwords are never saved.
 // Cookie persistence across Android process death still requires device verification.
-async function request(path: string, init: RequestInit = {}): Promise<Response> {
+export async function request(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set('Origin', API_ORIGIN);
   if (!headers.has('Accept')) headers.set('Accept', 'application/json');
@@ -19,7 +19,7 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
   }
 }
 
-async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await request(path, init);
   if (!response.ok) throw await toError(response);
   return response.status === 204 ? (undefined as T) : (await response.json() as T);
@@ -37,7 +37,7 @@ async function toError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, code);
 }
 
-function jsonInit(method: string, body: unknown): RequestInit {
+export function jsonInit(method: string, body: unknown): RequestInit {
   return {
     method,
     headers: { 'Content-Type': 'application/json' },
