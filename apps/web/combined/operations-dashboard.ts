@@ -111,7 +111,6 @@ export function mountDashboard({ element, fetchImpl = fetch, today = () => new D
   }
 
   async function loadLabels(): Promise<void> {
-    if (labels.size) return;
     try {
       const response = await fetchImpl('/api/dispatch-data/regions', { credentials: 'same-origin' });
       const regions = await response.json();

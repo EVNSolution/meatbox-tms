@@ -198,6 +198,17 @@ export function mountDatedDispatch({ element, onSelect, onAssign, onCommand, onD
       onContextChange();
     }
   }
+  // Zones saved in the resource screen apply to this page without a reload.
+  async function reloadRegions() {
+    if (!regions) return;
+    try {
+      const next = await fetchJSON('/api/dispatch-data/regions');
+      if (destroyed || !next || next.type !== 'FeatureCollection') return;
+      regions = next;
+      if (current && operationalData?.sourceData?.date === current.date) updateViews();
+    } catch { /* the zones it has stay */ }
+  }
+  if (typeof globalThis.addEventListener === 'function') { globalThis.addEventListener('meatbox:regions-changed', reloadRegions); listeners.push(() => globalThis.removeEventListener('meatbox:regions-changed', reloadRegions)); }
   listen(previous, 'click', () => { const index = manifest.dates.findIndex(item => item.date === selectedDate); if (index > 0) selectDate(manifest.dates[index - 1].date); });
   listen(next, 'click', () => { const index = manifest.dates.findIndex(item => item.date === selectedDate); if (index >= 0 && index < manifest.dates.length - 1) selectDate(manifest.dates[index + 1].date); });
   listen(todayButton, 'click', () => selectDate(now()));

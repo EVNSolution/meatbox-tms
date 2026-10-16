@@ -1,6 +1,7 @@
 package com.evnsolution.meatbox.dispatch
 
 import com.evnsolution.meatbox.auth.SessionVerifier
+import com.evnsolution.meatbox.legacy.CustomRegions
 import com.evnsolution.meatbox.legacy.DispatchDataReader
 import com.evnsolution.meatbox.legacy.LegacySettings
 import com.evnsolution.meatbox.integrations.meatbox.inbound.InboundOrders
@@ -21,13 +22,15 @@ class DispatchConfiguration {
         @Value("\${meatbox.dispatch.state-dir:}") directory: String,
         inbound: ObjectProvider<InboundOrders>,
         alerts: ObjectProvider<ErrorAlerts>,
+        customRegions: CustomRegions,
     ): DispatchStore {
         val path = Path.of(directory)
         require(directory.isNotBlank() && path.isAbsolute && path.normalize() == path) {
             "Explicit absolute dispatch state directory required"
         }
         val orders = inbound.ifAvailable
-        return DispatchStore(DispatchDataReader(settings, orders), path, inbound = orders).also { store ->
+        val reader = DispatchDataReader(settings, orders, customRegions)
+        return DispatchStore(reader, path, inbound = orders).also { store ->
             alerts.ifAvailable?.let { sink ->
                 store.onSourceConflict = { date, conflict ->
                     sink.report("dispatch", "SOURCE_CHANGED", "date=$date reason=${conflict.reason}")
@@ -35,6 +38,10 @@ class DispatchConfiguration {
             }
         }
     }
+
+    @Bean
+    fun customRegions(@Value("\${meatbox.dispatch.state-dir:}") directory: String): CustomRegions =
+        CustomRegions(Path.of(directory).resolve("regions-custom.json"))
 
     @Bean
     fun dispatchSessionFilter(verifier: SessionVerifier): DispatchSessionFilter = DispatchSessionFilter(verifier)

@@ -28,6 +28,7 @@ telemetry/ranges.json               차량별 허용 온도 범위 (있을 때�
 resources/vehicles.json             차량 등록부
 resources/region-codes.json         지역 코드
 resources/driver-profiles.json      기사 기준정보 (개인정보 포함, 있을 때만)
+resources/regions-custom.json       운영자가 저장한 배송 권역 (있을 때만)
 ```
 
 `{date}`는 배송일 `YYYY-MM-DD`다. 범위를 주면 그 범위(양끝 포함)의 날짜 파일만 들어간다. `resources/`·`telemetry/*/outbox.json`·`telemetry/ranges.json`은 날짜가 없어 항상 전체가 들어간다. 해당 데이터가 없으면 파일이 없다.
@@ -150,6 +151,9 @@ SQLite 차량 등록부를 JSON으로 푼 것이다.
 |---|---|
 | `revision` | 변경 번호 |
 | `profiles{계정}` | 기사 계정 이름 → `region`(권역), `skill`(숙련도), `phone`, `address`, `contract`, `vehicleType`(차종), `topSpec`(탑 사양), `capa{stops, boxes, weightKg}`(최대 착지수·Box·중량). 비워 둔 항목은 키가 없다 |
+
+### resources/regions-custom.json
+운영자가 가져와 저장한 배송 권역이다. 상태 디렉터리의 `regions-custom.json`을 그대로 넣는다. `revision`(변경 번호)과 `regions`(속성이 `zoneId`·`label`뿐인 GeoJSON FeatureCollection, 지워진 상태면 `null`)가 들어 있다. 준비된 `regions.geojson`은 이 아카이브에 들어가지 않는다.
 
 ## 복원 방법
 

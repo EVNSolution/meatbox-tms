@@ -29,6 +29,7 @@ import java.util.zip.GZIPOutputStream
 class DispatchDataReader(
     settings: LegacySettings,
     private val inbound: InboundDays? = null,
+    private val customRegions: CustomRegions? = null,
 ) {
     internal val files = SafeSourceFiles(settings.dispatchDataDirectory)
     private val mapper = JsonMapper.builder().build()
@@ -111,6 +112,8 @@ class DispatchDataReader(
 
     fun regions(acceptEncoding: String?): DispatchFile {
         loadManifest()
+        // Imported zones replace the prepared file. Without them, or when unreadable, the prepared file serves.
+        customRegions?.bytes()?.let { return generatedJson(it, acceptEncoding) }
         return selectFile(Path.of("regions.geojson"), acceptEncoding)
     }
 

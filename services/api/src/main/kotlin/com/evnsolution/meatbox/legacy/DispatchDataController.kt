@@ -18,8 +18,9 @@ import java.nio.charset.StandardCharsets
 class DispatchDataController(
     settings: LegacySettings,
     inbound: ObjectProvider<InboundDays>,
+    customRegions: ObjectProvider<CustomRegions>,
 ) {
-    private val reader = DispatchDataReader(settings, inbound.ifAvailable)
+    private val reader = DispatchDataReader(settings, inbound.ifAvailable, customRegions.ifAvailable)
     private val destinations = DestinationCatalogReader(settings)
 
     @RequestMapping("/api/dispatch-data/manifest", method = [RequestMethod.GET, RequestMethod.HEAD])

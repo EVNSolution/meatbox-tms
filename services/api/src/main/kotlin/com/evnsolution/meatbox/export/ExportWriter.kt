@@ -304,14 +304,15 @@ class ExportWriter(
 
     private fun resources(): List<Item> {
         // The driver master holds personal data (contact, address, contract); it leaves with the rest of the archive.
-        val profiles = sources.state.resolve("driver-profiles.json").takeIf(::regular)
-            ?.let { Item("resources/driver-profiles.json", size(it), it) }
-        val database = sources.resourceDatabase?.takeIf(::regular) ?: return listOfNotNull(profiles)
+        val stateFiles = listOf("driver-profiles.json", "regions-custom.json").mapNotNull { name ->
+            sources.state.resolve(name).takeIf(::regular)?.let { Item("resources/$name", size(it), it) }
+        }
+        val database = sources.resourceDatabase?.takeIf(::regular) ?: return stateFiles
         val registry = lazy { runCatching { readRegistry(database) }.getOrNull() }
         return listOf(
             Item("resources/vehicles.json", make = { registry.value?.first }),
             Item("resources/region-codes.json", make = { registry.value?.second }),
-        ) + listOfNotNull(profiles)
+        ) + stateFiles
     }
 
     private fun dated(directory: Path, pattern: Regex, request: ExportRequest) =

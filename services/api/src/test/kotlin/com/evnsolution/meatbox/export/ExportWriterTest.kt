@@ -168,7 +168,10 @@ class ExportWriterTest {
             w.fixture.state.resolve("driver-profiles.json"),
             """{"version":1,"revision":1,"profiles":{"kim":{"phone":"010-0000-0000","capa":{"boxes":100}}}}""",
         )
+        val zones = """{"version":1,"revision":2,"regions":null}"""
+        Files.writeString(w.fixture.state.resolve("regions-custom.json"), zones)
         val archive = export(w.writer)
+        assertThat(archive.json("resources/regions-custom.json").path("revision").asInt()).isEqualTo(2)
         assertThat(archive.json("resources/driver-profiles.json").path("profiles").path("kim").path("phone").asString())
             .isEqualTo("010-0000-0000")
         assertThat(archive.manifest.path("counts").path("driverProfiles").asInt()).isEqualTo(1)

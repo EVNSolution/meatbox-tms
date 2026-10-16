@@ -57,6 +57,8 @@
 | `POST` | `/api/ops/days/{date}/source-conflict/resolve` | 원본이 바뀐 날짜의 체크포인트를 유지·보관 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/driver-assignments` | 기사 계정-차량 배정과 기사 계정 목록 (Kotlin API 전용) | ops |
 | `PUT` | `/api/ops/driver-assignments/{vehicleId}` | 차량에 기사 계정을 배정하거나 해제 (Kotlin API 전용) | ops |
+| `GET` | `/api/ops/regions` | 지금 쓰는 배송 권역(운영자가 저장한 것 또는 준비된 것) (Kotlin API 전용) | ops |
+| `PUT` | `/api/ops/regions` | 배송 권역을 가져온 GeoJSON으로 바꾸거나 되돌림 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/dashboard?from=&to=` | 날짜 범위(최대 31일)의 일별 물량·차량별 운행·권역·추가 수수료 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/driver-notes?date=` | 그날 기사가 완료·미배송 때 남긴 특이사항 목록 (Kotlin API 전용) | ops |
 | `GET` | `/api/ops/driver-profiles` | 기사 계정별 기준정보(권역·숙련도·연락처·주소·계약정보·차종·탑 사양·최대 Capa) (Kotlin API 전용) | ops |
@@ -87,6 +89,21 @@
 - 사진 `GET driver/photos/{photoId}`와 `GET driver/events/{eventId}`는 차량에 묶이지 않는다. 식별자를 모르면 읽을 수 없다는 점에 기댄다.
 - 알 수 없는 `role` 값의 계정은 `/api/session`만 쓸 수 있다.
 - Node가 인증을 소유하는 호환 모드(`legacy-api-origin`)는 역할을 모르므로 모든 계정이 `ops`다.
+
+### `GET /api/ops/regions`, `PUT /api/ops/regions`
+
+`GET`은 `{"revision": 3, "custom": true, "regions": FeatureCollection}`이다. `custom`이 `false`면 준비된 `regions.geojson`이다(없으면 빈 컬렉션, `revision`은 0). 저장된 파일이 깨졌으면 `500 REGIONS_CUSTOM_INVALID`이고 다른 읽기(`/api/dispatch-data/regions`)는 준비된 권역으로 돌아간다.
+
+`PUT`은 `Origin`이 공개 origin과 같아야 하고 본문은 `{"revision": 3, "regions": FeatureCollection}`이다. `regions`가 `null`이면 운영자 권역을 지우고 준비된 권역으로 돌아간다. 성공하면 `200 {"revision", "custom"}`이다. `revision`은 지워도 줄지 않고 계속 커진다.
+
+| 상태 | `code` | 뜻 |
+|---|---|---|
+| `400` | `INVALID_INPUT` | 본문 형식·`revision` 오류 |
+| `400` | `INVALID_REGIONS` | FeatureCollection이 아님, 비어 있거나 500개 초과, 꼭짓점 20만 개 초과, `zoneId`가 `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`가 아니거나 겹침, 이름이 100자 초과, 닫힌 Polygon/MultiPolygon(경도 ±180, 위도 ±90)이 아님 |
+| `403` | `ORIGIN_REQUIRED` | `Origin` 불일치 |
+| `409` | `REGIONS_REVISION_CONFLICT` | `revision`이 낡음 |
+
+저장하면 `zoneId`와 `label`(없으면 `zoneId`)만 남고 다른 속성과 좌표의 높이 값은 버린다. 준비된 CSV 날짜의 주문은 원래 `zoneIds`를 가지므로 권역을 지우거나 코드를 바꾸면 그 주문은 권역 없음으로 보인다. 변경은 서버 로그(INFO)에 권역 수와 수정자를 남긴다.
 
 ### `GET /api/ops/dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD`
 
@@ -223,7 +240,7 @@
 
 ### `GET /api/dispatch-data/regions`
 
-검증된 설치의 `regions.geojson`을 그대로 반환한다. 날짜별 상태를 변경하지 않는다.
+검증된 설치의 `regions.geojson`을 그대로 반환한다. 운영자가 `PUT /api/ops/regions`로 저장한 권역이 있으면 그것을 대신 준다(속성은 `zoneId`·`label`만, ETag는 내용마다 다르다). 날짜별 상태를 변경하지 않는다.
 
 ### `GET /api/dispatch-data/destinations`
 

@@ -11,7 +11,7 @@
   "sourceFileCount": 142,
   "initialForkTargetFileCount": 145,
   "targetFileCount": 98,
-  "authoredFileCount": 73,
+  "authoredFileCount": 76,
   "records": [
     {
       "source": "apps/combined/app-viewer.css",
@@ -28,7 +28,7 @@
       "source": "apps/combined/app.mjs",
       "sourceSha256": "6853dcfc0fa8051442fd49457bdfdf28e4a4d735d1a3efcf09e186fff5dff747",
       "target": "apps/web/combined/app.mjs",
-      "targetSha256": "e1c3000db2028713c70f8cf0e730fffb64376a7e35af1d41a79512652306db2b",
+      "targetSha256": "a09fdf75153213b206708c7c7302708d0d6eaed1ca0f504fb6d7c66a1525573e",
       "reason": "Copy the original file byte-for-byte into the standalone frontend package.",
       "changes": [
         "Removed retired demo behavior while preserving operational regression coverage.",
@@ -46,7 +46,8 @@
         "Give the resource screen the driver assignment client.",
         "Show what the server told the drivers after a route-changing command.",
         "Mount the driver master under the resource list.",
-        "Add the 운영 현황 page."
+        "Add the 운영 현황 page.",
+        "Mount the zone manager."
       ],
       "status": "active"
     },
@@ -429,7 +430,7 @@
       "source": "apps/combined/dated-dispatch.mjs",
       "sourceSha256": "e7b533d02f1cfedc6ba4ca582034d9ec207519d006bbb93af49f1df4d3d3af0a",
       "target": "apps/web/combined/dated-dispatch.mjs",
-      "targetSha256": "2b18dbb7ce15e87ddf539f03d910a8967d5e81497bd4049c4db2341dfdacf1dc",
+      "targetSha256": "6b2b7acc33673005270ecb70d5b51f7eef4dfcee500d899aa4b1dedc2981f8cf",
       "reason": "Preserve the existing served behavior in a standalone Vite frontend; materialize gateway transformations, fixed public paths and the listed lint adjustments.",
       "changes": [
         "Remove unused escaping helper, selection value and catch binding; retain update argument position",
@@ -440,7 +441,8 @@
         "Report loading and failure notices through a notify callback instead of an in-flow message and retry button.",
         "Unify labels without dot separators (및/과/쉼표/슬래시) and add the signed-in name and a logout form to the header.",
         "Place orders that came without zones into zones from their coordinates and add the delivery-kind view filter, leaving the day and every command untouched.",
-        "Show the Capa overrun line and list after the dispatch is confirmed."
+        "Show the Capa overrun line and list after the dispatch is confirmed.",
+        "Read the zones again when the operator saves new ones."
       ],
       "status": "active"
     },
@@ -817,7 +819,7 @@
       "source": "apps/combined/index.html",
       "sourceSha256": "b113653747d2cfef910b8f2fe8f23503c1278a840a1b61188e90837d9a52114d",
       "target": "apps/web/combined/index.html",
-      "targetSha256": "610030d12630485131e19f07ab06d1d4c7cb039d80f7479097130d51fbeff4f0",
+      "targetSha256": "68695df85c2fe2aae08d385de38da7ee5ca1f718889f4a83cddbab577998e8c5",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Preserve fixed public asset URLs",
@@ -833,7 +835,8 @@
         "Load the temperature stylesheet for the control screen.",
         "Load the all-vehicle map stylesheet.",
         "Add the host of the driver master.",
-        "Add the host of the 운영 현황 page."
+        "Add the host of the 운영 현황 page.",
+        "Add the host of the zone manager."
       ],
       "status": "active"
     },
@@ -1114,7 +1117,7 @@
       "source": "apps/combined/resource-management.css",
       "sourceSha256": "1c8c5ce3e4213a456759a5d8efb6a3c09382393a8d7e2bd8aa0bf2b2840927db",
       "target": "apps/web/combined/resource-management.css",
-      "targetSha256": "1f1bb15fd540b8f9accc644a6e159a6d0c9b721fdb84d86d90d58890fbefdbca",
+      "targetSha256": "7b5c3190ce21d11b28946e276eba66ec0f1080a3c8b2d568d998c2c8d3cc3277",
       "reason": "Preserve the original served frontend and the fixed API/writer contracts while applying the listed approved shared-theme, design-guide, extraction or provenance-document changes.",
       "changes": [
         "Use shared 44px height and 6px radius for search and region-code forms; retain dense table select dimensions of 34px/4px",
@@ -1124,7 +1127,8 @@
         "Center the vehicle count of each region code row against its input and button.",
         "Style the driver column and let the table scroll inside its box on narrow screens.",
         "Style the driver master list and form.",
-        "Style the 운영 현황 tables."
+        "Style the 운영 현황 tables.",
+        "Style the zone manager."
       ],
       "status": "active"
     },
@@ -2763,7 +2767,7 @@
       "origin": "authored",
       "reason": "The 운영 현황 page: volumes, vehicle runs, zones and the extra fee.",
       "status": "active",
-      "sha256": "f67ae1a8e5d2aed0f13aa2f89acb956f449faf78aa2bcd026f200584ab9d600b"
+      "sha256": "aa3cc70e3b4d918a7a3aaddc6903e3255bacbe9f36313b1d77f68b170ae42551"
     },
     {
       "path": "apps/web/combined/operations-dashboard.test.mjs",
@@ -2771,6 +2775,27 @@
       "reason": "Verify the 운영 현황 model and page.",
       "status": "active",
       "sha256": "1306f8f4b4d4911a5063bc52e17f12255f7ad6b000777ba450a1f819a4a59b66"
+    },
+    {
+      "path": "apps/web/combined/region-model.ts",
+      "origin": "authored",
+      "reason": "Read, merge, rename and remove delivery zones in memory.",
+      "status": "active",
+      "sha256": "bfd46b229387171f6f6838635e209a306d03b7b6df4307279793ec65a33872ea"
+    },
+    {
+      "path": "apps/web/combined/region-manager.ts",
+      "origin": "authored",
+      "reason": "The zone manager of the resource screen: import GeoJSON, rename, delete, save.",
+      "status": "active",
+      "sha256": "284d59b62d9a44dc6c4621efb215ad7e264ab84ec895bc61784cb1836cfd1c56"
+    },
+    {
+      "path": "apps/web/combined/region-manager.test.mjs",
+      "origin": "authored",
+      "reason": "Verify the zone import, edits, save, revert and failures.",
+      "status": "active",
+      "sha256": "d64917e89984ffba0d456430a741e06f0ab19f6e25f74161c1cef6b20f4b8090"
     }
   ],
   "historicalTargetFileCount": 163,

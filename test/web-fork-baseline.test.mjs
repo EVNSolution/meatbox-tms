@@ -65,6 +65,8 @@ const authoredPaths = [
   'apps/web/combined/capa-check.test.mjs', 'apps/web/combined/capa-alert.ts',
   'apps/web/combined/capa-alert.test.mjs', 'apps/web/combined/dashboard-model.ts',
   'apps/web/combined/operations-dashboard.ts', 'apps/web/combined/operations-dashboard.test.mjs',
+  'apps/web/combined/region-model.ts', 'apps/web/combined/region-manager.ts',
+  'apps/web/combined/region-manager.test.mjs',
 ].sort();
 const inventory = JSON.parse(readFileSync(path.join(root, 'apps/web/fork-inventory.json'), 'utf8'));
 const git = args => execFileSync('git', args, { cwd: root, maxBuffer: 16 * 1024 * 1024 });

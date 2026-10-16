@@ -100,3 +100,16 @@
 .ops-table thead th, .ops-table tbody td, .ops-table tbody th { white-space: nowrap; }
 .ops-table td { font-variant-numeric: tabular-nums; }
 .ops-table thead th:first-child, .ops-table thead th:nth-child(3), .ops-table thead th:last-child { width: auto; }
+.region-manager { margin-top: 28px; }
+.region-manager h2 { margin: 0 0 8px; font-size: 18px; }
+.region-manager h3 { margin: 0 0 8px; font-size: 14px; }
+.region-table thead th:first-child { width: 160px; }
+.region-table thead th:nth-child(3) { width: 100px; }
+.region-label { width: 100%; min-height: 34px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; color: var(--text); font: inherit; font-size: 13px; }
+.region-table tr[data-changed="true"] { background: #f1f7ff; }
+.region-import { display: grid; gap: 10px; margin: 16px 0; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.region-import .field { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.region-import textarea { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font: 12px/1.4 ui-monospace, monospace; resize: vertical; }
+.region-import-mode { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; }
+.region-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.region-caveat { font-size: 12px; }

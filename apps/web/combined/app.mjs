@@ -10,6 +10,7 @@ import { vehicleOperations, resolveControlVehicle, resolveControlDelivery } from
 import { mountResourceManagement } from './resource-management.mjs';
 import { createDriverAssignmentClient } from './driver-assignment-client.ts';
 import { dashboardMarkup, mountDashboard } from './operations-dashboard.ts';
+import { mountRegionManager, regionMarkup } from './region-manager.ts';
 import { createDriverProfileClient } from './driver-profile-client.ts';
 import { masterMarkup, mountDriverMaster } from './driver-master.ts';
 import { sourceVehicleContext } from './source-context.mjs';
@@ -95,6 +96,8 @@ const orderPlanning = mountDatedDispatch({ element: byId('order-planning'), onSe
     return { ...result, shared: true };
   }, onContextChange: () => { if (state.data) renderSummary(); renderStatusNotification(); },
   notify: notice => { state.dispatchNotice = notice.message ? notice : null; renderProgress(); } });
+byId('region-manager').innerHTML = regionMarkup();
+mountRegionManager({ element: byId('region-manager') });
 byId('operations-dashboard').innerHTML = dashboardMarkup();
 const operationsDashboard = mountDashboard({ element: byId('operations-dashboard') });
 const driverAssignments = createDriverAssignmentClient();
