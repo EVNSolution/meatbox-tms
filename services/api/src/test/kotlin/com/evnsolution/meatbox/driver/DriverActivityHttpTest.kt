@@ -5,6 +5,7 @@ import com.evnsolution.meatbox.assertProblem
 import com.evnsolution.meatbox.auth.LoginRequiredException
 import com.evnsolution.meatbox.auth.SessionVerifier
 import com.evnsolution.meatbox.dispatch.DispatchSessionFilter
+import com.evnsolution.meatbox.integrations.fcm.FcmSender
 import com.evnsolution.meatbox.ops.quietAlerts
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach

@@ -1,6 +1,6 @@
 package com.evnsolution.meatbox
 
-import com.evnsolution.meatbox.compat.DispatchDataException
+import com.evnsolution.meatbox.legacy.DispatchDataException
 import com.evnsolution.meatbox.dispatch.DispatchException
 import com.evnsolution.meatbox.ops.ErrorAlerts
 import com.evnsolution.meatbox.resources.ResourceException

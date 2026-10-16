@@ -1,6 +1,7 @@
 package com.evnsolution.meatbox.ops
 
 import com.evnsolution.meatbox.auth.SessionVerifier
+import com.evnsolution.meatbox.integrations.webhook.WebhookAlertChannel
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean

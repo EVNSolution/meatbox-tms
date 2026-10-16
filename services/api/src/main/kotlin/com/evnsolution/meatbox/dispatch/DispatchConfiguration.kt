@@ -1,9 +1,9 @@
 package com.evnsolution.meatbox.dispatch
 
 import com.evnsolution.meatbox.auth.SessionVerifier
-import com.evnsolution.meatbox.compat.DispatchDataReader
-import com.evnsolution.meatbox.compat.CompatSettings
-import com.evnsolution.meatbox.inbound.InboundOrders
+import com.evnsolution.meatbox.legacy.DispatchDataReader
+import com.evnsolution.meatbox.legacy.LegacySettings
+import com.evnsolution.meatbox.integrations.meatbox.inbound.InboundOrders
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -16,7 +16,7 @@ import java.nio.file.Path
 class DispatchConfiguration {
     @Bean
     fun dispatchStore(
-        settings: CompatSettings,
+        settings: LegacySettings,
         @Value("\${meatbox.dispatch.state-dir:}") directory: String,
         inbound: ObjectProvider<InboundOrders>,
     ): DispatchStore {

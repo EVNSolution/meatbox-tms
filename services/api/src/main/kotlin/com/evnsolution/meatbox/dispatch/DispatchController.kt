@@ -1,6 +1,6 @@
 package com.evnsolution.meatbox.dispatch
 
-import com.evnsolution.meatbox.compat.DispatchDataException
+import com.evnsolution.meatbox.legacy.DispatchDataException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Value

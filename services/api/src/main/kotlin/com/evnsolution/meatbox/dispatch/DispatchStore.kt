@@ -1,11 +1,17 @@
 package com.evnsolution.meatbox.dispatch
 
-import com.evnsolution.meatbox.compat.DispatchDataReader
-import com.evnsolution.meatbox.compat.SafeSourceFiles
-import com.evnsolution.meatbox.compat.DispatchDataException
-import com.evnsolution.meatbox.inbound.InboundOrder
-import com.evnsolution.meatbox.inbound.InboundOrders
-import com.evnsolution.meatbox.inbound.InboundReceipt
+import com.evnsolution.meatbox.integrations.meatbox.outbound.OutboundDraft
+import com.evnsolution.meatbox.integrations.meatbox.outbound.Outbox
+import com.evnsolution.meatbox.integrations.meatbox.outbound.OutboxItem
+import com.evnsolution.meatbox.integrations.meatbox.outbound.OutboxOutcome
+import com.evnsolution.meatbox.integrations.meatbox.outbound.deliveryStatusBody
+import com.evnsolution.meatbox.integrations.meatbox.outbound.seoulStamp
+import com.evnsolution.meatbox.legacy.DispatchDataReader
+import com.evnsolution.meatbox.legacy.SafeSourceFiles
+import com.evnsolution.meatbox.legacy.DispatchDataException
+import com.evnsolution.meatbox.integrations.meatbox.inbound.InboundOrder
+import com.evnsolution.meatbox.integrations.meatbox.inbound.InboundOrders
+import com.evnsolution.meatbox.integrations.meatbox.inbound.InboundReceipt
 import jakarta.servlet.http.HttpServletResponse
 import java.io.IOException
 import tools.jackson.core.StreamReadFeature

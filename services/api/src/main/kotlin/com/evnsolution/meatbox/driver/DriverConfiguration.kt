@@ -2,6 +2,7 @@ package com.evnsolution.meatbox.driver
 
 import com.evnsolution.meatbox.dispatch.DispatchStore
 import com.evnsolution.meatbox.auth.AuthService
+import com.evnsolution.meatbox.integrations.fcm.FcmSender
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty

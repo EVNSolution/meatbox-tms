@@ -3,7 +3,7 @@ package com.evnsolution.meatbox.driver
 import org.springframework.http.HttpStatus
 
 import com.evnsolution.meatbox.dispatch.DispatchException
-import com.evnsolution.meatbox.compat.DispatchDataException
+import com.evnsolution.meatbox.legacy.DispatchDataException
 import com.evnsolution.meatbox.dispatch.DispatchStore
 import tools.jackson.core.StreamReadFeature
 import tools.jackson.databind.DeserializationFeature

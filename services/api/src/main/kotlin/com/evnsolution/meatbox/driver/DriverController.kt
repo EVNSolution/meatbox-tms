@@ -1,8 +1,10 @@
 package com.evnsolution.meatbox.driver
 
+import com.evnsolution.meatbox.integrations.fcm.FcmSender
+import com.evnsolution.meatbox.integrations.fcm.PushSummary
 import org.springframework.http.HttpStatus
 
-import com.evnsolution.meatbox.compat.DispatchDataException
+import com.evnsolution.meatbox.legacy.DispatchDataException
 import com.evnsolution.meatbox.auth.AuthService
 import com.evnsolution.meatbox.dispatch.DispatchException
 import jakarta.servlet.http.HttpServletRequest

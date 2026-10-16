@@ -1,8 +1,8 @@
 package com.evnsolution.meatbox.dispatch
 
-import com.evnsolution.meatbox.compat.CompatSettings
-import com.evnsolution.meatbox.compat.DispatchDataException
-import com.evnsolution.meatbox.compat.DispatchDataReader
+import com.evnsolution.meatbox.legacy.LegacySettings
+import com.evnsolution.meatbox.legacy.DispatchDataException
+import com.evnsolution.meatbox.legacy.DispatchDataReader
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -197,7 +197,7 @@ class DispatchStoreTest {
         return DispatchStore(reader(), directory.resolve("state"), ::now)
     }
 
-    private fun reader() = DispatchDataReader(CompatSettings(URI("http://127.0.0.1:1"), directory.resolve("data")))
+    private fun reader() = DispatchDataReader(LegacySettings(URI("http://127.0.0.1:1"), directory.resolve("data")))
 
     private fun calculate(store: DispatchStore, revision: Long = 0) = dispatchMapper.createObjectNode().apply {
         put("type", "calculate_dispatch")

@@ -1,7 +1,7 @@
 package com.evnsolution.meatbox.driver
 
-import com.evnsolution.meatbox.compat.CompatSettings
-import com.evnsolution.meatbox.compat.DispatchDataReader
+import com.evnsolution.meatbox.legacy.LegacySettings
+import com.evnsolution.meatbox.legacy.DispatchDataReader
 import com.evnsolution.meatbox.dispatch.DispatchStore
 import java.net.URI
 import java.nio.file.Files
@@ -31,7 +31,7 @@ internal fun driverFixture(
          "orders":[{"id":"O1","groupId":"G1","name":"합성 배송지","address":"합성 주소",
          "boxes":1,"sourceRows":1,"sequence":1,"coordinates":[127.0,37.5],"zoneIds":["Z1"]}]}
     """.trimIndent())
-    val reader = DispatchDataReader(CompatSettings(URI("http://127.0.0.1:1"), root.resolve("data")))
+    val reader = DispatchDataReader(LegacySettings(URI("http://127.0.0.1:1"), root.resolve("data")))
     val dispatch = DispatchStore(reader, root.resolve("state"), { Instant.parse("${today}T01:00:00Z").toEpochMilli() })
     return DriverStore(dispatch, root.resolve("state"), isSessionActive = isSessionActive) to root.resolve("state")
 }
@@ -48,7 +48,7 @@ internal class RouteFixture(
 
     companion object {
         fun open(root: Path, now: AtomicLong): RouteFixture {
-            val reader = DispatchDataReader(CompatSettings(URI("http://127.0.0.1:1"), root.resolve("data")))
+            val reader = DispatchDataReader(LegacySettings(URI("http://127.0.0.1:1"), root.resolve("data")))
             val dispatch = DispatchStore(reader, root.resolve("state"), now::get)
             val clock = { Instant.ofEpochMilli(now.get()) }
             val driver = DriverStore(dispatch, root.resolve("state"), clock, { _, _ -> true })

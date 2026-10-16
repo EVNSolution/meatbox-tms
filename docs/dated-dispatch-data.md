@@ -9,7 +9,7 @@
 | 원본 CSV·SHP | [prepare-dispatch-data.py](../scripts/prepare-dispatch-data.py) 입력 | 개인정보와 위치가 포함된 비공개 원본 |
 | `manifest.json`, `days/*.json`, gzip, `regions.geojson` | 위 스크립트 → [dispatch-data.js](../lib/dispatch-data.js) | 날짜별 주문·후보 그룹·공통 경계의 조회 자료 |
 | `destinations.json` | [prepare-destination-data.py](../scripts/prepare-destination-data.py) | 날짜 누적 배송처 집계. 일별 운행·현재 자원 등록부와 다름 |
-| 미트박스 주문 수신 파일 | Kotlin API `inbound/InboundOrders` | `POST /api/meatbox/orders`로 받은 주문의 날짜별 파일(`{state-dir}/inbound/{date}.json`). 준비 스크립트 산출물이 아니며 상태 디렉터리가 소유 |
+| 미트박스 주문 수신 파일 | Kotlin API `integrations/meatbox/inbound/InboundOrders` | `POST /api/meatbox/orders`로 받은 주문의 날짜별 파일(`{state-dir}/inbound/{date}.json`). 준비 스크립트 산출물이 아니며 상태 디렉터리가 소유 |
 | 날짜별 체크포인트 | [source-operations-router.js](../lib/source-operations-router.js) | 계산안·확정 배차·진행 상태. 원본 산출물과 별도 저장 |
 | 자원 SQLite | [import-resource-catalog.mjs](../scripts/import-resource-catalog.mjs) | 명시적으로 가져온 차량·지역 코드 등록부. 일별 주문 DB가 아님 |
 

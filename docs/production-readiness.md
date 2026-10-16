@@ -24,7 +24,7 @@
 | 인증 | Kotlin 초대·가입·로그인·로그아웃, 계정 JSON v1·메모리 세션 | [Kotlin 인증](../services/api/src/test/kotlin/com/evnsolution/meatbox/auth/AuthHttpTest.kt), [native 게이트웨이](../test/api-connection/kotlin-native-gateway.test.mjs) | 테넌트·역할·고객·차량별 접근 제한과 거부 경로 |
 | 운영 UI | 배차·관제·자원 세 화면, 공유 컴포넌트와 상단 알림; 빈 자료·로딩·조회 오류 구분 | [공유 스타일](../apps/web/public/components.css), [상단 알림](../apps/web/src/shared/ui/status-notification.test.mjs), [자원 화면](../apps/web/combined/resource-management.test.mjs) | 지원 브라우저·좁은 화면·키보드 접근과 실제 업무 흐름 |
 | 날짜별 배차 | Kotlin 계산·핀배차·확정·수정안 시작/취소·순서 저장 | [배차](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/DispatchPlanTest.kt), [실제 JAR 명령](../test/api-connection/kotlin-state-owner.test.mjs) | 기존 확정 상태 보존, 충돌·실패·복구와 실제 기사 수신 |
-| 원본 날짜 경계 | 요청 날짜와 일반·gzip day 본문 날짜 대조; 상태 캐시 재사용 전 원본 재검사 | [원본 조회](../services/api/src/test/kotlin/com/evnsolution/meatbox/compat/DispatchDataReaderTest.kt), [상태 저장소](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/DispatchStoreTest.kt) | 실제 공급 자료의 계약·인수·대사와 복구 |
+| 원본 날짜 경계 | 요청 날짜와 일반·gzip day 본문 날짜 대조; 상태 캐시 재사용 전 원본 재검사 | [원본 조회](../services/api/src/test/kotlin/com/evnsolution/meatbox/legacy/DispatchDataReaderTest.kt), [상태 저장소](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/DispatchStoreTest.kt) | 실제 공급 자료의 계약·인수·대사와 복구 |
 | 체크포인트 | Kotlin 날짜별 JSON v2 저장·기존 운행 기록 복원 | [상태 소유권·재시작](../test/api-connection/kotlin-state-owner.test.mjs) | 선택한 작성자 구성, 비정상 종료, 백업·복원 |
 | 자원 등록부 | Kotlin SQLite v2와 revision CAS | [Kotlin 자원](../services/api/src/test/kotlin/com/evnsolution/meatbox/resources/ResourceStoreTest.kt), [실제 JAR 자원](../test/api-connection/kotlin-resources.test.mjs) | 원본 인수·스키마 이행·복구와 저장 후 조회 |
 | 차량 신원·배차 후보 연결 | 기사 표기 그룹에서 번호판·차량 기준 위치를 합성; 기존 자원 인수도 합성 fleet 사용; 등록부와 배차 미연결 | [현재 fleet](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchFleet.kt), [자원 인수](../scripts/import-resource-catalog.mjs), [배차 주입](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchConfiguration.kt) | 검증된 명부·실제 차량 ID·명시적 매핑·확정 snapshot 보존 |
@@ -111,9 +111,9 @@ native 배포 도구는 기존 Node writer를 중지하고 Kotlin writer를 선�
 
 근거:
 
-- 파일 기반 날짜 조회: [`DispatchDataReader.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/compat/DispatchDataReader.kt)
+- 파일 기반 날짜 조회: [`DispatchDataReader.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/legacy/DispatchDataReader.kt)
 - 날짜 상태 생성: [`DispatchStore.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchStore.kt), [`DispatchPlan.kt`](../services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/DispatchPlan.kt)
-- 요청·본문 날짜 경계 회귀: [`DispatchDataReaderTest.kt`](../services/api/src/test/kotlin/com/evnsolution/meatbox/compat/DispatchDataReaderTest.kt), [`DispatchStoreTest.kt`](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/DispatchStoreTest.kt)
+- 요청·본문 날짜 경계 회귀: [`DispatchDataReaderTest.kt`](../services/api/src/test/kotlin/com/evnsolution/meatbox/legacy/DispatchDataReaderTest.kt), [`DispatchStoreTest.kt`](../services/api/src/test/kotlin/com/evnsolution/meatbox/dispatch/DispatchStoreTest.kt)
 - 준비 스크립트: [`prepare-dispatch-data.py`](../scripts/prepare-dispatch-data.py), [`prepare-destination-data.py`](../scripts/prepare-destination-data.py)
 
 완료 조건:

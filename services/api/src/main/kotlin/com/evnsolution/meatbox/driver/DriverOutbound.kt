@@ -1,7 +1,7 @@
 package com.evnsolution.meatbox.driver
 
-import com.evnsolution.meatbox.dispatch.OutboundDraft
-import com.evnsolution.meatbox.dispatch.deliveryStatusBody
+import com.evnsolution.meatbox.integrations.meatbox.outbound.OutboundDraft
+import com.evnsolution.meatbox.integrations.meatbox.outbound.deliveryStatusBody
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.node.ObjectNode
 

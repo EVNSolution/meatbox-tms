@@ -58,7 +58,7 @@ lint, typecheck, build, 브라우저 E2E, 배포 스모크용 npm 스크립트�
 - 시나리오: `test/api-connection/kotlin-state-owner.test.mjs`의 `Kotlin sends delivery-status messages to the mock Meatbox receiver after driver events`. 실제 JAR을 `--meatbox.mock-receiver.enabled=true`, `--meatbox.outbound.base-url=<자기 주소>/mock/meatbox`, 주기 1초로 띄운다.
 - 순서: 배차 확정 → `departed` → 사진 업로드 → `stop_completed` → `GET /mock/meatbox/received`를 최대 15초 폴링.
 - 기대: `dispatched`·`departed`·`delivered` 메시지가 도착하고, `Idempotency-Key`가 본문 `messageId`와 같고, `photos`가 사진 경로이고, `GET /api/ops/outbox`가 `pending 0`·`failed 0`이다.
-- 나머지 동작(재시도 간격, 4xx 거절, 연결 거부 11회 알림, 재시작 뒤 이어 보내기, 저장 실패 시 송신함 미생성)은 `OutboxMessagesTest`, `OutboxDispatcherTest`, `MockMeatboxReceiverTest`, `OpsOutboxTest`가 시계를 주입해 확인한다.
+- 나머지 동작(재시도 간격, 4xx 거절, 연결 거부 11회 알림, 재시작 뒤 이어 보내기, 저장 실패 시 송신함 미생성)은 `OutboxMessagesTest`, `OutboxSenderTest`, `MockMeatboxReceiverTest`, `OpsOutboxTest`가 시계를 주입해 확인한다.
 - 포함하지 않음: 실제 미트박스 인증·끝점, 사진 서명 URL, TEST 서버 배포, ETA·온도 송신.
 
 ## 로컬 검증 순서

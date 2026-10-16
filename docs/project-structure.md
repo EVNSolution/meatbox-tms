@@ -21,9 +21,24 @@
 | 보호 정적 파일·라우팅 | `apps/web/scripts/legacy-gateway.mjs`, `api-routing.mjs` | 세션 검사, API owner 전달, 폐기 URL의 410을 처리한다. |
 | Kotlin 인증 | `services/api/src/main/kotlin/com/evnsolution/meatbox/auth/` | 로그인·등록·로그아웃·세션과 access JSON v1 호환을 담당한다. |
 | Kotlin 자원 | `services/api/src/main/kotlin/com/evnsolution/meatbox/resources/` | SQLite v2 조회·저장·버전 충돌·트랜잭션을 담당한다. |
-| Kotlin 원본 조회 | `services/api/src/main/kotlin/com/evnsolution/meatbox/compat/` | 기존 네 원본 형식과 읽기 API를 보존한다. 일반·gzip day 본문 날짜를 요청 날짜와 대조한다. |
+| Kotlin 원본 조회 | `services/api/src/main/kotlin/com/evnsolution/meatbox/legacy/` | 기존 네 원본 형식과 읽기 API를 보존한다. 일반·gzip day 본문 날짜를 요청 날짜와 대조한다. |
 | Kotlin 날짜별 상태 | `services/api/src/main/kotlin/com/evnsolution/meatbox/dispatch/` | 여섯 명령, 계산, 확정 운행 기록, CAS checkpoint를 담당한다. |
+| Kotlin 외부 연동 | `services/api/src/main/kotlin/com/evnsolution/meatbox/integrations/` | 서버가 밖과 주고받는 코드를 모은다. 아래 `integrations/` 절을 따른다. |
 | 배포·복구 | `deploy/new-stack/` | 환경 설정, 패키징, 전환과 롤백을 관리한다. |
+
+## Kotlin `integrations/`
+
+서버 밖과 주고받는 코드는 `integrations/` 아래에 둔다. 패키지 이름이 호출 방향과 상대를 말한다.
+
+| 패키지 | 방향 | 내용 |
+| --- | --- | --- |
+| `integrations/meatbox/inbound/` | 미트박스 → 서버 | `POST /api/meatbox/orders`: 본문 검증·매핑(`InboundOrder`), 날짜별 수신 파일과 변경·취소 정책(`InboundOrders`), 토큰 필터, 컨트롤러 |
+| `integrations/meatbox/outbound/` | 서버 → 미트박스 | 배송 상태 송신함(`Outbox`), 발송기(`OutboxSender`), HTTP 클라이언트(`MeatboxClient`) |
+| `integrations/meatbox/mock/` | 테스트 전용 | `/mock/meatbox/*` 모의 수신기. 기본 꺼짐 |
+| `integrations/fcm/` | 서버 → FCM | 기사 앱 푸시 발송 |
+| `integrations/webhook/` | 서버 → 알림 수신처 | 운영 알림 웹훅 채널. 채널 인터페이스(`AlertChannel`)와 로그 채널은 `ops/`에 둔다 |
+
+`legacy/`는 기존 Node 서비스의 원본 파일·세션 계약을 읽는 호환 코드다(속성 접두사 `meatbox.compat.*`와 환경 변수는 그대로다). `dispatch/`는 `Outbox`를 직접 쓰므로 `dispatch`와 `integrations/meatbox/outbound`는 서로 참조한다.
 
 ## 수정 원칙
 

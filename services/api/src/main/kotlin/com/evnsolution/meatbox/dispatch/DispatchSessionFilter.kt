@@ -2,8 +2,8 @@ package com.evnsolution.meatbox.dispatch
 
 import com.evnsolution.meatbox.auth.SessionVerifier
 import com.evnsolution.meatbox.writeProblem
-import com.evnsolution.meatbox.compat.LoginRequiredException
-import com.evnsolution.meatbox.compat.SessionUnavailableException
+import com.evnsolution.meatbox.legacy.LoginRequiredException
+import com.evnsolution.meatbox.legacy.SessionUnavailableException
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
