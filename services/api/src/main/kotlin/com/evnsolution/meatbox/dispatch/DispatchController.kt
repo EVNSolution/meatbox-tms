@@ -50,7 +50,10 @@ class DispatchController(
         // Recomputed ETAs change the day without a revision when no command came with them.
         val recomputed = state.path("sourceData").path("etaVersion").asLong(0)
         val estimated = if (recomputed > 0) "-e$recomputed" else ""
-        val etag = "\"source-${store.boot}-$date-$revision-$today$reported$pushed$estimated\""
+        // A shown temperature, or a vehicle turning stale, changes the day without a revision.
+        val temperature = state.path("sourceData").path("temperatureVersion").asLong(0)
+        val measured = if (temperature > 0) "-t$temperature" else ""
+        val etag = "\"source-${store.boot}-$date-$revision-$today$reported$pushed$estimated$measured\""
         if (request.getHeader("If-None-Match") == etag) {
             return ResponseEntity.status(HttpServletResponse.SC_NOT_MODIFIED)
                 .eTag(etag).header("Vary", "Accept-Encoding").build()

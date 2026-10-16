@@ -186,7 +186,15 @@
 
 차량이 출발했으면 `vehicleStates[vehicleId].eta`에 그 차량의 도착 예정 시각(아래 "도착 예정 시각")이 들어간다. 출발 전 차량에는 이 필드가 없다. 웹은 모르는 필드를 읽지 않고 그대로 넘긴다. ETA는 `departed`·`stop_*`·출발 후 `route_reordered` 명령과 같은 쓰기로 바뀌므로 `revision`과 ETag도 함께 바뀐다. `zone_entered`의 재산출은 명령이 없어 `revision`이 그대로이므로 ETag의 `-e{재산출 횟수}`로 바뀐다.
 
-서버는 `ETag: "source-{boot}-{date}-{revision}-{today}"`를 보낸다. 기사 앱 위치를 받은 날짜는 `-l{위치 버전}`, ETA를 재산출한 날짜는 `-e{재산출 횟수 합}`이 뒤에 붙는다. 클라이언트의 `If-None-Match`가 같으면 본문 없이 `304`다. 서울 날짜가 바뀌면 revision이 같아도 ETag와 `dispatch.readOnly`가 바뀔 수 있다.
+**오늘(서울) 날짜의** snapshot에는 온도 단말이 값을 보낸 차량의 `vehicleStates[vehicleId].temperature`도 들어간다(아래 "온도 단말 수신과 조회"). 다른 날짜에는 없다. 값은 그 차량 센서 중 측정 시각이 가장 새로운 것이다. 값이 없는 차량·날짜는 바이트가 이전과 같다. 체크포인트에는 쓰지 않는다.
+
+```json
+"temperature": { "celsius": -18.4, "measuredAt": "2026-11-02T09:12:00+09:00", "stale": false, "outOfRange": false }
+```
+
+`stale`은 모든 센서가 10분(설정) 넘게 새 값을 보내지 않았다는 뜻이고, `outOfRange`는 어느 센서든 허용 범위를 벗어난 것이 확정됐다는 뜻이다. 아무것도 바뀌지 않아도 차량이 stale로 바뀌면 화면이 달라지므로 `sourceData.temperatureVersion`이 함께 바뀐다.
+
+서버는 `ETag: "source-{boot}-{date}-{revision}-{today}"`를 보낸다. 기사 앱 위치를 받은 날짜는 `-l{위치 버전}`, ETA를 재산출한 날짜는 `-e{재산출 횟수 합}`이 뒤에 붙는다. 온도가 보이는 날짜는 `-t{온도 버전}`도 붙는다(값·stale·이탈 중 하나라도 바뀌면 달라진다). 클라이언트의 `If-None-Match`가 같으면 본문 없이 `304`다. 서울 날짜가 바뀌면 revision이 같아도 ETag와 `dispatch.readOnly`가 바뀔 수 있다.
 
 ## 날짜 명령
 
@@ -423,6 +431,7 @@
 ```
 
 - `revision`은 날짜 상태의 `revision`이며 `route_reordered`의 `expectedRevision`으로 보낸다.
+- `temperature`는 오늘 날짜에 그 차량의 온도 값이 있을 때만 나온다: `{celsius, measuredAt, stale, outOfRange}`(날짜 상태의 같은 필드). 없으면 키가 없다.
 - `phase`는 차량 phase(`idle`, `preparing`, `delivering`, `done`)다. `status`는 `pending`, `current`, `done`, `skipped`다.
 - `eta`·`estimated`는 차량이 출발해 ETA를 계산한 뒤에 채워지고, 출발 전에는 둘 다 `null`이다. 출발 뒤에는 완료한 배송지도 출발 때 계산한 값을 그대로 보인다(재산출은 아직 없다). `estimated: false`는 좌표가 없어 이동 시간을 못 더한 값이다. `next`는 아직 끝나지 않은 첫 배송지이고 없으면 생략한다.
 
@@ -600,7 +609,7 @@ STEGO 단말의 통신 방식·수신 규격은 정해지지 않았다. 이 끝�
 
 ### `GET /api/telemetry/temperature/latest`
 
-세션이 필요하다. 지금까지 값을 보낸 모든 차량·센서의 최신 값이다. `stale`은 마지막 수신이 `MEATBOX_TELEMETRY_STALE_MINUTES`(기본 10분)보다 오래됐을 때 `true`다. 단말 시계가 아니라 서버가 받은 시각 기준이다.
+세션이 필요하다. 지금까지 값을 보낸 모든 차량·센서의 최신 값이다. `range`는 그 값에 적용되는 허용 범위(`min`·`max`, 한쪽은 `null`일 수 있다)이고 정해진 범위가 없으면 `null`이며 그 센서는 판정하지 않는다. `outOfRange`는 연속 3개 측정이 범위를 벗어나 확정된 상태다(아래 규칙). `stale`은 마지막 수신이 `MEATBOX_TELEMETRY_STALE_MINUTES`(기본 10분)보다 오래됐을 때 `true`다. 단말 시계가 아니라 서버가 받은 시각 기준이다.
 
 ```json
 {
@@ -608,10 +617,13 @@ STEGO 단말의 통신 방식·수신 규격은 정해지지 않았다. 이 끝�
   "vehicles": [{
     "vehicleId": "V-021", "sensorId": "STEGO-7731", "celsius": -18.1,
     "measuredAt": "2026-11-02T09:12:30+09:00", "receivedAt": "2026-11-02T09:12:31+09:00",
-    "ageSeconds": 29, "stale": false, "compartment": "frozen"
+    "ageSeconds": 29, "stale": false, "outOfRange": false, "range": { "min": null, "max": -18.0 },
+    "compartment": "frozen"
   }]
 }
 ```
+
+**허용 범위와 이탈 판정.** 범위는 ①측정의 `compartment`, ②`{state-dir}/telemetry/ranges.json`의 차량 항목, ③`MEATBOX_TELEMETRY_DEFAULT_KIND` 순으로 정한다. `frozen`은 -18 이하, `chilled`는 0~5(양 끝 포함)다. 셋 다 없으면 판정하지 않는다. 연속 3개 측정이 범위 밖이면 `outOfRange`가 되고 알림 `telemetry` / `OUT_OF_RANGE`를 한 번 보낸다. 범위 안 측정 하나로 풀린다. 단말 재전송처럼 stale 창보다 오래된 측정은 판정에 쓰지 않는다. 상태는 메모리에만 있어 재시작 뒤 아직 이탈 중이면 3개를 다시 받아야 확정된다.
 
 ### `GET /api/telemetry/temperature/{vehicleId}?from=&to=&resolution=`
 

@@ -109,6 +109,8 @@ class TemperatureHttpTest(
         assertThat(latest.path("celsius").doubleValue()).isEqualTo(-16.0)
         assertThat(latest.path("sensorId").asString()).isEqualTo("S-1")
         assertThat(latest.path("stale").asBoolean()).isFalse()
+        assertThat(latest.path("outOfRange").asBoolean()).isFalse()
+        assertThat(latest.path("range").isNull).isTrue()
         assertThat(latest.path("ageSeconds").asLong()).isLessThan(30)
 
         val raw = json.readTree(get("/api/telemetry/temperature/T-READ?from=${enc(at(300))}").body())

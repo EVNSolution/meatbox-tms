@@ -22,7 +22,12 @@ import tools.jackson.databind.node.ObjectNode
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
+
+private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
 
 // One lock and one file per date keep every command atomic; splitting the store would expose its internals.
 @Suppress("TooManyFunctions")
@@ -36,6 +41,9 @@ class DispatchStore(
 
     /** Set by the driver module. It must answer without taking any lock that waits for this store. */
     @Volatile var locations: DriverLocationSource? = null
+
+    /** Set by the telemetry module. Same rule: it must not wait for this store. */
+    @Volatile var temperatures: TemperatureSource? = null
     private val parser = JsonMapper.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build()
     private val stateFiles = SafeSourceFiles(stateDirectory)
     private val outboxDates = sortedSetOf<String>()
@@ -357,6 +365,8 @@ class DispatchStore(
     private fun publicState(state: ObjectNode, entry: Entry): ObjectNode =
         state.put("boot", boot).also { overlayDriverLocations(it, locations) }.also {
             Etas.overlay(it, entry.etas)
+        }.also {
+            overlayTemperatures(it, temperatures, LocalDate.ofInstant(Instant.ofEpochMilli(clock()), SEOUL).toString())
         }.also {
             // Only dates fed by Meatbox carry this block, so prepared-CSV snapshots keep their bytes.
             if (entry.api) inbound?.summary(state.path("sourceData").path("date").asString())?.let { summary ->

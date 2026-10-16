@@ -19,6 +19,9 @@ internal class Route(val snapshot: ObjectNode, val vehicleId: String) {
 
     /** The vehicle's stored ETA (`vehicleStates[v].eta`), or a missing node before it has departed. */
     val eta: JsonNode = state.path("eta")
+
+    /** The vehicle's newest temperature (`vehicleStates[v].temperature`), or a missing node when it has none today. */
+    val temperature: JsonNode = state.path("temperature")
     val stops: List<RouteStop> = snapshot.path("fleetDeliveries")
         .filter { it.path("vehicleId").asString() == vehicleId }
         .groupBy { it.path("assignmentUnitId").asString() }

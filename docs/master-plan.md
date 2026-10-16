@@ -130,6 +130,7 @@
 | --- | --- | --- |
 | [ ] STEGO 단말 수신·차량 매핑 (15·16) | 미착수 | 단말 계약 주체 미정 (25) |
 | [x] 온도 이력 조회 | 로컬 검증 | `telemetry/TemperatureStoreTest`(줄 형식·서울 날짜별 파일·파일 권한 0600, 같은 센서·초 무시, 다른 날짜 분리, 늦은 측정이 최신 값을 못 덮음, 다른 프로세스가 쓴 줄 인식·잘린 끝줄 보정, 재시작 뒤 최신 값 복원, stale 10분 경계, 이력 날짜 경계 조회, 본문 검증 거절 코드, 1분 평균·최소·최대), `telemetry/TemperatureHttpTest`(토큰 없음·틀림·주문 토큰 401, 202·재전송 `accepted:0`·미등록 차량 `UNKNOWN_VEHICLE` 알림 1회, 형식·크기·범위 거절 시 파일 없음, 세션 없음 401, `latest`·`raw`·`1m`, 24시간 초과·역순·잘못된 이름 400). 수신 끝점·저장·조회까지다. 센서 단말(STEGO)이 실제로 보내는 모습은 보지 못했고 게이트웨이 경로는 배포 쪽 설정이 필요하다. 허용 범위·경고·snapshot 노출·미트박스 송신은 아래 행 |
+| [x] 온도 허용 범위·이탈 경고·snapshot 노출 (15·16) | 로컬 검증 | `telemetry/TemperatureWatchTest`(연속 3개 이탈에서만 알림 1회·단발 스파이크 무시·범위 안 측정으로 해제, 같은 창 재이탈은 알림 창이 억제, `compartment` > 차량 항목 > 기본 종류 순, 범위 없으면 판정 안 함, 파일 수정 시각이 바뀌면 다시 읽기·깨진 파일은 `onInvalid` 한 번, stale 창보다 오래된 측정은 무시, 여러 센서 중 최신 값·모든 센서가 조용해야 stale), `telemetry/TemperatureSnapshotTest`(값 없으면 snapshot 바이트·ETag 불변, 오늘 날짜에만 `vehicleStates[v].temperature`, 값·stale 변화가 ETag `-t`에 반영, 기사 경로 `temperature`, 다른 날짜는 없음), `TemperatureHttpTest`(`latest`의 `range`·`outOfRange`). 허용 범위는 `telemetry/ranges.json`이며 **임시 위치**다: 자원 등록부 `vehicles` 필드로 옮길 예정이고 그때까지 값은 운영자가 파일로 관리한다. 기본 범위(냉동 -18 이하·냉장 0~5)와 연속 3개·10분은 근거 없는 초기값이다. 웹이 이 필드를 그리는 모습은 확인하지 않았다 |
 | [ ] 미트박스 온도 송신 (17) | 미착수 | 트랙 B 계약 |
 
 ## 환경

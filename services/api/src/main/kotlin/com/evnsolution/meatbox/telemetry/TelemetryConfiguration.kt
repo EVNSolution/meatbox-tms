@@ -1,7 +1,10 @@
 package com.evnsolution.meatbox.telemetry
 
 import com.evnsolution.meatbox.auth.SessionVerifier
+import com.evnsolution.meatbox.dispatch.DispatchStore
+import com.evnsolution.meatbox.dispatch.TemperatureSource
 import com.evnsolution.meatbox.integrations.meatbox.inbound.MeatboxInboundFilter
+import com.evnsolution.meatbox.ops.ErrorAlerts
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -22,6 +25,26 @@ class TelemetryConfiguration {
         require(staleMinutes in 1..MAX_STALE_MINUTES) { "meatbox.telemetry.stale-minutes must be between 1 and 1440" }
         val directory = Path.of(stateDirectory).resolve("telemetry")
         return TemperatureStore(directory, staleAfter = Duration.ofMinutes(staleMinutes))
+    }
+
+    @Bean
+    fun temperatureWatch(
+        store: TemperatureStore,
+        alerts: ErrorAlerts,
+        dispatch: DispatchStore,
+        @Value("\${meatbox.dispatch.state-dir:}") stateDirectory: String,
+        @Value("\${meatbox.telemetry.default-kind:}") defaultKind: String,
+    ): TemperatureWatch {
+        require(defaultKind.isEmpty() || defaultKind in setOf("frozen", "chilled")) {
+            "meatbox.telemetry.default-kind must be empty, frozen or chilled"
+        }
+        val file = Path.of(stateDirectory).resolve("telemetry/ranges.json")
+        val ranges = TemperatureRanges(file, defaultKind.ifEmpty { null }) {
+            alerts.report("telemetry", "RANGES_INVALID")
+        }
+        return TemperatureWatch(store, ranges, alerts).also {
+            dispatch.temperatures = TemperatureSource(it::perVehicle)
+        }
     }
 
     @Bean

@@ -130,7 +130,8 @@ published ── begin_dispatch_revision ──► amending
 - 한 줄이 측정 1건이다: `t`(측정 시각 `+09:00`), `c`(섭씨), `s`(센서 ID), `k`(칸 `frozen`·`chilled`, 선택), `r`(수신 epoch ms). 파일은 덧붙이기만 한다.
 - 날짜는 측정 시각의 서울 날짜다. 늦게 도착한 측정(단말 재전송)은 자기 날짜 파일에 들어간다.
 - 같은 센서·같은 초는 한 번만 남는다. 프로세스는 파일별 키 집합을 메모리에 두고, 파일 크기가 자기가 쓴 값과 다르면(다른 프로세스가 썼으면) 다시 읽는다.
-- 차량별 최신 값은 메모리에 있고 시작할 때 각 차량의 마지막 파일에서 복원한다. 날짜 snapshot과 기사 조회는 아직 이 값을 읽지 않는다.
+- 차량별 최신 값은 메모리에 있고 시작할 때 각 차량의 마지막 파일에서 복원한다. 오늘 날짜 snapshot이 `vehicleStates[v].temperature`로 덧씌워 보여 주고(`DriverLocationOverlay`와 같은 방식, 체크포인트에는 쓰지 않음) 기사 경로 조회가 같은 값을 읽는다. 이탈 판정 상태(`outOfRange`)는 메모리에만 있다.
+- 허용 범위는 `telemetry/ranges.json`(차량별 `kind` 또는 `min`·`max`)이 가진다. **임시 위치다.** 자원 등록부 `vehicles` 필드로 옮길 예정이며, 옮기면 이 파일과 `MEATBOX_TELEMETRY_DEFAULT_KIND`는 없어진다.
 - `telemetry/.telemetry.lock`이 쓰기를 직렬화한다. `DriverFileLock`을 같은 방식으로 쓴다.
 
 ## 미트박스가 보낸 주문(API 원본)

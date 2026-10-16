@@ -40,6 +40,7 @@ private val KEY = Regex("[A-Za-z0-9._:-]{1,128}")
 class TemperatureIngestController(
     private val store: TemperatureStore,
     private val alerts: ErrorAlerts,
+    private val watch: TemperatureWatch,
     private val resources: ObjectProvider<ResourceStore>,
 ) {
     private val parser = JsonMapper.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build()
@@ -52,6 +53,7 @@ class TemperatureIngestController(
         if (key != null && !KEY.matches(key)) telemetryFail(BAD_REQUEST, "INVALID_IDEMPOTENCY_KEY")
         val batch = parseBatch(body(request), store.now())
         val receipt = store.ingest(batch)
+        watch.observe(batch.vehicleId, receipt.fresh)
         val unknown = registered(batch.vehicleId) == false
         if (unknown) alerts.report("telemetry", "UNKNOWN_VEHICLE", "vehicleId=${batch.vehicleId}")
         val json = telemetryJson.createObjectNode().put("accepted", receipt.accepted)
@@ -84,9 +86,9 @@ class TemperatureIngestController(
 @RestController
 @RequestMapping("/api/telemetry/temperature")
 @ConditionalOnProperty(prefix = "meatbox.dispatch", name = ["enabled"], havingValue = "true")
-class TemperatureQueryController(private val store: TemperatureStore) {
+class TemperatureQueryController(private val store: TemperatureStore, private val watch: TemperatureWatch) {
     @GetMapping("/latest")
-    fun latest(): ObjectNode = latestView(store)
+    fun latest(): ObjectNode = latestView(store, watch)
 
     /** [from]..[to] is at most 24 hours; `to` defaults to now. */
     @GetMapping("/{vehicleId}")

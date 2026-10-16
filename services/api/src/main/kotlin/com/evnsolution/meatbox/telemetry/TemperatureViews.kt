@@ -15,7 +15,7 @@ internal val MAX_RANGE: Duration = Duration.ofHours(24)
 internal fun stamp(instant: Instant): String = seoulStamp(instant.toEpochMilli())
 
 /** Every sensor's newest value with its age and whether the service has heard from it recently. */
-internal fun latestView(store: TemperatureStore): ObjectNode {
+internal fun latestView(store: TemperatureStore, watch: TemperatureWatch): ObjectNode {
     val now = store.now()
     val rows: ArrayNode = telemetryJson.createArrayNode()
     store.latest().forEach { latest ->
@@ -23,8 +23,12 @@ internal fun latestView(store: TemperatureStore): ObjectNode {
             .put("celsius", latest.celsius).put("measuredAt", stamp(latest.measuredAt))
             .put("receivedAt", stamp(latest.receivedAt))
             .put("ageSeconds", Duration.between(latest.receivedAt, now).seconds.coerceAtLeast(0))
-            .put("stale", store.stale(latest))
+            .put("stale", store.stale(latest)).put("outOfRange", watch.outOfRange(latest))
         latest.compartment?.let { row.put("compartment", it) }
+        val range = watch.rangeOf(latest)
+        if (range == null) row.putNull("range") else {
+            row.putObject("range").put("min", range.min).put("max", range.max)
+        }
     }
     return telemetryJson.createObjectNode().put("generatedAt", stamp(now)).set("vehicles", rows)
 }

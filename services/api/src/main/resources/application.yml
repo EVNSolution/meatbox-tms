@@ -69,6 +69,9 @@ meatbox:
     token: ${MEATBOX_TELEMETRY_TOKEN:}
     # A sensor that sent nothing new for this long is marked stale.
     stale-minutes: ${MEATBOX_TELEMETRY_STALE_MINUTES:10}
+    # frozen or chilled: the range for vehicles that name none (no compartment, no entry in telemetry/ranges.json).
+    # Empty leaves them unjudged.
+    default-kind: ${MEATBOX_TELEMETRY_DEFAULT_KIND:}
 
   outbound:
     # Empty base URL keeps messages in the outbox without sending. The token is sent as a Bearer header when set.

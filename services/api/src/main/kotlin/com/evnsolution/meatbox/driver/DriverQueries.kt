@@ -35,6 +35,7 @@ class DriverQueries internal constructor(private val store: DriverStore) {
                 summary(stop, index + 1).also { putEta(it, route, stop) }
             }))
             route.next(null)?.let { set("next", nextStop(it.stopId, route)) }
+            if (route.temperature.isObject) set("temperature", route.temperature.deepCopy())
         }
     }
 
