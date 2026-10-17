@@ -66,6 +66,17 @@ class VroomOptimizerTest {
     }
 
     @Test
+    fun `a stop that no road reaches is not an outage, so no alert and no pause`() {
+        engine.handler = { MockEngine.Reply(500, """{"code":3,"error":"Could not find route near location"}""") }
+        val vroom = optimizer()
+        assertThat(vroom.order(stops, depot, null)).isNull()
+        assertThat(vroom.order(stops, depot, null)).isNull()
+        executor.drain()
+        assertThat(engine.requests).hasSize(2)
+        assertThat(channel.sent).isEmpty()
+    }
+
+    @Test
     fun `after a failure the engine is left alone for thirty seconds`() {
         engine.handler = { MockEngine.Reply(503, "down") }
         val vroom = optimizer()

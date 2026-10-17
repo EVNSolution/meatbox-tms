@@ -46,6 +46,8 @@ class VroomOptimizer(
             tooSmall -> if (jobs.isEmpty() && lead != null) listOf(lead.stopId) else null
             else -> try {
                 listOfNotNull(lead?.stopId) + ask(jobs, start!!)
+            } catch (_: StopsRejected) { // the engine is up; one stop has no road (VROOM code 2 or 3)
+                null
             } catch (@Suppress("TooGenericExceptionCaught") error: Exception) { // any failure falls back to 2-opt
                 retryAfter = at.plusSeconds(BACKOFF_SECONDS)
                 alerts?.report("route-engine", "VROOM_UNAVAILABLE", "${error.javaClass.simpleName}: ${error.message}")
@@ -69,9 +71,12 @@ class VroomOptimizer(
             .header("Content-Type", "application/json; charset=utf-8")
             .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body))).build()
         val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-        check(response.statusCode() == STATUS_OK) { "vroom status ${response.statusCode()}" }
-        val json = mapper.readTree(response.body())
-        check(json.path("code").asInt(-1) == 0) { "vroom code ${json.path("code").asInt(-1)}" }
+        val json = runCatching { mapper.readTree(response.body()) }.getOrNull()
+        val code = json?.path("code")?.asInt(-1) ?: -1
+        if (code in REJECTED_CODES) throw StopsRejected()
+        check(response.statusCode() == STATUS_OK && json != null && code == 0) {
+            "vroom status ${response.statusCode()} code $code"
+        }
         check(json.path("unassigned").size() == 0) { "vroom left stops unassigned" }
         val ids = json.path("routes").path(0).path("steps").filter { it.path("type").asString("") == "job" }
             .map { jobs[it.path("id").asInt() - 1].stopId }
@@ -79,7 +84,11 @@ class VroomOptimizer(
         return ids
     }
 
+    /** VROOM answered but cannot plan these stops (input error, or a stop no road reaches): not an outage. */
+    private class StopsRejected : RuntimeException()
+
     private companion object {
+        val REJECTED_CODES = setOf(2, 3)
         const val MAX_STOPS = 200
         const val BACKOFF_SECONDS = 30L
         const val STATUS_OK = 200
