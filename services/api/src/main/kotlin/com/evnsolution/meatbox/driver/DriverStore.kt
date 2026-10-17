@@ -10,6 +10,7 @@ import com.evnsolution.meatbox.eta.HaversineEstimator
 import com.evnsolution.meatbox.eta.TravelTimeEstimator
 import com.evnsolution.meatbox.eta.EtaModel
 import com.evnsolution.meatbox.eta.EtaPoint
+import com.evnsolution.meatbox.eta.RouteOptimizer
 import com.evnsolution.meatbox.eta.RoutePlanner
 import tools.jackson.core.StreamReadFeature
 import tools.jackson.databind.DeserializationFeature
@@ -57,9 +58,11 @@ class DriverStore(
     internal val depot: EtaPoint? = null,
     /** The road engine's travel times (`MEATBOX_OSRM_BASE_URL`), or null: straight lines. */
     estimator: TravelTimeEstimator? = null,
+    /** The road engine's delivery order (`MEATBOX_VROOM_URL`), or null: nearest neighbour with 2-opt. */
+    optimizer: RouteOptimizer? = null,
 ) {
     internal val eta = EtaModel(etaConfig, estimator ?: HaversineEstimator(etaConfig))
-    internal val planner = RoutePlanner(eta.estimator)
+    internal val planner = RoutePlanner(eta.estimator, optimizer)
 
     private val fileLock = DriverFileLock(directory.resolve(".driver-state.lock"))
 

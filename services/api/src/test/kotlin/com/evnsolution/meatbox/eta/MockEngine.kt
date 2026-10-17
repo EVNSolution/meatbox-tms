@@ -38,6 +38,23 @@ class MockEngine(@Volatile var handler: (Request) -> Reply) : AutoCloseable {
     override fun close() = server.stop(0)
 
     companion object {
+        private val mapper = tools.jackson.databind.json.JsonMapper.builder().build()
+
+        private fun jobsOf(request: Request) = mapper.readTree(request.body).path("jobs").toList()
+
+        /** The jobs `(id, point)` of a VROOM request. */
+        fun jobs(request: Request): List<Pair<Int, EtaPoint>> = jobsOf(request).map {
+            val at = it.path("location")
+            it.path("id").asInt() to EtaPoint(at[1].doubleValue(), at[0].doubleValue())
+        }
+
+        /** A VROOM answer that visits the jobs in the order [pick] gives (job IDs). */
+        fun vroom(request: Request, pick: (List<Pair<Int, EtaPoint>>) -> List<Int>): Reply {
+            val steps = listOf("""{"type":"start"}""") + pick(jobs(request)).map { """{"type":"job","id":$it}""" }
+            val route = """{"vehicle":1,"steps":[${steps.joinToString(",")}]}"""
+            return Reply(body = """{"code":0,"unassigned":[],"routes":[$route]}""")
+        }
+
         /** The coordinates `lng,lat;lng,lat` of an OSRM table request. */
         fun coordinates(uri: String): List<EtaPoint> = uri.substringAfter("/car/").substringBefore('?').split(';')
             .map { it.split(',').let { (lng, lat) -> EtaPoint(lat.toDouble(), lng.toDouble()) } }

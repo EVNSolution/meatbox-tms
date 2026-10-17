@@ -23,12 +23,13 @@ class RoutePlan(
 )
 
 /**
- * First automatic order: nearest neighbour from the origin, improved by 2-opt, over the stops that are not fixed.
+ * First automatic order over the stops that are not fixed: the [optimizer]'s (VROOM) when it answers, else nearest
+ * neighbour from the origin improved by 2-opt.
  * Distances come from [estimator], so a routing API replaces the straight-line model without a change here (2-opt
  * reverses segments, so it assumes the travel time is the same both ways). It knows nothing about roads, left-turn
  * limits or arterials.
  */
-class RoutePlanner(private val estimator: TravelTimeEstimator) {
+class RoutePlanner(private val estimator: TravelTimeEstimator, private val optimizer: RouteOptimizer? = null) {
     /**
      * [origin] is where the vehicle starts the free stops; without it the first free located stop stays first.
      * [lockFirst] must be a free stop with coordinates and becomes the first free stop. Without [lockFirst] the result
@@ -45,7 +46,8 @@ class RoutePlanner(private val estimator: TravelTimeEstimator) {
         val engine = estimator.prepare(listOfNotNull(origin) + located.mapNotNull { it.point })
         val path = Path(located, origin)
         val head = lockedAt ?: if (origin == null && located.isNotEmpty()) 0 else null
-        val candidate = path.improve(path.nearest(head), head != null)
+        val vroom = optimized(located, origin, head, path)
+        val candidate = vroom ?: path.improve(path.nearest(head), head != null)
         val current = located.indices.toList()
         val best = if (lockedAt == null && path.seconds(current) <= path.seconds(candidate)) current else candidate
 
@@ -58,8 +60,25 @@ class RoutePlanner(private val estimator: TravelTimeEstimator) {
         }
         val order = stops.map { it.stopId }.toMutableList()
         slots.forEachIndexed { slot, index -> order[index] = ids[slot] }
-        return RoutePlan(order, path.seconds(best), placed, path.meters(best, origin), engine)
+        val named = engineName(vroom != null, engine)
+        return RoutePlan(order, path.seconds(best), placed, path.meters(best, origin), named)
     }
+
+    /** `vroom` when the optimizer ordered, else the estimator engine, else `haversine` if the optimizer failed. */
+    private fun engineName(optimized: Boolean, estimated: String?): String? = when {
+        optimized -> "vroom"
+        estimated != null -> estimated
+        optimizer != null -> "haversine"
+        else -> null
+    }
+
+    /** The optimizer's order of the located free stops as positions in [located], or null without a usable answer. */
+    private fun optimized(located: List<PlanStop>, origin: EtaPoint?, head: Int?, path: Path): List<Int>? =
+        if (located.size > 1) {
+            optimizer?.order(located, origin, head?.let { located[it].stopId })?.let { path.indicesOf(it) }
+        } else {
+            null
+        }
 
     /** The first three words of both addresses match (a district and a road, or a road and a number). */
     private fun similar(left: String, right: String): Boolean {
@@ -79,6 +98,12 @@ class RoutePlanner(private val estimator: TravelTimeEstimator) {
         }
 
         private fun leg(previous: Int, next: Int) = if (previous < 0) fromOrigin[next] else between[previous][next]
+
+        /** The positions of [ids], or null when they are not exactly the stops of this path. */
+        fun indicesOf(ids: List<String>): List<Int>? {
+            val positions = ids.mapNotNull { id -> stops.indexOfFirst { it.stopId == id }.takeIf { it >= 0 } }
+            return positions.takeIf { it.size == n && it.toSet().size == n }
+        }
 
         fun seconds(order: List<Int>): Int = order.indices.sumOf { leg(if (it == 0) -1 else order[it - 1], order[it]) }
 

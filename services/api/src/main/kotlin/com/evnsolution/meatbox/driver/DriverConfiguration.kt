@@ -7,6 +7,7 @@ import com.evnsolution.meatbox.eta.EtaConfig
 import com.evnsolution.meatbox.eta.EtaPoint
 import com.evnsolution.meatbox.eta.HaversineEstimator
 import com.evnsolution.meatbox.eta.OsrmTableEstimator
+import com.evnsolution.meatbox.eta.VroomOptimizer
 import com.evnsolution.meatbox.ops.ErrorAlerts
 import com.evnsolution.meatbox.integrations.fcm.FcmSender
 import org.springframework.beans.factory.ObjectProvider
@@ -33,18 +34,21 @@ class DriverConfiguration {
         @Value("\${meatbox.route.depot-lat:}") depotLat: String,
         @Value("\${meatbox.route.depot-lng:}") depotLng: String,
         @Value("\${MEATBOX_OSRM_BASE_URL:}") osrmBaseUrl: String,
+        @Value("\${MEATBOX_VROOM_URL:}") vroomUrl: String,
         alerts: ErrorAlerts,
     ): DriverStore {
         val etaConfig = EtaConfig(detourFactor, speedKmh, serviceMinutes, delayThresholdMinutes)
         val road = osrmBaseUrl.trim().takeIf { it.isNotEmpty() }
             ?.let { OsrmTableEstimator(it, HaversineEstimator(etaConfig), alerts) }
+        val optimizer = vroomUrl.trim().takeIf { it.isNotEmpty() }?.let { VroomOptimizer(it, alerts) }
         return DriverStore(dispatch, Path.of(directory), isSessionActive = { digest, username ->
             auth.ifAvailable?.isSessionActive(digest, username) == true
         }, mayDrive = { username, vehicleId ->
             // Operators run every vehicle. A driver only the ones that are assigned to them.
             val service = auth.ifAvailable
             service == null || service.roleOf(username) == Role.OPS || assignments.driverOf(vehicleId) == username
-        }, publicOrigin = origin, etaConfig = etaConfig, depot = depot(depotLat, depotLng), estimator = road)
+        }, publicOrigin = origin, etaConfig = etaConfig, depot = depot(depotLat, depotLng), estimator = road,
+            optimizer = optimizer)
     }
 
     @Bean
