@@ -10,6 +10,7 @@
 | 다차량 시연 | [설계](../fleet-operations-plan.md), [당시 테스트 명세](../fleet-operations-test-spec.md), [성능 측정](../server-data-readiness.md) |
 | 수동 장면 시연 | [설계](../manual-scenarios-plan.md), [당시 테스트 명세](../manual-scenarios-test-spec.md) |
 | 2026-09-16 통합·배포 | [시스템 점검](../system-integration-audit-2026-09-16.md), [배포 기록](../deployment-2026-09-16-integration.md) |
+| 2026-10-17 경로 엔진(R-1) | [TEST 배포·연동 기록](test-deploy-r1-route-engine-2026-10-17.md) — OSRM+VROOM 엔진 연결·폴백 관찰 |
 | 발표·뷰어 인계 | [발표 준비](../dispatch-presentation-2026-09-16.md), [발표 점검](../presentation-scenario-audit-2026-09-16.md), [뷰어 인계](../customer-driver-viewer-handoff.md) |
 | 헤더·자원 변경 기록 | [헤더·날짜 정리](../header-date-cleanup-plan.md), [지역 코드 전환](../resource-classification-cleanup-plan.md) |
 | 검토용 프로필 | [미배정 후보](../driver-profile-candidates.md) — 실제 직원 프로필이나 신원 검증 결과가 아님 |

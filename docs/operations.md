@@ -349,6 +349,24 @@ ETA·자동 배송 순서·운행 거리를 직선거리 대신 실도로 기준
 - 엔진이 계획할 수 없는 배송지(VROOM 코드 2·3, 도로가 닿지 않는 좌표)가 하나라도 있으면 그 요청은 2-opt로 떨어진다. 엔진 장애가 아니므로 알림도 휴지도 없다. 장애(연결 실패·5xx·시간 초과)는 알림 1회와 30초 휴지다.
 - 배송지 200곳이면 OSRM table 약 2.4초 + VROOM 약 2.45초를 차례로 부른다(각각 시간 초과 3초 안, 합쳐 약 5초). 50곳 이하는 합쳐 1초 안이다.
 
+### 시연 전 엔진 켜기와 끝나면 끄기
+
+엔진 인스턴스 `meatbox-route-engine`(`i-03fc76005facd40d8`)은 평소 정지 상태다. TEST API에는 이미 두 설정이 들어 있어(2026-10-17, [기록](history/test-deploy-r1-route-engine-2026-10-17.md)) 인스턴스만 켜고 끄면 된다.
+
+1. 시연 20분 전쯤 켠다. 시작 후 약 1분 안에 docker와 두 컨테이너가 올라온다.
+   ```sh
+   aws ec2 start-instances --region ap-northeast-2 --instance-ids i-03fc76005facd40d8
+   ```
+2. 확인: TEST 호스트에서 `curl http://172.31.0.176:5005/nearest/v1/car/126.9780,37.5665`가 200이면 된다. 인증된 세션으로 suggest 응답의 `engine`이 `vroom`인지 본다.
+3. 끝나면 끈다. 켜 두면 시간당 약 0.05달러, 꺼 두면 디스크만 월 약 2달러다.
+   ```sh
+   aws ec2 stop-instances --region ap-northeast-2 --instance-ids i-03fc76005facd40d8
+   ```
+
+- 꺼진 동안 API는 직선거리로 계산한다. 첫 요청은 OSRM·VROOM 시간 초과로 각각 약 3초 걸리고, 이후 30초는 즉시 직선거리로 답한다. `route-engine` 알림이 코드(`OSRM_UNAVAILABLE`·`VROOM_UNAVAILABLE`)마다 10분에 1회 나간다.
+- 엔진을 끈 직후 60초까지는 캐시된 행렬 때문에 `engine:"osrm"`으로 답할 수 있다.
+- 엔진 설정을 완전히 빼려면 TEST `api.env`의 두 줄을 지우고 `meatbox-api@<활성 슬롯>`을 재시작한다(변경 전 사본 `api.env.before-r1-20261017`).
+
 ### 자동 배송 순서 설정 (Kotlin API)
 
 `POST .../driver/route/suggest`가 출발 전 시작점으로 쓰는 창고 좌표다. 거리 모델은 위 ETA 설정(우회계수·속도·작업 시간)을 그대로 쓴다. 바꾸면 슬롯을 다시 시작해야 한다.
