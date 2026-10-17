@@ -36,3 +36,23 @@ table 200 points: 200 in 2.420025s
 vroom: 200
 # 정지 -> 시작 후 약 1분: docker ps에 ups-route-osrm-1, ups-route-vroom-1 Up, osrm after reboot: 200, vroom after reboot: 200
 # 엔진 인스턴스 메모리(실행 중): total 3832MB, used 1893MB, available 1938MB
+
+# 2차 확인 (2026-10-17): 전용 인스턴스 엔진을 SSH 터널(127.0.0.1:15005/13005)로 붙여 같은 JAR 시나리오 재실행
+haversine (engine not configured): departed=21:00 engine=(none) suggest.engine=(none) order=마포,여의도,강남역,성수,잠실 totalKm=43.1 totalMinutes=123 dashboard=91km/estimate
+  ETA 잠실 21:42 -> 여의도 22:39 -> 성수 23:24 -> 마포 00:13 -> 강남역 00:59
+osrm+vroom (engine configured)   : departed=21:00 engine=osrm suggest.engine=vroom order=성수,잠실,강남역,여의도,마포 totalKm=39.3 totalMinutes=64 dashboard=83.6km/road-plan
+  ETA 잠실 21:18 -> 여의도 21:39 -> 성수 22:01 -> 마포 22:24 -> 강남역 22:46
+✔ the actual JAR times the route on roads when the engine is configured and on straight lines when it is not (5539.466083ms)
+ℹ tests 1
+# 경계 값 (전용 엔진, 터널 경유)
+vroom 50 jobs: http 200 code 0 in 0.48s unassigned=0
+osrm table 50 points: http 200 in 0.51s
+vroom 100 jobs: http 200 code 0 in 1.04s unassigned=0
+osrm table 100 points: http 200 in 1.07s
+vroom 200 jobs: http 200 code 0 in 2.45s unassigned=0
+osrm table 200 points: http 200 in 2.39s
+# 바다 한가운데 좌표(131.5,36.0)를 VROOM에 보냄 -> HTTP 500 {"code":3,"error":"Could not find route near location [131.500000,36.000000]"}  (서버는 이를 장애가 아닌 '계획 불가'로 보고 2-opt로 떨어짐, 알림·휴지 없음)
+# 같은 좌표를 OSRM table에 보냄 -> code Ok, 가장 가까운 도로로 붙여 약 360km로 계산(null 아님)
+# (정정) 제주 좌표(126.5312,33.4996)는 본토에 붙은 것이 아니라 제주 도로(광양11길, 25m)에 붙고 배편 구간을 포함해 서울에서 539km, 8.2시간으로 계산된다. 울릉(130.9057,37.4844)도 412km, 6.0시간(배편 포함). OSRM car 프로필이 배편을 도로처럼 쓴다.
+# 전국 확인 (TEST 호스트에서 사설 IP 호출, 서울시청 기준): 인천 32km 0.5h, 대전 167km 2.1h, 전주 212km 2.7h, 강릉 216km 2.9h, 대구 282km 3.6h, 광주 297km 3.7h, 부산 393km 4.9h. 서울→부산을 직선×1.4÷25km/h로 하면 18.2h다.
+# 전국에 흩어진 좌표: 50점 table 0.35s·VROOM 0.35s, 200점 table 1.79s·VROOM 1.69s, null 0개, unassigned 0건.

@@ -342,7 +342,12 @@ ETA·자동 배송 순서·운행 거리를 직선거리 대신 실도로 기준
 - 알림: `route-engine` / `OSRM_UNAVAILABLE`·`VROOM_UNAVAILABLE`이 10분에 1회 나간다(오류 알림 설정을 따른다).
 - 엔진은 외부에 노출하지 않는다. 같은 호스트면 `127.0.0.1:5005`·`3005`, 다른 호스트면 사설 IP에 연결하고 보안 그룹으로 TEST 호스트만 허용한다. 설치·갱신·중지는 [deploy/new-stack/route-engine.md](../deploy/new-stack/route-engine.md)에 있다. **TEST 호스트(RAM 908MB)에는 올리지 않고, 같은 VPC의 전용 인스턴스 `meatbox-route-engine`(t3.medium, 사설 IP 172.31.0.176)에 엔진을 설치했다. 평소 정지 상태이고 API 설정은 코드 배포 뒤에 넣는다.**
 - 지도 데이터 © OpenStreetMap 기여자(ODbL), OSRM·VROOM은 BSD-2-Clause다. 운영 웹 지도 저작 표기는 아래 "남은 경계"를 본다.
-- 남은 경계: 실시간 교통·좌회전 제한·정차 위치 선정·GPS 누적 실측 거리는 하지 않는다(`actualKm`은 여전히 `null`). 지도 갱신은 `prepare.sh` 재실행뿐이다. **웹 지도 저작 표기**: 웹은 MapLibre 저작 표기 컨트롤을 켜지만 스타일(`dsv-korea-v1.json`)에는 정적 문구가 없고 OpenFreeMap TileJSON(`tiles.openfreemap.org/planet`)이 주는 문구에 의존한다. 그 문구에 OSM이 들어 있는지는 실행 화면에서 확인하지 못했으므로 **확인이 필요**하다(웹은 이번 범위에서 수정하지 않았다).
+- 남은 경계: 실시간 교통·좌회전 제한·정차 위치 선정·GPS 누적 실측 거리는 하지 않는다(`actualKm`은 여전히 `null`). 지도 갱신은 `prepare.sh` 재실행뿐이다.
+- **웹 지도 저작 표기**: 웹은 MapLibre 저작 표기 컨트롤을 켜고 스타일은 TileJSON(`tiles.openfreemap.org/planet`)을 가리킨다. 그 TileJSON의 `attribution`은 "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"(OSM 저작권 링크 포함)이다(2026-10-17 직접 조회). 따라서 OSM 문구는 있고 docs에 더할 것은 없다. 화면 캡처로는 확인하지 않았다.
+- **웹 대시보드 라벨(웹 후속 필요)**: 웹은 응답의 `distanceBasis`를 읽지 않는다. 표 머리글은 "추정 거리(km)", 안내 문구는 "직선거리에 우회 계수를 곱한 추정값"으로 고정이다. 엔진이 답해 `road-plan`이 와도 화면은 "추정"으로 보인다. 수치는 맞지만 설명이 틀리므로 웹에서 `distanceBasis`가 `road-plan`이면 "도로 기준 계획 거리"로 바꿔야 한다(이번 범위에서는 웹을 수정하지 않았다).
+- 지도는 한국 전체다. 전국에 흩어진 200곳도 table 약 1.8초, VROOM 약 1.7초다(수도권만 모인 200곳은 약 2.4초). 제주·울릉은 OSRM car 프로필이 배편을 도로처럼 계산해 섬 배송지의 ETA에 배편 시간이 들어간다.
+- 엔진이 계획할 수 없는 배송지(VROOM 코드 2·3, 도로가 닿지 않는 좌표)가 하나라도 있으면 그 요청은 2-opt로 떨어진다. 엔진 장애가 아니므로 알림도 휴지도 없다. 장애(연결 실패·5xx·시간 초과)는 알림 1회와 30초 휴지다.
+- 배송지 200곳이면 OSRM table 약 2.4초 + VROOM 약 2.45초를 차례로 부른다(각각 시간 초과 3초 안, 합쳐 약 5초). 50곳 이하는 합쳐 1초 안이다.
 
 ### 자동 배송 순서 설정 (Kotlin API)
 
