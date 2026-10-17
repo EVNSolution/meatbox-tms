@@ -340,7 +340,7 @@ ETA·자동 배송 순서·운행 거리를 직선거리 대신 실도로 기준
 - **둘 다 비면 지금 동작과 바이트 단위로 같다.** 응답·저장 형식에 `engine` 필드도 없다.
 - 호출은 요청 스레드에서 동기 1회, 시간 초과 3초, 배송지 200개 상한이다. 오류·시간 초과·응답 불량이면 직선거리·2-opt로 떨어지고 `engine: "haversine"`을 남긴다. 실패 뒤 30초는 엔진을 다시 부르지 않아 요청이 3초씩 막히지 않는다. 같은 좌표 집합의 행렬은 60초 캐시한다.
 - 알림: `route-engine` / `OSRM_UNAVAILABLE`·`VROOM_UNAVAILABLE`이 10분에 1회 나간다(오류 알림 설정을 따른다).
-- 엔진은 TEST 호스트 로컬 포트(`127.0.0.1:5005`·`3005`)에만 열고 외부에 노출하지 않는다. 설치·갱신·중지는 [deploy/new-stack/route-engine.md](../deploy/new-stack/route-engine.md)에 있다. **TEST 호스트는 RAM 908MB라 아직 설치하지 않았다(인스턴스 증설 선행).**
+- 엔진은 외부에 노출하지 않는다. 같은 호스트면 `127.0.0.1:5005`·`3005`, 다른 호스트면 사설 IP에 연결하고 보안 그룹으로 TEST 호스트만 허용한다. 설치·갱신·중지는 [deploy/new-stack/route-engine.md](../deploy/new-stack/route-engine.md)에 있다. **TEST 호스트(RAM 908MB)에는 올리지 않고, 같은 VPC의 전용 인스턴스 `meatbox-route-engine`(t3.medium, 사설 IP 172.31.0.176)에 엔진을 설치했다. 평소 정지 상태이고 API 설정은 코드 배포 뒤에 넣는다.**
 - 지도 데이터 © OpenStreetMap 기여자(ODbL), OSRM·VROOM은 BSD-2-Clause다. 운영 웹 지도 저작 표기는 아래 "남은 경계"를 본다.
 - 남은 경계: 실시간 교통·좌회전 제한·정차 위치 선정·GPS 누적 실측 거리는 하지 않는다(`actualKm`은 여전히 `null`). 지도 갱신은 `prepare.sh` 재실행뿐이다. **웹 지도 저작 표기**: 웹은 MapLibre 저작 표기 컨트롤을 켜지만 스타일(`dsv-korea-v1.json`)에는 정적 문구가 없고 OpenFreeMap TileJSON(`tiles.openfreemap.org/planet`)이 주는 문구에 의존한다. 그 문구에 OSM이 들어 있는지는 실행 화면에서 확인하지 못했으므로 **확인이 필요**하다(웹은 이번 범위에서 수정하지 않았다).
 

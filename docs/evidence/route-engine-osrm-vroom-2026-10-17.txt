@@ -22,3 +22,17 @@ osrm+vroom (engine configured)   : departed=20:27 engine=osrm suggest.engine=vro
 # docker stats (엔진 실행 중)
 ups-route-vroom-1 41.14MiB / 3.814GiB
 ups-route-osrm-1 1.158GiB / 3.814GiB
+
+# 전용 인스턴스 확인 (2026-10-17): meatbox-route-engine i-03fc76005facd40d8, t3.medium, 사설 IP 172.31.0.176
+# TEST 호스트(172.31.15.12)에서 사설 IP로 호출한 결과
+osrm route: 200 in 0.003698s
+osrm table 150 points: 200 in 1.671621s
+table 20 points: 200 in 0.171229s
+table 60 points: 200 in 0.583724s
+table 100 points: 200 in 0.989442s
+table 150 points: 200 in 1.579834s
+table 200 points: 200 in 2.449150s
+table 200 points: 200 in 2.420025s
+vroom: 200
+# 정지 -> 시작 후 약 1분: docker ps에 ups-route-osrm-1, ups-route-vroom-1 Up, osrm after reboot: 200, vroom after reboot: 200
+# 엔진 인스턴스 메모리(실행 중): total 3832MB, used 1893MB, available 1938MB
