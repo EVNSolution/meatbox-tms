@@ -1,0 +1,24 @@
+# OSRM+VROOM 경로 엔진 실제 JAR 시나리오 (2026-10-17, 로컬)
+# 명령: ROUTE_ENGINE_OSRM_URL=http://127.0.0.1:5005 ROUTE_ENGINE_VROOM_URL=http://127.0.0.1:3005/ node --test test/api-connection/kotlin-route-engine.test.mjs
+# 엔진: 08_UPS/clever-ups/infra/route를 임시 폴더에 복사해 colima(docker 29.5, 4GiB VM)로 실행. OSRM v5.27.1 MLD, 한국 지도(미리 만든 .osrm 파일 사용).
+# 서버: services/api bootJar (커밋 fde7c4b 기준). 주문 5건을 /api/meatbox/orders로 수신 -> calculate/publish -> suggest -> departed -> ETA 조회.
+# 출발점·창고: 서울시청(37.5665,126.978). 두 번 실행(엔진 설정 없음 / 있음)하고 같은 주문으로 비교한다.
+# ETA 줄은 확정된 현재 순서(suggest를 적용하지 않음) 기준이라 두 실행의 배송지 순서가 같다.
+
+haversine (engine not configured): departed=20:27 engine=(none) suggest.engine=(none) order=마포,여의도,강남역,성수,잠실 totalKm=43.1 totalMinutes=123 dashboard=91km/estimate
+  ETA 잠실 21:09 -> 여의도 22:06 -> 성수 22:51 -> 마포 23:39 -> 강남역 00:26
+osrm+vroom (engine configured)   : departed=20:27 engine=osrm suggest.engine=vroom order=성수,잠실,강남역,여의도,마포 totalKm=39.3 totalMinutes=64 dashboard=83.6km/road-plan
+  ETA 잠실 20:44 -> 여의도 21:06 -> 성수 21:27 -> 마포 21:51 -> 강남역 22:13
+✔ the actual JAR times the route on roads when the engine is configured and on straight lines when it is not (6009.379875ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6109.026083
+
+# docker stats (엔진 실행 중)
+ups-route-vroom-1 41.14MiB / 3.814GiB
+ups-route-osrm-1 1.158GiB / 3.814GiB

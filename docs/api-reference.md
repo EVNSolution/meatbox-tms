@@ -127,7 +127,7 @@
 
 - `vehicles`는 배차가 확정(`published`·`amending`)된 날만 채운다. 그 밖의 날은 빈 배열이다.
 - 시각은 엔진이 기록한 운영 사건에서 읽는다(`departedAt`은 출발, `lastArrivedAt`은 마지막 도착, `finishedAt`은 모든 착지를 닫은 뒤 마지막 완료·보류). 아직 닫지 못한 차량은 `finishedAt`·`driveMinutes`가 `null`이다.
-- `distanceKm`는 **추정**이다. 창고(`meatbox.route.depot-*`가 있으면)부터 좌표가 있는 착지를 현재 순서로 이은 직선거리에 ETA 모델의 우회 계수(`meatbox.eta.detour-factor`)를 곱한 값이다. 좌표가 하나도 없으면 `null`. 서버는 실제 주행 경로를 보관하지 않으므로(위치 샘플은 최근 120건) `actualKm`은 항상 `null`(미수신)이다.
+- `distanceKm`는 기본적으로 **추정**이다. `MEATBOX_OSRM_BASE_URL`이 있고 OSRM이 답하면 창고부터 좌표 있는 착지를 현재 순서로 이은 **도로 기준 계획 거리**(OSRM `distance` 합)이고 `distanceBasis`는 `"road-plan"`이다. 엔진이 없거나 답하지 않으면 아래 추정이고 `"estimate"`다. 창고(`meatbox.route.depot-*`가 있으면)부터 좌표가 있는 착지를 현재 순서로 이은 직선거리에 ETA 모델의 우회 계수(`meatbox.eta.detour-factor`)를 곱한 값이다. 좌표가 하나도 없으면 `null`. 서버는 실제 주행 경로를 보관하지 않으므로(위치 샘플은 최근 120건) `actualKm`은 항상 `null`(미수신)이다.
 - `driver`는 차량의 **지금** 배정 계정이다. 날짜별 배정 기록은 없다.
 - `zones`는 주문의 `zoneIds`로 모은다. 미트박스 주문은 `zoneIds`가 비어 있어 `unlocatedOrders`로 센다(좌표로 권역을 정하는 일은 웹의 배차 화면이 한다).
 - `incentiveRules`가 `null`이면 규칙 파일이 없는 것이고 `incentive` 필드는 어디에도 없다. 파일이 깨졌으면 `incentiveRules` 대신 `incentiveRulesError: "INCENTIVE_RULES_INVALID"`가 오고 수수료는 계산하지 않는다. 계산은 [운영 런북](operations.md#추가-수수료-규칙-교체)을 따른다.
@@ -680,23 +680,24 @@
 ```json
 {
   "date": "2026-11-02", "vehicleId": "G1", "revision": 8,
-  "stopOrder": ["O3", "O4", "O1"], "changed": true, "totalMinutes": 70, "totalKm": 24.8,
+  "stopOrder": ["O3", "O4", "O1"], "changed": true, "totalMinutes": 70, "totalKm": 24.8, "engine": "vroom",
   "placed": [{ "stopId": "O4", "placed": "no-coordinates", "afterStopId": "O1" }]
 }
 ```
 
 - `stopOrder`는 전체 배송지 ID다. `revision`은 `GET route`와 같은 값이라 `route_reordered`의 `expectedRevision`으로 그대로 보낸다. `changed`는 지금 순서와 다른지다.
-- `totalMinutes`는 열린 배송지 사이 이동 시간과 배송지당 작업 시간(`MEATBOX_ETA_SERVICE_MINUTES`)의 합이다. `totalKm`은 이동 시간을 평균 속도(`MEATBOX_ETA_SPEED_KMH`)로 환산한 도로 추정 거리다. 둘 다 직선거리 × 우회계수 모델의 값이라 실측이 아니다.
+- `totalMinutes`는 열린 배송지 사이 이동 시간과 배송지당 작업 시간(`MEATBOX_ETA_SERVICE_MINUTES`)의 합이다. `totalKm`은 이동 시간을 평균 속도(`MEATBOX_ETA_SPEED_KMH`)로 환산한 도로 추정 거리다. 둘 다 모델의 값이라 실측이 아니다. 직선거리 × 우회계수 모델이 기본이고, 경로 엔진이 답하면 이동 시간은 OSRM 구간 행렬, `totalKm`은 그 행렬의 도로 거리다.
+- `engine`은 경로 엔진(`MEATBOX_OSRM_BASE_URL`·`MEATBOX_VROOM_URL`)이 하나라도 설정됐을 때만 있다. 둘 다 비면 필드가 없고 응답은 이전과 바이트 단위로 같다. `vroom`은 순서를 VROOM이 정했다는 뜻이고, `osrm`은 순서는 최근접+2-opt로 정하되 이동 시간을 OSRM이 줬다는 뜻이다. `haversine`은 엔진이 설정됐지만 답하지 않아(오류·시간 초과 3초·200개 초과) 직선거리로 계산했다는 뜻이다.
 - 출발 전에는 모든 배송지를, 출발 뒤에는 `pending` 배송지만 옮긴다. 현재·완료·보류 배송지는 제 자리에 있다(`route_reordered`의 규칙과 같다). 종료된 경로는 `409 ROUTE_LOCKED`다.
 - 시작점은 출발 전에 창고 좌표(`MEATBOX_ROUTE_DEPOT_LAT/LNG`), 없으면 기사 앱의 최신 위치다. 출발 뒤에는 최신 위치, 없으면 직전 닫힌 배송지, 없으면 창고다. 시작점이 없으면 첫 열린 배송지가 그대로 첫 자리에 남는다.
-- 알고리즘은 시작점에서의 최근접 이웃 뒤 2-opt(최대 100회 반복, 배송지 200개 상한)다. 지금 순서보다 긴 순서는 제안하지 않는다(`lockFirst`가 있으면 제외).
+- 알고리즘은 시작점에서의 최근접 이웃 뒤 2-opt(최대 100회 반복, 배송지 200개 상한)다. `MEATBOX_VROOM_URL`이 있으면 좌표가 있는 열린 배송지를 VROOM(`POST /`, 차량 1대, 열린 경로, `g: false`)에 보내 받은 순서를 쓰고, 답이 없거나 배송지 ID가 틀리면 2-opt로 떨어진다. `lockFirst` 배송지는 차량 시작점으로 보내고 답 맨 앞에 붙인다. 닫힌 배송지 고정과 좌표 없는 배송지 배치는 엔진과 무관하게 서버 규칙이다. 지금 순서보다 긴 순서는 제안하지 않는다(`lockFirst`가 있으면 제외).
 - 좌표가 없는 배송지는 주소 앞 3어절이 같은 배송지 바로 뒤에, 없으면 열린 배송지의 맨 끝에 놓고 `placed`에 `no-coordinates`로 알린다. 배송지는 이미 `assignmentUnitId` 묶음이라 "같은 묶음 뒤"는 따로 없다.
 - `lockFirst`는 열린 배송지 중 좌표가 있는 배송지(묶음의 아무 주문 ID)이고 열린 배송지의 첫 자리가 된다. 아니면 `400 INVALID_INPUT`, 이 차량의 배송지가 아니면 `404 STOP_NOT_FOUND`다.
-- **한계.** 도로 데이터가 없어 좌회전 제한·간선도로 위주(요구서 62번의 휴리스틱)는 계산하지 않는다. 거리는 `TravelTimeEstimator` 한 곳에서만 나오므로 경로 API 구현체로 바꾸면 이 제안과 ETA가 같이 바뀐다. 2-opt는 구간을 뒤집으므로 오가는 시간이 다른 추정기라면 계산부를 다시 본다. 자동 주행 경로(63)는 범위 밖이다.
+- **한계.** 좌회전 제한·간선도로 위주(요구서 62번의 휴리스틱)와 실시간 교통은 계산하지 않는다. 엔진이 없으면 직선거리 모델이고, 있어도 OSRM 기본 `car` 프로필의 정적 도로 기준이다. 거리는 `TravelTimeEstimator` 한 곳에서만 나오므로 경로 API 구현체로 바꾸면 이 제안과 ETA가 같이 바뀐다. 2-opt는 구간을 뒤집으므로 오가는 시간이 다른 추정기라면 계산부를 다시 본다. 자동 주행 경로(63)는 범위 밖이다.
 
 ### 도착 예정 시각 (ETA)
 
-`departed` 이벤트가 성공하면 서버가 그 차량의 남은 배송지마다 도착 예정 시각을 계산해 날짜 체크포인트의 `etas`에 저장한다. 외부 경로 API는 쓰지 않는다. 저장 형태(날짜 상태의 `vehicleStates[v].eta`와 같다):
+`departed` 이벤트가 성공하면 서버가 그 차량의 남은 배송지마다 도착 예정 시각을 계산해 날짜 체크포인트의 `etas`에 저장한다. 상용 경로 API(네이버·TMAP·Google)는 쓰지 않는다. 시연용으로 자체 OSRM+VROOM 엔진을 쓸 수 있고, 없으면 직선거리 모델이다. 저장 형태(날짜 상태의 `vehicleStates[v].eta`와 같다):
 
 ```json
 {
@@ -706,10 +707,11 @@
 }
 ```
 
-- 모델: 도착 = 출발 시각 + 첫 구간 이동. 이후 도착 = 직전 도착 + 배송지당 작업시간 + 이동. 이동 시간 = 직선거리(하버사인) × 우회계수 ÷ 평균속도. ETA는 분 단위로 반올림한다. 순서는 출발 때 확정된 경로 순서다.
+- 모델: 도착 = 출발 시각 + 첫 구간 이동. 이후 도착 = 직전 도착 + 배송지당 작업시간 + 이동. 이동 시간 = 직선거리(하버사인) × 우회계수 ÷ 평균속도. `MEATBOX_OSRM_BASE_URL`이 있고 OSRM이 답하면 이동 시간은 OSRM `table` 행렬 값(도로 기준 초)이다. ETA는 분 단위로 반올림한다. 순서는 출발 때 확정된 경로 순서다.
 - 출발 위치: 이벤트 `location`, 없으면 그 차량의 가장 최근 위치 샘플. 둘 다 없으면 첫 배송지 이동 시간을 0으로 두고 그 배송지는 `estimated: false`다. 합성 차량 좌표(`truck`)는 쓰지 않는다.
 - 좌표 없는 배송지는 직전 도착에 작업시간만 더하고 `estimated: false`다. 다음 배송지의 이동은 마지막으로 좌표를 아는 배송지에서 이어 계산한다.
 - 출발 시각: 이벤트 `occurredAt`. 서버 수신 시각과 5분(`MAX_CLOCK_SKEW_MILLIS`)보다 더 다르면 수신 시각을 쓴다. `departureTimeSource`는 `"device"` 또는 `"server"`다.
+- 산출 출처 `engine`(`osrm` 또는 `haversine`)은 `MEATBOX_OSRM_BASE_URL`이 설정됐을 때만 저장된다. `osrm`은 행렬 값으로 계산했다는 뜻이고 `haversine`은 엔진이 답하지 않아 직선거리로 떨어졌다는 뜻이다. 설정이 없으면 필드가 없어 저장 형태가 이전과 같다. 엔진 호출은 요청 스레드에서 동기 1회(3초), 같은 좌표 집합의 행렬은 60초 캐시, 실패 뒤 30초는 엔진을 다시 부르지 않는다. 오류는 알림 `route-engine` / `OSRM_UNAVAILABLE`·`VROOM_UNAVAILABLE`을 10분에 1회 보낸다.
 - 같은 `eventId` 재전송은 저장된 값을 바꾸지 않고 송신함에도 더하지 않는다. 한 차량에는 최신 ETA 하나만 남는다.
 
 재산출(`departed` 뒤, 그 차량에 저장된 ETA가 있을 때만. 웹 명령으로 출발한 차량은 ETA가 없어 재산출하지 않는다):
