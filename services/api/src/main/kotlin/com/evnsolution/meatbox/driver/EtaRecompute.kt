@@ -35,9 +35,8 @@ internal fun recomputeRemaining(
     always: Boolean,
 ): Recomputed {
     val open = after.stops.withIndex().filter { it.value.status in OPEN }
-    val computed = context.model.compute(
-        open.map { EtaStopInput(it.value.stopId, stopPoint(it.value)) }, anchor, origin,
-    )
+    val inputs = open.map { EtaStopInput(it.value.stopId, stopPoint(it.value)) }
+    val computed = context.model.compute(inputs, anchor, origin)
     val openIds = open.map { it.value.stopId }.toSet()
     val routeIds = after.stops.map { it.stopId }.toSet()
     val stops = driverJson.createArrayNode()
@@ -63,6 +62,7 @@ internal fun recomputeRemaining(
         previous.get("departedAt")?.let { set("departedAt", it) }
         previous.get("departureTimeSource")?.let { set("departureTimeSource", it) }
         put("recomputes", previous.path("recomputes").asInt(0) + 1)
+        context.model.engine(inputs, origin)?.let { put("engine", it) }
         set("stops", stops)
         set("reported", if (notify) fresh else previous.path("reported").deepCopy())
     }

@@ -36,9 +36,19 @@ data class EtaConfig(
     }
 }
 
-/** Travel time between two points. A routing API replaces [HaversineEstimator] behind this one method. */
+/** Travel time between two points. A routing engine replaces [HaversineEstimator] behind [seconds]. */
 fun interface TravelTimeEstimator {
     fun seconds(from: EtaPoint, to: EtaPoint): Int
+
+    /**
+     * Gives the estimator all points of one calculation at once, so an engine can answer them from one table. Returns
+     * the engine that will answer (`osrm`, or `haversine` when the engine is configured but did not answer), or null
+     * when the estimator has no engine. The default does nothing.
+     */
+    fun prepare(points: List<EtaPoint>): String? = null
+
+    /** The road distance between two points in metres, or null when this estimator has none. */
+    fun meters(from: EtaPoint, to: EtaPoint): Int? = null
 }
 
 class HaversineEstimator(private val config: EtaConfig) : TravelTimeEstimator {
@@ -72,6 +82,7 @@ class EtaModel(
      * `estimated = false`. Times round to the minute, as contract 3.2 shows them.
      */
     fun compute(stops: List<EtaStopInput>, departure: Instant, origin: EtaPoint?): List<EtaStop> {
+        engine(stops, origin)
         var seconds = departure.epochSecond
         var position = origin
         return stops.mapIndexed { index, stop ->
@@ -82,6 +93,10 @@ class EtaModel(
             EtaStop(stop.stopId, index + 1, roundToMinute(seconds), leg != null)
         }
     }
+
+    /** The engine that times these stops (see [TravelTimeEstimator.prepare]); the answer is cached by the estimator. */
+    fun engine(stops: List<EtaStopInput>, origin: EtaPoint?): String? =
+        estimator.prepare(listOfNotNull(origin) + stops.mapNotNull { it.point })
 
     private fun roundToMinute(epochSeconds: Long): Instant =
         Instant.ofEpochSecond((epochSeconds.toDouble() / SECONDS_PER_MINUTE).roundToLong() * SECONDS_PER_MINUTE)

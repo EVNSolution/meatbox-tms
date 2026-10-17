@@ -4,6 +4,7 @@ import com.evnsolution.meatbox.legacy.LegacySettings
 import com.evnsolution.meatbox.legacy.DispatchDataReader
 import com.evnsolution.meatbox.dispatch.DispatchStore
 import com.evnsolution.meatbox.eta.EtaPoint
+import com.evnsolution.meatbox.eta.TravelTimeEstimator
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -48,11 +49,18 @@ internal class RouteFixture(
     fun restarted(): RouteFixture = RouteFixture.open(state.parent, now)
 
     companion object {
-        fun open(root: Path, now: AtomicLong, depot: EtaPoint? = null): RouteFixture {
+        fun open(
+            root: Path,
+            now: AtomicLong,
+            depot: EtaPoint? = null,
+            estimator: TravelTimeEstimator? = null,
+        ): RouteFixture {
             val reader = DispatchDataReader(LegacySettings(URI("http://127.0.0.1:1"), root.resolve("data")))
             val dispatch = DispatchStore(reader, root.resolve("state"), now::get)
             val clock = { Instant.ofEpochMilli(now.get()) }
-            val driver = DriverStore(dispatch, root.resolve("state"), clock, { _, _ -> true }, depot = depot)
+            val driver = DriverStore(
+                dispatch, root.resolve("state"), clock, { _, _ -> true }, depot = depot, estimator = estimator,
+            )
             return RouteFixture(driver, dispatch, root.resolve("state"), now)
         }
     }
@@ -67,6 +75,7 @@ internal fun routeFixture(
     coordinates: Map<String, String> = emptyMap(),
     addresses: Map<String, String> = emptyMap(),
     depot: EtaPoint? = null,
+    estimator: TravelTimeEstimator? = null,
     /** Raw JSON members added to an order by ID, such as `"items":[...],"csNote":"..."`. */
     extras: Map<String, String> = emptyMap(),
     /** More orders for G1, each `(id, destination name)`, to size-test a big day. */
@@ -95,7 +104,8 @@ internal fun routeFixture(
         bulk.mapIndexed { index, (id, name) -> "," + order(id, name, 5 + index) }.joinToString("")
     }]}
     """.trimIndent())
-    val fixture = RouteFixture.open(root, AtomicLong(Instant.parse("${DRIVER_DATE}T01:00:00Z").toEpochMilli()), depot)
+    val start = AtomicLong(Instant.parse("${DRIVER_DATE}T01:00:00Z").toEpochMilli())
+    val fixture = RouteFixture.open(root, start, depot, estimator)
     beforePublish(fixture)
     fun run(command: ObjectNode) =
         fixture.dispatch.command(DRIVER_DATE, command.put("expectedBoot", fixture.dispatch.boot))

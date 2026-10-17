@@ -6,6 +6,8 @@ import com.evnsolution.meatbox.dispatch.DispatchException
 import com.evnsolution.meatbox.legacy.DispatchDataException
 import com.evnsolution.meatbox.dispatch.DispatchStore
 import com.evnsolution.meatbox.eta.EtaConfig
+import com.evnsolution.meatbox.eta.HaversineEstimator
+import com.evnsolution.meatbox.eta.TravelTimeEstimator
 import com.evnsolution.meatbox.eta.EtaModel
 import com.evnsolution.meatbox.eta.EtaPoint
 import com.evnsolution.meatbox.eta.RoutePlanner
@@ -53,8 +55,10 @@ class DriverStore(
     etaConfig: EtaConfig = EtaConfig(),
     /** Where routes start before departure (`meatbox.route.depot-lat/lng`), or null when the installation sets none. */
     internal val depot: EtaPoint? = null,
+    /** The road engine's travel times (`MEATBOX_OSRM_BASE_URL`), or null: straight lines. */
+    estimator: TravelTimeEstimator? = null,
 ) {
-    internal val eta = EtaModel(etaConfig)
+    internal val eta = EtaModel(etaConfig, estimator ?: HaversineEstimator(etaConfig))
     internal val planner = RoutePlanner(eta.estimator)
 
     private val fileLock = DriverFileLock(directory.resolve(".driver-state.lock"))

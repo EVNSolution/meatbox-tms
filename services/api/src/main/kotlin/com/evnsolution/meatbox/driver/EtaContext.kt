@@ -49,7 +49,8 @@ internal fun etaOf(event: DriverEvent, receivedAt: String, context: EtaContext, 
     val time = eventTime(event, receivedAt)
     val origin = point(event.body.path("location"), "lat", "lng") ?: context.sampledOrigin
     val open = after.stops.filter { it.status in OPEN }
-    val computed = context.model.compute(open.map { EtaStopInput(it.stopId, stopPoint(it)) }, time.instant, origin)
+    val inputs = open.map { EtaStopInput(it.stopId, stopPoint(it)) }
+    val computed = context.model.compute(inputs, time.instant, origin)
     val stops = driverJson.createArrayNode().apply {
         computed.forEach { add(stopNode(it.stopId, it.sequence, it.eta, it.estimated)) }
     }
@@ -59,6 +60,7 @@ internal fun etaOf(event: DriverEvent, receivedAt: String, context: EtaContext, 
         put("departedAt", stampOf(time.instant))
         put("departureTimeSource", if (time.trusted) "device" else "server")
         put("recomputes", 0)
+        context.model.engine(inputs, origin)?.let { put("engine", it) }
         set("stops", stops)
         set("reported", reportedOf(stops))
     }

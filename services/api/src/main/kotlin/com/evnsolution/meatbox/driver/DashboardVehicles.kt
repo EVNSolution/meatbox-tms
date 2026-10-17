@@ -17,6 +17,7 @@ private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
 private const val MS_PER_MINUTE = 60_000.0
 private const val EARTH_RADIUS_KM = 6371.0088
 private const val TENTH = 10.0
+private const val METRES_PER_KM = 1000.0
 
 /** The per-vehicle rows of the [Dashboard]: times from the engine's events, figures from the route. */
 internal class DashboardVehicles(private val store: DriverStore) {
@@ -60,8 +61,9 @@ internal class DashboardVehicles(private val store: DriverStore) {
             put("stopsSkipped", route.stops.count { it.status == "skipped" })
             setTime("departedAt", departed).setTime("lastArrivedAt", arrived).setTime("finishedAt", finished)
             if (minutes == null) putNull("driveMinutes") else put("driveMinutes", minutes)
-            distanceOf(route)?.let { put("distanceKm", it) } ?: putNull("distanceKm")
-            put("distanceBasis", "estimate").putNull("actualKm")
+            val distance = distanceOf(route)
+            if (distance == null) putNull("distanceKm") else put("distanceKm", distance.km)
+            put("distanceBasis", if (distance?.road == true) "road-plan" else "estimate").putNull("actualKm")
             put("boxesPerStop", roundTenth(boxes / route.stops.size))
             if (minutes != null && stopsDone > 0) put("minutesPerStop", roundTenth(minutes / stopsDone))
             else putNull("minutesPerStop")
@@ -87,12 +89,27 @@ internal class DashboardVehicles(private val store: DriverStore) {
             .put("excess", excess).put("amount", Math.round(excess * rules.ratePerUnit)).put("stops", stops)
     }
 
-    /** Straight line from the depot (when set) through the stops with coordinates, times the detour factor, in km. */
-    private fun distanceOf(route: Route): Double? {
+    private class Distance(val km: Double, val road: Boolean)
+
+    /**
+     * From the depot (when set) through the stops with coordinates, in km. The road engine's planned distance when it
+     * answers (`road`); else the straight line times the detour factor.
+     */
+    private fun distanceOf(route: Route): Distance? {
         val points = listOfNotNull(store.depot) + route.stops.mapNotNull(::stopPoint)
         if (route.stops.none { stopPoint(it) != null }) return null
-        val line = points.zipWithNext().sumOf { (from, to) -> kilometres(from, to) }
-        return roundTenth(line * store.eta.config.detourFactor)
+        val legs = points.zipWithNext()
+        val road = roadKilometres(points, legs)
+        val line = legs.sumOf { (from, to) -> kilometres(from, to) }
+        return Distance(roundTenth(road ?: (line * store.eta.config.detourFactor)), road != null)
+    }
+
+    /** The planned road distance of [legs], or null when the road engine does not answer every leg. */
+    private fun roadKilometres(points: List<EtaPoint>, legs: List<Pair<EtaPoint, EtaPoint>>): Double? {
+        val estimator = store.eta.estimator
+        if (estimator.prepare(points) != "osrm") return null
+        val metres = legs.map { (from, to) -> estimator.meters(from, to) }
+        return if (metres.any { it == null }) null else metres.sumOf { it!! } / METRES_PER_KM
     }
 
     private fun kilometres(from: EtaPoint, to: EtaPoint): Double {

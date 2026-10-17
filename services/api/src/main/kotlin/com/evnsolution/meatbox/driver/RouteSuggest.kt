@@ -11,6 +11,7 @@ import kotlin.math.roundToInt
 private const val SECONDS_PER_MINUTE = 60
 private const val SECONDS_PER_HOUR = 3600.0
 private const val TENTHS = 10
+private const val METRES_PER_KM = 1000.0
 
 private val PlanStop.canLead get() = !fixed && point != null
 
@@ -58,7 +59,9 @@ private fun proposal(route: Route, plan: RoutePlan, current: List<String>, secon
         set("stopOrder", driverJson.createArrayNode().apply { plan.order.forEach(::add) })
         put("changed", plan.order != current)
         put("totalMinutes", (seconds.toDouble() / SECONDS_PER_MINUTE).roundToInt())
-        put("totalKm", (plan.travelSeconds / SECONDS_PER_HOUR * speedKmh * TENTHS).roundToInt().toDouble() / TENTHS)
+        val km = plan.travelMeters?.let { it / METRES_PER_KM } ?: (plan.travelSeconds / SECONDS_PER_HOUR * speedKmh)
+        put("totalKm", (km * TENTHS).roundToInt().toDouble() / TENTHS)
+        plan.engine?.let { put("engine", it) }
         set("placed", driverJson.createArrayNode().apply {
             plan.placed.forEach {
                 add(

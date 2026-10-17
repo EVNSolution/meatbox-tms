@@ -9,8 +9,18 @@ class PlanStop(val stopId: String, val address: String, val point: EtaPoint?, va
 /** A stop without coordinates and the stop it was put behind (null: the end of the free stops). */
 class Placement(val stopId: String, val afterStopId: String?)
 
-/** [order] holds every stop ID. [travelSeconds] is the travel along the free located stops, work time excluded. */
-class RoutePlan(val order: List<String>, val travelSeconds: Int, val placed: List<Placement>)
+/**
+ * [order] holds every stop ID. [travelSeconds] is the travel along the free located stops, work time excluded.
+ * [travelMeters] is the road distance of the same travel (null without a road engine) and [engine] names what timed
+ * it (`osrm`, `haversine` after a fallback, null when no engine is configured).
+ */
+class RoutePlan(
+    val order: List<String>,
+    val travelSeconds: Int,
+    val placed: List<Placement>,
+    val travelMeters: Int? = null,
+    val engine: String? = null,
+)
 
 /**
  * First automatic order: nearest neighbour from the origin, improved by 2-opt, over the stops that are not fixed.
@@ -32,6 +42,7 @@ class RoutePlanner(private val estimator: TravelTimeEstimator) {
         val lockedAt = lockFirst?.let { id -> located.indexOfFirst { it.stopId == id } }
         require(lockedAt == null || lockedAt >= 0) { "lockFirst must be a free stop with coordinates" }
 
+        val engine = estimator.prepare(listOfNotNull(origin) + located.mapNotNull { it.point })
         val path = Path(located, origin)
         val head = lockedAt ?: if (origin == null && located.isNotEmpty()) 0 else null
         val candidate = path.improve(path.nearest(head), head != null)
@@ -47,7 +58,7 @@ class RoutePlanner(private val estimator: TravelTimeEstimator) {
         }
         val order = stops.map { it.stopId }.toMutableList()
         slots.forEachIndexed { slot, index -> order[index] = ids[slot] }
-        return RoutePlan(order, path.seconds(best), placed)
+        return RoutePlan(order, path.seconds(best), placed, path.meters(best, origin), engine)
     }
 
     /** The first three words of both addresses match (a district and a road, or a road and a number). */
@@ -58,7 +69,7 @@ class RoutePlanner(private val estimator: TravelTimeEstimator) {
     }
 
     /** Travel seconds between the located stops (by their index in the list) and from the origin, computed once. */
-    private inner class Path(stops: List<PlanStop>, origin: EtaPoint?) {
+    private inner class Path(private val stops: List<PlanStop>, origin: EtaPoint?) {
         private val n = stops.size
         private val between = Array(n) { from ->
             IntArray(n) { to -> if (from == to) 0 else estimator.seconds(stops[from].point!!, stops[to].point!!) }
@@ -70,6 +81,13 @@ class RoutePlanner(private val estimator: TravelTimeEstimator) {
         private fun leg(previous: Int, next: Int) = if (previous < 0) fromOrigin[next] else between[previous][next]
 
         fun seconds(order: List<Int>): Int = order.indices.sumOf { leg(if (it == 0) -1 else order[it - 1], order[it]) }
+
+        /** The road distance along [order], or null when the estimator has none for some leg. */
+        fun meters(order: List<Int>, origin: EtaPoint?): Int? {
+            val points = listOfNotNull(origin) + order.map { stops[it].point!! }
+            val legs = points.zipWithNext().map { (from, to) -> estimator.meters(from, to) }
+            return if (legs.any { it == null }) null else legs.sumOf { it!! }
+        }
 
         /** [head] (when set) goes first; otherwise the stop nearest the origin does. */
         fun nearest(head: Int?): MutableList<Int> {
